@@ -4,7 +4,7 @@ app = Flask(__name__)
 
 @app.route("/dispense/<int:slot>")
 def dispense(slot):
-    print(f"Dispensing slot {slot}")
+    print(f"[PI] Dispensing slot {slot}")
     return {"status": "dispensed", "slot": slot}
 
 @app.route("/health")
