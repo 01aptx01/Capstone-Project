@@ -1,14 +1,8 @@
 from flask import Flask
+from routes import routes
 
 app = Flask(__name__)
+app.register_blueprint(routes)
 
-@app.route("/dispense/<int:slot>")
-def dispense(slot):
-    print(f"[PI] Dispensing slot {slot}")
-    return {"status": "dispensed", "slot": slot}
-
-@app.route("/health")
-def health():
-    return {"status": "pi-agent-ok"}
-
-app.run(host="0.0.0.0", port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
