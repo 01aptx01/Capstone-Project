@@ -10,10 +10,12 @@ services:
     volumes:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
-      - "3306:3306"
+      - "3307:3306"
 
   server:
     build: ./server
+    volumes:
+      - ./web/web-ui/build:/app/web-build
     container_name: vending-server
     env_file:
       - .env
@@ -22,8 +24,8 @@ services:
     depends_on:
       - db
 
-  pi-agent:
-    build: ./client
+  client:
+    build: ./client/agent
     container_name: vending-pi
     ports:
       - "5000:5000"
