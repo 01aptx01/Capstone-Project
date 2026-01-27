@@ -1,8 +1,10 @@
 from flask import Flask, request
+from flasgger import Swagger
 import mysql.connector
 import os
 
 app = Flask(__name__)
+swagger = Swagger(app, template_file='swagger.yaml')
 
 def get_db():
     return mysql.connector.connect(
