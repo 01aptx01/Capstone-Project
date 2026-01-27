@@ -66,6 +66,7 @@ Capstone-Project-main/
 │       └── Dockerfile      # สภาพแวดล้อมสำหรับรัน Web UI
 |
 ├── docker-compose.yml      # ไฟล์บงการทุก Service ให้ทำงานร่วมกัน
+├── swagger.yaml            # เอกสารอธิบาย API (API Documentation)
 ├── .gitignore              # ป้องกันไฟล์ขยะหลุดขึ้น Repo
 └── .env                    # ไฟล์เก็บ Config สำคัญ (ต้องสร้างเอง)
 
