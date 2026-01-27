@@ -10,7 +10,7 @@
     
     -   **Stack:** Python (Flask)
         
-    -   **Port:** `8000`
+    -   **Port:** `8000` 
         
     -   **Role:** ตัวแม่คอยจัดการ Business Logic ทั้งหมด เชื่อมต่อ Database และประสานงานกับส่วนอื่นๆ
         
@@ -29,7 +29,15 @@
     -   **Port:** `5000`
         
     -   **Role:** รันบนตัวตู้จริงเพื่อรับคำสั่งจ่ายของ (Dispense) และคอยรายงานสถานะเครื่อง
-        
+
+4.  **Web-UI**
+    
+    -   **Stack:** React.js, Node.js, Bootstrap
+    
+    -   **Port:** `3000`
+
+    -   **Role:** ส่วนติดต่อผู้ใช้งาน (User Interface) สำหรับให้ลูกค้าเลือกซื้อสินค้าบนหน้าจอpi และแอดมินสามารถดูสถานะของตู้สินค้าได้บนเว็ป
+
 
 ## 📂 Project Structure
 
@@ -41,12 +49,22 @@ Capstone-Project-main/
 │   └── agent/
 │       ├── agent.py        # โค้ดควบคุมการจ่ายของ (Edge Logic)
 │       └── Dockerfile      # สภาพแวดล้อมสำหรับรัน Agent
+|
 ├── server/
 │   ├── main.py             # ศูนย์กลาง API Gateway
 │   ├── requirements.txt    # Library ที่ต้องใช้
 │   └── Dockerfile          # สภาพแวดล้อมสำหรับรัน Server
+|
 ├── database/
 │   └── init.sql            # ไฟล์ Setup Database เริ่มต้น
+|
+├── web/
+│   └── web-ui/             # โค้ดส่วนหน้าจอ UI (React.js)
+│       ├── src/            # ไฟล์ Source Code หลัก
+│       │   ├── api/        # ส่วนเชื่อมต่อ API กับ Server
+│       │   └── pages/      # หน้าแสดงผลต่างๆ เช่น หน้าตู้ขายสินค้า
+│       └── Dockerfile      # สภาพแวดล้อมสำหรับรัน Web UI
+|
 ├── docker-compose.yml      # ไฟล์บงการทุก Service ให้ทำงานร่วมกัน
 ├── .gitignore              # ป้องกันไฟล์ขยะหลุดขึ้น Repo
 └── .env                    # ไฟล์เก็บ Config สำคัญ (ต้องสร้างเอง)
@@ -135,8 +153,6 @@ _ระบบจะทำการ Build Image และดึงฐานข้
 ## 🛠️ Troubleshooting (แก้ปัญหาแบบตัวตึง)
 
 -   **MySQL เชื่อมต่อไม่ได้:** ตรวจสอบไฟล์ `.env` และดูว่า Container `db` รันสมบูรณ์หรือยัง
-    
--   **Agent รันไม่ขึ้น:** เช็ค Path ใน `docker-compose.yml` ให้เป็น `./client/agent`
     
 -   **Port ชน:** ถ้าเครื่องคุณใช้พอร์ต `8000`, `5000` หรือ `3306` อยู่ ให้ไปเปลี่ยนที่ `ports` ใน `docker-compose.yml`
 
