@@ -9,17 +9,16 @@ app = Flask(__name__)
 swagger = Swagger(app, template_file='swagger.yaml')
 app.register_blueprint(buy_api)
 
+@app.route("/")
+def react_index():
+    return send_from_directory("web-build", "index.html")
+
+@app.route("/static/<path:path>")
+def react_static(path):
+    return send_from_directory("web-build/static", path)
+
 @app.route("/health")
 def health():
     return {"status": "server-ok"}
-
-@app.route("/")
-def react_app():
-    return send_from_directory("../web/web-ui/build", "index.html")
-
-
-@app.route("/static/<path:path>")
-def static_files(path):
-    return send_from_directory("../web/web-ui/build/static", path)
 
 app.run(host="0.0.0.0", port=8000)
