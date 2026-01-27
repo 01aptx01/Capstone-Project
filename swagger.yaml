@@ -1,0 +1,27 @@
+swagger: "2.0"
+info:
+  title: "Smart Vending System API"
+  description: "API สำหรับจัดการตู้ Vending Machine อัจฉริยะ"
+  version: "1.0.0"
+paths:
+  /api/buy:
+    post:
+      summary: "สั่งซื้อสินค้า"
+      parameters:
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            type: "object"
+            properties:
+              machine_id:
+                type: "integer"
+                example: 1
+              product_id:
+                type: "integer"
+                example: 1
+      responses:
+        200:
+          description: "ซื้อสำเร็จ"
+        400:
+          description: "สินค้าหมด"
