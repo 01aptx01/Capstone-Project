@@ -23,7 +23,7 @@ services:
       - db
 
   pi-agent:
-    build: ./client-pi
+    build: ./client
     container_name: vending-pi
     ports:
       - "5000:5000"
