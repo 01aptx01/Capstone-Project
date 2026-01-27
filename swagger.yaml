@@ -3,6 +3,9 @@ info:
   title: "Smart Vending System API"
   description: "API สำหรับจัดการตู้ Vending Machine อัจฉริยะ"
   version: "1.0.0"
+
+Components:
+
 paths:
   /api/buy:
     post:
