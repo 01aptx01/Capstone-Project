@@ -177,3 +177,82 @@ _ระบบจะทำการ Build Image และดึงฐานข้
 -   **refactor:** รื้อโค้ด เขียนใหม่ให้ดีขึ้น แต่ผลลัพธ์เหมือนเดิม
     
 -   **chore:** งานจุกจิก เช่น อัปเดต version, แก้ .gitignore
+
+# การทำงานของทั้งหมดแบบย่อ
+เราแบ่งออก 3 ส่วนหลัก คือ
+## web(html+css+javaScript)
+ส่วนนี้เราใช้ react เป็นหลัก ซึ่งเอาไว้เป็นเพียง UI ในการสั่งงาน
+- ไม่แตะ DB เอง
+- ไม่สั่ง GPIO(สั่งงาน pi) โดยตรง
+แค่บอกว่าผู้ใช้กดคำสั้งอะไร เช่น “มีคนกดซื้อแล้วนะ”
+มันจะสั่งงานไปให้ตัว Server ทำงานอีกที
+## Server(py)
+ส่วนนี้เราใช้เป็นสมองหลักในการทำงานเลยเพราะทุกส่วนต้องมาติดต่อตรงนี้ก่อนเป็นตัวจัดการ business logic
+Server ทำหน้าที่:
+- ตัดสินใจ
+- ตรวจสอบ
+- คุม flow
+- บังคับกฎ (business logic)
+เช่น เมื่อ Server ได้ request จาก Web:
+
+``` text
+รับคำสั่งจาก Web
+→ เช็ค DB
+→ ตัด stock
+→ log transaction
+→ ตัดสินใจว่าจะสั่ง Pi หรือไม่
+```
+
+Server เป็นคนเดียวที่:
+- คุยกับ DB
+- คุยกับ Pi
+- รู้สถานะทั้งหมดของระบบ
+
+## DB (MySQL)
+เก็บข้อมูลทั้งหมด ทุกตู้
+
+## Raspberry Pi(py) (Agent)
+ส่วนที่ติดต่อกับ Hardware
+
+Pi:
+- ไม่รู้ราคา
+- ไม่รู้ stock
+- ไม่รู้ user
+
+Pi แค่ทำตามคำสั่ง:
+``` text
+Server (หรือ Web หลัง Server อนุญาต)
+→ /dispense/1
+→ GPIO ทำงาน
+```
+
+Flow ที่ “ถูกต้องตามสถาปัตยกรรม”
+
+กรณีซื้อของ 1 ครั้ง:
+``` pgsql
+1. User กดปุ่ม (Web)
+2. Web → Server : buy
+3. Server → DB : check & update stock
+4. DB → Server : OK
+5. Server → Web : success + slot
+6. Web → Pi Agent : dispense
+```
+
+# การคุยกันข้ามภาษา
+- Web (React) → เขียนด้วย JavaScript
+- Server → เขียนด้วย Python (Flask)
+- Pi Agent → Python
+- DB → MySQL (SQL)
+เราจะคุยกันด้วย __HTTP + JSON__ ผ่าน __HTTP Request / Response__
+
+เช่น การกดซื้อสินค้า
+
+Web -> server -> DB
+``` json
+{
+  "machine_id": 1,
+  "product_id": 1
+}
+```
+server ก็ไปทำ Logic ต่างๆ แล้วส่งให้ DB ไปตัดของใน Database แล้ว server ส่ง respon กลับมา เช่น ``` json { status: "OK", slot: 1 } ```
+
