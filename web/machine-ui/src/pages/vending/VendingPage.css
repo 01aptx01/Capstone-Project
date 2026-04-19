@@ -507,3 +507,176 @@ body {
     font-weight: 500;
     color: #444;
 }
+
+/* --- สไตล์สำหรับ Modal กรอกเบอร์โทรศัพท์ (Numpad) --- */
+.numpad-modal-box {
+    background-color: white;
+    border-radius: 24px;
+    padding: 30px 20px 20px 20px;
+    width: 360px;
+    height: 450px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: popIn 0.2s ease-out;
+}
+
+.numpad-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+/* จอแสดงเบอร์โทร */
+.phone-display {
+    background-color: #f89025;
+    color: white;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 10px 20px;
+    border-radius: 40px;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+    min-height: 60px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* แป้นพิมพ์ 3x4 */
+.numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    width: 100%;
+    padding: 0 10px;
+}
+
+.numpad-btn {
+    background-color: #e2e2e2;
+    color: #000;
+    border: none;
+    border-radius: 50%;
+    width: 65px;
+    height: 65px;
+    font-size: 28px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 0 auto;
+    transition: background 0.1s, transform 0.1s;
+    font-family: inherit;
+}
+
+.numpad-btn:active {
+    background-color: #d0d0d0;
+    transform: scale(0.95);
+}
+
+.numpad-btn.action {
+    font-size: 18px; /* ปรับฟอนต์ให้เล็กลงสำหรับคำว่า DEL / OK */
+}
+
+/* --- สไตล์สำหรับ Modal รายงานปัญหา (Report Issue) --- */
+.report-modal-box {
+    background-color: white;
+    border-radius: 24px;
+    padding: 30px 25px 20px 25px;
+    width: 400px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    animation: popIn 0.2s ease-out;
+}
+
+.report-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+/* โซน LINE QR Code */
+.line-report-section {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 15px;
+    background-color: #f8fafc;
+    border-radius: 16px;
+    width: 100%;
+}
+
+.qr-placeholder {
+    width: 100px;
+    height: 100px;
+    background-color: #fff;
+    border: 2px solid #22c55e; /* สีเขียว Line */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    position: relative;
+}
+
+.line-id-text {
+    font-size: 18px;
+    font-weight: 700;
+    color: #22c55e;
+}
+
+.scan-text {
+    font-size: 14px;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* เส้นคั่นคำว่า "หรือ" */
+.report-divider {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin: 5px 0 15px 0;
+    color: #94a3b8;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.report-divider::before,
+.report-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background-color: #e2e8f0;
+    margin: 0 15px;
+}
+
+/* กล่องเบอร์โทรศัพท์ */
+.report-phone {
+    font-size: 32px;
+    font-weight: 800;
+    color: #f89025;
+    background-color: #fff1e0;
+    border-radius: 16px;
+    padding: 8px 20px;
+    width: 100%;
+    text-align: center;
+    margin: 15px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 10px rgba(248, 144, 37, 0.1);
+}
