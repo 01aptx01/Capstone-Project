@@ -41,10 +41,55 @@ export default function VendingPage() {
 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isUsageModalOpen, setIsUsageModalOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const [isNumpadModalOpen, setIsNumpadModalOpen] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState("");
 
   const handleOpenUsage = () => {
     setIsInfoModalOpen(false); // ปิด Popup แรก
     setIsUsageModalOpen(true); // เปิด Popup วิธีการใช้งาน
+  };
+
+  const handleOpenReport = () => {
+    setIsInfoModalOpen(false); // ปิดหน้าเมนู i
+    setIsReportModalOpen(true); // เปิดหน้าแจ้งปัญหา
+  };
+
+  const handleOpenNumpad = () => {
+    setIsInfoModalOpen(false);
+    setIsNumpadModalOpen(true);
+    setPhoneNumber(""); // เคลียร์เบอร์เก่าทุกครั้งที่เปิดใหม่
+  };
+
+  const handleNumberClick = (num) => {
+    // ให้กรอกได้สูงสุด 10 ตัว
+    if (phoneNumber.length < 10) {
+      setPhoneNumber(prev => prev + num);
+    }
+  };
+
+  const handleDeleteClick = () => {
+    setPhoneNumber(prev => prev.slice(0, -1)); // ลบตัวสุดท้ายทิ้ง
+  };
+
+  const handleConfirmPhone = () => {
+    if (phoneNumber.length === 10) {
+      alert(`ตรวจสอบคะแนนสำหรับเบอร์: ${phoneNumber}`);
+      setIsNumpadModalOpen(false);
+      // TODO: นำเบอร์นี้ไปเช็คกับ API ต่อ
+    } else {
+      alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลักครับ");
+    }
+  };
+
+  // ฟังก์ชันจัดฟอร์แมตเบอร์โทรให้ออกมาเป็น XXX-XXXXXXX
+  const displayFormattedPhone = () => {
+    if (phoneNumber.length === 0) return "000-0000000"; // Placeholder เบลอๆ
+    if (phoneNumber.length > 3) {
+      return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+    }
+    return phoneNumber;
   };
 
   // ฟังก์ชันเพิ่มของลงตะกร้า
@@ -153,36 +198,21 @@ export default function VendingPage() {
               &times; {/* ตัวอักษร X (กากบาท) */}
             </button>
 
-            <button className="modal-action-btn" onClick={handleOpenUsage}>
-              วิธีการใช้งาน
-            </button>
-            <button className="modal-action-btn">ตรวจสอบคะแนน</button>
-            <button className="modal-action-btn">รายงานปัญหา</button>
+            <button className="modal-action-btn" onClick={handleOpenUsage}>วิธีการใช้งาน</button>
+            <button className="modal-action-btn" onClick={handleOpenNumpad}>ตรวจสอบคะแนน</button>
+            <button className="modal-action-btn" onClick={handleOpenReport}>รายงานปัญหา</button>
           </div>
         </div>
       )}
 
       {isUsageModalOpen && (
-        <div
-          className="modal-overlay"
-          onClick={() => setIsUsageModalOpen(false)}
-        >
-          <div
-            className="usage-modal-box"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="modal-overlay" onClick={() => setIsUsageModalOpen(false)}>
+          <div className="usage-modal-box" onClick={(e) => e.stopPropagation()}>
             {/* ปุ่มกากบาทสีส้ม */}
-            <button
-              className="modal-close-btn"
-              onClick={() => setIsUsageModalOpen(false)}
-            >
-              &times;
-            </button>
-
+            <button className="modal-close-btn" onClick={() => setIsUsageModalOpen(false)}>&times;</button>
             {/* หัวข้อ */}
             <div className="modal-title">วิธีการใช้งาน</div>
 
-            {/* รายการ*/}
             <div className="usage-list">
               <div className="usage-item">
                 <span className="usage-number">1.</span>
@@ -207,6 +237,59 @@ export default function VendingPage() {
                 <div className="usage-icon-placeholder"><span class="material-symbols-outlined">box</span></div>
                 <span className="usage-text">รับสินค้า</span>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isNumpadModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsNumpadModalOpen(false)}>
+          <div className="numpad-modal-box" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setIsNumpadModalOpen(false)}>&times;</button>
+
+            <div className="numpad-title">โปรดกรอกหมายเลขโทรศัพท์</div>
+
+            {/* จอแสดงเบอร์โทร */}
+            <div className="phone-display" style={{ opacity: phoneNumber ? 1 : 0.6 }}>
+              {displayFormattedPhone()}
+            </div>
+
+            {/* แป้นพิมพ์ */}
+            <div className="numpad-grid">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                <button key={num} className="numpad-btn" onClick={() => handleNumberClick(num.toString())}>
+                  {num}
+                </button>
+              ))}
+              <button className="numpad-btn action" onClick={handleDeleteClick}>DEL</button>
+              <button className="numpad-btn" onClick={() => handleNumberClick('0')}>0</button>
+              <button className="numpad-btn action" onClick={handleConfirmPhone}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isReportModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsReportModalOpen(false)}>
+          <div className="report-modal-box" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setIsReportModalOpen(false)}>&times;</button>
+
+            <div className="report-title">รายงานปัญหา</div>
+
+            {/* เบอร์โทรศัพท์ */}
+            <div className="report-phone"><span class="material-symbols-outlined">call</span>02-123-4567</div>
+            <div className="report-divider">หรือ</div>
+            {/* โซน LINE สำหรับสแกนแจ้งปัญหา */}
+            <div className="line-report-section">
+              <div className="qr-placeholder">
+                {/* จำลอง QR Code ด้วย Icon Line และภาพตัวอย่าง */}
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ color: '#22c55e', fontSize: '24px', fontWeight: 'bold' }}>LINE</div>
+                  <div style={{ fontSize: '10px' }}>SCAN ME</div>
+                </div>
+              </div>
+              <div className="line-id-text">ID: @MOD.PAO</div>
+              <div className="scan-text">สแกนเพื่อติดต่อเจ้าหน้าที่โดยตรง</div>
             </div>
           </div>
         </div>
