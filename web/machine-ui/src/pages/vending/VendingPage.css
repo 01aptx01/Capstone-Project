@@ -372,3 +372,138 @@ body {
   'GRAD' 0,
   'opsz' 48
 }
+
+/* --- Modal (Popup ปุ่ม i) --- */
+.modal-overlay {
+    position: absolute; /* ให้ลอยทับหน้าจอ 800x480 ของเรา */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* สีดำโปร่งแสง ทำให้ฉากหลังมืดลง */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999; /* บังคับให้อยู่บนสุดของหน้าจอ */
+}
+
+.modal-box {
+    background-color: white;
+    border-radius: 24px;
+    padding: 50px 40px 40px 40px; /* เว้นที่ด้านบนให้กากบาทนิดนึง */
+    width: 440px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* ระยะห่างระหว่างปุ่ม */
+    /* เพิ่ม Animation เด้งขึ้นมาเบาๆ ให้ดูแพง */
+    animation: popIn 0.2s ease-out; 
+}
+
+@keyframes popIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 40px;
+    font-weight: bold;
+    color: #f89025;
+    background: none;
+    border: none;
+    cursor: pointer;
+    line-height: 1;
+    transition: transform 0.1s;
+}
+
+.modal-close-btn:active {
+    transform: scale(0.9);
+}
+
+.modal-action-btn {
+    background-color: #e2e2e2;
+    color: #444;
+    border: none;
+    border-radius: 40px; /* ปุ่มโค้งมนแบบแคปซูล */
+    padding: 18px 20px;
+    font-size: 26px; /* ตัวอักษรใหญ่ชัดเจน */
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    transition: background 0.1s;
+}
+
+.modal-action-btn:active {
+    background-color: #d0d0d0;
+    transform: translateY(2px);
+    box-shadow: none;
+}
+
+/* --- เพิ่มสไตล์เฉพาะสำหรับ Modal วิธีการใช้งาน --- */
+.usage-modal-box {
+    background-color: white;
+    border-radius: 24px;
+    padding: 30px 20px 20px 20px;
+    width: 360px; /* ขนาดกะทัดรัดกว่า Popup แรก */
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    display: flex;
+    flex-direction: column;
+    animation: popIn 0.2s ease-out; /* ใช้ Animation เดียวกัน */
+}
+
+/* หัวข้อ Popup */
+.modal-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+/* สไตล์ของลิสต์รายการ */
+.usage-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* ระยะห่างระหว่างข้อ */
+    padding: 0 10px;
+}
+
+.usage-item {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* เลขลำดับ (1, 2, 3, 4) */
+.usage-number {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f47b2a; /* สีส้ม */
+    width: 25px;
+    text-align: right;
+}
+
+/* ไอคอนสถานะ (เนื่องจากผมไม่สามารถใช้ไฟล์ภาพภายนอกได้ ผมจะใช้เป็นกล่องสี่เหลี่ยม Placeholder เพื่อบอกตำแหน่ง และให้ UI Agent สไตล์ให้ครับ) */
+.usage-icon-placeholder {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px;
+    color: #f47b2a;
+}
+
+/* ข้อความบรรยาย */
+.usage-text {
+    font-size: 16px;
+    font-weight: 500;
+    color: #444;
+}
