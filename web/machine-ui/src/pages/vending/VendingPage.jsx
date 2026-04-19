@@ -39,6 +39,14 @@ const mockProducts = [
 export default function VendingPage() {
   const [cart, setCart] = useState([]);
 
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [isUsageModalOpen, setIsUsageModalOpen] = useState(false);
+
+  const handleOpenUsage = () => {
+    setIsInfoModalOpen(false); // ปิด Popup แรก
+    setIsUsageModalOpen(true); // เปิด Popup วิธีการใช้งาน
+  };
+
   // ฟังก์ชันเพิ่มของลงตะกร้า
   const handleAddToCart = (product) => {
     setCart(prevCart => {
@@ -125,8 +133,85 @@ export default function VendingPage() {
         onIncrease={handleIncrease}
         onDecrease={handleDecrease}
         onRemove={handleRemove}
+        onOpenInfo={() => setIsInfoModalOpen(true)}
       />
 
-    </div>
+      {/* โมดูลข้อมูล */}
+      {isInfoModalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => setIsInfoModalOpen(false)} /* กดพื้นหลังสีดำเพื่อปิด */
+        >
+          <div
+            className="modal-box"
+            onClick={(e) => e.stopPropagation()} /* ป้องกันไม่ให้กดโดนปุ่มแล้วทะลุไปปิดฉากหลัง */
+          >
+            <button
+              className="modal-close-btn"
+              onClick={() => setIsInfoModalOpen(false)}
+            >
+              &times; {/* ตัวอักษร X (กากบาท) */}
+            </button>
+
+            <button className="modal-action-btn" onClick={handleOpenUsage}>
+              วิธีการใช้งาน
+            </button>
+            <button className="modal-action-btn">ตรวจสอบคะแนน</button>
+            <button className="modal-action-btn">รายงานปัญหา</button>
+          </div>
+        </div>
+      )}
+
+      {isUsageModalOpen && (
+        <div
+          className="modal-overlay"
+          onClick={() => setIsUsageModalOpen(false)}
+        >
+          <div
+            className="usage-modal-box"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* ปุ่มกากบาทสีส้ม */}
+            <button
+              className="modal-close-btn"
+              onClick={() => setIsUsageModalOpen(false)}
+            >
+              &times;
+            </button>
+
+            {/* หัวข้อ */}
+            <div className="modal-title">วิธีการใช้งาน</div>
+
+            {/* รายการ*/}
+            <div className="usage-list">
+              <div className="usage-item">
+                <span className="usage-number">1.</span>
+                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">gesture_select</span></div>
+                <span className="usage-text">เลือกสินค้าที่ต้องการ</span>
+              </div>
+
+              <div className="usage-item">
+                <span className="usage-number">2.</span>
+                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">credit_card</span></div>
+                <span className="usage-text">เลือกช่องทางการชำระเงิน</span>
+              </div>
+
+              <div className="usage-item">
+                <span className="usage-number">3.</span>
+                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">money_bag</span></div>
+                <span className="usage-text">ชำระเงินตามจำนวน</span>
+              </div>
+
+              <div className="usage-item">
+                <span className="usage-number">4.</span>
+                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">box</span></div>
+                <span className="usage-text">รับสินค้า</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div >
   );
 }

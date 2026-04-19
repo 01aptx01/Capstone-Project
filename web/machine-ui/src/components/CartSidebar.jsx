@@ -1,9 +1,9 @@
 import React from 'react';
 
-const CartSidebar = ({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onRemove }) => {
+const CartSidebar = ({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo }) => {
   return (
     <div className="sidebar">
-      <button className="info-btn">i</button>
+      <button className="info-btn" onClick={onOpenInfo}>i</button>
 
       <div className="cart-content-area">
         {cart.length === 0 ? (
