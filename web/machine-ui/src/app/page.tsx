@@ -1,11 +1,13 @@
+"use client";
 import React, { useState } from "react";
-import ProductCard from "../../components/ProductCard";
-import CartSidebar from "../../components/CartSidebar";
-import LogoModPao from "../../assets/Logo_modpao.png";
-import './VendingPage.css';
+import ProductCard, { Product } from "../components/ProductCard";
+import CartSidebar, { CartItem } from "../components/CartSidebar";
+import Image from "next/image";
+import "./globals.css";
+import { BanknoteArrowUp, CreditCard, Headset, PackageOpen, PhoneCall, SquareDashedMousePointer } from "lucide-react";
 
-// ข้อมูลจำลองอ้างอิงตาม Design ของคุณ
-const mockProducts = [
+// --- Mock Data ---
+const mockProducts: Product[] = [
   {
     id: 1,
     name: "เปามดแดง",
@@ -36,8 +38,10 @@ const mockProducts = [
   }
 ];
 
+type ModalType = "none" | "info" | "usage" | "numpad" | "report";
+
 export default function VendingPage() {
-  const [cart, setCart] = useState([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
 
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [isUsageModalOpen, setIsUsageModalOpen] = useState(false);
@@ -52,7 +56,7 @@ export default function VendingPage() {
   };
 
   const handleOpenReport = () => {
-    setIsInfoModalOpen(false); // ปิดหน้าเมนู i
+    setIsInfoModalOpen(false); // ปิดหน้าเมนู info
     setIsReportModalOpen(true); // เปิดหน้าแจ้งปัญหา
   };
 
@@ -148,7 +152,7 @@ export default function VendingPage() {
       {/* ฝั่งซ้าย: โซนเลือกสินค้า */}
       <div className="main-content">
         <div className="header">
-          <span>M <img src={LogoModPao} alt="Logo ModPao" className="logo-image" /> D . P A O</span>
+          <span>M <Image src="/Logo_modpao.png" alt="Logo ModPao" width={70} height={70} className="logo-image" /> D . P A O</span>
         </div>
 
         <div className="product-container">
@@ -216,25 +220,25 @@ export default function VendingPage() {
             <div className="usage-list">
               <div className="usage-item">
                 <span className="usage-number">1.</span>
-                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">gesture_select</span></div>
+                <div className="usage-icon-placeholder"><SquareDashedMousePointer /></div>
                 <span className="usage-text">เลือกสินค้าที่ต้องการ</span>
               </div>
 
               <div className="usage-item">
                 <span className="usage-number">2.</span>
-                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">credit_card</span></div>
+                <div className="usage-icon-placeholder"><CreditCard /></div>
                 <span className="usage-text">เลือกช่องทางการชำระเงิน</span>
               </div>
 
               <div className="usage-item">
                 <span className="usage-number">3.</span>
-                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">money_bag</span></div>
+                <div className="usage-icon-placeholder"><BanknoteArrowUp /></div>
                 <span className="usage-text">ชำระเงินตามจำนวน</span>
               </div>
 
               <div className="usage-item">
                 <span className="usage-number">4.</span>
-                <div className="usage-icon-placeholder"><span class="material-symbols-outlined">box</span></div>
+                <div className="usage-icon-placeholder"><PackageOpen /></div>
                 <span className="usage-text">รับสินค้า</span>
               </div>
             </div>
@@ -277,7 +281,7 @@ export default function VendingPage() {
             <div className="report-title">รายงานปัญหา</div>
 
             {/* เบอร์โทรศัพท์ */}
-            <div className="report-phone"><span class="material-symbols-outlined">call</span>02-123-4567</div>
+            <div className="report-phone"><PhoneCall />02-123-4567</div>
             <div className="report-divider">หรือ</div>
             {/* โซน LINE สำหรับสแกนแจ้งปัญหา */}
             <div className="line-report-section">
