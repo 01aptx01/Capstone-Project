@@ -124,7 +124,7 @@ export default function VendingPage() {
               className="logo-image"
               priority
             />
-            D . P A O
+            D.PAO
           </span>
         </div>
 

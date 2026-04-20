@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Kanit } from "next/font/google";
+import { Kanit, Madimi_One } from "next/font/google";
 
 const kanit = Kanit({
   subsets: ["thai", "latin"],
   weight: ['300', '400', '500', '600', '700', '800'],
   display: 'swap',
+  variable: "--font-kanit",
+});
+
+const madimiOne = Madimi_One({
+  subsets: ["latin"],
+  weight: ['400'],
+  variable: "--font-madimi",
 });
 
 export const metadata: Metadata = {
@@ -19,7 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="th">
-      <body className={kanit.className}>{children}</body>
+      <body className={`${kanit.className} ${madimiOne.variable}`}>{children}</body>
     </html>
   );
 }
