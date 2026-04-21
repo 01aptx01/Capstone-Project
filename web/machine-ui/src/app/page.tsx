@@ -14,7 +14,7 @@ const mockProducts: Product[] = [
   { id: 4, name: "เปาครีม", desc: "ครีมคัสตาร์ด หอมหวานละมุน", price: 25, heatingTime: 12, image: "/product/img/pao-cream.png" }
 ];
 
-type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment" | "processing";
+type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment" | "processing" | "points_result";
 type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
 const PROCESS_STEPS = ["กำลังนำเข้าเตาอุ่น", "กำลังอุ่น", "กำลังเสิร์ฟ", "พร้อมทาน"];
 
@@ -28,6 +28,10 @@ export default function VendingPage() {
   // --- Logic ระบบคิว ---
   const [queue, setQueue] = useState<Product[]>([]); // แถวคิวสินค้า (แตกจากตะกร้า)
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
+
+  // State สำหรับหน้าเช็คคะแนน
+  const [pointsCountdown, setPointsCountdown] = useState<number>(10);
+  const MOCK_USER_POINTS = 38; // Mockup ข้อมูลคะแนนตามภาพ
 
   const totalHeatingTime = cart.reduce((sum, item) => sum + (item.heatingTime * item.qty), 0);
 
@@ -52,6 +56,19 @@ export default function VendingPage() {
     }
     return () => clearInterval(interval);
   }, [activeModal, globalTimeLeft]);
+
+  // Timer (นับถอยหลังแล้วปิดเอง)
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (activeModal === "points_result") {
+      if (pointsCountdown > 0) {
+        timer = setInterval(() => setPointsCountdown((prev) => prev - 1), 1000);
+      } else {
+        setActiveModal("none");
+      }
+    }
+    return () => clearInterval(timer);
+  }, [activeModal, pointsCountdown]);
 
   let currentStep = 0;
   let currentItemIndex = 0;
@@ -124,15 +141,15 @@ export default function VendingPage() {
   const handleDeleteClick = () => setPhoneNumber(prev => prev.slice(0, -1))
   const handleConfirmPhone = () => {
     if (phoneNumber.length === 10) {
-      alert(`ตรวจสอบคะแนนสำหรับเบอร์: ${phoneNumber}`);
-      setActiveModal("none");
+      setPointsCountdown(10);
+      setActiveModal("points_result");
     } else {
       alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
     }
   };
 
   const displayFormattedPhone = () => {
-    if (!phoneNumber) return "000-0000000";
+    if (!phoneNumber) return "xxx-xxxxxxx";
     if (phoneNumber.length > 3) return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
     return phoneNumber;
   };
@@ -247,6 +264,31 @@ export default function VendingPage() {
                 <button className="numpad-btn action" onClick={handleDeleteClick}>DEL</button>
                 <button className="numpad-btn" onClick={() => handleNumberClick('0')}>0</button>
                 <button className="numpad-btn action" onClick={handleConfirmPhone}>OK</button>
+              </div>
+            </div>
+          )}
+
+          {/* 💡 Modal ใหม่: แสดงคะแนนสะสม */}
+          {activeModal === "points_result" && (
+            <div className="points-modal-box" onClick={(e) => e.stopPropagation()}>
+              {/* ปุ่มปิดอัตโนมัติพร้อมตัวเลข */}
+              <button className="points-close-btn" onClick={() => setActiveModal("none")}>
+                <span>{pointsCountdown}</span>
+                <span className="points-close-icon">&times;</span>
+              </button>
+
+              <div className="points-title">คุณมีคะแนนทั้งหมด</div>
+
+              <div className="points-value">
+                {MOCK_USER_POINTS}
+              </div>
+
+              <div className="points-unit">คะแนน</div>
+
+              <div className="points-disclaimer">
+                <strong>*คะแนนสามารถนำไปแลกเป็นส่วนลดหรือโปรโมชั่น*</strong>
+                <br />
+                ได้ทางเว็ปไซต์ MODPAO.com
               </div>
             </div>
           )}
