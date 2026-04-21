@@ -38,7 +38,7 @@ const mockProducts: Product[] = [
   }
 ];
 
-type ModalType = "none" | "info" | "usage" | "numpad" | "report";
+type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment";
 
 export default function VendingPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -248,6 +248,55 @@ export default function VendingPage() {
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* Modal : เมนู payment */}
+      {activeModal === "payment" && (
+        <div className="modal-overlay" onClick={() => setActiveModal("none")}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setActiveModal("none")}>&times;</button>
+            <div className="modal-title">โปรดเลือกวิธีการชำระเงิน</div>
+            <div className="modal-payment">
+              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน PromptPay")}>
+                <Image
+                  className="payment-logo"
+                  src="/PromptPay-logo.png"
+                  alt="PromptPay"
+                  width={160}
+                  height={89}
+                  priority
+                />
+              </button>
+              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน Visa")}>
+                <Image
+                  src="/Visa-logo.png"
+                  alt="Visa"
+                  width={160}
+                  height={65}
+                  priority
+                />
+              </button>
+              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน UnionPay")}>
+                <Image
+                  src="/UnionPay-logo.png"
+                  alt="UnionPay"
+                  width={160}
+                  height={90}
+                  priority
+                />
+              </button>
+              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน Mastercard")}>
+                <Image
+                  src="/Mastercard-logo.png"
+                  alt="Mastercard"
+                  width={140}
+                  height={90}
+                  priority
+                />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
