@@ -27,11 +27,11 @@ export function MenuCard({ item }: { item: MenuItem }) {
         </p>
         <div className="flex items-center justify-between mt-3">
           <span className="font-bold text-lg" style={{ color: COLORS.accent }}>
-            {item.price} B
+            {item.price} ฿
           </span>
           <button
             onClick={handleBook}
-            className="px-5 py-1.5 rounded-full text-sm font-medium border transition-all duration-200"
+            className="px-5 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200"
             style={
               added
                 ? {
@@ -40,9 +40,9 @@ export function MenuCard({ item }: { item: MenuItem }) {
                     color: "white",
                   }
                 : {
-                    backgroundColor: "white",
+                    backgroundColor: COLORS.accent,
                     borderColor: COLORS.accent,
-                    color: COLORS.accent,
+                    color: "white",
                   }
             }
           >
