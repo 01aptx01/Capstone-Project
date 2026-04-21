@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import ProductCard, { Product } from "../components/ProductCard";
 import CartSidebar, { CartItem } from "../components/CartSidebar";
+import CardPaymentModal from "../components/CardPaymentModal";
 import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
@@ -39,7 +40,7 @@ const mockProducts: Product[] = [
   }
 ];
 
-type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment";
+type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment" | "card-payment";
 
 export default function VendingPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -357,8 +358,7 @@ export default function VendingPage() {
               </button>
               <button 
                 className="modal-action-payment-btn" 
-                onClick={() => handleOmiseCheckout('card')}
-                disabled={!isOmiseLoaded}
+                onClick={() => setActiveModal('card-payment')}
               >
                 <Image
                   src="/Visa-logo.png"
@@ -370,8 +370,7 @@ export default function VendingPage() {
               </button>
               <button 
                 className="modal-action-payment-btn" 
-                onClick={() => handleOmiseCheckout('card')}
-                disabled={!isOmiseLoaded}
+                onClick={() => setActiveModal('card-payment')}
               >
                 <Image
                   src="/UnionPay-logo.png"
@@ -383,8 +382,7 @@ export default function VendingPage() {
               </button>
               <button 
                 className="modal-action-payment-btn" 
-                onClick={() => handleOmiseCheckout('card')}
-                disabled={!isOmiseLoaded}
+                onClick={() => setActiveModal('card-payment')}
               >
                 <Image
                   src="/Mastercard-logo.png"
@@ -397,6 +395,15 @@ export default function VendingPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal : Card Payment MSR Form */}
+      {activeModal === "card-payment" && (
+        <CardPaymentModal
+          totalPrice={totalPrice}
+          onClose={() => setActiveModal("none")}
+          onPaymentSuccess={processPayment}
+        />
       )}
 
     </div >
