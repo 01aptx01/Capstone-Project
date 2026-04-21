@@ -4,7 +4,7 @@ import ProductCard, { Product } from "../components/ProductCard";
 import CartSidebar, { CartItem } from "../components/CartSidebar";
 import Image from "next/image";
 import "./globals.css";
-import { BanknoteArrowUp, CreditCard, Headset, PackageOpen, PhoneCall, SquareDashedMousePointer } from "lucide-react";
+import { BanknoteArrowUp, CreditCard, Headset, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer } from "lucide-react";
 
 // --- Mock Data ---
 const mockProducts: Product[] = [
@@ -39,6 +39,7 @@ const mockProducts: Product[] = [
 ];
 
 type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment";
+type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
 
 export default function VendingPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -46,10 +47,19 @@ export default function VendingPage() {
   const [activeModal, setActiveModal] = useState<ModalType>("none");
   const [phoneNumber, setPhoneNumber] = useState("");
 
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
+
   // --- Modal Handlers ---
   const handleOpenNumpad = () => {
     setActiveModal("numpad");
     setPhoneNumber("");
+  };
+
+  const closePaymentModal = () => {
+    setActiveModal("none");
+    setSelectedPaymentMethod(null);
+    setPaymentStep(1);
   };
 
   // --- Numpad Logic ---
@@ -105,6 +115,8 @@ export default function VendingPage() {
   const handleCheckout = () => {
     alert(`กำลังดำเนินการชำระเงินจำนวน ${totalPrice} บาท`);
     // TODO: เรียก API ชำระเงินตรงนี้
+
+    setActiveModal("payment");
     setCart([]);
   };
 
@@ -160,7 +172,7 @@ export default function VendingPage() {
       />
 
       {activeModal !== "none" && (
-        <div className="modal-overlay" onClick={() => setActiveModal("none")}>
+        <div className="modal-overlay" onClick={activeModal === "payment" ? closePaymentModal : () => setActiveModal("none")}>
           {/* Modal 1: เมนู Info */}
           {activeModal === "info" && (
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -248,58 +260,142 @@ export default function VendingPage() {
             </div>
           )}
 
-        </div>
-      )}
+          {/* Modal 5 : เมนู payment */}
+          {activeModal === "payment" && (
+            <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+              <button className="modal-close-btn" onClick={() => { setActiveModal("none"); setSelectedPaymentMethod(null); }}>&times;</button>
+              <div className="payment-wrapper">
+                {/* --- Step 0: เลือกช่องทางชำระเงิน --- */}
+                {selectedPaymentMethod === null && (
+                  <>
+                    <div className="modal-title">โปรดเลือกวิธีการชำระเงิน</div>
+                    <div className="modal-payment">
+                      <button className="modal-action-payment-btn" onClick={() => setSelectedPaymentMethod("promptpay")}>
+                        <Image
+                          className="payment-logo"
+                          src="/PromptPay-logo.png"
+                          alt="PromptPay"
+                          width={160}
+                          height={89}
+                          priority
+                        />
+                      </button>
+                      <button className="modal-action-payment-btn" onClick={() => setSelectedPaymentMethod("visa")}>
+                        <Image
+                          src="/Visa-logo.png"
+                          alt="Visa"
+                          width={160}
+                          height={65}
+                          priority
+                        />
+                      </button>
+                      <button className="modal-action-payment-btn" onClick={() => setSelectedPaymentMethod("unionpay")}>
+                        <Image
+                          src="/UnionPay-logo.png"
+                          alt="UnionPay"
+                          width={160}
+                          height={90}
+                          priority
+                        />
+                      </button>
+                      <button className="modal-action-payment-btn" onClick={() => setSelectedPaymentMethod("mastercard")}>
+                        <Image
+                          src="/Mastercard-logo.png"
+                          alt="Mastercard"
+                          width={140}
+                          height={90}
+                          priority
+                        />
+                      </button>
+                    </div>
+                  </>
+                )}
 
-      {/* Modal : เมนู payment */}
-      {activeModal === "payment" && (
-        <div className="modal-overlay" onClick={() => setActiveModal("none")}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn" onClick={() => setActiveModal("none")}>&times;</button>
-            <div className="modal-title">โปรดเลือกวิธีการชำระเงิน</div>
-            <div className="modal-payment">
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน PromptPay")}>
-                <Image
-                  className="payment-logo"
-                  src="/PromptPay-logo.png"
-                  alt="PromptPay"
-                  width={160}
-                  height={89}
-                  priority
-                />
-              </button>
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน Visa")}>
-                <Image
-                  src="/Visa-logo.png"
-                  alt="Visa"
-                  width={160}
-                  height={65}
-                  priority
-                />
-              </button>
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน UnionPay")}>
-                <Image
-                  src="/UnionPay-logo.png"
-                  alt="UnionPay"
-                  width={160}
-                  height={90}
-                  priority
-                />
-              </button>
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน Mastercard")}>
-                <Image
-                  src="/Mastercard-logo.png"
-                  alt="Mastercard"
-                  width={140}
-                  height={90}
-                  priority
-                />
-              </button>
+                {/* --- Flow A: PromptPay --- */}
+                {selectedPaymentMethod === "promptpay" && (
+                  <>
+                    <div className="payment-title">ชำระเงินด้วย PromptPay</div>
+                    {/* Step 1: แนะนำ */}
+                    {paymentStep === 1 && (
+                      <>
+                        <div className="payment-instruction-list">
+                          <p><Smartphone size={20} color="#f89025" /> 1. เปิดแอปพลิเคชันธนาคารของคุณ</p>
+                          <p><ScanLine size={20} color="#f89025" /> 2. เลือกเมนู "สแกน QR Code"</p>
+                          <p><BanknoteArrowUp size={20} color="#f89025" /> 3. สแกนเพื่อชำระเงินในหน้าถัดไป</p>
+                        </div>
+                        <button className="modal-confirm-btn" onClick={() => setPaymentStep(2)}>
+                          รับทราบ และแสดง QR Code
+                        </button>
+                      </>
+                    )}
+                    {/* Step 2: แสดง QR Code เปล่าๆ */}
+                    {paymentStep === 2 && (
+                      <>
+                        <Image
+                          src="/QR_code-fake.svg"
+                          alt="QR Code"
+                          width={200}
+                          height={200}
+                          priority
+                        />
+                        <p style={{ color: '#475569', fontWeight: 600 }}>กรุณาสแกนภายใน 3:00 นาที</p>
+                      </>
+                    )}
+                  </>
+                )}
+                {/* --- Flow B: บัตรเครดิต (Visa, UnionPay, Mastercard) --- */}
+                {selectedPaymentMethod !== null && selectedPaymentMethod !== "promptpay" && (
+                  <>
+                    <div className="payment-title">
+                      ชำระเงินด้วย {selectedPaymentMethod.toUpperCase()}
+                    </div>
+
+                    {/* Step 1: แนะนำ */}
+                    {paymentStep === 1 && (
+                      <>
+                        <div className="payment-instruction-list">
+                          <p><CreditCard size={20} color="#f89025" /> 1. เตรียมบัตรของคุณให้พร้อม</p>
+                          <p><Nfc size={20} color="#f89025" /> 2. แตะบัตรที่เครื่องรับชำระเงินด้านล่างหน้าจอ</p>
+                          <p><BanknoteArrowUp size={20} color="#f89025" /> 3. รอสัญญาณเสียงเพื่อเสร็จสิ้นรายการ</p>
+                        </div>
+                        <button className="modal-confirm-btn" onClick={() => setPaymentStep(2)}>
+                          ดำเนินการแตะบัตร
+                        </button>
+                      </>
+                    )}
+
+                    {/* Step 2: แอนิเมชันรอแตะบัตร */}
+                    {paymentStep === 2 && (
+                      <>
+                        <div className="nfc-pulse-container">
+                          <div className="nfc-icon-wrapper">
+                            <Nfc size={64} strokeWidth={1.5} />
+                          </div>
+                        </div>
+                        <h3 style={{ color: '#f89025', marginBottom: '5px' }}>กำลังรอการแตะบัตร...</h3>
+                        <p style={{ color: '#64748b', fontSize: '14px' }}>กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง</p>
+                      </>
+                    )}
+                  </>
+                )}
+
+                {/* ปุ่มย้อนกลับ */}
+                {selectedPaymentMethod !== null && (
+                  <button
+                    className="modal-back-btn"
+                    onClick={() => {
+                      if (paymentStep === 2) setPaymentStep(1);
+                      else setSelectedPaymentMethod(null);
+                    }}
+                  >
+                    {paymentStep === 2 ? "ย้อนกลับไปอ่านวิธีใช้" : "เปลี่ยนช่องทางการชำระเงิน"}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
-
-    </div >
+    </div>
   );
 }
