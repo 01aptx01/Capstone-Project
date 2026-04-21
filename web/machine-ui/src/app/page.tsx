@@ -8,101 +8,104 @@ import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLi
 
 // --- Mock Data ---
 const mockProducts: Product[] = [
-  {
-    id: 1,
-    name: "เปามดแดง",
-    desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี",
-    price: 32,
-    image: "/product/img/pao-moddaeng.png"
-  },
-  {
-    id: 2,
-    name: "เปาหมูสับ",
-    desc: "หมูสับไข่เค็ม รสกลมกล่อม",
-    price: 32,
-    image: "/product/img/pao-moosub.png"
-  },
-  {
-    id: 3,
-    name: "เปากุ้ง",
-    desc: "เนื้อกุ้งเด้งเต็มคำ",
-    price: 32,
-    image: "/product/img/pao-shrimp.png"
-  },
-  {
-    id: 4,
-    name: "เปาครีม",
-    desc: "ครีมคัสตาร์ด หอมหวานละมุน",
-    price: 25,
-    image: "/product/img/pao-cream.png"
-  }
+  { id: 1, name: "เปามดแดง", desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี", price: 32, heatingTime: 15, image: "/product/img/pao-moddaeng.png" },
+  { id: 2, name: "เปาหมูสับ", desc: "หมูสับไข่เค็ม รสกลมกล่อม", price: 32, heatingTime: 20, image: "/product/img/pao-moosub.png" },
+  { id: 3, name: "เปากุ้ง", desc: "เนื้อกุ้งเด้งเต็มคำ", price: 32, heatingTime: 15, image: "/product/img/pao-shrimp.png" },
+  { id: 4, name: "เปาครีม", desc: "ครีมคัสตาร์ด หอมหวานละมุน", price: 25, heatingTime: 12, image: "/product/img/pao-cream.png" }
 ];
 
 type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment" | "processing";
 type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
-
-// รายชื่อสเต็ปตอนรอสินค้า
-const PROCESS_STEPS = [
-  "กำลังนำเข้าเตาอุ่น",
-  "กำลังอุ่น",
-  "กำลังเสิร์ฟ",
-  "พร้อมทาน"
-];
-
-const TOTAL_PROCESS_TIME = 40; // เวลาทั้งหมด (วินาที)
+const PROCESS_STEPS = ["กำลังนำเข้าเตาอุ่น", "กำลังอุ่น", "กำลังเสิร์ฟ", "พร้อมทาน"];
 
 export default function VendingPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
-
-  const [activeModal, setActiveModal] = useState<ModalType>("processing");
+  const [activeModal, setActiveModal] = useState<ModalType>("none");
   const [phoneNumber, setPhoneNumber] = useState("");
-
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
 
-  const [processStepIndex, setProcessStepIndex] = useState<number>(0); // 0 ถึง 3
-  const [timeLeft, setTimeLeft] = useState<number>(TOTAL_PROCESS_TIME);
+  // --- Logic ระบบคิว ---
+  const [queue, setQueue] = useState<Product[]>([]); // แถวคิวสินค้า (แตกจากตะกร้า)
+  const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
+
+  const totalHeatingTime = cart.reduce((sum, item) => sum + (item.heatingTime * item.qty), 0);
 
   const simulatePaymentSuccess = () => {
+    // 1. แตกสินค้าในตะกร้าออกมาเป็นคิวทีละลูก (เช่น ซื้อ 2 ลูก จะมี 2 array items)
+    const flatQueue = cart.flatMap(item => Array(item.qty).fill(item));
+    setQueue(flatQueue);
+
+    // 2. คำนวณเวลารวม = เวลาอุ่นทุกชิ้นรวมกัน + นำเข้าเตา (3วิ) + เสิร์ฟ (3วิ)
+    const totalProcessTime = 3 + flatQueue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
+
+    setGlobalTimeLeft(totalProcessTime);
     setActiveModal("processing");
-    setProcessStepIndex(0);
-    setTimeLeft(TOTAL_PROCESS_TIME);
     setCart([]);
   };
 
   // Logic นับถอยหลัง (Timer)
   useEffect(() => {
     let interval: NodeJS.Timeout;
-
-    if (activeModal === "processing" && timeLeft > 0) {
-      // นับถอยหลังทีละ 1 วินาที
-      interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
+    if (activeModal === "processing" && globalTimeLeft > 0) {
+      interval = setInterval(() => setGlobalTimeLeft((prev) => prev - 1), 1000);
     }
-
     return () => clearInterval(interval);
-  }, [activeModal, timeLeft]);
+  }, [activeModal, globalTimeLeft]);
 
-  // จำลองเวลาการอุ่นสินค้า (Timer)
-  useEffect(() => {
-    if (activeModal === "processing") {
-      if (timeLeft > 30) {
-        setProcessStepIndex(0); // วิที่ 15-12: นำเข้าเตาอุ่น
-      } else if (timeLeft > 8) {
-        setProcessStepIndex(1); // วิที่ 11-6: กำลังอุ่น
-      } else if (timeLeft > 0) {
-        setProcessStepIndex(2); // วิที่ 5-1: กำลังเสิร์ฟ
-      } else {
-        setProcessStepIndex(3); // วิที่ 0: พร้อมทาน
+  let currentStep = 0;
+  let currentItemIndex = 0;
+  const totalProcessTime = 3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
+
+  if (globalTimeLeft === 0) {
+    currentStep = 3; // พร้อมทาน
+  } else if (globalTimeLeft <= 3) {
+    currentStep = 2; // กำลังเสิร์ฟ (3 วิสุดท้าย)
+  } else if (globalTimeLeft <= totalProcessTime - 3) {
+    currentStep = 1; // กำลังอุ่น
+    // คำนวณว่าตอนนี้กำลังอุ่นลูกไหนอยู่
+    const elapsedHeating = (totalProcessTime - 3) - globalTimeLeft;
+    let accumulatedTime = 0;
+    for (let i = 0; i < queue.length; i++) {
+      accumulatedTime += queue[i].heatingTime;
+      if (elapsedHeating < accumulatedTime) {
+        currentItemIndex = i;
+        break;
       }
     }
-  }, [timeLeft, activeModal]);
+  } else {
+    currentStep = 0; // นำเข้าเตาอุ่น (3 วิแรก)
+  }
 
-  // คำนวณความกว้างของเส้น Progress (ขึ้นอยู่กับสเต็ปปัจจุบัน)
-  const progressLineWidth = `${(processStepIndex / (PROCESS_STEPS.length - 1)) * 75}%`;
+  const progressLineWidth = `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
+  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-  // --- Modal Handlers ---
+  // --- Handlers ---
+  const handleAddToCart = (product: Product) => {
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.id === product.id);
+      if (existingItem) {
+        return prevCart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...prevCart, { ...product, qty: 1 }];
+    });
+  };
+  const handleIncrease = (productId: number) => {
+    setCart(prevCart => prevCart.map(item => item.id === productId ? { ...item, qty: item.qty + 1 } : item));
+  };
+  const handleDecrease = (productId: number) => {
+    setCart(prevCart => prevCart.map(item => item.id === productId ? { ...item, qty: Math.max(1, item.qty - 1) } : item));
+  };
+  const handleRemove = (productId: number) => {
+    setCart(prevCart => prevCart.filter(item => item.id !== productId));
+  };
+
+  const handleCheckout = () => {
+    // TODO: เรียก API ชำระเงินตรงนี้
+    setActiveModal("payment");
+    // setCart([]);
+  };
+
   const handleOpenNumpad = () => {
     setActiveModal("numpad");
     setPhoneNumber("");
@@ -128,48 +131,10 @@ export default function VendingPage() {
     }
   };
 
-  // ฟังก์ชันจัดฟอร์แมตเบอร์โทรให้ออกมาเป็น XXX-XXXXXXX
   const displayFormattedPhone = () => {
     if (!phoneNumber) return "000-0000000";
     if (phoneNumber.length > 3) return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
     return phoneNumber;
-  };
-
-  // --- Cart Logic ---
-  const handleAddToCart = (product: Product) => { // ใส่ Type : Product
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
-      if (existingItem) {
-        return prevCart.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
-      }
-      return [...prevCart, { ...product, qty: 1 }];
-    });
-  };
-
-  // คำนวณราคารวมทั้งหมด
-  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-
-  // 1. ฟังก์ชันเพิ่มจำนวน
-  const handleIncrease = (productId: number) => {
-    setCart(prevCart => prevCart.map(item => item.id === productId ? { ...item, qty: item.qty + 1 } : item));
-  };
-
-  // 2. ฟังก์ชันลดจำนวน
-  const handleDecrease = (productId: number) => {
-    setCart(prevCart => prevCart.map(item => item.id === productId ? { ...item, qty: Math.max(1, item.qty - 1) } : item));
-  };
-
-  // 3. ฟังก์ชันลบสินค้าออกจากตะกร้า
-  const handleRemove = (productId: number) => {
-    setCart(prevCart => prevCart.filter(item => item.id !== productId));
-  };
-
-  const handleCheckout = () => {
-    alert(`กำลังดำเนินการชำระเงินจำนวน ${totalPrice} บาท`);
-    // TODO: เรียก API ชำระเงินตรงนี้
-
-    setActiveModal("payment");
-    setCart([]);
   };
 
   return (
@@ -195,12 +160,8 @@ export default function VendingPage() {
         <div className="product-container">
           {mockProducts.map((product) => (
             <ProductCard
-              id={product.id}
               key={product.id}
-              name={product.name}
-              desc={product.desc}
-              price={product.price}
-              image={product.image}
+              {...product}
               onAdd={() => handleAddToCart(product)}
             />
           ))}
@@ -215,6 +176,7 @@ export default function VendingPage() {
       {/* ฝั่งขวา: ตะกร้าสินค้า */}
       <CartSidebar
         cart={cart}
+        totalHeatingTime={totalHeatingTime}
         totalPrice={totalPrice}
         onCheckout={handleCheckout}
         onIncrease={handleIncrease}
@@ -460,29 +422,37 @@ export default function VendingPage() {
           {/* Modal 6: หน้าจอรอรับสินค้า (Processing) */}
           {activeModal === "processing" && (
             <div className="processing-modal-box" onClick={(e) => e.stopPropagation()}>
-
               {/* ส่วนหัว */}
-              <div className={`processing-header ${processStepIndex === 3 ? 'success-theme' : ''}`}>
-                <div className="processing-title">
-                  {processStepIndex === 3 ? "ทานให้อร่อยนะครับ!" : "กรุณารอสักครู่..."}
-                </div>
-                <div className="processing-subtitle">
-                  {processStepIndex === 3 ? "🎉 ซาลาเปาของคุณพร้อมแล้ว!" : PROCESS_STEPS[processStepIndex]}
-                </div>
+              <div className={`processing-header ${currentStep === 3 ? 'success-theme' : ''}`}>
+                <div className="processing-title">{currentStep === 3 ? "อร่อยให้อร่อยนะครับ!" : "กรุณารอสักครู่..."}</div>
+                <div className="processing-subtitle">{currentStep === 3 ? "🎉 สินค้าของคุณพร้อมแล้ว!" : PROCESS_STEPS[currentStep]}</div>
               </div>
 
               {/* ส่วนกลาง */}
               <div className="processing-center-area">
-                {processStepIndex < 3 && (
+                {currentStep < 3 && (
                   <div className="countdown-timer">
-                    {timeLeft}
-                    <span className="countdown-label">วินาที</span>
+                    {globalTimeLeft >= 60 ? (
+                      <>{Math.floor(globalTimeLeft / 60)}:{String(globalTimeLeft % 60).padStart(2, '0')}<span className="countdown-label">นาทีที่เหลือ</span></>
+                    ) : (
+                      <>{globalTimeLeft}<span className="countdown-label">วินาทีที่เหลือ</span></>
+                    )}
+
+                    {/* แสดงบอกสถานะคิว */}
+                    {currentStep === 1 && queue.length > 0 && (
+                      <div className="current-queue-status">
+                        ♨️ กำลังอุ่น: {queue[currentItemIndex]?.name}
+                        {queue.length > 1 && (
+                          <div className="queue-counter">ลูกที่ {currentItemIndex + 1} จาก {queue.length}</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div className={`bun-illustration ${processStepIndex === 3 ? 'ready' : ''}`}>
-                    {processStepIndex === 3 ? (
+                  <div className={`bun-illustration ${currentStep === 3 ? 'ready' : ''}`}>
+                    {currentStep === 3 ? (
                       <Image src="/Pao.png" alt="Completed Bun" width={190} height={190} />
                     ) : (
                       <>
@@ -491,17 +461,18 @@ export default function VendingPage() {
                       </>
                     )}
                   </div>
+
                 </div>
               </div>
 
               {/* ส่วนล่าง */}
-              <div className={`processing-bottom-area ${processStepIndex === 3 ? 'success-theme' : ''}`}>
-                {processStepIndex < 3 ? (
+              <div className={`processing-bottom-area ${currentStep === 3 ? 'success-theme' : ''}`}>
+                {currentStep < 3 ? (
                   <div className="stepper-container">
                     <div className="stepper-progress-line" style={{ width: progressLineWidth }}></div>
                     {PROCESS_STEPS.map((stepName, index) => {
-                      const isActive = index === processStepIndex;
-                      const isCompleted = index < processStepIndex;
+                      const isActive = index === currentStep;
+                      const isCompleted = index < currentStep;
                       return (
                         <div key={index} className={`step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
                           <div className="step-circle">
@@ -513,11 +484,7 @@ export default function VendingPage() {
                     })}
                   </div>
                 ) : (
-                  <button
-                    className="modal-confirm-btn"
-                    style={{ fontSize: '24px', padding: '15px 50px' }}
-                    onClick={() => setActiveModal("none")}
-                  >
+                  <button className="modal-confirm-btn" style={{ fontSize: '24px', padding: '15px 50px' }} onClick={() => setActiveModal("none")}>
                     หยิบสินค้าเรียบร้อยแล้ว
                   </button>
                 )}
