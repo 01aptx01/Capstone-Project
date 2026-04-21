@@ -80,4 +80,4 @@ export default function CartSidebar({ cart, totalPrice, onCheckout, onIncrease, 
       </div>
     </div>
   );
-};
+}

@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import ProductCard, { Product } from "../components/ProductCard";
 import CartSidebar, { CartItem } from "../components/CartSidebar";
 import Image from "next/image";
+import Script from "next/script";
 import "./globals.css";
 import { BanknoteArrowUp, CreditCard, Headset, PackageOpen, PhoneCall, SquareDashedMousePointer } from "lucide-react";
 
@@ -42,6 +43,7 @@ type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment";
 
 export default function VendingPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isOmiseLoaded, setIsOmiseLoaded] = useState(false);
 
   const [activeModal, setActiveModal] = useState<ModalType>("none");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -102,14 +104,95 @@ export default function VendingPage() {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
   };
 
-  const handleCheckout = () => {
-    alert(`กำลังดำเนินการชำระเงินจำนวน ${totalPrice} บาท`);
-    // TODO: เรียก API ชำระเงินตรงนี้
-    setCart([]);
+  const handleCheckoutClick = () => {
+    setActiveModal("payment");
+  };
+
+  const processPayment = async (paymentData: { type: 'token' | 'source', id: string, amount: number }) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/buy/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          machine_id: 'MP1-001',
+          cart: cart.map(item => ({ id: item.id, qty: item.qty })),
+          amount: paymentData.amount,
+          payment_type: paymentData.type,
+          payment_id: paymentData.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Payment failed');
+      }
+
+      const result = await response.json();
+      
+      if (paymentData.type === 'source' && result.qr_code) {
+        alert(`Please scan this QR code to pay: ${result.qr_code}`); // Normally you would show this in a modal
+        pollPaymentStatus(result.charge_id);
+      } else {
+        alert('Payment successful!');
+        setCart([]);
+        setActiveModal("none");
+      }
+    } catch (err) {
+      alert('Error processing payment');
+      console.error(err);
+    }
+  };
+
+  const handleOmiseCheckout = (paymentMethod: 'card' | 'promptpay') => {
+    if (typeof window !== 'undefined' && (window as any).OmiseCard) {
+      const OmiseCard = (window as any).OmiseCard;
+      OmiseCard.configure({
+        publicKey: process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY || "pkey_test_xxx",
+        currency: 'THB',
+        frameLabel: 'Vending Machine',
+        submitLabel: 'Pay Now',
+      });
+
+      OmiseCard.open({
+        amount: totalPrice * 100, // Omise requires amount in smallest unit (satang)
+        defaultPaymentMethod: paymentMethod === 'promptpay' ? 'promptpay' : undefined,
+        onCreateTokenSuccess: (nonce: string) => {
+          // nonce can be a token_id (tokn_...) or source_id (src_...)
+          const type = nonce.startsWith('tokn_') ? 'token' : 'source';
+          processPayment({ type, id: nonce, amount: totalPrice * 100 });
+        },
+        onFormClosed: () => {
+          console.log('Payment form closed');
+        },
+      });
+    } else {
+      alert("Payment gateway is still loading. Please try again.");
+    }
+  };
+
+  const pollPaymentStatus = (chargeId: string) => {
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`http://localhost:8000/api/buy/status/${chargeId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === 'PAID') {
+            clearInterval(interval);
+            alert('Payment successful via PromptPay!');
+            setCart([]);
+          }
+        }
+      } catch (e) {
+        console.error('Polling error', e);
+      }
+    }, 2000);
   };
 
   return (
     <div className="vending-app">
+      <Script 
+        src="https://cdn.omise.co/omise.js" 
+        onLoad={() => setIsOmiseLoaded(true)}
+      />
 
       {/* ฝั่งซ้าย: โซนเลือกสินค้า */}
       <div className="main-content">
@@ -152,7 +235,7 @@ export default function VendingPage() {
       <CartSidebar
         cart={cart}
         totalPrice={totalPrice}
-        onCheckout={handleCheckout}
+        onCheckout={handleCheckoutClick}
         onIncrease={handleIncrease}
         onDecrease={handleDecrease}
         onRemove={handleRemove}
@@ -258,7 +341,11 @@ export default function VendingPage() {
             <button className="modal-close-btn" onClick={() => setActiveModal("none")}>&times;</button>
             <div className="modal-title">โปรดเลือกวิธีการชำระเงิน</div>
             <div className="modal-payment">
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน PromptPay")}>
+              <button 
+                className="modal-action-payment-btn" 
+                onClick={() => handleOmiseCheckout('promptpay')}
+                disabled={!isOmiseLoaded}
+              >
                 <Image
                   className="payment-logo"
                   src="/PromptPay-logo.png"
@@ -268,7 +355,11 @@ export default function VendingPage() {
                   priority
                 />
               </button>
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน Visa")}>
+              <button 
+                className="modal-action-payment-btn" 
+                onClick={() => handleOmiseCheckout('card')}
+                disabled={!isOmiseLoaded}
+              >
                 <Image
                   src="/Visa-logo.png"
                   alt="Visa"
@@ -277,7 +368,11 @@ export default function VendingPage() {
                   priority
                 />
               </button>
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน UnionPay")}>
+              <button 
+                className="modal-action-payment-btn" 
+                onClick={() => handleOmiseCheckout('card')}
+                disabled={!isOmiseLoaded}
+              >
                 <Image
                   src="/UnionPay-logo.png"
                   alt="UnionPay"
@@ -286,7 +381,11 @@ export default function VendingPage() {
                   priority
                 />
               </button>
-              <button className="modal-action-payment-btn" onClick={() => alert("กำลังดำเนินการชำระเงินผ่าน Mastercard")}>
+              <button 
+                className="modal-action-payment-btn" 
+                onClick={() => handleOmiseCheckout('card')}
+                disabled={!isOmiseLoaded}
+              >
                 <Image
                   src="/Mastercard-logo.png"
                   alt="Mastercard"
