@@ -6,7 +6,9 @@ import Image from "next/image";
 import "./globals.css";
 import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer } from "lucide-react";
 
-// --- Mock Data ---
+// ==========================================
+// MOCK DATA & TYPES
+// ==========================================
 const mockProducts: Product[] = [
   { id: 1, name: "เปามดแดง", desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี", price: 32, heatingTime: 15, image: "/product/img/pao-moddaeng.png" },
   { id: 2, name: "เปาหมูสับ", desc: "หมูสับไข่เค็ม รสกลมกล่อม", price: 32, heatingTime: 20, image: "/product/img/pao-moosub.png" },
@@ -18,51 +20,80 @@ type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment" | "
 type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
 const PROCESS_STEPS = ["กำลังนำเข้าเตาอุ่น", "กำลังอุ่น", "กำลังเสิร์ฟ", "พร้อมทาน"];
 
+// สไตล์ปุ่ม Test เพื่อลดความซ้ำซ้อนใน JSX
+const testBtnStyle: React.CSSProperties = {
+  padding: '10px', background: '#22c55e', color: 'white', borderRadius: '12px',
+  width: '100%', fontWeight: 'bold', fontSize: '18px', border: 'none', marginTop: '10px', cursor: 'pointer'
+};
+
 export default function VendingPage() {
+  // ==========================================
+  // APPLICATION STATES
+  // ==========================================
+  // -- Cart & General States --
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeModal, setActiveModal] = useState<ModalType>("none");
+
+  // -- User & Payment States --
   const [phoneNumber, setPhoneNumber] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
+  const [isAfterPayment, setIsAfterPayment] = useState(false);
 
-  // --- Logic ระบบคิว ---
+  // -- Queue & Processing States --
   const [queue, setQueue] = useState<Product[]>([]);
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
 
-  // State สำหรับหน้าเช็คคะแนน
-  const [isAfterPayment, setIsAfterPayment] = useState(false);
+  // -- Timers States --
   const [paymentCountdown, setPaymentCountdown] = useState<number>(60);
   const [pointsCountdown, setPointsCountdown] = useState<number>(10);
-  const MOCK_USER_POINTS = 38; // Mockup ข้อมูลคะแนนตามภาพ
 
+  const MOCK_USER_POINTS = 38;
+
+  // ==========================================
+  // DERIVED DATA (คำนวณค่าจาก State อัตโนมัติ)
+  // ==========================================
   const totalHeatingTime = cart.reduce((sum, item) => sum + (item.heatingTime * item.qty), 0);
+  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const totalProcessTime = 3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
 
-  const simulatePaymentSuccess = () => {
-    // 1. เตรียมคิวสินค้าไว้รอ
-    const flatQueue = cart.flatMap(item => Array(item.qty).fill(item));
-    setQueue(flatQueue);
-    setCart([]);
+  // ฟังก์ชันหาว่าตอนนี้อยู่สเต็ปไหนของการอุ่น
+  const getProcessStatus = () => {
+    if (queue.length === 0) return { step: 0, itemIndex: 0 };
+    if (globalTimeLeft === 0) return { step: 3, itemIndex: 0 };
+    if (globalTimeLeft <= 3) return { step: 2, itemIndex: queue.length - 1 };
 
-    // 2. สลับไปหน้ากรอกเบอร์เพื่อสะสมแต้ม
-    setIsAfterPayment(true);
-    setPhoneNumber("");
-    setActiveModal("numpad");
+    const elapsedHeating = (totalProcessTime - 3) - globalTimeLeft;
+    let accumulatedTime = 0;
+
+    for (let i = 0; i < queue.length; i++) {
+      accumulatedTime += queue[i].heatingTime;
+      if (elapsedHeating < accumulatedTime) {
+        return { step: 1, itemIndex: i };
+      }
+    }
+    return { step: 0, itemIndex: 0 };
   };
+  const { step: currentStep, itemIndex: currentItemIndex } = getProcessStatus();
+  const progressLineWidth = `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
 
-  // --- 💡 Timer 1: นับถอยหลังหน้าชำระเงิน (Payment Timeout) ---
+  // ==========================================
+  // TIMERS (useEffect)
+  // ==========================================
+  // Timer: นับถอยหลังการชำระเงิน
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (activeModal === "payment") {
       if (paymentCountdown > 0) {
         timer = setInterval(() => setPaymentCountdown(prev => prev - 1), 1000);
       } else {
-        closePaymentModal(); // หมดเวลา ปิดหน้าจอชำระเงิน
+        closePaymentModal();
       }
     }
     return () => clearInterval(timer);
   }, [activeModal, paymentCountdown]);
 
-  // --- Timer 2: นับถอยหลังหน้าแสดงแต้ม (Points Auto-Close) ---
+  // Timer: นับถอยหลังการโชว์คะแนนสะสม
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (activeModal === "points_result") {
@@ -70,16 +101,16 @@ export default function VendingPage() {
         timer = setInterval(() => setPointsCountdown(prev => prev - 1), 1000);
       } else {
         if (isAfterPayment) {
-          startHeatingProcess(); // ถ้าใช่ ให้ไปหน้าอุ่นสินค้า
+          startHeatingProcess();
         } else {
-          setActiveModal("none"); // ถ้าไม่ใช่ (เช็คแต้มเฉยๆ) ให้ปิดหน้าจอ
+          setActiveModal("none");
         }
       }
     }
     return () => clearInterval(timer);
   }, [activeModal, pointsCountdown, isAfterPayment]);
 
-  // --- Timer 3: นับถอยหลังการอุ่นสินค้า (Global Timer) ---
+  // Timer: นับถอยหลังระบบอุ่นสินค้ารวม
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (activeModal === "processing" && globalTimeLeft > 0) {
@@ -88,34 +119,10 @@ export default function VendingPage() {
     return () => clearInterval(interval);
   }, [activeModal, globalTimeLeft]);
 
-  // --- UI Logic คำนวณ Step การอุ่น (เหมือนเดิม) ---
-  let currentStep = 0;
-  let currentItemIndex = 0;
-  const totalProcessTime = 3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
-  if (globalTimeLeft === 0) {
-    currentStep = 3; // พร้อมทาน
-  } else if (globalTimeLeft <= 3) {
-    currentStep = 2; // กำลังเสิร์ฟ (3 วิสุดท้าย)
-  } else if (globalTimeLeft <= totalProcessTime - 3) {
-    currentStep = 1; // กำลังอุ่น
-    // คำนวณว่าตอนนี้กำลังอุ่นลูกไหนอยู่
-    const elapsedHeating = (totalProcessTime - 3) - globalTimeLeft;
-    let accumulatedTime = 0;
-    for (let i = 0; i < queue.length; i++) {
-      accumulatedTime += queue[i].heatingTime;
-      if (elapsedHeating < accumulatedTime) {
-        currentItemIndex = i;
-        break;
-      }
-    }
-  } else {
-    currentStep = 0; // นำเข้าเตาอุ่น (3 วิแรก)
-  }
-
-  const progressLineWidth = `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
-  const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-
-  // --- Handlers ---
+  // ==========================================
+  // EVENT HANDLERS
+  // ==========================================
+  // Cart Actions
   const handleAddToCart = (product: Product) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item.id === product.id);
@@ -135,25 +142,24 @@ export default function VendingPage() {
     setCart(prevCart => prevCart.filter(item => item.id !== productId));
   };
 
+  // Modal Actions
   const handleCheckout = () => {
     // TODO: เรียก API ชำระเงินตรงนี้
     setPaymentCountdown(180); // 3 นาที
     setActiveModal("payment");
   };
-
   const handleOpenNumpad = () => {
     setIsAfterPayment(false);
     setActiveModal("numpad");
     setPhoneNumber("");
   };
-
   const closePaymentModal = () => {
     setActiveModal("none");
     setSelectedPaymentMethod(null);
     setPaymentStep(1);
   };
 
-  // --- Numpad Logic ---
+  // Phone Handlers
   const handleNumberClick = (num: string) => {
     if (phoneNumber.length < 10) setPhoneNumber(prev => prev + num);
   };
@@ -166,6 +172,21 @@ export default function VendingPage() {
       alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
     }
   };
+  const displayFormattedPhone = () => {
+    if (!phoneNumber) return "xxx-xxxxxxx";
+    if (phoneNumber.length > 3) return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+    return phoneNumber;
+  };
+
+  // Flow Actions
+  const simulatePaymentSuccess = () => {
+    const flatQueue = cart.flatMap(item => Array(item.qty).fill(item));
+    setQueue(flatQueue);
+    setCart([]);
+    setIsAfterPayment(true);
+    setPhoneNumber("");
+    setActiveModal("numpad");
+  };
 
   const startHeatingProcess = () => {
     // คำนวณเวลาและเริ่มหน้าจอ Processing
@@ -175,30 +196,13 @@ export default function VendingPage() {
     setActiveModal("processing");
   };
 
-  const displayFormattedPhone = () => {
-    if (!phoneNumber) return "xxx-xxxxxxx";
-    if (phoneNumber.length > 3) return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
-    return phoneNumber;
-  };
-
   return (
     <div className="vending-app">
 
-      {/* ฝั่งซ้าย: โซนเลือกสินค้า */}
+      {/* --- ฝั่งซ้าย: โซนเลือกสินค้า --- */}
       <div className="main-content">
         <div className="header">
-          <span>
-            M
-            <Image
-              src="/Logo_modpao.png"
-              alt="Logo ModPao"
-              width={70}
-              height={70}
-              className="logo-image"
-              priority
-            />
-            D.PAO
-          </span>
+          <span>M<Image src="/Logo_modpao.png" alt="Logo ModPao" width={70} height={70} className="logo-image" priority />D.PAO</span>
         </div>
 
         <div className="product-container">
@@ -211,13 +215,10 @@ export default function VendingPage() {
           ))}
         </div>
 
-        <div className="device-id">
-          <div className="status-dot"></div>
-          ID:MP1-001
-        </div>
+        <div className="device-id"><div className="status-dot"></div>ID:MP1-001</div>
       </div>
 
-      {/* ฝั่งขวา: ตะกร้าสินค้า */}
+      {/* --- ฝั่งขวา: ตะกร้าสินค้า --- */}
       <CartSidebar
         cart={cart}
         totalHeatingTime={totalHeatingTime}
@@ -229,6 +230,7 @@ export default function VendingPage() {
         onOpenInfo={() => setActiveModal("info")}
       />
 
+      {/* --- OVERLAY & MODALS --- */}
       {activeModal !== "none" && (
         <div className="modal-overlay" onClick={activeModal === "payment" ? closePaymentModal : () => setActiveModal("none")}>
           {/* Modal 1: เมนู Info */}
@@ -272,7 +274,7 @@ export default function VendingPage() {
             </div>
           )}
 
-          {/* Modal 3: Numpad */}
+          {/* Modal 3: Numpad (กรอกเบอร์โทร) */}
           {activeModal === "numpad" && (
             <div className="numpad-modal-box" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close-btn" onClick={() => setActiveModal("none")}>&times;</button>
@@ -306,7 +308,7 @@ export default function VendingPage() {
             </div>
           )}
 
-          {/* Modal: แสดงแต้ม */}
+          {/* Modal 4: Points Result (แสดงคะแนนสะสม) */}
           {activeModal === "points_result" && (
             <div className="points-modal-box" onClick={(e) => e.stopPropagation()}>
               {/* ปุ่มปิดอัตโนมัติพร้อมตัวเลข */}
@@ -325,7 +327,7 @@ export default function VendingPage() {
             </div>
           )}
 
-          {/* Modal 4: Report */}
+          {/* Modal 5: Report (รายงานปัญหา) */}
           {activeModal === "report" && (
             <div className="report-modal-box" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close-btn" onClick={() => setActiveModal("none")}>&times;</button>
@@ -348,7 +350,7 @@ export default function VendingPage() {
             </div>
           )}
 
-          {/* Modal 5 : เมนู payment */}
+          {/* Modal 6 : Payment (ชำระเงิน) */}
           {activeModal === "payment" && (
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
               <button className="timeout-close-btn danger" onClick={closePaymentModal}>
@@ -433,12 +435,7 @@ export default function VendingPage() {
 
                         {/* ปุ่มจำลองชำระเงินสำเร็จ */}
                         {selectedPaymentMethod !== null && (
-                          <button
-                            style={{ padding: '10px', background: '#22c55e', color: 'white', borderRadius: '12px', width: '100%', fontWeight: 'bold', fontSize: '18px', border: 'none' }}
-                            onClick={simulatePaymentSuccess}
-                          >
-                            [Test] จำลองชำระเงินสำเร็จ
-                          </button>
+                          <button style={testBtnStyle} onClick={simulatePaymentSuccess}>[Test] จำลองชำระเงินสำเร็จ</button>
                         )}
                       </>
                     )}
@@ -478,12 +475,7 @@ export default function VendingPage() {
 
                         {/* ปุ่มจำลองชำระเงินสำเร็จ */}
                         {selectedPaymentMethod !== null && (
-                          <button
-                            style={{ padding: '10px', background: '#22c55e', color: 'white', borderRadius: '12px', width: '100%', fontWeight: 'bold', fontSize: '18px', border: 'none' }}
-                            onClick={simulatePaymentSuccess}
-                          >
-                            [Test] จำลองชำระเงินสำเร็จ
-                          </button>
+                          <button style={testBtnStyle} onClick={simulatePaymentSuccess}>[Test] จำลองชำระเงินสำเร็จ</button>
                         )}
                       </>
                     )}
@@ -506,7 +498,7 @@ export default function VendingPage() {
             </div>
           )}
 
-          {/* Modal 6: หน้าจอรอรับสินค้า (Processing) */}
+          {/* Modal 7: Processing (หน้าจอรอรับสินค้า) */}
           {activeModal === "processing" && (
             <div className="processing-modal-box" onClick={(e) => e.stopPropagation()}>
               {/* ส่วนหัว */}
