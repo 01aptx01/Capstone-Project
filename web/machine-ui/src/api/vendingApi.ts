@@ -1,4 +1,10 @@
-export async function buyProduct(productId) {
+export interface VendingResponse {
+  slot: string;
+  status: string;
+  // เติมฟิลด์อื่นๆ ตามที่ API จริงของคุณส่งมา
+}
+
+export const buyProduct = async (productId: number): Promise<VendingResponse> => {
   const res = await fetch("/api/buy", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
