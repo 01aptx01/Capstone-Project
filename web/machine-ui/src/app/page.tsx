@@ -1,10 +1,10 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ProductCard, { Product } from "../components/ProductCard";
 import CartSidebar, { CartItem } from "../components/CartSidebar";
 import Image from "next/image";
 import "./globals.css";
-import { BanknoteArrowUp, CreditCard, Headset, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer } from "lucide-react";
+import { BanknoteArrowUp, Check, CreditCard, Headset, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer } from "lucide-react";
 
 // --- Mock Data ---
 const mockProducts: Product[] = [
@@ -38,17 +38,69 @@ const mockProducts: Product[] = [
   }
 ];
 
-type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment";
+type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment" | "processing";
 type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
+
+// รายชื่อสเต็ปตอนรอสินค้า
+const PROCESS_STEPS = [
+  "กำลังนำเข้าเตาอุ่น",
+  "กำลังอุ่น",
+  "กำลังเสิร์ฟ",
+  "พร้อมทาน"
+];
+
+const TOTAL_PROCESS_TIME = 40; // เวลาทั้งหมด (วินาที)
 
 export default function VendingPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  const [activeModal, setActiveModal] = useState<ModalType>("none");
+  const [activeModal, setActiveModal] = useState<ModalType>("processing");
   const [phoneNumber, setPhoneNumber] = useState("");
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
+
+  const [processStepIndex, setProcessStepIndex] = useState<number>(0); // 0 ถึง 3
+  const [timeLeft, setTimeLeft] = useState<number>(TOTAL_PROCESS_TIME);
+
+  const simulatePaymentSuccess = () => {
+    setActiveModal("processing");
+    setProcessStepIndex(0);
+    setTimeLeft(TOTAL_PROCESS_TIME);
+    setCart([]);
+  };
+
+  // Logic นับถอยหลัง (Timer)
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+
+    if (activeModal === "processing" && timeLeft > 0) {
+      // นับถอยหลังทีละ 1 วินาที
+      interval = setInterval(() => {
+        setTimeLeft((prev) => prev - 1);
+      }, 1000);
+    }
+
+    return () => clearInterval(interval);
+  }, [activeModal, timeLeft]);
+
+  // จำลองเวลาการอุ่นสินค้า (Timer)
+  useEffect(() => {
+    if (activeModal === "processing") {
+      if (timeLeft > 30) {
+        setProcessStepIndex(0); // วิที่ 15-12: นำเข้าเตาอุ่น
+      } else if (timeLeft > 8) {
+        setProcessStepIndex(1); // วิที่ 11-6: กำลังอุ่น
+      } else if (timeLeft > 0) {
+        setProcessStepIndex(2); // วิที่ 5-1: กำลังเสิร์ฟ
+      } else {
+        setProcessStepIndex(3); // วิที่ 0: พร้อมทาน
+      }
+    }
+  }, [timeLeft, activeModal]);
+
+  // คำนวณความกว้างของเส้น Progress (ขึ้นอยู่กับสเต็ปปัจจุบัน)
+  const progressLineWidth = `${(processStepIndex / (PROCESS_STEPS.length - 1)) * 75}%`;
 
   // --- Modal Handlers ---
   const handleOpenNumpad = () => {
@@ -391,9 +443,85 @@ export default function VendingPage() {
                     {paymentStep === 2 ? "ย้อนกลับไปอ่านวิธีใช้" : "เปลี่ยนช่องทางการชำระเงิน"}
                   </button>
                 )}
+
+                {/* ปุ่มจำลองชำระเงินสำเร็จ */}
+                {selectedPaymentMethod !== null && (
+                  <button
+                    style={{ marginTop: '20px', padding: '10px', background: '#22c55e', color: 'white', borderRadius: '8px', width: '100%', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
+                    onClick={simulatePaymentSuccess}
+                  >
+                    [Test] จำลองชำระเงินสำเร็จ
+                  </button>
+                )}
               </div>
             </div>
           )}
+
+          {/* Modal 6: หน้าจอรอรับสินค้า (Processing) */}
+          {activeModal === "processing" && (
+            <div className="processing-modal-box" onClick={(e) => e.stopPropagation()}>
+
+              {/* ส่วนหัว */}
+              <div className="processing-header">
+                <div className="processing-title">กรุณารอสักครู่...</div>
+                <div className="processing-subtitle">
+                  {processStepIndex === 3 ? "🎉 สินค้าของคุณพร้อมแล้ว!" : PROCESS_STEPS[processStepIndex]}
+                </div>
+              </div>
+
+              {/* ส่วนกลาง (แยกเวลา กับ แอนิเมชัน) */}
+              <div className="processing-center-area">
+                {processStepIndex < 3 && (
+                  <div className="countdown-timer">
+                    {timeLeft}
+                    <span className="countdown-label">วินาที</span>
+                  </div>
+                )}
+
+                <div className="bun-illustration">
+                  {processStepIndex === 3 ? (
+                    <Image src="/Pao.png" alt="Completed Bun" width={200} height={200} />
+                  ) : (
+                    <>
+                      <span className="bun-smoke">♨️</span>
+                      <Image src="/Pao.png" alt="Heating Bun" width={160} height={160} />
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* ส่วนล่าง (Progress Bar หรือ ปุ่มหยิบสินค้า) */}
+              <div className="processing-bottom-area">
+                {processStepIndex < 3 ? (
+                  <div className="stepper-container">
+                    <div className="stepper-progress-line" style={{ width: progressLineWidth }}></div>
+                    {PROCESS_STEPS.map((stepName, index) => {
+                      const isActive = index === processStepIndex;
+                      const isCompleted = index < processStepIndex;
+                      return (
+                        <div key={index} className={`step-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}>
+                          <div className="step-circle">
+                            {isCompleted ? <Check size={24} /> : index + 1}
+                          </div>
+                          <div className="step-label">{stepName}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <button
+                    className="modal-confirm-btn"
+                    style={{ fontSize: '24px', padding: '20px' }}
+                    onClick={() => setActiveModal("none")}
+                  >
+                    หยิบสินค้าเรียบร้อยแล้ว
+                  </button>
+                )}
+              </div>
+
+            </div>
+          )}
+
         </div>
       )}
     </div>
