@@ -1,4 +1,11 @@
 /* จำลองพื้นหลังข้างนอกจอ Kiosk เป็นสีดำ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    /* บังคับให้ Padding อยู่ข้างใน ไม่ดันให้กล่องขยาย */
+}
+
 body {
     background-color: #111;
     margin: 0;
@@ -19,6 +26,7 @@ body {
     font-family: var(--font-kanit), sans-serif;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    margin: 0 auto;
 }
 
 /* --- Left Content Area (Products) : พื้นที่ฝั่งซ้ายจะเหลือ 520px --- */
@@ -517,7 +525,13 @@ body {
 
 .modal-confirm-btn:active {
     transform: scale(0.98);
-    box-shadow: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.processing-modal-box .modal-confirm-btn {
+    font-size: 20px;
+    padding: 15px;
+    margin-bottom: 5px;
 }
 
 .modal-back-btn {
@@ -653,7 +667,7 @@ body {
 
 }
 
-/* --- เพิ่มสไตล์เฉพาะสำหรับ Modal วิธีการใช้งาน --- */
+/* --- สไตล์เฉพาะสำหรับ Modal วิธีการใช้งาน --- */
 .usage-modal-box {
     background-color: white;
     border-radius: 24px;
@@ -702,7 +716,7 @@ body {
     text-align: right;
 }
 
-/* ไอคอนสถานะ (เนื่องจากผมไม่สามารถใช้ไฟล์ภาพภายนอกได้ ผมจะใช้เป็นกล่องสี่เหลี่ยม Placeholder เพื่อบอกตำแหน่ง และให้ UI Agent สไตล์ให้ครับ) */
+/* ไอคอนสถานะ */
 .usage-icon-placeholder {
     width: 30px;
     height: 30px;
@@ -891,4 +905,251 @@ body {
     align-items: center;
     gap: 10px;
     box-shadow: 0 4px 10px rgba(248, 144, 37, 0.1);
+}
+
+/* --- หน้าจอรอสินค้า (Processing Modal) --- */
+.processing-modal-box {
+    background-color: #ffffff;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    animation: popIn 0.3s ease-out;
+}
+
+/* --- แถบด้านบน (Header) --- */
+.processing-header {
+    background-color: #FF8800;
+    padding: 20px 40px;
+    box-shadow: 0 4px 15px rgba(255, 136, 0, 0.2);
+}
+
+.processing-title {
+    font-size: 36px;
+    font-weight: 800;
+    color: #ffffff; /* 💡 เปลี่ยนจาก #333 เป็นสีขาว */
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1); /* เพิ่มเงาบางๆ ให้ตัวอักษรลอยขึ้นมา */
+}
+
+.processing-subtitle {
+    font-size: 24px;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    margin-top: 5px;
+}
+
+/* --- พื้นที่ตรงกลาง (Center Area) --- */
+.processing-center-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 70px;
+    width: 100%;
+}
+
+/* ตัวนับเวลา */
+.countdown-timer {
+    font-size: 120px;
+    font-weight: 900;
+    color: #FF8800;
+    line-height: 1;
+    font-family: var(--font-madimi), 'Kanit', sans-serif;
+    text-shadow: 4px 4px 0px #fff7ed;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    font-variant-numeric: tabular-nums;
+    min-width: 160px;
+    text-align: center;
+}
+
+.countdown-label {
+    font-size: 24px;
+    color: #64748b;
+    font-weight: 600;
+    text-shadow: none;
+}
+
+/* แอนิเมชันรูปซาลาเปา */
+.bun-illustration {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: bounce-soft 2s infinite ease-in-out;
+    position: relative;
+    height: 160px;
+}
+
+.bun-illustration img {
+    max-height: 140px !important;
+    width: auto;
+    object-fit: contain;
+}
+
+.bun-smoke {
+    position: absolute;
+    top: -20px;
+    font-size: 40px;
+    animation: float-up 2s infinite ease-in-out;
+    opacity: 0.6;
+}
+
+/* --- แถบด้านล่าง (Bottom Area & Stepper) --- */
+.processing-bottom-area {
+    background-color: #FF8800;
+    padding: 20px 40px 10px 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 120px;
+}
+
+/* --- Progress Stepper --- */
+.stepper-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    position: relative;
+    margin-bottom: 10px;
+    z-index: 1;
+}
+
+/* เส้นคั่นกลาง (Background Line) */
+.stepper-container::before {
+    content: '';
+    position: absolute;
+    top: 22px;
+    left: 12.5%;
+    right: 12.5%;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.3);
+    z-index: -1;
+    border-radius: 2px;
+}
+
+/* เส้นที่วิ่งตามความคืบหน้า (Progress Line) */
+.stepper-progress-line {
+    position: absolute;
+    top: 22px;
+    left: 12.5%;
+    height: 4px;
+    background-color: #ffffff;
+    z-index: -1;
+    transition: width 0.5s ease-in-out;
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+    width: 25%;
+}
+
+.step-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    /* background-color: #e2e8f0;
+    color: #64748b; */
+    background-color: #f17b11;
+    color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 20px;
+    margin-bottom: 12px;
+    border: 3px solid #ff9e33;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+    line-height: 1.2;
+    transition: all 0.3s;
+}
+
+/* สถานะ Active (กำลังทำ) */
+.step-item.active .step-circle {
+    background-color: #ffffff;
+    color: #FF8800;
+    border: none;
+    box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.25), 0 4px 10px rgba(0,0,0,0.1);
+    transform: scale(1.15);
+}
+
+.step-item.active .step-label {
+    color: #e5ebf3;
+    font-weight: 700;
+    font-size: 16px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* สถานะ Completed (เสร็จแล้ว) */
+.step-item.completed .step-circle {
+    background-color: #22c55e;
+    color: #ffffff;
+    border: 3px solid #66e795;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.step-item.completed .step-label {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.processing-bottom-area .modal-confirm-btn {
+    background-color: #ffffff;
+    color: #FF8800;
+    font-size: 24px;
+    font-weight: 800;
+    padding: 15px 50px;
+    margin: 0px 30px;
+    border-radius: 40px;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+@keyframes bounce-soft {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-15px);
+    }
+}
+
+@keyframes float-up {
+    0% {
+        transform: translateY(0) scale(0.8);
+        opacity: 0;
+    }
+
+    50% {
+        transform: translateY(-20px) scale(1.1);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: translateY(-40px) scale(1.2);
+        opacity: 0;
+    }
 }
