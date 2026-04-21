@@ -26,29 +26,60 @@ export default function VendingPage() {
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
 
   // --- Logic ระบบคิว ---
-  const [queue, setQueue] = useState<Product[]>([]); // แถวคิวสินค้า (แตกจากตะกร้า)
+  const [queue, setQueue] = useState<Product[]>([]);
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
 
   // State สำหรับหน้าเช็คคะแนน
+  const [isAfterPayment, setIsAfterPayment] = useState(false);
+  const [paymentCountdown, setPaymentCountdown] = useState<number>(60);
   const [pointsCountdown, setPointsCountdown] = useState<number>(10);
   const MOCK_USER_POINTS = 38; // Mockup ข้อมูลคะแนนตามภาพ
 
   const totalHeatingTime = cart.reduce((sum, item) => sum + (item.heatingTime * item.qty), 0);
 
   const simulatePaymentSuccess = () => {
-    // 1. แตกสินค้าในตะกร้าออกมาเป็นคิวทีละลูก (เช่น ซื้อ 2 ลูก จะมี 2 array items)
+    // 1. เตรียมคิวสินค้าไว้รอ
     const flatQueue = cart.flatMap(item => Array(item.qty).fill(item));
     setQueue(flatQueue);
-
-    // 2. คำนวณเวลารวม = เวลาอุ่นทุกชิ้นรวมกัน + นำเข้าเตา (3วิ) + เสิร์ฟ (3วิ)
-    const totalProcessTime = 3 + flatQueue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
-
-    setGlobalTimeLeft(totalProcessTime);
-    setActiveModal("processing");
     setCart([]);
+
+    // 2. สลับไปหน้ากรอกเบอร์เพื่อสะสมแต้ม
+    setIsAfterPayment(true);
+    setPhoneNumber("");
+    setActiveModal("numpad");
   };
 
-  // Logic นับถอยหลัง (Timer)
+  // --- 💡 Timer 1: นับถอยหลังหน้าชำระเงิน (Payment Timeout) ---
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (activeModal === "payment") {
+      if (paymentCountdown > 0) {
+        timer = setInterval(() => setPaymentCountdown(prev => prev - 1), 1000);
+      } else {
+        closePaymentModal(); // หมดเวลา ปิดหน้าจอชำระเงิน
+      }
+    }
+    return () => clearInterval(timer);
+  }, [activeModal, paymentCountdown]);
+
+  // --- Timer 2: นับถอยหลังหน้าแสดงแต้ม (Points Auto-Close) ---
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (activeModal === "points_result") {
+      if (pointsCountdown > 0) {
+        timer = setInterval(() => setPointsCountdown(prev => prev - 1), 1000);
+      } else {
+        if (isAfterPayment) {
+          startHeatingProcess(); // ถ้าใช่ ให้ไปหน้าอุ่นสินค้า
+        } else {
+          setActiveModal("none"); // ถ้าไม่ใช่ (เช็คแต้มเฉยๆ) ให้ปิดหน้าจอ
+        }
+      }
+    }
+    return () => clearInterval(timer);
+  }, [activeModal, pointsCountdown, isAfterPayment]);
+
+  // --- Timer 3: นับถอยหลังการอุ่นสินค้า (Global Timer) ---
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (activeModal === "processing" && globalTimeLeft > 0) {
@@ -57,23 +88,10 @@ export default function VendingPage() {
     return () => clearInterval(interval);
   }, [activeModal, globalTimeLeft]);
 
-  // Timer (นับถอยหลังแล้วปิดเอง)
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (activeModal === "points_result") {
-      if (pointsCountdown > 0) {
-        timer = setInterval(() => setPointsCountdown((prev) => prev - 1), 1000);
-      } else {
-        setActiveModal("none");
-      }
-    }
-    return () => clearInterval(timer);
-  }, [activeModal, pointsCountdown]);
-
+  // --- UI Logic คำนวณ Step การอุ่น (เหมือนเดิม) ---
   let currentStep = 0;
   let currentItemIndex = 0;
   const totalProcessTime = 3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
-
   if (globalTimeLeft === 0) {
     currentStep = 3; // พร้อมทาน
   } else if (globalTimeLeft <= 3) {
@@ -119,11 +137,12 @@ export default function VendingPage() {
 
   const handleCheckout = () => {
     // TODO: เรียก API ชำระเงินตรงนี้
+    setPaymentCountdown(180); // 3 นาที
     setActiveModal("payment");
-    // setCart([]);
   };
 
   const handleOpenNumpad = () => {
+    setIsAfterPayment(false);
     setActiveModal("numpad");
     setPhoneNumber("");
   };
@@ -146,6 +165,14 @@ export default function VendingPage() {
     } else {
       alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
     }
+  };
+
+  const startHeatingProcess = () => {
+    // คำนวณเวลาและเริ่มหน้าจอ Processing
+    const totalProcessTime = 3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
+    setGlobalTimeLeft(totalProcessTime);
+    setIsAfterPayment(false);
+    setActiveModal("processing");
   };
 
   const displayFormattedPhone = () => {
@@ -249,7 +276,9 @@ export default function VendingPage() {
           {activeModal === "numpad" && (
             <div className="numpad-modal-box" onClick={(e) => e.stopPropagation()}>
               <button className="modal-close-btn" onClick={() => setActiveModal("none")}>&times;</button>
-              <div className="numpad-title">โปรดกรอกหมายเลขโทรศัพท์</div>
+              <div className="numpad-title">
+                {isAfterPayment ? "กรุณากรอกเบอร์เพื่อสะสมแต้ม" : "โปรดกรอกหมายเลขโทรศัพท์"}
+              </div>
               {/* จอแสดงเบอร์โทร */}
               <div className="phone-display" style={{ opacity: phoneNumber ? 1 : 0.6 }}>
                 {displayFormattedPhone()}
@@ -265,26 +294,29 @@ export default function VendingPage() {
                 <button className="numpad-btn" onClick={() => handleNumberClick('0')}>0</button>
                 <button className="numpad-btn action" onClick={handleConfirmPhone}>OK</button>
               </div>
+              {isAfterPayment && (
+                <button
+                  className="modal-back-btn"
+                  onClick={startHeatingProcess}
+                  style={{ textDecoration: 'underline', marginTop: '10px' }}
+                >
+                  ไม่สะสมแต้ม ข้ามไปยังขั้นตอนการอุ่น
+                </button>
+              )}
             </div>
           )}
 
-          {/* 💡 Modal ใหม่: แสดงคะแนนสะสม */}
+          {/* Modal: แสดงแต้ม */}
           {activeModal === "points_result" && (
             <div className="points-modal-box" onClick={(e) => e.stopPropagation()}>
               {/* ปุ่มปิดอัตโนมัติพร้อมตัวเลข */}
-              <button className="points-close-btn" onClick={() => setActiveModal("none")}>
+              <button className="timeout-close-btn" onClick={isAfterPayment ? startHeatingProcess : () => setActiveModal("none")}>
                 <span>{pointsCountdown}</span>
                 <span className="points-close-icon">&times;</span>
               </button>
-
-              <div className="points-title">คุณมีคะแนนทั้งหมด</div>
-
-              <div className="points-value">
-                {MOCK_USER_POINTS}
-              </div>
-
+              <div className="points-title">คะแนนสะสมปัจจุบัน</div>
+              <div className="points-value">{MOCK_USER_POINTS}</div>
               <div className="points-unit">คะแนน</div>
-
               <div className="points-disclaimer">
                 <strong>*คะแนนสามารถนำไปแลกเป็นส่วนลดหรือโปรโมชั่น*</strong>
                 <br />
@@ -319,7 +351,10 @@ export default function VendingPage() {
           {/* Modal 5 : เมนู payment */}
           {activeModal === "payment" && (
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-              <button className="modal-close-btn" onClick={() => { setActiveModal("none"); setSelectedPaymentMethod(null); }}>&times;</button>
+              <button className="timeout-close-btn danger" onClick={closePaymentModal}>
+                <span>{paymentCountdown}</span>
+                <span style={{ fontSize: '28px', lineHeight: 1 }}>&times;</span>
+              </button>
               <div className="payment-wrapper">
                 {/* --- Step 0: เลือกช่องทางชำระเงิน --- */}
                 {selectedPaymentMethod === null && (
@@ -329,10 +364,10 @@ export default function VendingPage() {
                       <button className="modal-action-payment-btn" onClick={() => setSelectedPaymentMethod("promptpay")}>
                         <Image
                           className="payment-logo"
-                          src="/PromptPay-logo.png"
+                          src="/Promptpay-logo.png"
                           alt="PromptPay"
-                          width={160}
-                          height={89}
+                          width={150}
+                          height={85}
                           priority
                         />
                       </button>
@@ -340,7 +375,7 @@ export default function VendingPage() {
                         <Image
                           src="/Visa-logo.png"
                           alt="Visa"
-                          width={160}
+                          width={150}
                           height={65}
                           priority
                         />
@@ -349,8 +384,8 @@ export default function VendingPage() {
                         <Image
                           src="/UnionPay-logo.png"
                           alt="UnionPay"
-                          width={160}
-                          height={90}
+                          width={140}
+                          height={80}
                           priority
                         />
                       </button>
@@ -358,8 +393,8 @@ export default function VendingPage() {
                         <Image
                           src="/Mastercard-logo.png"
                           alt="Mastercard"
-                          width={140}
-                          height={90}
+                          width={110}
+                          height={80}
                           priority
                         />
                       </button>
@@ -395,6 +430,16 @@ export default function VendingPage() {
                           priority
                         />
                         <p style={{ color: '#475569', fontWeight: 600 }}>กรุณาสแกนภายใน 3:00 นาที</p>
+
+                        {/* ปุ่มจำลองชำระเงินสำเร็จ */}
+                        {selectedPaymentMethod !== null && (
+                          <button
+                            style={{ padding: '10px', background: '#22c55e', color: 'white', borderRadius: '12px', width: '100%', fontWeight: 'bold', fontSize: '18px', border: 'none' }}
+                            onClick={simulatePaymentSuccess}
+                          >
+                            [Test] จำลองชำระเงินสำเร็จ
+                          </button>
+                        )}
                       </>
                     )}
                   </>
@@ -430,6 +475,16 @@ export default function VendingPage() {
                         </div>
                         <h3 style={{ color: '#f89025', marginBottom: '5px' }}>กำลังรอการแตะบัตร...</h3>
                         <p style={{ color: '#64748b', fontSize: '14px' }}>กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง</p>
+
+                        {/* ปุ่มจำลองชำระเงินสำเร็จ */}
+                        {selectedPaymentMethod !== null && (
+                          <button
+                            style={{ padding: '10px', background: '#22c55e', color: 'white', borderRadius: '12px', width: '100%', fontWeight: 'bold', fontSize: '18px', border: 'none' }}
+                            onClick={simulatePaymentSuccess}
+                          >
+                            [Test] จำลองชำระเงินสำเร็จ
+                          </button>
+                        )}
                       </>
                     )}
                   </>
@@ -445,16 +500,6 @@ export default function VendingPage() {
                     }}
                   >
                     {paymentStep === 2 ? "ย้อนกลับไปอ่านวิธีใช้" : "เปลี่ยนช่องทางการชำระเงิน"}
-                  </button>
-                )}
-
-                {/* ปุ่มจำลองชำระเงินสำเร็จ */}
-                {selectedPaymentMethod !== null && (
-                  <button
-                    style={{ marginTop: '20px', padding: '10px', background: '#22c55e', color: 'white', borderRadius: '8px', width: '100%', fontWeight: 'bold', border: 'none', cursor: 'pointer' }}
-                    onClick={simulatePaymentSuccess}
-                  >
-                    [Test] จำลองชำระเงินสำเร็จ
                   </button>
                 )}
               </div>

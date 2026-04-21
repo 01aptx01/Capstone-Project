@@ -642,13 +642,11 @@ body {
     color: #444;
     border: none;
     border-radius: 30px;
-    /* ปุ่มโค้งมนแบบแคปซูล */
     font-size: 26px;
-    /* ตัวอักษรใหญ่ชัดเจน */
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
-    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+    box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.2);
     transition: background 0.1s;
 
     display: flex;
@@ -676,13 +674,11 @@ body {
     border-radius: 24px;
     padding: 30px 20px 20px 20px;
     width: 360px;
-    /* ขนาดกะทัดรัดกว่า Popup แรก */
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     display: flex;
     flex-direction: column;
     animation: popIn 0.2s ease-out;
-    /* ใช้ Animation เดียวกัน */
 }
 
 /* หัวข้อ Popup */
@@ -744,7 +740,7 @@ body {
     border-radius: 24px;
     padding: 30px 20px 20px 20px;
     width: 360px;
-    height: 450px;
+    height: 460px;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     display: flex;
@@ -1226,30 +1222,6 @@ body {
 }
 
 /* ปุ่มปิดแบบแคปซูล มีเลขนับถอยหลัง */
-.points-close-btn {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  background-color: white;
-  border: 3px solid #f89025;
-  color: #f89025;
-  border-radius: 30px;
-  padding: 4px 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  font-size: 22px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.points-close-btn:active {
-  transform: scale(0.95);
-  background-color: #fff7ed;
-}
-
 .points-close-icon {
   font-size: 28px;
   line-height: 1;
@@ -1289,4 +1261,56 @@ body {
 .points-disclaimer strong {
   font-weight: 600;
   color: #64748b;
+}
+
+/* --- ปุ่มปิดแบบแคปซูลพร้อมตัวนับเวลา (ใช้ร่วมกันทุก Modal ที่มี Timeout) --- */
+.timeout-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: white;
+  border: 3px solid #f89025;
+  color: #f89025;
+  border-radius: 30px;
+  padding: 4px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.timeout-close-btn:active {
+  transform: scale(0.95);
+  background-color: #fff7ed;
+}
+
+.timeout-close-btn.danger:active {
+  background-color: #fef2f2;
+}
+
+.payment-timeout-timer {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background-color: #fee2e2;
+    color: #ef4444;
+    padding: 8px 15px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 2px solid #fecaca;
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
