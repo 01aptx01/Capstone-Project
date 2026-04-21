@@ -21,5 +21,7 @@
   },
   "menuColor": "default",
   "menuAccent": "subtle",
-  "registries": {}
+  "registries": {},
+  "json.schemaDownload.enable": true,
+  "security.workspace.trust.enabled": true
 }

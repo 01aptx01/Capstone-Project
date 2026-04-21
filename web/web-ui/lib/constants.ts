@@ -81,3 +81,64 @@ export const CATEGORIES: Category[] = [
   { key: "veggie", label: "มังสวิรัติ" },
   { key: "sweet", label: "ไส้หวาน" },
 ];
+
+export interface Coupon {
+  id: number;
+  title: string;
+  description: string;
+  points: number;
+  colorBg: string; // คลาสสีของ Tailwind
+}
+
+export const COUPONS: Coupon[] = [
+  {
+    id: 1,
+    title: "ส่วนลด 10 บาท",
+    description: "เมื่อซื้อซาลาเปาครั้งต่อไปภายใน7วันนับจากวันที่แลก และมียอดสั่งซื้อขั้นต่ำ 50 บาท",
+    points: 40,
+    colorBg: "bg-[#EAB308]", // สีเหลือง
+  },
+  {
+    id: 2,
+    title: "ส่วนลด 30 บาท",
+    description: "เมื่อซื้อซาลาเปาครั้งต่อไปภายใน7วันนับจากวันที่แลก และมียอดสั่งซื้อขั้นต่ำ 100 บาท",
+    points: 100,
+    colorBg: "bg-[#EF4444]", // สีแดง
+  },
+];
+
+export interface OrderHistory {
+  id: string;
+  orderNumber: string;
+  datetime: string;
+  items: string;
+  total: number;
+  status: "pending" | "completed" | "cancelled";
+}
+
+export const ORDER_HISTORY: OrderHistory[] = [
+  {
+    id: "1",
+    orderNumber: "1111",
+    datetime: "2026-04-15 14:30",
+    items: "เปามดแดง x2",
+    total: 50,
+    status: "pending",
+  },
+  {
+    id: "2",
+    orderNumber: "1110",
+    datetime: "2026-04-15 14:30",
+    items: "เปามดแดง x2",
+    total: 50,
+    status: "completed",
+  },
+  {
+    id: "3",
+    orderNumber: "1109",
+    datetime: "2026-04-15 14:30",
+    items: "เปามดแดง x2",
+    total: 50,
+    status: "cancelled",
+  },
+];
