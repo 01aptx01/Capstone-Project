@@ -357,13 +357,16 @@ body {
 }
 
 .total-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
     font-size: 16px;
     font-weight: 600;
     color: #555;
 }
 
 .total-amount {
-    font-size: 24px;
+    font-size: 16px;
     font-weight: 700;
     color: #f47b2a;
 }
@@ -907,6 +910,15 @@ body {
     box-shadow: 0 4px 10px rgba(248, 144, 37, 0.1);
 }
 
+.heating-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b; /* สีเทา Slate-500 ดูสะอาดตา */
+}
+
 /* --- หน้าจอรอสินค้า (Processing Modal) --- */
 .processing-modal-box {
     background-color: #ffffff;
@@ -926,7 +938,7 @@ body {
 /* --- แถบด้านบน (Header) --- */
 .processing-header {
     background-color: #FF8800;
-    padding: 20px 40px;
+    padding: 15px 40px;
     box-shadow: 0 4px 15px rgba(255, 136, 0, 0.2);
 }
 
@@ -952,11 +964,12 @@ body {
     justify-content: center;
     gap: 70px;
     width: 100%;
+    max-height: 200px !important;
 }
 
 /* ตัวนับเวลา */
 .countdown-timer {
-    font-size: 120px;
+    font-size: 105;
     font-weight: 900;
     color: #FF8800;
     line-height: 1;
@@ -985,7 +998,6 @@ body {
     align-items: center;
     animation: bounce-soft 2s infinite ease-in-out;
     position: relative;
-    height: 160px;
 }
 
 .bun-illustration img {
@@ -1138,19 +1150,32 @@ body {
     transition: background-color 0.5s ease;
 }
 
-.take-item-hint {
-    color: #22c55e;
-    font-size: 28px;
-    font-weight: 800;
+/* --- ป้ายบอกสถานะคิวสินค้า (Queue Status) --- */
+.current-queue-status {
+    background-color: #fff7ed;
+    color: #f89025;
+    padding: 12px 25px;
+    border-radius: 20px;
+    font-size: 20px;
+    font-weight: 700;
+    margin-top: 15px;
+    border: 2px solid #fed7aa;
+    box-shadow: 0 4px 10px rgba(248, 144, 37, 0.15);
+    animation: popIn 0.3s ease-out;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    margin-top: 20px;
-    animation: bounce-down 1.5s infinite; /* แอนิเมชันเด้งชี้ลง */
 }
 
-
+.queue-counter {
+    font-size: 16px;
+    color: #ea580c;
+    font-weight: 600;
+    background-color: #ffedd5;
+    padding: 4px 15px;
+    border-radius: 12px;
+    margin-top: 5px;
+}
 
 @keyframes bounce-down {
     0%, 100% { transform: translateY(0); }
