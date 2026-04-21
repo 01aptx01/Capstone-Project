@@ -770,3 +770,13 @@ body {
   gap: 10px;
   box-shadow: 0 4px 10px rgba(248, 144, 37, 0.1);
 }
+
+/* ดักจับ iframe ของ Omise ที่โผล่มาทับหน้าจอ */
+iframe[src*="omise.co"],
+iframe[name^="omise"] {
+  transform: scale(
+    0.65
+  ) !important; /* ย่อขนาดลงเหลือ 75% ปรับเลขนี้เอาตามความเหมาะสม */
+  transform-origin: center center !important;
+  max-height: 100vh !important;
+}
