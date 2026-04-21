@@ -1125,6 +1125,38 @@ body {
     transition: transform 0.1s, box-shadow 0.1s;
 }
 
+/* --- เอฟเฟกต์ซาลาเปาตอนสุกพร้อมเสิร์ฟ --- */
+.bun-illustration.ready img {
+    transform: scale(1.4);
+    filter: drop-shadow(0 15px 30px rgba(255, 136, 0, 0.3));
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: none;
+}
+
+.processing-header,
+.processing-bottom-area {
+    transition: background-color 0.5s ease;
+}
+
+.take-item-hint {
+    color: #22c55e;
+    font-size: 28px;
+    font-weight: 800;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+    animation: bounce-down 1.5s infinite; /* แอนิเมชันเด้งชี้ลง */
+}
+
+
+
+@keyframes bounce-down {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(15px); }
+}
+
 @keyframes bounce-soft {
 
     0%,

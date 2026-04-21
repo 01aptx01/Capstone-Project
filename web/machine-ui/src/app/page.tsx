@@ -4,7 +4,7 @@ import ProductCard, { Product } from "../components/ProductCard";
 import CartSidebar, { CartItem } from "../components/CartSidebar";
 import Image from "next/image";
 import "./globals.css";
-import { BanknoteArrowUp, Check, CreditCard, Headset, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer } from "lucide-react";
+import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer } from "lucide-react";
 
 // --- Mock Data ---
 const mockProducts: Product[] = [
@@ -462,14 +462,16 @@ export default function VendingPage() {
             <div className="processing-modal-box" onClick={(e) => e.stopPropagation()}>
 
               {/* ส่วนหัว */}
-              <div className="processing-header">
-                <div className="processing-title">กรุณารอสักครู่...</div>
+              <div className={`processing-header ${processStepIndex === 3 ? 'success-theme' : ''}`}>
+                <div className="processing-title">
+                  {processStepIndex === 3 ? "ทานให้อร่อยนะครับ!" : "กรุณารอสักครู่..."}
+                </div>
                 <div className="processing-subtitle">
-                  {processStepIndex === 3 ? "🎉 สินค้าของคุณพร้อมแล้ว!" : PROCESS_STEPS[processStepIndex]}
+                  {processStepIndex === 3 ? "🎉 ซาลาเปาของคุณพร้อมแล้ว!" : PROCESS_STEPS[processStepIndex]}
                 </div>
               </div>
 
-              {/* ส่วนกลาง (แยกเวลา กับ แอนิเมชัน) */}
+              {/* ส่วนกลาง */}
               <div className="processing-center-area">
                 {processStepIndex < 3 && (
                   <div className="countdown-timer">
@@ -478,20 +480,22 @@ export default function VendingPage() {
                   </div>
                 )}
 
-                <div className="bun-illustration">
-                  {processStepIndex === 3 ? (
-                    <Image src="/Pao.png" alt="Completed Bun" width={200} height={200} />
-                  ) : (
-                    <>
-                      <span className="bun-smoke">♨️</span>
-                      <Image src="/Pao.png" alt="Heating Bun" width={160} height={160} />
-                    </>
-                  )}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div className={`bun-illustration ${processStepIndex === 3 ? 'ready' : ''}`}>
+                    {processStepIndex === 3 ? (
+                      <Image src="/Pao.png" alt="Completed Bun" width={190} height={190} />
+                    ) : (
+                      <>
+                        <span className="bun-smoke">♨️</span>
+                        <Image src="/Pao.png" alt="Heating Bun" width={160} height={160} />
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* ส่วนล่าง (Progress Bar หรือ ปุ่มหยิบสินค้า) */}
-              <div className="processing-bottom-area">
+              {/* ส่วนล่าง */}
+              <div className={`processing-bottom-area ${processStepIndex === 3 ? 'success-theme' : ''}`}>
                 {processStepIndex < 3 ? (
                   <div className="stepper-container">
                     <div className="stepper-progress-line" style={{ width: progressLineWidth }}></div>
@@ -511,7 +515,7 @@ export default function VendingPage() {
                 ) : (
                   <button
                     className="modal-confirm-btn"
-                    style={{ fontSize: '24px', padding: '20px' }}
+                    style={{ fontSize: '24px', padding: '15px 50px' }}
                     onClick={() => setActiveModal("none")}
                   >
                     หยิบสินค้าเรียบร้อยแล้ว
