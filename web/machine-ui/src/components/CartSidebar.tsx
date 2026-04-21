@@ -1,6 +1,23 @@
+"use client";
 import React from 'react';
+import { Product } from './ProductCard';
+import { ShoppingCart, Trash2, ScanQrCode } from 'lucide-react';
 
-const CartSidebar = ({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo }) => {
+export interface CartItem extends Product {
+  qty: number;
+}
+
+interface Props {
+  cart: CartItem[];
+  totalPrice: number;
+  onCheckout: () => void;
+  onIncrease: (id: number) => void;
+  onDecrease: (id: number) => void;
+  onRemove: (id: number) => void;
+  onOpenInfo: () => void;
+}
+
+export default function CartSidebar({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo }: Props) {
   return (
     <div className="sidebar">
       <button className="info-btn" onClick={onOpenInfo}>i</button>
@@ -8,7 +25,9 @@ const CartSidebar = ({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onR
       <div className="cart-content-area">
         {cart.length === 0 ? (
           <div className="cart-empty-state">
-            <div className="cart-icon material-symbols-outlined">shopping_cart</div>
+            <div className="cart-icon">
+              <ShoppingCart size={50} />
+            </div>
             <div className="cart-empty-text">ตะกร้าว่างๆ</div>
           </div>
         ) : (
@@ -31,7 +50,7 @@ const CartSidebar = ({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onR
                     <button className="btn-qty" onClick={() => onIncrease(item.id)}>+</button>
                   </div>
                   <button className="btn-remove" onClick={() => onRemove(item.id)}>
-                    <span class="material-symbols-outlined">delete</span>
+                    <Trash2 size={20} />
                   </button>
                 </div>
               </div>
@@ -54,7 +73,7 @@ const CartSidebar = ({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onR
           ชำระเงิน
         </button>
         <button className="preorder-btn">
-          <span class="material-symbols-outlined">qr_code</span> สั่งอาหารล่วงหน้า
+          <ScanQrCode size={20} /> สั่งอาหารล่วงหน้า
         </button>
 
         <a href="#" className="contact-link">ติดต่อสอบถามเพิ่มเติม</a>
@@ -62,5 +81,3 @@ const CartSidebar = ({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onR
     </div>
   );
 };
-
-export default CartSidebar;

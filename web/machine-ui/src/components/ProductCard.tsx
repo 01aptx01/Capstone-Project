@@ -1,12 +1,30 @@
+"use client";
 import React from 'react';
+import Image from 'next/image';
 
-const ProductCard = ({ name, desc, price, image, onAdd }) => {
+export interface Product {
+    id: number;
+    name: string;
+    desc: string;
+    price: number;
+    image: string;
+}
+
+interface Props extends Product {
+    onAdd: () => void;
+}
+
+export default function ProductCard({ name, desc, price, image, onAdd }: Props) {
     return (
         <div className="product-card">
             <div className="product-image">
-                <img 
+                <Image 
                     src={image} 
                     alt={name} 
+                    width={110} 
+                    height={110}
+                    style={{ objectFit: 'cover' }}
+                    priority
                 />
             </div>
             <div className="product-title">{name}</div>
@@ -15,6 +33,4 @@ const ProductCard = ({ name, desc, price, image, onAdd }) => {
             <button className="add-btn" onClick={onAdd}>+ เพิ่มลงตะกร้า</button>
         </div>
     );
-};
-
-export default ProductCard;
+}
