@@ -744,7 +744,7 @@ body {
     border-radius: 24px;
     padding: 30px 20px 20px 20px;
     width: 360px;
-    height: 410px;
+    height: 450px;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     display: flex;
@@ -791,8 +791,8 @@ body {
     color: #000;
     border: none;
     border-radius: 50%;
-    width: 65px;
-    height: 65px;
+    width: 62px;
+    height: 62px;
     font-size: 28px;
     font-weight: 700;
     cursor: pointer;
@@ -1209,4 +1209,84 @@ body {
         transform: translateY(-40px) scale(1.2);
         opacity: 0;
     }
+}
+
+/* =========================================
+   หน้าต่างแสดงผลคะแนนสะสม (Points Result Modal)
+   ========================================= */
+.points-modal-box {
+  background-color: white;
+  border-radius: 24px;
+  padding: 50px 40px 40px 40px;
+  width: 500px;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  animation: popIn 0.3s ease-out;
+}
+
+/* ปุ่มปิดแบบแคปซูล มีเลขนับถอยหลัง */
+.points-close-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background-color: white;
+  border: 3px solid #f89025;
+  color: #f89025;
+  border-radius: 30px;
+  padding: 4px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.points-close-btn:active {
+  transform: scale(0.95);
+  background-color: #fff7ed;
+}
+
+.points-close-icon {
+  font-size: 28px;
+  line-height: 1;
+  margin-top: -2px;
+}
+
+.points-title {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-top: 10px;
+}
+
+.points-value {
+  font-size: 130px;
+  font-weight: 900;
+  color: #f89025;
+  line-height: 1;
+  margin: 15px 0 5px 0;
+  text-shadow: 3px 3px 0px #fff7ed;
+}
+
+.points-unit {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 25px;
+}
+
+.points-disclaimer {
+  font-size: 16px;
+  font-weight: 500;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.points-disclaimer strong {
+  font-weight: 600;
+  color: #64748b;
 }
