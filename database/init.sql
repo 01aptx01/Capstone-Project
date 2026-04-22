@@ -14,7 +14,7 @@ CREATE TABLE products (
   price DECIMAL(6,2),
   heating_time INT,
   image_url VARCHAR(200)
-);
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE stock (
   id INT AUTO_INCREMENT PRIMARY KEY,

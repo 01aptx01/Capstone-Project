@@ -1,258 +1,152 @@
 # 🤖 Capstone Project: Smart Vending System
 
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com/)
+
 ระบบจัดการตู้ Vending Machine อัจฉริยะที่ออกแบบมาด้วยสถาปัตยกรรมแบบ **Distributed System** แยกส่วนควบคุม (Agent) และส่วนบริหารจัดการ (Server) ออกจากกันเพื่อความยืดหยุ่นและการขยายตัวในอนาคต
+
+---
+
+## 🌟 Project Vision (วิสัยทัศน์โครงการ)
+
+โปรเจกต์นี้มุ่งเน้นการสร้างระบบตู้ขายสินค้าที่สามารถขยายตัวได้ง่าย (Scalable) โดยใช้หลักการแยกส่วนการทำงาน (Decoupling) ระหว่าง Hardware Control และ Business Logic:
+
+- **Distributed Architecture**: แยก Agent ที่รันบน Edge (Raspberry Pi) ออกจาก Central Server
+- **Real-time Synchronization**: จัดการสต็อกและธุรกรรมแบบ Real-time
+- **Secure Payments**: รองรับการชำระเงินผ่าน Opn (Omise) พร้อมระบบ Webhook
+
+---
 
 ## 🏗️ System Architecture (โครงสร้างระบบ)
 
-โปรเจกต์นี้ทำงานร่วมกันผ่าน 3 Service หลักบน Docker:
+ระบบทำงานร่วมกันผ่าน 4 Service หลักบน Docker Container:
 
 1.  **Server (Backend API)**
-    
-    -   **Stack:** Python (Flask)
-        
-    -   **Port:** `8000` 
-        
-    -   **Role:** ตัวแม่คอยจัดการ Business Logic ทั้งหมด เชื่อมต่อ Database และประสานงานกับส่วนอื่นๆ
-        
+    - **Stack:** Python (Flask)
+    - **Port:** `8000` 
+    - **Role:** ศูนย์กลางจัดการ Business Logic, เชื่อมต่อ Database และประสานงานกับส่วนอื่นๆ
 2.  **Database (MySQL)**
-    
-    -   **Stack:** MySQL 8.0
-        
-    -   **Role:** คลังเก็บข้อมูลสินค้า และสถานะต่างๆ ของระบบ
-        
+    - **Stack:** MySQL 8.0
+    - **Port:** `3307` (External) / `3306` (Internal)
+    - **Role:** เก็บข้อมูลสินค้า, สถานะเครื่อง และบันทึกธุรกรรมทั้งหมด
 3.  **Pi-Agent (Edge Control)**
-    
-    -   **Stack:** Python (Flask)
-        
-    -   **Network:** `host` mode (เพื่อการเชื่อมต่อฮาร์ดแวร์ที่รวดเร็ว)
-        
-    -   **Port:** `5000`
-        
-    -   **Role:** รันบนตัวตู้จริงเพื่อรับคำสั่งจ่ายของ (Dispense) และคอยรายงานสถานะเครื่อง
+    - **Stack:** Python (Flask)
+    - **Port:** `5000`
+    - **Role:** รันบน Raspberry Pi เพื่อควบคุม Hardware (GPIO) และรายงานสถานะเครื่อง
+4.  **Machine UI (Customer Interface)**
+    - **Stack:** Next.js 16, Tailwind CSS 4
+    - **Port:** `3000`
+    - **Role:** หน้าจอสำหรับลูกค้าเลือกซื้อสินค้า รองรับการแสดงผล QR Code สำหรับชำระเงิน
 
-4.  **Web-UI**
-    
-    -   **Stack:** React.js, Node.js, Bootstrap
-    
-    -   **Port:** `3000`
+---
 
-    -   **Role:** ส่วนติดต่อผู้ใช้งาน (User Interface) สำหรับให้ลูกค้าเลือกซื้อสินค้าบนหน้าจอpi และแอดมินสามารถดูสถานะของตู้สินค้าได้บนเว็ป
+## 🛠️ Tech Stack
 
+| Component | Technology |
+| :--- | :--- |
+| **Frontend** | Next.js 16 (App Router), Tailwind CSS 4, Lucide React |
+| **Backend** | Python 3.x, Flask, Flasgger (Swagger) |
+| **Database** | MySQL 8.0 |
+| **Edge Agent** | Flask, GPIO (Production ready) |
+| **Payments** | Opn (Omise) SDK |
+| **DevOps** | Docker, Docker Compose |
+
+---
 
 ## 📂 Project Structure
 
-Plaintext
-
-```
-Capstone-Project-main/
+```text
+Capstone-Project/
 ├── client/
-│   └── agent/
-│       ├── agent.py        # โค้ดควบคุมการจ่ายของ (Edge Logic)
-│       └── Dockerfile      # สภาพแวดล้อมสำหรับรัน Agent
-|
+│   ├── agent/              # Edge Logic (Flask)
+│   └── kiosk/              # Legacy or specific kiosk configs
 ├── server/
-│   ├── main.py             # ศูนย์กลาง API Gateway
-│   ├── requirements.txt    # Library ที่ต้องใช้
-│   └── Dockerfile          # สภาพแวดล้อมสำหรับรัน Server
-|
+│   ├── app/                # Core API Logic
+│   ├── main.py             # Entry point
+│   └── requirements.txt    # Backend Dependencies
 ├── database/
-│   └── init.sql            # ไฟล์ Setup Database เริ่มต้น
-|
+│   └── init.sql            # Database Schema & Initial Data
 ├── web/
-│   └── web-ui/             # โค้ดส่วนหน้าจอ UI (React.js)
-│       ├── src/            # ไฟล์ Source Code หลัก
-│       │   ├── api/        # ส่วนเชื่อมต่อ API กับ Server
-│       │   └── pages/      # หน้าแสดงผลต่างๆ เช่น หน้าตู้ขายสินค้า
-│       └── Dockerfile      # สภาพแวดล้อมสำหรับรัน Web UI
-|
-├── docker-compose.yml      # ไฟล์บงการทุก Service ให้ทำงานร่วมกัน
-├── swagger.yaml            # เอกสารอธิบาย API (API Documentation)
-├── .gitignore              # ป้องกันไฟล์ขยะหลุดขึ้น Repo
-└── .env                    # ไฟล์เก็บ Config สำคัญ (ต้องสร้างเอง)
-
+│   ├── machine-ui/         # Next.js 16 Frontend (Customer UI)
+│   ├── admin-ui/           # Admin Dashboard (WIP)
+│   └── web-ui/             # Legacy React UI
+├── docker-compose.yml      # Service Orchestration
+├── swagger.yaml            # API Documentation
+└── .env                    # Environment Config (Required)
 ```
 
-## 🚀 Getting Started (เริ่มลุยกันเลย)
+---
 
-### 1. สิ่งที่ต้องมีในเครื่อง
+## 🚀 Getting Started
 
--   **Docker & Docker Compose**
-    
+### 1. Prerequisites
+- Docker Desktop installed
+- Git
 
-### 2. การเตรียมตัวก่อนรัน (สำคัญมาก!) 🆕
+### 2. Environment Setup
+สร้างไฟล์ `.env` ไว้ที่ Root Directory และกำหนดค่าดังนี้:
 
-**ก. สร้างไฟล์ `.env`:** เนื่องจากระบบดึงค่าจาก Environment Variable ให้สร้างไฟล์ชื่อ `.env` ไว้ที่ Root Folder แล้วใส่ค่าดังนี้:
-
-ข้อมูลโค้ด
-
-```
+```env
+# Database Configuration
 DB_HOST=db
 DB_USER=root
 DB_PASSWORD=root
 DB_NAME=vending
 
+# Omise Payment Keys (Required for Checkout)
+OMISE_PUBLIC_KEY=pkey_test_...
+OMISE_SECRET_KEY=skey_test_...
+NEXT_PUBLIC_OMISE_PUBLIC_KEY=pkey_test_...
+
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-**ข. ตรวจสอบ Docker Build Path:** ในไฟล์ `docker-compose.yml` ตรวจสอบว่า `pi-agent` ชี้ไปที่ Folder ที่ถูกต้อง:
+### 3. Running the System
+ใช้คำสั่งด้านล่างเพื่อ Build และเริ่มทำงานทุก Service:
 
--   **ต้องเป็น:** `build: ./client/agent`
-    
-
-### 3. คำสั่งรันระบบ
-
-เปิด Terminal ในโฟลเดอร์หลักแล้วจัดไป:
-
-Bash
-
-```
-docker-compose up --build
-
+```bash
+docker compose up --build
 ```
 
-_ระบบจะทำการ Build Image และดึงฐานข้อมูลขึ้นมาให้อัตโนมัติ_
+---
 
-## 🔌 API Documentation & Testing 🆕
+## 🔌 API Reference (Quick Look)
 
-#### 🖥️ Server API (`localhost:8000`)
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Check Server health |
+| `POST` | `/api/buy` | Purchase item & update stock |
+| `GET` | `/dispense/<slot>` | Trigger physical dispensing (Agent Only) |
 
--   **System Health**
-    
-    -   **Method:** `GET`
-        
-    -   **Endpoint:** `/health`
-        
-    -   **Description:** เช็คสถานะการออนไลน์ของ Server
-        
--   **Purchase (ซื้อสินค้า)**
-    
-    -   **Method:** `POST`
-        
-    -   **Endpoint:** `/api/buy`
-        
-    -   **Description:** สั่งซื้อสินค้า ตัดสต็อก และบันทึก Transaction
-        
-    -   **Body (JSON):** `{ "machine_id": 1, "product_id": 1 }`
-        
+> [!TIP]
+> สำหรับรายละเอียด API ทั้งหมด สามารถดูได้ที่ [swagger.yaml](./swagger.yaml) หรือเข้าผ่าน `/apidocs` เมื่อรัน Server แล้ว
 
-#### 🤖 Agent API (`localhost:5000`)
+---
 
--   **Dispense Item**
-    
-    -   **Method:** `GET`
-        
-    -   **Endpoint:** `/dispense/<slot>`
-        
-    -   **Example:** `curl http://localhost:5000/dispense/1`
-        
--   **Agent Health**
-    
-    -   **Method:** `GET`
-        
-    -   **Endpoint:** `/health`
-        
+## 📝 Development Guidelines
 
-## 🛠️ Troubleshooting (แก้ปัญหาแบบตัวตึง)
+### Commit Message Guide
+เราใช้มาตรฐาน **Conventional Commits**:
+- `feat`: เพิ่มฟีเจอร์ใหม่
+- `fix`: แก้ไข Bug
+- `docs`: แก้ไขเอกสาร
+- `style`: ปรับแต่งความสวยงาม/Format (ไม่กระทบ Logic)
+- `refactor`: ปรับปรุงโครงสร้างโค้ด
+- `chore`: งานจุกจิกทั่วไป
 
--   **MySQL เชื่อมต่อไม่ได้:** ตรวจสอบไฟล์ `.env` และดูว่า Container `db` รันสมบูรณ์หรือยัง
-    
--   **Port ชน:** ถ้าเครื่องคุณใช้พอร์ต `8000`, `5000` หรือ `3306` อยู่ ให้ไปเปลี่ยนที่ `ports` ใน `docker-compose.yml`
+### Workflow (ตัวอย่างการซื้อสินค้า)
+1. **Web UI** ส่งคำสั่งซื้อไปที่ **Server**
+2. **Server** ตรวจสอบสต็อกใน **DB** และสร้าง Payment Charge
+3. เมื่อชำระเงินสำเร็จ **Server** ส่งคำสั่งไปที่ **Pi Agent**
+4. **Pi Agent** สั่งจ่ายสินค้าผ่าน GPIO
 
+---
 
-## 📝 Commit Message Guide
+## 🛠️ Troubleshooting
 
-ใช้หลักการ **Conventional Commits** เพื่อความเป็นระเบียบและเป็นมาตรฐานสากล
-
-**Format:** `type(scope): subject`
-
-**หัวข้อ (Type) ที่ควรใช้:**
-
--   **feat:** เพิ่มฟีเจอร์ใหม่ (New Feature)
-    
--   **fix:** แก้บั๊ก (Bug Fix)
-    
--   **docs:** แก้ไขเอกสาร เช่น README (Documentation)
-    
--   **style:** จัด format โค้ด, เติม semicolon (ไม่กระทบ logic)
-    
--   **refactor:** รื้อโค้ด เขียนใหม่ให้ดีขึ้น แต่ผลลัพธ์เหมือนเดิม
-    
--   **chore:** งานจุกจิก เช่น อัปเดต version, แก้ .gitignore
-
-# การทำงานของทั้งหมดแบบย่อ
-เราแบ่งออก 3 ส่วนหลัก คือ
-## web(html+css+javaScript)
-ส่วนนี้เราใช้ react เป็นหลัก ซึ่งเอาไว้เป็นเพียง UI ในการสั่งงาน
-- ไม่แตะ DB เอง
-- ไม่สั่ง GPIO(สั่งงาน pi) โดยตรง
-แค่บอกว่าผู้ใช้กดคำสั้งอะไร เช่น “มีคนกดซื้อแล้วนะ”
-มันจะสั่งงานไปให้ตัว Server ทำงานอีกที
-## Server(py)
-ส่วนนี้เราใช้เป็นสมองหลักในการทำงานเลยเพราะทุกส่วนต้องมาติดต่อตรงนี้ก่อนเป็นตัวจัดการ business logic
-Server ทำหน้าที่:
-- ตัดสินใจ
-- ตรวจสอบ
-- คุม flow
-- บังคับกฎ (business logic)
-เช่น เมื่อ Server ได้ request จาก Web:
-
-``` text
-รับคำสั่งจาก Web
-→ เช็ค DB
-→ ตัด stock
-→ log transaction
-→ ตัดสินใจว่าจะสั่ง Pi หรือไม่
-```
-
-Server เป็นคนเดียวที่:
-- คุยกับ DB
-- คุยกับ Pi
-- รู้สถานะทั้งหมดของระบบ
-
-## DB (MySQL)
-เก็บข้อมูลทั้งหมด ทุกตู้
-
-## Raspberry Pi(py) (Agent)
-ส่วนที่ติดต่อกับ Hardware
-
-Pi:
-- ไม่รู้ราคา
-- ไม่รู้ stock
-- ไม่รู้ user
-
-Pi แค่ทำตามคำสั่ง:
-``` text
-Server (หรือ Web หลัง Server อนุญาต)
-→ /dispense/1
-→ GPIO ทำงาน
-```
-
-Flow ที่ “ถูกต้องตามสถาปัตยกรรม”
-
-กรณีซื้อของ 1 ครั้ง:
-``` pgsql
-1. User กดปุ่ม (Web)
-2. Web → Server : buy
-3. Server → DB : check & update stock
-4. DB → Server : OK
-5. Server → Web : success + slot
-6. Web → Pi Agent : dispense
-```
-
-# การคุยกันข้ามภาษา
-- Web (React) → เขียนด้วย JavaScript
-- Server → เขียนด้วย Python (Flask)
-- Pi Agent → Python
-- DB → MySQL (SQL)
-เราจะคุยกันด้วย __HTTP + JSON__ ผ่าน __HTTP Request / Response__
-
-เช่น การกดซื้อสินค้า
-
-Web -> server -> DB
-``` json
-{
-  "machine_id": 1,
-  "product_id": 1
-}
-```
-server ก็ไปทำ Logic ต่างๆ แล้วส่งให้ DB ไปตัดของใน Database แล้ว server ส่ง respon กลับมา เช่น ``` json { status: "OK", slot: 1 } ```
-
+- **Database Connection Error**: ตรวจสอบให้แน่ใจว่าได้สร้างไฟล์ `.env` และรัน `db` container สำเร็จ (Port 3307)
+- **Payment Failed**: ตรวจสอบ Omise Keys ในไฟล์ `.env` ว่าถูกต้องและยังไม่หมดอายุ
+- **Port Conflict**: หาก Port `3000`, `5000` หรือ `8000` ไม่ว่าง ให้ปรับเปลี่ยนใน `docker-compose.yml`
