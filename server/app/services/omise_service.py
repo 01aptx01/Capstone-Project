@@ -16,10 +16,10 @@ def create_charge(amount: int, payment_type: str, payment_id: str):
     
     if payment_type == "token":
         charge_data["card"] = payment_id
-    elif payment_type == "source":
+    elif payment_type in ["source", "promptpay"]:
         charge_data["source"] = payment_id
         # Usually for webhook return_uri
-        charge_data["return_uri"] = "http://localhost:3000" 
+        charge_data["return_uri"] = os.environ.get("RETURN_URI", "http://localhost:3000")
     
     try:
         charge = omise.Charge.create(**charge_data)
