@@ -147,10 +147,15 @@ export default function VendingPage() {
   };
 
   const processPayment = async (paymentData: { type: 'token' | 'source', id: string, amount: number }) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
     try {
-      const response = await fetch('http://localhost:8000/api/buy/checkout', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/buy/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           machine_id: 'MP1-001',
           cart: cart.map(item => ({ id: item.id, qty: item.qty })),
@@ -160,34 +165,56 @@ export default function VendingPage() {
         })
       });
 
-      if (!response.ok) throw new Error('Payment failed');
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Payment failed: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+      
       const result = await response.json();
 
       if (paymentData.type === 'source' && result.qr_code) {
-        // แทนที่จะใช้ alert ให้เราตั้งค่า QR Code จริง และสลับ UI ไป Step 2
         setRealQrCode(result.qr_code);
         setPaymentStep(2);
         pollPaymentStatus(result.charge_id);
       } else {
-        // หากเป็นการตัดบัตรสำเร็จ จะทำงานส่วนนี้
         handlePaymentSuccess();
       }
-    } catch (err) {
-      alert('Error processing payment. Backend might be down.');
-      console.error(err);
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.error('Payment Error Details:', {
+        message: err.message,
+        name: err.name,
+        stack: err.stack,
+        cause: err.cause
+      });
+
+      if (err.name === 'AbortError') {
+        alert('ระบบเชื่อมต่อล่าช้า กรุณาลองใหม่อีกครั้ง (Request Timeout)');
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${err.message}`);
+      }
+
+      // Safeguard: Reset to home screen to prevent freeze
+      setTimeout(() => {
+        closePaymentModal();
+        setActiveModal("none");
+      }, 3000);
     }
   };
 
   const pollPaymentStatus = (chargeId: string) => {
     if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
 
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`http://localhost:8000/api/buy/status/${chargeId}`);
+        const res = await fetch(`${apiUrl}/api/buy/status/${chargeId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.status === 'PAID') {
-            handlePaymentSuccess(); // จ่ายสำเร็จ ไหลไปหน้าสะสมแต้มอัตโนมัติ
+            handlePaymentSuccess();
           }
         }
       } catch (e) {
@@ -296,32 +323,52 @@ export default function VendingPage() {
   // Flow Actions
   // --- 💡 ฟังก์ชันสร้าง QR Code ทันที (ข้ามหน้าต่าง Omise) ---
   const handleDirectPromptPay = async () => {
-    setPaymentStep(2); // เปลี่ยนไปหน้าจอรอโหลดรูป QR ทันที
+    setPaymentStep(2);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const response = await fetch('http://localhost:8000/api/buy/checkout', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/buy/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           machine_id: 'MP1-001',
           cart: cart.map(item => ({ id: item.id, qty: item.qty })),
           amount: totalPrice * 100,
-          payment_type: 'promptpay' // 💡 ส่งค่าไปบอกหลังบ้านว่าเป็น promptpay
+          payment_type: 'promptpay'
         })
       });
 
-      if (!response.ok) throw new Error('Payment failed');
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`QR Generation failed: ${response.status} - ${errorText}`);
+      }
+
       const result = await response.json();
 
       if (result.qr_code) {
-        setRealQrCode(result.qr_code); // นำรูป QR มาโชว์
+        setRealQrCode(result.qr_code);
         setCurrentChargeId(result.charge_id);
-        pollPaymentStatus(result.charge_id); // เริ่มจับเวลาเช็คสถานะการโอน
+        pollPaymentStatus(result.charge_id);
       }
-    } catch (err) {
-      alert('เกิดข้อผิดพลาดในการสร้าง QR Code');
-      console.error(err);
-      setPaymentStep(1); // ถ้า error ให้ถอยกลับมาหน้าเดิม
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.error('PromptPay Error Details:', err);
+      
+      if (err.name === 'AbortError') {
+        alert('ไม่สามารถสร้าง QR Code ได้ในขณะนี้ (Timeout)');
+      } else {
+        alert('เกิดข้อผิดพลาดในการสร้าง QR Code');
+      }
+
+      setTimeout(() => {
+        closePaymentModal();
+        setActiveModal("none");
+      }, 3000);
     }
   };
   // --- 💡 ฟังก์ชันจำลองการโอนเงิน PromptPay (ยิงไปบอกหลังบ้าน) ---
@@ -329,24 +376,28 @@ export default function VendingPage() {
     if (!currentChargeId) return;
 
     try {
-      await fetch('http://localhost:8000/api/buy/mock-pay', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      await fetch(`${apiUrl}/api/buy/mock-pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ charge_id: currentChargeId }) // ส่ง ID ไปบอกหลังบ้านว่าจ่ายแล้ว
+        body: JSON.stringify({ charge_id: currentChargeId })
       });
-      // 💡 สังเกตว่าเราไม่ต้องสั่ง handlePaymentSuccess() ตรงนี้เลย! 
-      // เพราะเดี๋ยวฟังก์ชัน pollPaymentStatus ที่หมุนอยู่เบื้องหลัง จะเจอสถานะ 'PAID' แล้วทำงานให้เองอัตโนมัติ
     } catch (err) {
-      console.error(err);
-      handlePaymentSuccess(); // Fallback กรณีหลังบ้านพัง
+      console.error('Mock Pay Error:', err);
+      handlePaymentSuccess();
     }
   };
   // --- 💡 ฟังก์ชันจำลองการแตะบัตรที่เครื่องอ่าน NFC ---
   const simulateNfcTap = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     try {
-      const response = await fetch('http://localhost:8000/api/buy/checkout', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/buy/checkout`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           machine_id: 'MP1-001',
           cart: cart.map(item => ({ id: item.id, qty: item.qty })),
@@ -357,15 +408,24 @@ export default function VendingPage() {
         })
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) throw new Error('NFC Payment failed');
       const result = await response.json();
 
       if (result.status === 'successful') {
-        handlePaymentSuccess(); // จ่ายสำเร็จ ไหลไปหน้าสะสมแต้ม
+        handlePaymentSuccess();
       }
-    } catch (err) {
-      console.warn("Backend not ready, falling back to UI simulation.");
-      handlePaymentSuccess();
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      console.error('NFC Error Details:', err);
+      
+      if (err.name === 'AbortError') {
+        alert('เครื่องอ่านบัตรไม่ตอบสนอง (Timeout)');
+      } else {
+        console.warn("Backend not ready, falling back to UI simulation.");
+        handlePaymentSuccess();
+      }
     }
   };
 
