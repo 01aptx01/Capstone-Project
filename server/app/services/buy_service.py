@@ -1,9 +1,13 @@
 import os
 import requests
+import logging
 from app.config.db import get_db
 
+# Configure logger
+logger = logging.getLogger(__name__)
+
 # Hardware Agent URL (configurable via environment variable)
-AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:5001/dispense")
+AGENT_URL = os.environ.get("AGENT_URL", "http://localhost:5000/dispense")
 
 
 def buy_product(machine_id, product_id):
@@ -19,6 +23,7 @@ def buy_product(machine_id, product_id):
         """, (machine_id, product_id))
 
         if cur.rowcount == 0:
+            logger.warning(f"[BuyService] buy_product: No stock for {product_id} at {machine_id}")
             return False
 
         cur.execute("""
@@ -27,11 +32,12 @@ def buy_product(machine_id, product_id):
         """, (machine_id, product_id))
 
         db.commit()
+        logger.info(f"[BuyService] buy_product success: {product_id} at {machine_id}")
         return True
 
     except Exception as e:
         db.rollback()
-        print(f"[BuyService] buy_product error: {e}")
+        logger.error(f"[BuyService] buy_product error: {e}")
         return False
 
     finally:
@@ -55,7 +61,7 @@ def deduct_stock(machine_code, cart_items, charge_id=None):
         machine = cur.fetchone()
 
         if not machine:
-            print(f"[BuyService] Machine not found: {machine_code}")
+            logger.error(f"[BuyService] Machine not found: {machine_code}")
             return False
 
         machine_id = machine["id"]
@@ -72,7 +78,7 @@ def deduct_stock(machine_code, cart_items, charge_id=None):
             """, (qty, machine_id, product_id, qty))
 
             if cur.rowcount == 0:
-                print(f"[BuyService] Insufficient stock for product {product_id}")
+                logger.error(f"[BuyService] Insufficient stock for product {product_id} in machine {machine_id}")
                 db.rollback()
                 return False
 
@@ -83,14 +89,56 @@ def deduct_stock(machine_code, cart_items, charge_id=None):
             """, (machine_id, product_id, qty, charge_id))
 
         db.commit()
-        print(f"[BuyService] Stock deducted successfully for charge {charge_id}")
+        logger.info(f"[BuyService] Stock deducted successfully for charge {charge_id}")
         return True
 
     except Exception as e:
         db.rollback()
-        print(f"[BuyService] deduct_stock error: {e}")
+        logger.error(f"[BuyService] deduct_stock error for charge {charge_id}: {e}")
         return False
 
+    finally:
+        cur.close()
+        db.close()
+
+
+def check_stock(machine_code, cart_items):
+    """
+    Verify if all items in the cart are in stock for the given machine.
+    Returns True if all items are available.
+    """
+    db = get_db()
+    cur = db.cursor(dictionary=True)
+
+    try:
+        cur.execute("SELECT id FROM machines WHERE machine_code = %s", (machine_code,))
+        machine = cur.fetchone()
+        if not machine:
+            logger.error(f"[BuyService] check_stock: Machine {machine_code} not found")
+            return False
+
+        machine_id = machine["id"]
+
+        for item in cart_items:
+            product_id = item["id"]
+            qty = item["qty"]
+
+            cur.execute("""
+                SELECT quantity FROM stock 
+                WHERE machine_id = %s AND product_id = %s
+            """, (machine_id, product_id))
+            
+            stock = cur.fetchone()
+            if not stock or stock["quantity"] < qty:
+                logger.warning(f"[BuyService] check_stock: Product {product_id} is out of stock or low (Needed: {qty})")
+                return False
+
+        logger.info(f"[BuyService] check_stock: All items in stock for machine {machine_code}")
+        return True
+
+    except Exception as e:
+        logger.error(f"[BuyService] check_stock error: {e}")
+        return False
     finally:
         cur.close()
         db.close()
@@ -106,6 +154,8 @@ def notify_hardware_agent(cart_items, machine_code):
         "items": cart_items
     }
 
+    logger.info(f"[BuyService] Notifying hardware agent at {AGENT_URL} with payload: {payload}")
+
     try:
         response = requests.post(
             AGENT_URL,
@@ -114,20 +164,20 @@ def notify_hardware_agent(cart_items, machine_code):
         )
 
         if response.status_code == 200:
-            print(f"[BuyService] Hardware agent acknowledged dispense: {response.json()}")
+            logger.info(f"[BuyService] Hardware agent acknowledged dispense: {response.json()}")
             return True
         else:
-            print(f"[BuyService] Hardware agent returned status {response.status_code}: {response.text}")
+            logger.error(f"[BuyService] Hardware agent returned status {response.status_code}: {response.text}")
             return False
 
     except requests.exceptions.ConnectionError:
-        print(f"[BuyService] Cannot connect to hardware agent at {AGENT_URL}")
+        logger.error(f"[BuyService] Cannot connect to hardware agent at {AGENT_URL}")
         return False
 
     except requests.exceptions.Timeout:
-        print(f"[BuyService] Hardware agent request timed out ({AGENT_URL})")
+        logger.error(f"[BuyService] Hardware agent request timed out ({AGENT_URL})")
         return False
 
     except requests.exceptions.RequestException as e:
-        print(f"[BuyService] Hardware agent request failed: {e}")
+        logger.error(f"[BuyService] Hardware agent request failed: {e}")
         return False

@@ -7,9 +7,27 @@ products_api = Blueprint("products_api", __name__)
 @products_api.route("/api/products", methods=["GET"])
 def get_products():
     """
-    GET /api/products?machine_id=MP1-001
-    Returns available products with stock for the given machine.
-    Defaults to MP1-001 if no machine_id is provided.
+    List available products with stock
+    ---
+    tags:
+      - Inventory
+    parameters:
+      - name: machine_id
+        in: query
+        type: string
+        default: MP1-001
+    responses:
+      200:
+        description: List of products
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id: {type: integer}
+              name: {type: string}
+              price: {type: number}
+              stock: {type: integer}
     """
     machine_code = request.args.get("machine_id", "MP1-001")
 
