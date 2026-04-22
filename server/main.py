@@ -1,13 +1,22 @@
 from flask import Flask, request, send_from_directory
+from flask_cors import CORS
 from flasgger import Swagger
 from app.config.db import get_db
 from app.api.buy import buy_api
+from app.api.products import products_api
 import mysql.connector
 import os
 
 app = Flask(__name__)
+
+# Enable CORS for all routes (allows cross-origin requests from Next.js frontend)
+CORS(app)
+
 swagger = Swagger(app, template_file='swagger.yaml')
+
+# Register API blueprints
 app.register_blueprint(buy_api)
+app.register_blueprint(products_api)
 
 @app.route("/")
 def react_index():

@@ -10,12 +10,13 @@ import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLi
 // ==========================================
 // MOCK DATA & TYPES
 // ==========================================
-const mockProducts: Product[] = [
-  { id: 1, name: "เปามดแดง", desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี", price: 32, heatingTime: 15, image: "/product/img/pao-moddaeng.png" },
-  { id: 2, name: "เปาหมูสับ", desc: "หมูสับไข่เค็ม รสกลมกล่อม", price: 32, heatingTime: 20, image: "/product/img/pao-moosub.png" },
-  { id: 3, name: "เปากุ้ง", desc: "เนื้อกุ้งเด้งเต็มคำ", price: 32, heatingTime: 15, image: "/product/img/pao-shrimp.png" },
-  { id: 4, name: "เปาครีม", desc: "ครีมคัสตาร์ด หอมหวานละมุน", price: 25, heatingTime: 12, image: "/product/img/pao-cream.png" }
-];
+// Products will be fetched from the server
+// const mockProducts: Product[] = [
+//   { id: 1, name: "เปามดแดง", desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี", price: 32, heatingTime: 15, image: "/product/img/pao-moddaeng.png" },
+//   { id: 2, name: "เปาหมูสับ", desc: "หมูสับไข่เค็ม รสกลมกล่อม", price: 32, heatingTime: 20, image: "/product/img/pao-moosub.png" },
+//   { id: 3, name: "เปากุ้ง", desc: "เนื้อกุ้งเด้งเต็มคำ", price: 32, heatingTime: 15, image: "/product/img/pao-shrimp.png" },
+//   { id: 4, name: "เปาครีม", desc: "ครีมคัสตาร์ด หอมหวานละมุน", price: 25, heatingTime: 12, image: "/product/img/pao-cream.png" }
+// ];
 
 type ModalType = "none" | "info" | "usage" | "numpad" | "report" | "payment" | "processing" | "points_result";
 type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
@@ -31,9 +32,10 @@ export default function VendingPage() {
   // ==========================================
   // APPLICATION STATES
   // ==========================================
-  // -- Cart & General States --
+  const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeModal, setActiveModal] = useState<ModalType>("none");
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [phoneNumber, setPhoneNumber] = useState("");
 
   // -- Payment States --
@@ -81,6 +83,37 @@ export default function VendingPage() {
   };
   const { step: currentStep, itemIndex: currentItemIndex } = getProcessStatus();
   const progressLineWidth = `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
+
+  // Fetch Products from Server
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setIsLoadingProducts(true);
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const response = await fetch(`${apiUrl}/api/products?machine_id=MP1-001`);
+        if (!response.ok) throw new Error("Failed to fetch products");
+        
+        const data = await response.json();
+        // Map DB fields to Frontend interface
+        const mappedProducts: Product[] = data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          desc: p.description,
+          price: p.price,
+          heatingTime: p.heating_time,
+          image: p.image_url
+        }));
+        
+        setProducts(mappedProducts);
+      } catch (err) {
+        console.error("Error fetching products:", err);
+      } finally {
+        setIsLoadingProducts(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // ==========================================
   // TIMERS (useEffect)
@@ -447,13 +480,19 @@ export default function VendingPage() {
         </div>
 
         <div className="product-container">
-          {mockProducts.map((product) => (
-            <ProductCard
-              key={product.id}
-              {...product}
-              onAdd={() => handleAddToCart(product)}
-            />
-          ))}
+          {isLoadingProducts ? (
+            <div className="loading-state">กำลังโหลดสินค้า...</div>
+          ) : products.length > 0 ? (
+            products.map((product) => (
+              <ProductCard
+                key={product.id}
+                {...product}
+                onAdd={() => handleAddToCart(product)}
+              />
+            ))
+          ) : (
+            <div className="error-state">ไม่พบสินค้าที่พร้อมจำหน่าย</div>
+          )}
         </div>
 
         <div className="device-id"><div className="status-dot"></div>ID:MP1-001</div>
