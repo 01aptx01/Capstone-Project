@@ -16,6 +16,7 @@ services:
     build: ./server
     volumes:
       - ./web/web-ui/build:/app/web-build
+      - ./swagger.yaml:/app/swagger.yaml
     container_name: vending-server
     env_file:
       - .env
@@ -29,3 +30,15 @@ services:
     container_name: vending-pi
     ports:
       - "5000:5000"
+
+  machine-ui:
+    build:
+      context: ./web/machine-ui
+      args:
+        - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
+        - NEXT_PUBLIC_API_URL=http://localhost:8000
+    container_name: vending-machine-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
