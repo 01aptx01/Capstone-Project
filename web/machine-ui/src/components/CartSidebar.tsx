@@ -1,7 +1,7 @@
 "use client";
 import React from 'react';
 import { Product } from './ProductCard';
-import { ShoppingCart, Trash2, ScanQrCode } from 'lucide-react';
+import { ShoppingCart, Trash2, ScanQrCode, Timer } from 'lucide-react';
 
 export interface CartItem extends Product {
   qty: number;
@@ -10,6 +10,7 @@ export interface CartItem extends Product {
 interface Props {
   cart: CartItem[];
   totalPrice: number;
+  totalHeatingTime: number;
   onCheckout: () => void;
   onIncrease: (id: number) => void;
   onDecrease: (id: number) => void;
@@ -17,7 +18,7 @@ interface Props {
   onOpenInfo: () => void;
 }
 
-export default function CartSidebar({ cart, totalPrice, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo }: Props) {
+export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo }: Props) {
   return (
     <div className="sidebar">
       <button className="info-btn" onClick={onOpenInfo}>i</button>
@@ -60,6 +61,16 @@ export default function CartSidebar({ cart, totalPrice, onCheckout, onIncrease, 
       </div>
 
       <div className="summary-section">
+        {totalHeatingTime > 0 && (
+          <div className="total-row" style={{ borderBottom: 'none', paddingBottom: 0, color: '#f89025' }}>
+            <div className="total-label"><Timer size={20} /> เวลารอประมาณ:</div>
+            <div className="total-amount">
+              {Math.floor(totalHeatingTime / 60) > 0 && `${Math.floor(totalHeatingTime / 60)} นาที `}
+              {totalHeatingTime % 60} วินาที
+            </div>
+          </div>
+        )}
+
         <div className="total-row">
           <div className="total-label">รวมทั้งหมด:</div>
           <div className="total-amount">{totalPrice} ฿</div>
