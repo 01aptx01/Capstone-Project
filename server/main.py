@@ -1,13 +1,23 @@
 from flask import Flask, request, send_from_directory
 from flask_cors import CORS
 from flasgger import Swagger
+from dotenv import load_dotenv
+load_dotenv() # Load variables from .env BEFORE other imports
+
 from app.config.db import get_db
 from app.api.buy import buy_api
 from app.api.products import products_api
+from app.api.health import health_api
 import mysql.connector
 import os
 
 app = Flask(__name__)
+
+# Verify Omise Keys are present
+if not os.environ.get("OMISE_SECRET_KEY"):
+    print("⚠️ WARNING: OMISE_SECRET_KEY is NOT set in environment!")
+else:
+    print(f"✅ Omise Keys Loaded (Secret key ends with ...{os.environ.get('OMISE_SECRET_KEY')[-4:]})")
 
 # Enable CORS for all routes (allows cross-origin requests from Next.js frontend)
 CORS(app)
@@ -17,6 +27,7 @@ swagger = Swagger(app, template_file='swagger.yaml')
 # Register API blueprints
 app.register_blueprint(buy_api)
 app.register_blueprint(products_api)
+app.register_blueprint(health_api)
 
 @app.route("/")
 def react_index():

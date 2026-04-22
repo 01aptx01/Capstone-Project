@@ -1,15 +1,140 @@
 swagger: "2.0"
 info:
   title: "Smart Vending System API"
-  description: "API สำหรับจัดการตู้ Vending Machine อัจฉริยะ"
-  version: "1.0.0"
+  description: "Advanced API for managing a smart vending machine, including payments, inventory, and health monitoring."
+  version: "1.2.0"
 
-Components:
+host: "localhost:8000"
+basePath: "/"
+schemes:
+  - "http"
+
+definitions:
+  Product:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+      name:
+        type: "string"
+      description:
+        type: "string"
+      price:
+        type: "number"
+      stock:
+        type: "integer"
+      image_url:
+        type: "string"
+  
+  CartItem:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+      quantity:
+        type: "integer"
 
 paths:
-  /api/buy:
+  /api/health:
+    get:
+      tags:
+        - "System"
+      summary: "Comprehensive system health check"
+      description: "Checks connectivity to MySQL, Omise API, and Hardware Agent."
+      responses:
+        200:
+          description: "All systems operational"
+        207:
+          description: "One or more systems degraded"
+        500:
+          description: "Internal server error"
+
+  /api/products:
+    get:
+      tags:
+        - "Inventory"
+      summary: "List available products"
+      parameters:
+        - name: "machine_id"
+          in: "query"
+          description: "Specific machine identifier"
+          required: false
+          type: "string"
+          default: "MP1-001"
+      responses:
+        200:
+          description: "List of products"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Product"
+
+  /api/buy/checkout:
     post:
-      summary: "สั่งซื้อสินค้า"
+      tags:
+        - "Payments"
+      summary: "Initiate purchase flow"
+      description: "Validates stock and creates an Omise charge (Token or Source)."
+      parameters:
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            type: "object"
+            required:
+              - "payment_id"
+              - "payment_type"
+              - "amount"
+              - "cart"
+            properties:
+              payment_id:
+                type: "string"
+                example: "tok_test_..."
+              payment_type:
+                type: "string"
+                enum: ["token", "source"]
+              amount:
+                type: "number"
+                example: 1000
+              cart:
+                type: "array"
+                items:
+                  $ref: "#/definitions/CartItem"
+              machine_id:
+                type: "string"
+                example: "MP1-001"
+      responses:
+        200:
+          description: "Charge created successfully (OK or PENDING)"
+        400:
+          description: "Out of stock or payment failure"
+
+  /api/buy/status/{charge_id}:
+    get:
+      tags:
+        - "Payments"
+      summary: "Poll payment status"
+      parameters:
+        - name: "charge_id"
+          in: "path"
+          required: true
+          type: "string"
+      responses:
+        200:
+          description: "Current status of the charge"
+          schema:
+            type: "object"
+            properties:
+              status:
+                type: "string"
+                example: "PAID"
+
+  /api/buy/mock-pay:
+    post:
+      tags:
+        - "Development"
+      summary: "Bypass payment (Dev only)"
+      description: "Forcefully marks a charge as PAID to trigger dispense."
       parameters:
         - in: "body"
           name: "body"
@@ -17,14 +142,18 @@ paths:
           schema:
             type: "object"
             properties:
-              machine_id:
-                type: "integer"
-                example: 1
-              product_id:
-                type: "integer"
-                example: 1
+              charge_id:
+                type: "string"
       responses:
         200:
-          description: "ซื้อสำเร็จ"
-        400:
-          description: "สินค้าหมด"
+          description: "Payment bypassed successfully"
+
+  /api/buy/omise-webhook:
+    post:
+      tags:
+        - "Payments"
+      summary: "Omise Webhook Listener"
+      description: "Handles asynchronous payment confirmations from Omise."
+      responses:
+        200:
+          description: "Webhook processed"

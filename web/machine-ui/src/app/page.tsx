@@ -231,6 +231,7 @@ export default function VendingPage() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      console.log("[Frontend] Initiating processPayment:", paymentData);
       const response = await fetch(`${apiUrl}/api/buy/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -245,15 +246,18 @@ export default function VendingPage() {
       });
 
       clearTimeout(timeoutId);
+      console.log("[Frontend] Backend response status:", response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
+        console.error("[Frontend] Backend error text:", errorText);
         throw new Error(
           `Payment failed: ${response.status} ${response.statusText} - ${errorText}`,
         );
       }
 
       const result = await response.json();
+      console.log("[Frontend] Backend result:", result);
 
       if (paymentData.type === "source" && result.qr_code) {
         setRealQrCode(result.qr_code);
@@ -264,11 +268,9 @@ export default function VendingPage() {
       }
     } catch (err: any) {
       clearTimeout(timeoutId);
-      console.error("Payment Error Details:", {
+      console.error("[Frontend] CRITICAL: Payment Process Failed", {
         message: err.message,
         name: err.name,
-        stack: err.stack,
-        cause: err.cause,
       });
 
       if (err.name === "AbortError") {
@@ -289,48 +291,84 @@ export default function VendingPage() {
     if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    console.log(`[Frontend] Starting poll for charge: ${chargeId}`);
+
     pollingIntervalRef.current = setInterval(async () => {
       try {
         const res = await fetch(`${apiUrl}/api/buy/status/${chargeId}`);
         if (res.ok) {
           const data = await res.json();
+          console.log(`[Frontend] Poll result for ${chargeId}:`, data.status);
           if (data.status === "PAID") {
+            console.log("[Frontend] Payment confirmed via polling!");
             handlePaymentSuccess();
           }
+        } else {
+          console.error(`[Frontend] Poll failed with status: ${res.status}`);
         }
       } catch (e) {
-        console.error("Polling error", e);
+        console.error("[Frontend] Polling exception:", e);
       }
     }, 2000);
   };
 
-  const handleOmiseCheckout = (paymentMethod: "card" | "promptpay") => {
+  const handleOmiseCheckout = (paymentMethod: "card" | "visa" | "mastercard" | "unionpay") => {
     if (typeof window !== "undefined" && (window as any).OmiseCard) {
       const OmiseCard = (window as any).OmiseCard;
       OmiseCard.configure({
-        publicKey: process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY || "pkey_test_xxx",
+        publicKey: process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY,
         currency: "THB",
         frameLabel: "MOD.PAO Vending",
         submitLabel: "ชำระเงิน / Pay Now",
       });
 
       OmiseCard.open({
-        amount: totalPrice * 100, // Omise ใช้หน่วยสตางค์
-        defaultPaymentMethod:
-          paymentMethod === "promptpay" ? "promptpay" : undefined,
+        amount: totalPrice * 100,
         onCreateTokenSuccess: (nonce: string) => {
-          const type = nonce.startsWith("tokn_") ? "token" : "source";
-          processPayment({ type, id: nonce, amount: totalPrice * 100 });
+          // nonce will be 'tokn_xxx' for cards
+          processPayment({ type: "token", id: nonce, amount: totalPrice * 100 });
         },
         onFormClosed: () => {
-          console.log("Payment form closed by user");
+          console.log("Card payment form closed");
         },
       });
     } else {
-      alert("Payment gateway is still loading. Please try again.");
+      alert("Payment gateway (OmiseCard) is still loading...");
     }
   };
 
+  // --- 💡 ฟังก์ชันสร้าง QR Code ทันที (ข้ามหน้าต่าง Omise) ---
+  const handleDirectPromptPay = async () => {
+    if (!(window as any).Omise) {
+      alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      return;
+    }
+
+    const Omise = (window as any).Omise;
+    Omise.setPublicKey(process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY);
+
+    // 1. Create Source ID for PromptPay
+    Omise.createSource(
+      "promptpay",
+      {
+        amount: totalPrice * 100,
+        currency: "THB",
+      },
+      async (statusCode: number, response: any) => {
+        if (statusCode !== 200) {
+          console.error("Omise Source Error:", response);
+          alert("ไม่สามารถสร้างรายการ PromptPay ได้");
+          return;
+        }
+
+        const sourceId = response.id; // src_xxx
+
+        // 2. Send sourceId to Backend
+        setPaymentStep(2);
+        processPayment({ type: "source", id: sourceId, amount: totalPrice * 100 });
+      },
+    );
+  };
   // ==========================================
   // EVENT HANDLERS
   // ==========================================
@@ -368,13 +406,10 @@ export default function VendingPage() {
 
   // Modal Actions
   const handleCheckout = () => {
-    // TODO: เรียก API ชำระเงินตรงนี้
     setSelectedPaymentMethod(null);
     setPaymentStep(1);
     setRealQrCode(null);
     setCurrentChargeId(null);
-
-    // ตั้งเวลาและเปิด Modal
     setPaymentCountdown(180);
     setActiveModal("payment");
   };
@@ -416,70 +451,6 @@ export default function VendingPage() {
   };
 
   // Flow Actions
-  // --- 💡 ฟังก์ชันสร้าง QR Code ทันที (ข้ามหน้าต่าง Omise) ---
-  const handleDirectPromptPay = async () => {
-    if (!(window as any).Omise) {
-      alert("ระบบชำระเงินยังไม่พร้อม");
-      return;
-    }
-
-    const Omise = (window as any).Omise;
-    const publicKey = process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY;
-    Omise.setPublicKey(publicKey);
-
-    // 1. สร้าง Source ID สำหรับ PromptPay ก่อน
-    Omise.createSource(
-      "promptpay",
-      {
-        amount: totalPrice * 100, // จำนวนสตางค์
-        currency: "THB",
-      },
-      async (statusCode: number, response: any) => {
-        if (statusCode !== 200) {
-          console.error("Omise Source Error:", response);
-          alert("ไม่สามารถสร้างรายการชำระเงินได้");
-          return;
-        }
-
-        const sourceId = response.id; // จะได้ค่าเริ่มต้นด้วย src_xxx
-
-        // 2. ส่ง sourceId ที่ได้ไปที่ Backend
-        setPaymentStep(2);
-        try {
-          const apiUrl =
-            process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-          const res = await fetch(`${apiUrl}/api/buy/checkout`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              machine_id: "MP1-001",
-              cart: cart.map((item) => ({ id: item.id, qty: item.qty })),
-              amount: totalPrice * 100,
-              payment_type: "promptpay",
-              payment_id: response.id, // <--- ต้องส่ง ID ที่ได้จาก Omise ไปด้วย!
-            }),
-          });
-
-          if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`Server Error: ${res.status} - ${errorText}`);
-          }
-
-          const result = await res.json();
-          if (result.qr_code) {
-            setRealQrCode(result.qr_code);
-            setCurrentChargeId(result.charge_id);
-            pollPaymentStatus(result.charge_id);
-          }
-        } catch (err: any) {
-          console.error("PromptPay Flow Error:", err);
-          alert("เกิดข้อผิดพลาดในการรับ QR Code");
-          closePaymentModal();
-        }
-      },
-    );
-  };
-  // --- 💡 ฟังก์ชันจำลองการโอนเงิน PromptPay (ยิงไปบอกหลังบ้าน) ---
   const simulatePromptPaySuccess = async () => {
     if (!currentChargeId) return;
 
@@ -497,44 +468,44 @@ export default function VendingPage() {
   };
   // --- 💡 ฟังก์ชันจำลองการแตะบัตรที่เครื่องอ่าน NFC ---
   const simulateNfcTap = async () => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/api/buy/checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          machine_id: "MP1-001",
-          cart: cart.map((item) => ({ id: item.id, qty: item.qty })),
-          amount: totalPrice * 100,
-          payment_type: "nfc_mock",
-          card_brand: selectedPaymentMethod,
-          payment_id: "nfc_token_from_hardware_12345",
-        }),
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) throw new Error("NFC Payment failed");
-      const result = await response.json();
-
-      if (result.status === "successful") {
-        handlePaymentSuccess();
-      }
-    } catch (err: any) {
-      clearTimeout(timeoutId);
-      console.error("NFC Error Details:", err);
-
-      if (err.name === "AbortError") {
-        alert("เครื่องอ่านบัตรไม่ตอบสนอง (Timeout)");
-      } else {
-        console.warn("Backend not ready, falling back to UI simulation.");
-        handlePaymentSuccess();
-      }
+    if (!(window as any).Omise) {
+      alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      return;
     }
+
+    const Omise = (window as any).Omise;
+    Omise.setPublicKey(process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY);
+
+    console.log("[Frontend] Simulating Card Tap: Generating Omise Token...");
+
+    const cardData = {
+      name: "Test Visa Machine",
+      number: "4242424242424242",
+      expiration_month: 12,
+      expiration_year: 2029,
+      security_code: "123",
+    };
+
+    Omise.createToken("card", cardData, async (statusCode: number, response: any) => {
+      if (statusCode === 200) {
+        console.log("[Frontend] Test Token Generated:", response.id);
+        // Step 2: Send token to Backend for real charge execution
+        processPayment({
+          type: "token",
+          id: response.id,
+          amount: totalPrice * 100,
+        });
+      } else {
+        console.error("[Frontend] Omise Tokenization Failed:", response);
+        alert(`Tokenization Error: ${response.message || "Unknown error"}`);
+        
+        // Reset UI on failure
+        setTimeout(() => {
+          closePaymentModal();
+          setActiveModal("none");
+        }, 2000);
+      }
+    });
   };
 
   const startHeatingProcess = () => {
@@ -1025,7 +996,7 @@ export default function VendingPage() {
                           </p>
                           {/* 💡 กดเพื่อจำลองการแตะบัตร NFC */}
                           <button style={testBtnStyle} onClick={simulateNfcTap}>
-                            [Test] จำลองการแตะบัตรสำเร็จ (NFC)
+                            [Test] Simulate Visa Tap (Auto-Token)
                           </button>
                         </>
                       )}
