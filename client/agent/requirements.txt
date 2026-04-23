@@ -1,2 +1,7 @@
+flask
 requests
 python-socketio
+adafruit-blinka
+adafruit-circuitpython-pca9685
+mfrc522
+pygame
