@@ -1,0 +1,13 @@
+[Unit]
+Description=Vending Machine Hardware Agent
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=../capstone-project/client/agent 
+ExecStart=/usr/bin/python3 agent.py (แก้ path ให้ตรงกับpi)
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
