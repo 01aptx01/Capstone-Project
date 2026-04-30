@@ -5,3 +5,6 @@ flasgger
 omise
 requests
 python-dotenv
+Error
+pooling
+mysql.connector
