@@ -12,6 +12,12 @@ services:
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
     ports:
       - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+      start_period: 20s
 
   server:
     build: ./server
@@ -24,7 +30,8 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   client:
     build: ./client/agent
