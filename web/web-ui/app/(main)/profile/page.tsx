@@ -1,3 +1,4 @@
+// app/(main)/profile/page.tsx
 "use client";
 
 import React, { useState } from "react";
@@ -9,33 +10,25 @@ export default function ProfilePage() {
     name: "มดเปา", 
     phone: "066-879-1011",
     points: 150,
-    avatar: "👧" // ค่าเริ่มต้นยังเป็น Emoji หรือจะแก้เป็นลิงก์ /images/default-avatar.png ก็ได้
+    avatar: "👧" 
   });
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // 💡 ตัวแปรจำลองจำนวนคูปอง (ถ้าเชื่อมระบบจริงให้ดึงจาก State/Context ได้เลย)
+  const availableCoupons = 2;
+
   const profileMenus = [
-    // ... เมนูต่างๆ ตามเดิม ...
     { id: "coupons", label: "คูปองของฉัน", href: "/coupons", icon: <div className="text-[#FF8A33]"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5V3H9v2M15 21v-2H9v2M5 9a2 2 0 0 0 2-2V5h10v2a2 2 0 0 0 2 2v6a2 2 0 0 0-2 2v2H7v-2a2 2 0 0 0-2-2V9z"/><line x1="9" y1="12" x2="15" y2="12" strokeDasharray="2 2" /></svg></div> },
     { id: "history", label: "ประวัติการสั่งซื้อทั้งหมด", href: "/history", icon: <div className="text-[#FF8A33]"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div> },
     { id: "help", label: "ศูนย์ความช่วยเหลือ", href: "#", icon: <div className="text-[#FF8A33]"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div> },
   ];
 
-  // ฟังก์ชันเมื่อกดบันทึกใน Modal
   const handleSaveProfile = (newName: string, newAvatar: string, file: File | null) => {
     setUser({ ...user, name: newName, avatar: newAvatar });
     setIsEditModalOpen(false);
-    
-    // TODO: หากต้องการเชื่อมต่อ Backend จริง
-    // ถ้ามีค่า file ให้สร้าง FormData แล้วยิง API อัปโหลดรูปไปที่เซิร์ฟเวอร์
-    // if (file) {
-    //   const formData = new FormData();
-    //   formData.append('avatar', file);
-    //   fetch('/api/upload', { method: 'POST', body: formData })
-    // }
   };
 
-  // ฟังก์ชันช่วยแสดงผล Avatar
   const renderAvatar = (avatarData: string) => {
     if (avatarData.startsWith("blob:") || avatarData.startsWith("http") || avatarData.startsWith("/")) {
       return <img src={avatarData} alt={user.name} className="w-full h-full object-cover" />;
@@ -54,7 +47,7 @@ export default function ProfilePage() {
           <div className="px-6 md:px-10 pb-8">
             <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 -mt-14 md:-mt-16 relative">
               
-              {/* Avatar Display บนหน้าหลัก */}
+              {/* Avatar Display */}
               <div className="w-28 h-28 md:w-32 md:h-32 rounded-[1.5rem] border-4 border-white bg-gray-200 overflow-hidden shrink-0 mx-auto md:mx-0 shadow-sm relative">
                 <div className="w-full h-full bg-[#FFD1A6] flex items-center justify-center">
                   {renderAvatar(user.avatar)}
@@ -100,9 +93,22 @@ export default function ProfilePage() {
                   </div>
                   <span className="font-bold text-gray-700 group-hover:text-[#FF8A33] transition-colors">{menu.label}</span>
                 </div>
-                <div className="text-gray-300 group-hover:text-[#FF8A33] transition-colors">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                
+                {/* 🚨 ส่วนที่แก้ไข: ฝั่งขวามี Badge และลูกศร */}
+                <div className="flex items-center gap-3">
+                  
+                  {/* แสดง Badge ถ้าเป็นเมนูคูปอง และมีจำนวนมากกว่า 0 */}
+                  {menu.id === "coupons" && availableCoupons > 0 && (
+                    <span className="bg-[#FF8A33] text-white text-[13px] md:text-xs font-bold px-4 py-1 rounded-full shadow-sm">
+                      {availableCoupons} พร้อมใช้
+                    </span>
+                  )}
+
+                  <div className="text-gray-300 group-hover:text-[#FF8A33] transition-colors">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </div>
                 </div>
+
               </Link>
             ))}
           </div>
@@ -117,12 +123,11 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Modal แก้ไขโปรไฟล์ */}
       {isEditModalOpen && (
         <EditProfileModal 
           initialName={user.name}
           phone={user.phone}
-          initialAvatar={user.avatar} // ส่ง avatar ปัจจุบันเข้าไปด้วย
+          initialAvatar={user.avatar} 
           onClose={() => setIsEditModalOpen(false)}
           onSave={handleSaveProfile}
         />
