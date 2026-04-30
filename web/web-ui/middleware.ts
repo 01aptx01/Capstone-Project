@@ -1,8 +1,8 @@
-// proxy.ts
+// middleware.ts  ← ต้องชื่อนี้เท่านั้น Next.js ถึงจะอ่านได้
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const token = request.cookies.get("token")?.value
   const isAuthPage = request.nextUrl.pathname.startsWith("/login")
 
@@ -18,5 +18,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|favicon.ico).*)"],
+  matcher: ["/((?!api|_next|favicon.ico|public).*)"],
 }
