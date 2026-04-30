@@ -164,7 +164,6 @@ export default function VendingPage() {
       const result = await response.json();
 
       if (paymentData.type === 'source' && result.qr_code) {
-        // แทนที่จะใช้ alert ให้เราตั้งค่า QR Code จริง และสลับ UI ไป Step 2
         setRealQrCode(result.qr_code);
         setPaymentStep(2);
         pollPaymentStatus(result.charge_id);
@@ -334,8 +333,6 @@ export default function VendingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ charge_id: currentChargeId }) // ส่ง ID ไปบอกหลังบ้านว่าจ่ายแล้ว
       });
-      // 💡 สังเกตว่าเราไม่ต้องสั่ง handlePaymentSuccess() ตรงนี้เลย! 
-      // เพราะเดี๋ยวฟังก์ชัน pollPaymentStatus ที่หมุนอยู่เบื้องหลัง จะเจอสถานะ 'PAID' แล้วทำงานให้เองอัตโนมัติ
     } catch (err) {
       console.error(err);
       handlePaymentSuccess(); // Fallback กรณีหลังบ้านพัง
