@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link"; // 1. นำเข้า Link จาก Next.js เพิ่มตรงนี้
 import { CouponCard } from "@/components/cards/CouponCard";
 import { COUPONS } from "@/lib/constants";
 
@@ -25,8 +26,8 @@ export default function RedeemPage() {
             </div>
           </div>
 
-          {/* Card/Button: คูปองที่สามารถใช้ได้ */}
-          <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex md:flex-col items-center justify-between md:justify-center cursor-pointer hover:bg-orange-50 transition-colors group">
+          {/* Card/Button: คูปองที่สามารถใช้ได้ -> 2. เปลี่ยน div ตรงนี้เป็น Link */}
+          <Link href="/coupons" className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex md:flex-col items-center justify-between md:justify-center cursor-pointer hover:bg-orange-50 transition-colors group">
             <span className="text-gray-800 font-bold md:mb-1 group-hover:text-[#FF8A33] transition-colors">
               คูปองที่สามารถใช้ได้
             </span>
@@ -36,7 +37,7 @@ export default function RedeemPage() {
               {/* Arrow Icon สำหรับ Mobile */}
               <svg className="md:hidden ml-2 text-[#FF8A33]" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* Section: เลือกคูปอง */}
