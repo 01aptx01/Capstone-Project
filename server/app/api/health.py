@@ -1,74 +1,89 @@
-from flask import Blueprint, jsonify
 import os
 import requests
-import mysql.connector
 import omise
+from flask import Blueprint, jsonify
 from app.config.db import get_db
 
-health_api = Blueprint("health_api", __name__)
-
-@health_api.route("/api/health", methods=["GET"])
-def health_check():
-    """
-    System Health Check
-    ---
-    tags:
-      - System
-    responses:
-      200:
-        description: System is healthy
-      207:
-        description: System is degraded
-    """
-    health_status = {
-        "status": "OK",
-        "components": {
-            "mysql": {"status": "UNKNOWN"},
-            "omise": {"status": "UNKNOWN"},
-            "hardware_agent": {"status": "UNKNOWN"}
-        }
-    }
-
-    # 1. Check MySQL
-    try:
-        db = get_db()
-        db.ping(reconnect=True)
-        db.close()
-        health_status["components"]["mysql"]["status"] = "CONNECTED"
-    except Exception as e:
-        health_status["status"] = "DEGRADED"
-        health_status["components"]["mysql"] = {"status": "ERROR", "message": str(e)}
-
-    # 2. Check Omise API
-    try:
-        omise.api_secret = os.environ.get("OMISE_SECRET_KEY")
-        if not omise.api_secret:
-            raise Exception("OMISE_SECRET_KEY not set")
+class HealthController:
+    def __init__(self, db_provider=None):
+        """Initialize Health Controller"""
+        self.get_db = db_provider or get_db
         
-        # Test connectivity by retrieving account info
-        account = omise.Account.retrieve()
-        health_status["components"]["omise"] = {
-            "status": "CONNECTED",
-            "mode": "test" if account.email.endswith("@omise.co") else "live"
-        }
-    except Exception as e:
-        health_status["status"] = "DEGRADED"
-        health_status["components"]["omise"] = {"status": "ERROR", "message": str(e)}
+        # สร้าง Blueprint ภายในคลาส
+        self.blueprint = Blueprint("health_api", __name__)
+        self._register_routes()
 
-    # 3. Check Hardware Agent
-    agent_url = os.environ.get("AGENT_URL", "http://localhost:5000/dispense")
-    # We'll ping the root of the agent if it has a health route, or just check connectivity
-    # For now, let's assume the agent has a root route or we just check if it's reachable
-    try:
-        # Get the base URL from the dispense URL
-        base_agent_url = agent_url.rsplit('/', 1)[0]
-        response = requests.get(base_agent_url, timeout=3)
-        health_status["components"]["hardware_agent"] = {
-            "status": "CONNECTED",
-            "url": base_agent_url
-        }
-    except Exception as e:
-        health_status["status"] = "DEGRADED"
-        health_status["components"]["hardware_agent"] = {"status": "ERROR", "message": str(e)}
+    def _register_routes(self):
+        """ลงทะเบียน Route สำหรับ Health Check"""
+        self.blueprint.add_url_rule(
+            "/api/health", 
+            view_func=self.health_check, 
+            methods=["GET"]
+        )
 
-    return jsonify(health_status), 200 if health_status["status"] == "OK" else 207
+    def _check_mysql(self) -> dict:
+        """ตรวจสอบสถานะการเชื่อมต่อฐานข้อมูล"""
+        try:
+            db = self.get_db()
+            db.ping(reconnect=True)
+            db.close()
+            return {"status": "CONNECTED"}
+        except Exception as e:
+            return {"status": "ERROR", "message": str(e)}
+
+    def _check_omise(self) -> dict:
+        """ตรวจสอบการเชื่อมต่อกับ Omise API"""
+        try:
+            omise.api_secret = os.environ.get("OMISE_SECRET_KEY")
+            if not omise.api_secret:
+                return {"status": "ERROR", "message": "OMISE_SECRET_KEY not set"}
+            
+            # Test connectivity by retrieving account info
+            account = omise.Account.retrieve()
+            return {
+                "status": "CONNECTED",
+                "mode": "test" if account.email.endswith("@omise.co") else "live"
+            }
+        except Exception as e:
+            return {"status": "ERROR", "message": str(e)}
+
+    def _check_hardware_agent(self) -> dict:
+        """ตรวจสอบสถานะของ Hardware Agent"""
+        agent_url = os.environ.get("AGENT_URL", "http://localhost:5000/dispense")
+        try:
+            base_agent_url = agent_url.rsplit('/', 1)[0]
+            response = requests.get(base_agent_url, timeout=3)
+            return {
+                "status": "CONNECTED",
+                "url": base_agent_url
+            }
+        except Exception as e:
+            return {"status": "ERROR", "message": str(e)}
+
+    def health_check(self):
+        """System Health Check"""
+        # รวบรวมผลการตรวจสอบจาก Private Methods
+        components = {
+            "mysql": self._check_mysql(),
+            "omise": self._check_omise(),
+            "hardware_agent": self._check_hardware_agent()
+        }
+
+        # ตรวจสอบว่ามี Component ไหนที่ Error หรือไม่
+        is_degraded = any(comp.get("status") == "ERROR" for comp in components.values())
+
+        health_status = {
+            "status": "DEGRADED" if is_degraded else "OK",
+            "components": components
+        }
+
+        # ถ้ามีระบบใดระบบหนึ่งร่วง ให้ตอบ 207 (Multi-Status / Degraded)
+        status_code = 207 if is_degraded else 200
+        return jsonify(health_status), status_code
+
+
+# =============================================
+# สร้าง Instance และนำ Blueprint ไปใช้งาน
+# =============================================
+health_controller = HealthController()
+health_api = health_controller.blueprint
