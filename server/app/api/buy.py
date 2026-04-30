@@ -1,8 +1,8 @@
 import json
 import logging
 from flask import Blueprint, request, jsonify
-from app.services.payment_service import OmisePaymentService
-from app.services.inventory_service import InventoryService
+from app.services.omise_service import OmisePaymentService
+from app.services.buy_service import InventoryService
 from app.services.hardware_service import HardwareAgentService
 
 # Configure logger
