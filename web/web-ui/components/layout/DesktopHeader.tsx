@@ -6,7 +6,7 @@ import { COLORS } from "@/lib/constants";
 export function DesktopHeader() {
   return (
     <header
-      className="hidden md:flex items-center justify-between px-6 h-64px gap-6 border-b border-orange-400"
+      className="hidden md:flex items-center justify-between px-6 h-84px gap-6 border-b border-orange-400"
       style={{ backgroundColor: COLORS.primary }}
     >
       {/* Logo */}

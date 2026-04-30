@@ -11,14 +11,14 @@ interface BaoImageProps {
 // Map category และ name ไปยังรูปภาพ
 const BAO_IMAGES: Record<string, string> = {
   // Pork category
-  "เปามดแดง": "@/web/web-ui/public/bao/เปามดแดง.jpg",
-  "เปาหมูสับ": "/resources/bao/bao-pork-mince.png",
-  "เปาไก่เห็ด": "/resources/bao/bao-chicken-mushroom.png",
+  "เปามดแดง": "/bao/pao-cream.png",
+  "เปาหมูสับ": "/bao/pao-moddaeng.png",
+  "เปาไก่เห็ด": "/bao/pao-moosub.png",
 
   // Veggie category
-  "เปาบัวแดง": "/resources/bao/bao-red-bean.png",
-  "เปาเต้าหู้": "/resources/bao/bao-tofu.png",
-  "เปามันแกว": "/resources/bao/bao-sweet-potato.png",
+  "เปาบัวแดง": "/bao/pao-moosub.png",
+  "เปาเต้าหู้": "/bao/pao-shrimp.png",
+  "เปามันแกว": "/bao/pao-cream.png",
 };
 
 /**

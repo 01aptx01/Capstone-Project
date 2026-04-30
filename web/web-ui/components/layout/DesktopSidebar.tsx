@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link"; // นำเข้า Link จาก Next.js
 import { IconHome, IconRedeem, IconHistory, IconProfile, IconLogout } from "@/components/icons";
 import { COLORS } from "@/lib/constants";
 
@@ -8,11 +9,12 @@ interface DesktopSidebarProps {
 }
 
 export function DesktopSidebar({ active }: DesktopSidebarProps) {
+  // เพิ่ม href สำหรับกำหนด path ที่จะไปเมื่อกดเมนู
   const items = [
-    { key: "home", label: "หน้าหลัก / สั่งซื้อ", icon: <IconHome /> },
-    { key: "redeem", label: "แลกรางวัล", icon: <IconRedeem /> },
-    { key: "history", label: "ประวัติการสั่งซื้อ", icon: <IconHistory /> },
-    { key: "profile", label: "ข้อมูลโปรไฟล์", icon: <IconProfile /> },
+    { key: "home", href: "/home", label: "หน้าแรก", icon: <IconHome /> },
+    { key: "redeem", href: "/redeem", label: "แลกรางวัล", icon: <IconRedeem /> },
+    { key: "history", href: "/history", label: "ประวัติการสั่งซื้อ", icon: <IconHistory /> },
+    { key: "profile", href: "/profile", label: "ข้อมูลโปรไฟล์", icon: <IconProfile /> },
   ];
 
   return (
@@ -26,8 +28,10 @@ export function DesktopSidebar({ active }: DesktopSidebarProps) {
         {items.map((item) => {
           const isActive = item.key === active;
           return (
-            <button
+            // เปลี่ยนจาก button เป็น Link และใส่ href
+            <Link
               key={item.key}
+              href={item.href}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
               style={
                 isActive
@@ -37,12 +41,13 @@ export function DesktopSidebar({ active }: DesktopSidebarProps) {
             >
               <span style={{ color: isActive ? COLORS.accent : COLORS.gray }}>{item.icon}</span>
               {item.label}
-            </button>
+            </Link>
           );
         })}
       </nav>
       <div className="px-3">
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium" style={{ color: COLORS.accent }}>
+        {/* ปุ่มออกจากระบบยังคงเป็น button เพราะมักจะใช้ผูกกับฟังก์ชัน onClick เพื่อลบ session */}
+        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors" style={{ color: "#FF5A5A" }}>
           <IconLogout />
           ออกจากระบบ
         </button>

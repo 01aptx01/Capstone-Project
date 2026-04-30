@@ -1,63 +1,112 @@
-// app/(auth)/login/page.tsx
-"use client"
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+"use client";
+
+import { useState } from "react";
+import { IconHome, IconRedeem, IconHistory, IconProfile, IconLogout } from "@/components/icons";
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [remember, setRemember] = useState(false)
-
-  const handleLogin = async () => {
-    // TODO: เชื่อม API จริง
-    // const res = await fetch("/api/auth/login", { ... })
-    document.cookie = "token=mock-token; path=/"
-    router.push("/home")
-  }
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState(1); // 1: ขอ OTP, 2: ยืนยัน OTP
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white px-8">
-      <img src="/images/logo.png" alt="MOD PAO" className="w-24 h-24 mb-2" />
-      <h1 className="text-2xl font-bold mb-6">MOD PAO</h1>
-
-      <div className="w-full max-w-sm space-y-4">
-        <div>
-          <label className="text-sm text-gray-500">email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 mt-1"
-          />
-        </div>
-        <div>
-          <label className="text-sm text-gray-500">password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 mt-1"
-          />
+    // คอนเทนเนอร์หลัก: จัดกึ่งกลางเต็มหน้าจอ พร้อมพื้นหลังสีส้มอ่อนแบบไล่เฉด
+    <div className="min-h-screen bg-gradient-to-b from-[#FFF3E8] to-white flex flex-col items-center justify-center p-5 notosanthai.className">
+      
+      {/* การ์ดล็อกอิน: Responsive (เต็มจอในมือถือ, ขนาดคงที่ในเดสก์ท็อป) */}
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-gray-100 p-8 md:p-10 transition-all">
+        
+        {/* ส่วนหัว: โลโก้และชื่อ */}
+        <div className="flex flex-col items-center mb-10">
+          {/* พื้นที่สำหรับ SVG Logo (จะใส่ภายหลัง) */}
+          <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mb-5 border-4 border-white shadow-inner">
+            <span className="text-4xl">🥟</span> {/* Placeholder Logo */}
+          </div>
+          <h1 className="text-3xl font-extrabold text-[#FF8A33] tracking-tight">MOD PAO</h1>
+          <p className="text-gray-500 mt-2 text-center">เข้าสู่ระบบเพื่อเริ่มจองซาลาเปาร้อนๆ</p>
         </div>
 
-        <div className="flex items-center justify-between text-sm">
-          <label className="flex items-center gap-2">
-            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-            remember me
-          </label>
-          <a href="#" className="text-gray-400">Forgot Password?</a>
+        {/* ฟอร์มล็อกอิน */}
+        <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+          
+          {step === 1 && (
+            // สเต็ป 1: กรอกเบอร์โทรศัพท์
+            <div className="animate-fade-in">
+              <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                เบอร์โทรศัพท์
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+
+                </div>
+                <input
+                  type="tel"
+                  id="phone"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="08x-xxxxxxx"
+                  className="w-full px-5 py-4 pl-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-200 focus:border-[#FF8A33] transition-all text-lg placeholder:text-gray-300"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-400 mt-2.5 ml-1">ระบบจะส่งรหัส OTP ไปยังเบอร์นี้ทาง SMS</p>
+            </div>
+          )}
+
+          {step === 2 && (
+            // สเต็ป 2: กรอก OTP
+            <div className="animate-fade-in">
+              <label htmlFor="otp" className="block text-sm font-bold text-gray-700 mb-2 ml-1">
+                รหัส OTP (6 หลัก)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  🔑
+                </div>
+                <input
+                  type="text"
+                  id="otp"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  placeholder="xxxxxx"
+                  maxLength={6}
+                  className="w-full px-5 py-4 pl-12 rounded-xl border border-gray-200 focus:ring-2 focus:ring-orange-200 focus:border-[#FF8A33] transition-all text-lg tracking-[0.5em] font-mono placeholder:text-gray-300 placeholder:tracking-normal"
+                  required
+                />
+              </div>
+              <button 
+                type="button"
+                onClick={() => setStep(1)}
+                className="text-sm text-[#FF8A33] hover:text-orange-600 font-medium mt-3 ml-1 transition-colors"
+              >
+                ← เปลี่ยนเบอร์โทรศัพท์
+              </button>
+            </div>
+          )}
+
+          {/* ปุ่มดำเนินการหลัก: สีส้มโดดเด่น */}
+          <button
+            type="submit"
+            onClick={() => step === 1 && phoneNumber ? setStep(2) : null}
+            className="w-full bg-[#FF8A33] text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:bg-orange-600 active:scale-[0.98] transition-all duration-150 flex items-center justify-center gap-2"
+          >
+            {step === 1 ? "ขอรับรหัส OTP" : "ยืนยันตัวตน"}
+            <span className="text-xl">→</span>
+          </button>
+        </form>
+
+        {/* ส่วนท้าย: สมัครสมาชิก (Optional) */}
+        <div className="mt-10 pt-6 border-t border-gray-100 text-center">
+          <p className="text-sm text-gray-500">
+            ยังไม่มีบัญชี?{" "}
+            <a href="#" className="font-bold text-[#FF8A33] hover:text-orange-600 transition-colors">
+              สมัครสมาชิกใหม่
+            </a>
+          </p>
         </div>
-
-        <button
-          onClick={handleLogin}
-          className="w-full bg-primary text-white py-3 rounded-full font-semibold"
-        >
-          Login
-        </button>
-
-        <p className="text-center text-xs text-gray-400 mt-4">Term of use</p>
       </div>
+
+      {/* เครดิตด้านล่าง */}
+      <p className="mt-8 text-xs text-gray-400">© 2024 MOD PAO. All rights reserved.</p>
     </div>
-  )
+  );
 }
