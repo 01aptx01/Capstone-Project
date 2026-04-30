@@ -3,7 +3,6 @@ from app.config.db import get_db
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 class InventoryService:
     def __init__(self, db_provider=None):

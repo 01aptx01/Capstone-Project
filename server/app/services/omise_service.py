@@ -5,7 +5,6 @@ from omise.errors import BaseError
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 class OmisePaymentService:
     def __init__(self, secret_key: str = None):

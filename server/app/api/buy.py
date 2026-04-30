@@ -197,6 +197,10 @@ class BuyController:
 
         return jsonify({"status": status})
 
+    def buy(self):
+        """Direct buy endpoint - alias for checkout"""
+        return self.checkout()
+
 # =============================================
 # การสร้าง Blueprint ส่งออกไปใช้งาน
 # =============================================

@@ -4,7 +4,6 @@ import logging
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
 
 class HardwareAgentService:
     def __init__(self, agent_url: str = None, timeout: int = 10):

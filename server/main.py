@@ -9,6 +9,7 @@ load_dotenv()
 from app.api.buy import buy_api
 from app.api.products import products_api
 from app.api.health import health_api
+from app.config.db import init_db
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -21,6 +22,9 @@ class ServerApp:
         self.app = Flask(__name__)
         
         # รันการตั้งค่าต่างๆ ตามลำดับ
+        logger.info("🔧 [ServerApp] Initializing database connection pool...")
+        init_db()  # ✅ สร้าง connection pool (พร้อม retry logic)
+        
         self._verify_environment()
         self._setup_extensions()
         self._register_blueprints()
@@ -60,5 +64,7 @@ class ServerApp:
         self.app.run(host=self.host, port=self.port)
 
 if __name__ == "__main__":
-    server = ServerApp(host="0.0.0.0", port=8000)
+    host = os.getenv("SERVER_HOST", "0.0.0.0")
+    port = int(os.getenv("SERVER_PORT", "8000"))
+    server = ServerApp(host=host, port=port)
     server.run()

@@ -1,13 +1,11 @@
-from flask import Blueprint
+import logging
+from flask import Blueprint, request
 
 routes = Blueprint("routes", __name__)
+logger = logging.getLogger(__name__)
 
 @routes.route("/dispense", methods=["POST"])
 def dispense():
-    import logging
-    logger = logging.getLogger(__name__)
-    from flask import request
-    
     data = request.json
     machine_id = data.get("machine_id")
     items = data.get("items", [])
