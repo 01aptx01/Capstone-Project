@@ -44,14 +44,14 @@ export function DrawerMenu({ open, onClose }: DrawerMenuProps) {
             <MenuLink 
               href="/redeem" 
               icon={<IconRedeem size={20} />} 
-              label="แลกของรางวัล" 
+              label="แลกคูปอง" 
               active={isActive("/redeem")} 
               onClick={onClose} 
             />
             <MenuLink 
               href="/history" 
               icon={<IconHistory size={20} />} 
-              label="ประวัติการจอง" 
+              label="ประวัติการสั่งซื้อ" 
               active={isActive("/history")} 
               onClick={onClose} 
             />

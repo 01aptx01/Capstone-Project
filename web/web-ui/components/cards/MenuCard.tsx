@@ -55,7 +55,7 @@ export function MenuCard({ item }: { item: MenuItem }) {
                   }
             }
           >
-            {added ? "✓ จองแล้ว" : "จอง"}
+            {added ? "✓ ซื้อแล้ว" : "ซื้อ"}
           </button>
         </div>
       </div>
