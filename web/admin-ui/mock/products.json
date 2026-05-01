@@ -2,8 +2,8 @@
   {
     "id": "P001",
     "code": "P001",
-    "name": "เปาแดง",
-    "category": "หมูย่าง/หมูแดง",
+    "name": "เปามดแดง",
+    "category": "หมูสับ/หมูแดง",
     "machines": 3,
     "quantity": 234,
     "unit_price": 25.0,
@@ -15,7 +15,7 @@
     "id": "P002",
     "code": "P002",
     "name": "เปาหมูสับ",
-    "category": "หมูย่าง/หมูแดง",
+    "category": "หมูสับ/หมูแดง",
     "machines": 3,
     "quantity": 156,
     "unit_price": 25.0,
@@ -26,7 +26,7 @@
   {
     "id": "P003",
     "code": "P003",
-    "name": "เปาครีม",
+    "name": "เปาบัวแดง",
     "category": "ไส้หวาน",
     "machines": 2,
     "quantity": 45,
@@ -38,8 +38,8 @@
   {
     "id": "P004",
     "code": "P004",
-    "name": "เปากุ้ง",
-    "category": "ไส้ทะเล",
+    "name": "เปาเต้าหู้",
+    "category": "มังสวิรัติ",
     "machines": 1,
     "quantity": 0,
     "unit_price": 22.0,
@@ -50,7 +50,7 @@
   {
     "id": "P005",
     "code": "P005",
-    "name": "เปาคริม",
+    "name": "เปาครีมคัสตาร์ด",
     "category": "ไส้หวาน",
     "machines": 3,
     "quantity": 300,
