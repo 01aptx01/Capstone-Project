@@ -5,15 +5,21 @@ import { useState } from "react";
 import { MenuItem } from "@/lib/constants";
 import { BaoImage } from "./BaoImage";
 import { COLORS } from "@/lib/constants";
-import { useCart } from "@/context/CartContext"; // ดึงฟังก์ชันเพิ่มลงตะกร้า
+import { useCart } from "@/context/CartContext";
 
 export function MenuCard({ item }: { item: MenuItem }) {
   const [added, setAdded] = useState(false);
-  const { addToCart } = useCart(); // เรียกใช้ฟังก์ชัน
+  const { addToCart } = useCart(); 
 
-  // รับ Event (e) เข้ามาเพื่อคำนวณจุดลอยของอนิเมชัน
   const handleBook = (e: React.MouseEvent<HTMLButtonElement>) => {
-    addToCart(e); // ส่ง event เข้าไปทำงาน
+    // 🚨 แก้ตรงนี้: ส่งข้อมูลทั้งหมดของสินค้าชิ้นนั้นเข้าไปในตะกร้า
+    addToCart(e, {
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      image: item.image || "", // ถ้าคุณใช้ชื่อ property อื่นเช่น img ให้เปลี่ยนให้ตรงนะครับ
+    }); 
+    
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };

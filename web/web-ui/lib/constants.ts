@@ -1,3 +1,5 @@
+// lib/constants.ts
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MenuItem {
   id: number;
@@ -82,31 +84,40 @@ export const CATEGORIES: Category[] = [
   { key: "sweet", label: "ไส้หวาน" },
 ];
 
+// ─── Coupons ──────────────────────────────────────────────────────────────────
+// 🚨 ใช้ interface แบบสมบูรณ์ที่มีครบทุก properties 
 export interface Coupon {
   id: number;
   title: string;
   description: string;
   points: number;
   colorBg: string; // คลาสสีของ Tailwind
+  discountValue: number; // มูลค่าส่วนลด (เพื่อให้ตะกร้ารู้ว่าลดกี่บาท)
+  expiry: string; // วันหมดอายุ
 }
 
 export const COUPONS: Coupon[] = [
   {
     id: 1,
-    title: "ส่วนลด 10 บาท",
-    description: "เมื่อซื้อซาลาเปาครั้งต่อไปภายใน7วันนับจากวันที่แลก และมียอดสั่งซื้อขั้นต่ำ 50 บาท",
-    points: 40,
-    colorBg: "bg-[#EAB308]", // สีเหลือง
+    title: "ส่วนลด 5 บาท",
+    description: "คูปองส่วนลด 5 บาท สำหรับการสั่งซื้อซาลาเปา",
+    points: 100,
+    colorBg: "bg-[#F5B041]", // สีเหลืองส้ม
+    discountValue: 5,
+    expiry: "หมดอายุ 4 พ.ค. 2026",
   },
   {
     id: 2,
-    title: "ส่วนลด 30 บาท",
-    description: "เมื่อซื้อซาลาเปาครั้งต่อไปภายใน7วันนับจากวันที่แลก และมียอดสั่งซื้อขั้นต่ำ 100 บาท",
-    points: 100,
-    colorBg: "bg-[#EF4444]", // สีแดง
+    title: "ส่วนลด 10 บาท",
+    description: "คูปองส่วนลด 10 บาท สำหรับการสั่งซื้อซาลาเปา",
+    points: 180,
+    colorBg: "bg-[#FF8A33]", // สีส้ม
+    discountValue: 10,
+    expiry: "หมดอายุ 4 พ.ค. 2026",
   },
 ];
 
+// ─── Order History ────────────────────────────────────────────────────────────
 export interface OrderHistory {
   id: string;
   orderNumber: string;
@@ -119,15 +130,15 @@ export interface OrderHistory {
 export const ORDER_HISTORY: OrderHistory[] = [
   {
     id: "1",
-    orderNumber: "1111",
-    datetime: "2026-04-15 14:30",
-    items: "เปามดแดง x2",
-    total: 50,
+    orderNumber: "1112", // 🚨 รายการรอล่าสุด
+    datetime: "2026-05-01 20:00", // อัปเดตเวลาให้ใกล้เคียงปัจจุบัน
+    items: "เปามันแกว x1, เปาหมูสับ x1",
+    total: 45,
     status: "pending",
   },
   {
     id: "2",
-    orderNumber: "1110",
+    orderNumber: "1111",
     datetime: "2026-04-15 14:30",
     items: "เปามดแดง x2",
     total: 50,
@@ -135,10 +146,10 @@ export const ORDER_HISTORY: OrderHistory[] = [
   },
   {
     id: "3",
-    orderNumber: "1109",
-    datetime: "2026-04-15 14:30",
-    items: "เปามดแดง x2",
-    total: 50,
+    orderNumber: "1110",
+    datetime: "2026-04-14 12:15",
+    items: "เปาไก่เห็ด x1",
+    total: 25,
     status: "cancelled",
   },
 ];

@@ -34,23 +34,7 @@ export function DesktopHeader() {
       {/* ฝั่งขวา: โปรไฟล์ และ ตะกร้า (ลบกระดิ่งแจ้งเตือนออกแล้ว) */}
       <div className="flex items-center gap-6 shrink-0">
         
-        {/* ปุ่มตะกร้า */}
-        <Link 
-          href="/checkout" 
-          className="relative p-2.5 hover:bg-white/20 rounded-full transition-colors text-white"
-        >
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="9" cy="21" r="1"></circle>
-            <circle cx="20" cy="21" r="1"></circle>
-            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-          </svg>
-          {/* แสดงตัวเลขตะกร้า */}
-          {cartCount > 0 && (
-            <span className="absolute top-1 right-0 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full border-2 border-[#FF8A33] flex items-center justify-center shadow-sm">
-              {cartCount}
-            </span>
-          )}
-        </Link>
+        
 
         {/* ข้อมูลโปรไฟล์ */}
         <div className="flex items-center gap-4 pl-6 border-l border-white/30">
