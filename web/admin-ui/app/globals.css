@@ -214,3 +214,33 @@ h3 { font-size: 1rem; font-weight: 700; color: var(--heading-color); margin: 0; 
 /* Sidebar add button polish */
 .sidebar-add { padding: 14px; font-size: 1rem; box-shadow: 0 10px 20px rgba(255,106,0,0.12); text-align:center; }
 
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in {
+  animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+
+.scale-in {
+  animation-name: scaleIn;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
