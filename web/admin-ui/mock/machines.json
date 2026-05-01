@@ -1,0 +1,23 @@
+[
+  {
+    "id": "MP-001",
+    "name": "MOD PAO Building LX",
+    "location": "อาคารการเรียนรู้",
+    "status": "active",
+    "uptime": 99.8
+  },
+  {
+    "id": "MP-002",
+    "name": "MOD PAO Building N7",
+    "location": "อาคาร N7",
+    "status": "active",
+    "uptime": 98.7
+  },
+  {
+    "id": "MP-003",
+    "name": "MOD PAO Canteen KFC",
+    "location": "โรงอาหาร",
+    "status": "maintenance",
+    "uptime": 95.2
+  }
+]
