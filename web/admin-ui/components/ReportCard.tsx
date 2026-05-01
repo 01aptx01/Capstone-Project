@@ -6,6 +6,8 @@ interface ReportCardProps {
   trendDirection?: "up" | "down" | "neutral";
   isFeatured?: boolean;
   icon?: React.ReactNode;
+  iconBg?: string;
+  iconColor?: string;
 }
 
 export default function ReportCard({
@@ -15,7 +17,9 @@ export default function ReportCard({
   trend,
   trendDirection = "up",
   isFeatured = false,
-  icon
+  icon,
+  iconBg = "#FFF7ED",
+  iconColor = "#FF6A00"
 }: ReportCardProps) {
   if (isFeatured) {
     return (
@@ -46,7 +50,10 @@ export default function ReportCard({
   return (
     <div className="bg-white border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300">
       <div className="flex justify-between items-start mb-4">
-        <div className="w-12 h-12 bg-[#FFF7ED] rounded-xl flex items-center justify-center text-xl shadow-sm border border-[#FFEDD5]">
+        <div 
+          className="w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm border"
+          style={{ backgroundColor: iconBg, borderColor: `${iconBg}CC`, color: iconColor }}
+        >
           {icon}
         </div>
         {trend && (
