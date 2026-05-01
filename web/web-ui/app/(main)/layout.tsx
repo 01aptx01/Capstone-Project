@@ -7,7 +7,9 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { DesktopHeader } from "@/components/layout/DesktopHeader";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { DrawerMenu } from "@/components/layout/DrawerMenu";
-import { CartProvider } from "@/context/CartContext"; // เพิ่ม Provider
+import { CartProvider } from "@/context/CartContext"; 
+// 🚨 1. Import FloatingCart เข้ามา
+import { FloatingCart } from "@/components/layout/FloatingCart";
 
 export default function MainLayout({
   children,
@@ -25,7 +27,6 @@ export default function MainLayout({
   };
 
   return (
-    // ครอบด้วย CartProvider ตรงนี้
     <CartProvider>
       <div className="flex flex-col w-full min-h-screen">
         <div className="hidden md:block">
@@ -48,6 +49,9 @@ export default function MainLayout({
         </div>
 
         <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+        {/* 🚨 2. นำ FloatingCart มาวางไว้ล่างสุดของแอป (แต่ยังอยู่ข้างใน CartProvider) */}
+        <FloatingCart />
       </div>
     </CartProvider>
   );

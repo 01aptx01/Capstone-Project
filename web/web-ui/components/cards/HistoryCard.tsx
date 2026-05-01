@@ -1,106 +1,71 @@
 // components/cards/HistoryCard.tsx
+"use client";
+
 import React from "react";
+import { useRouter } from "next/navigation";
 import { OrderHistory } from "@/lib/constants";
 
 interface HistoryCardProps {
   order: OrderHistory;
-  onScan?: () => void;
-  onCancel?: () => void; // 1. เพิ่ม Props สำหรับกดยกเลิก
 }
 
-export function HistoryCard({ order, onScan, onCancel }: HistoryCardProps) {
-  const getStatusConfig = () => {
-    switch (order.status) {
-      case "pending":
-        return {
-          icon: (
-            <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-[#FF8A33]">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-          ),
-          btnText: "แลกรับที่ตู้",
-          btnClass: "bg-[#FF8A33] text-white hover:bg-orange-500 shadow-sm",
-          onClick: onScan,
-        };
+export function HistoryCard({ order }: HistoryCardProps) {
+  const router = useRouter();
+
+  // กำหนดรูปแบบและสีตามสถานะ
+  const getStatusDisplay = (status: string) => {
+    switch (status) {
       case "completed":
-        return {
-          icon: (
-            <div className="w-12 h-12 rounded-full bg-[#4ADE80] flex items-center justify-center text-white">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
-          ),
-          btnText: "เสร็จสิ้น",
-          btnClass: "bg-gray-200 text-white cursor-not-allowed",
-          onClick: undefined,
-        };
+        return { label: "สำเร็จ", color: "text-[#10B981]", bg: "bg-emerald-50" };
       case "cancelled":
-        return {
-          icon: (
-            <div className="w-12 h-12 rounded-full bg-gray-400 flex items-center justify-center text-white">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </div>
-          ),
-          btnText: "ยกเลิกแล้ว",
-          btnClass: "bg-gray-200 text-white cursor-not-allowed",
-          onClick: undefined,
-        };
+        return { label: "ยกเลิกแล้ว", color: "text-[#FF5A5A]", bg: "bg-red-50" };
+      case "pending":
+      default:
+        return { label: "รอการชำระเงิน", color: "text-[#FF8A33]", bg: "bg-orange-50" };
     }
   };
 
-  const config = getStatusConfig();
+  const statusInfo = getStatusDisplay(order.status);
 
   return (
-    <div className="bg-white rounded-3xl p-5 md:p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-5 transition-transform hover:shadow-md">
+    <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col gap-3">
       
-      <div className="flex gap-4 relative">
-        <div className="shrink-0">{config.icon}</div>
-        <div>
-          <p className="text-xs text-gray-500 mb-0.5">{order.datetime}</p>
-          <h3 className="text-base font-bold text-gray-800">
-            หมายเลขคำสั่งซื้อ#{order.orderNumber}
-          </h3>
-          <p className="text-sm text-gray-500 mt-0.5">{order.items}</p>
+      {/* Header ของ Card */}
+      <div className="flex justify-between items-center border-b border-gray-50 pb-3">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-gray-800 text-sm">ออเดอร์ #{order.orderNumber}</span>
+          <span className="text-xs text-gray-400 font-medium">{order.datetime}</span>
+        </div>
+        <div className={`px-2.5 py-1 rounded-md text-xs font-bold ${statusInfo.bg} ${statusInfo.color}`}>
+          {statusInfo.label}
+        </div>
+      </div>
+
+      {/* ข้อมูลสินค้า */}
+      <div className="flex justify-between items-end">
+        <div className="flex flex-col gap-1">
+          <span className="text-gray-600 text-sm">{order.items}</span>
+          <span className="font-extrabold text-gray-800">{order.total} ฿</span>
         </div>
         
-        {/* 2. ปรับปุ่ม X บนมือถือให้ชัดขึ้น มีวงกลมรองรับพื้นหลัง */}
+        {/* 🚨 ปุ่มชำระเงิน (โชว์เฉพาะสถานะ pending) */}
         {order.status === "pending" && (
           <button 
-            onClick={onCancel}
-            className="md:hidden absolute top-0 right-0 p-1.5 bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-red-500 rounded-full transition-all"
+            onClick={() => router.push("/payment")}
+            className="px-5 py-2 bg-[#FF8A33] hover:bg-orange-500 text-white text-sm font-bold rounded-full shadow-sm transition-colors"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            ชำระเงิน
           </button>
+        )}
+
+        {/* ปุ่มสแกนรับสินค้า (โชว์เฉพาะสถานะ completed) */}
+        {order.status === "completed" && (
+           <button className="px-4 py-2 bg-gray-100 text-gray-700 text-sm font-bold rounded-full hover:bg-gray-200 transition-colors">
+             สแกนแลกรับ
+           </button>
         )}
       </div>
 
-      <div className="h-px w-full bg-gray-50 md:hidden" />
-
-      <div className="flex justify-between items-center md:flex-col md:items-end gap-3 md:gap-4">
-        <div className="text-sm">
-          <span className="text-gray-800 font-bold">ยอดรวม </span>
-          <span className="text-xl font-bold text-[#FF8A33] mx-1">{order.total}</span>
-          <span className="text-gray-800 font-bold">บาท</span>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* 3. ผูกปุ่มคำว่า "ยกเลิก" บนเดสก์ท็อปให้กดได้ด้วย */}
-          {order.status === "pending" && (
-            <button 
-              onClick={onCancel}
-              className="hidden md:block text-sm font-bold text-gray-400 hover:text-red-500 transition-colors"
-            >
-              ยกเลิก
-            </button>
-          )}
-          
-          <button 
-            onClick={config.onClick} 
-            className={`px-6 py-2 rounded-full font-bold text-sm ${config.btnClass}`}
-          >
-            {config.btnText}
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
