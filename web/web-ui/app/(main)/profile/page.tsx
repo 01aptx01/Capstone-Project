@@ -21,7 +21,7 @@ export default function ProfilePage() {
   const profileMenus = [
     { id: "coupons", label: "คูปองของฉัน", href: "/coupons", icon: <div className="text-[#FF8A33]"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 5V3H9v2M15 21v-2H9v2M5 9a2 2 0 0 0 2-2V5h10v2a2 2 0 0 0 2 2v6a2 2 0 0 0-2 2v2H7v-2a2 2 0 0 0-2-2V9z"/><line x1="9" y1="12" x2="15" y2="12" strokeDasharray="2 2" /></svg></div> },
     { id: "history", label: "ประวัติการสั่งซื้อทั้งหมด", href: "/history", icon: <div className="text-[#FF8A33]"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div> },
-    { id: "help", label: "ศูนย์ความช่วยเหลือ", href: "#", icon: <div className="text-[#FF8A33]"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div> },
+    { id: "help", label: "ศูนย์ความช่วยเหลือ", href: "/help", icon: <div className="text-[#FF8A33]"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div> },
   ];
 
   const handleSaveProfile = (newName: string, newAvatar: string, file: File | null) => {
