@@ -1,26 +1,216 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Palette (approximated from Figma screenshot) */
+  --background: #F5F7FA;
+  --surface: #FFFFFF;
+  --foreground: #0F172A;
+  --muted: #6B7280;
+  --border: #E6E9EF;
+  --primary: #FF6A00;
+  --accent: #FFDAB5;
+  --card-accent: #FFF7ED;
+  --success: #10B981;
+  --danger: #EF4444;
+  --sidebar-surface: #FFFFFF;
+  --sidebar-accent: #FF6A00;
+  --sidebar-item-bg: #FFF8F2;
+  --sidebar-foreground: #0F172A;
+  /* Font family placeholder — set by next/font variable */
+  --font-inter: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue";
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #071027;
+    --surface: #0b1220;
+    --foreground: #E6EEF6;
+    --muted: #9CA3AF;
+    --border: #10203a;
+    --sidebar-bg: #061022;
+    --sidebar-foreground: #E6EEF6;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue";
 }
+
+/* Sidebar styles */
+.sidebar {
+  background: var(--sidebar-surface);
+  color: var(--sidebar-foreground);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 260px;
+  padding: 0;
+}
+.sidebar-top {
+  background: linear-gradient(180deg, var(--sidebar-accent), #ff7b1a);
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sidebar-brand { display:flex; gap:12px; align-items:center; }
+.sidebar-brand-title { color: white; font-weight: 800; font-size: 1rem; line-height: 1; }
+.sidebar-brand-sub { color: rgba(255,255,255,0.95); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.6px; }
+.sidebar-top-avatar { width:36px; height:36px; border-radius:9999px; background: rgba(255,255,255,0.12); display:flex; align-items:center; justify-content:center; border: 2px solid rgba(255,255,255,0.12); }
+.sidebar-nav { padding: 14px; display:flex; flex-direction:column; gap:10px; }
+.sidebar-link { display:flex; align-items:center; gap:12px; padding: 10px 12px; border-radius: 10px; color: var(--sidebar-foreground); text-decoration: none; font-weight:600; }
+.sidebar-link:hover { background: rgba(15,23,42,0.03); }
+.sidebar-link .icon-container { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; background: transparent; color: var(--primary); font-size: 1.05rem; }
+.sidebar-link .label { font-size: 0.95rem; color: var(--sidebar-bg);}
+.sidebar-link.active { background: var(--sidebar-item-bg); color: var(--sidebar-accent); box-shadow: 0 8px 22px rgba(255,106,0,0.08); position: relative; }
+.sidebar-link.active .icon-container { background: var(--sidebar-item-bg); color: var(--sidebar-accent); }
+.sidebar-link.active::before { content: ""; position: absolute; left: 8px; top: 8px; bottom: 8px; width: 4px; background: var(--sidebar-accent); border-radius: 4px; }
+
+/* Ensure nav links have space for the left indicator */
+.sidebar-link { padding-left: 18px; }
+.sidebar-spacer { flex:1; }
+.sidebar-bottom { padding: 16px; display:flex; flex-direction:column; gap:12px; align-items:center; }
+.sidebar-add { width: calc(100% - 32px); display:inline-block; background: var(--sidebar-accent); color:#fff; padding: 12px; border-radius: 12px; text-align:center; font-weight:800; box-shadow: 0 12px 30px rgba(255,106,0,0.18); }
+.sidebar-bottom-link { width: calc(100% - 32px); display:block; padding: 10px; text-align:center; color:var(--muted); background: transparent; border-radius: 8px; text-decoration:none; }
+
+/* Header / Top bar styles */
+.app-header { background: var(--surface); border-bottom: 1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding: 0 20px; height:64px; }
+.app-header .left { display:flex; align-items:center; gap:12px; }
+.app-header .center { flex:1; display:flex; justify-content:center; }
+.header-search { width:760px; max-width: calc(100% - 360px); display:flex; align-items:center; gap:10px; background:#F6F9FB; border:1px solid var(--border); padding:8px 14px; border-radius:9999px; box-shadow: 0 10px 30px rgba(9,26,39,0.04); }
+.header-search .icon { color: var(--muted); display:flex; align-items:center; justify-content:center; }
+.header-search input { border:0; outline:none; background:transparent; width:100%; font-size:0.95rem; color:var(--foreground); }
+
+.header-actions { display:flex; align-items:center; gap:12px; }
+.bell { position:relative; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:transparent; color:var(--muted); }
+.bell .badge { position:absolute; top:8px; right:8px; width:9px; height:9px; border-radius:999px; background:var(--primary); box-shadow: 0 0 0 6px rgba(255,106,0,0.06); }
+.header-divider { width:1px; height:28px; background:var(--border); border-radius:2px; margin:0 6px; }
+.profile { display:flex; align-items:center; gap:10px; padding-left:6px; }
+.profile .avatar { width:36px; height:36px; border-radius:9999px; overflow:hidden; border:1px solid var(--border); }
+.profile .name { font-size:0.95rem; font-weight:700; color:var(--foreground); }
+
+
+
+/* Admin UI helpers */
+.rounded-lg { border-radius: 0.5rem; }
+.shadow-sm { box-shadow: 0 1px 2px rgba(16,24,40,0.05); }
+
+/* Make sure the app uses full-height layout */
+html, body, #__next { height: 100%; }
+
+/* Admin UI helpers */
+.rounded-lg { border-radius: 0.5rem; }
+.shadow-sm { box-shadow: 0 1px 2px rgba(16,24,40,0.05); }
+
+/* Make sure the app uses full-height layout */
+html, body, #__next { height: 100%; }
+
+/* Login page styles (approximate colors from provided design) */
+:root {
+  --login-bg: linear-gradient(180deg,#0b2233 0%,#071827 100%);
+  --login-overlay: rgba(3,18,33,0.6);
+  --login-card-bg: #ffffff;
+  --login-orange: #FF6A00;
+  --login-input-bg: #EEF2F6;
+}
+
+.login-page {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--login-bg);
+  z-index: 9999;
+}
+
+.login-page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--login-overlay);
+  backdrop-filter: blur(1px);
+}
+
+.login-card {
+  position: relative;
+  z-index: 1;
+  width: 420px;
+  background: var(--login-card-bg);
+  border-radius: 16px;
+  padding: 2.25rem 2rem 2.5rem;
+  box-shadow: 0 20px 50px rgba(3,12,23,0.5);
+  text-align: center;
+}
+
+.login-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 9999px;
+  background: var(--login-orange);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: -64px auto 8px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+  border: 6px solid #ffffff;
+}
+
+.login-title { font-size: 1.375rem; font-weight: 700; margin-top: 4px; color: #09212e; }
+.login-subtitle { color: var(--login-orange); font-weight: 600; margin-bottom: 1rem; text-transform: lowercase; }
+
+.login-label { display:block; font-size: 0.675rem; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; margin-top: 0.5rem; text-align:left; }
+.login-input { width:100%; padding: 0.7rem 1rem; border-radius: 9999px; border: 1px solid #e6edf3; background: var(--login-input-bg); outline: none; box-sizing: border-box; }
+.login-input:focus { box-shadow: 0 0 0 4px rgba(255,106,0,0.06); }
+
+.login-button { margin-top: 1rem; width: 68%; display:block; margin-left:auto; margin-right:auto; background: var(--login-orange); color: white; border-radius: 9999px; padding: 0.75rem 1rem; font-weight: 700; box-shadow: 0 12px 36px rgba(255,106,0,0.22); border: none; cursor: pointer; }
+.login-button:disabled { opacity: 0.7; cursor: default; }
+
+/* Override palette + typography for clearer dashboard/login visuals */
+:root {
+  --background: #F7F9FB;
+  --surface: #FFFFFF;
+  --foreground: #071827;
+  --muted: #64748B;
+  --border: #EAF2F6;
+  --primary: #FF6A00;
+  --accent: #FFDAB5;
+  --card-accent: #FFF7ED;
+  --login-orange: #FF6A00;
+  --base-font-size: 16px;
+  --heading-color: var(--foreground);
+  --muted-color: var(--muted);
+}
+
+/* Typography helpers */
+body { font-size: var(--base-font-size); line-height: 1.45; }
+h1 { font-size: 1.75rem; font-weight: 800; color: var(--heading-color); line-height: 1.12; margin: 0 0 6px 0; }
+h2 { font-size: 1.125rem; font-weight: 700; color: var(--heading-color); margin: 0; }
+h3 { font-size: 1rem; font-weight: 700; color: var(--heading-color); margin: 0; }
+
+/* Card and shadow refinements to match screenshot */
+.rounded-lg { border-radius: 12px; }
+.shadow-sm { box-shadow: 0 10px 25px rgba(2,6,23,0.06); }
+
+.dashboard-metric { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; box-shadow: 0 10px 25px rgba(2,6,23,0.06); }
+.dashboard-metric__title { color: var(--muted-color); font-size: 0.875rem; }
+.dashboard-metric__value { margin-top: 0.5rem; font-size: 1.5rem; font-weight: 800; color: var(--heading-color); letter-spacing: -0.01em; }
+
+/* Login-specific improvements for clarity */
+.login-title { font-size: 1.5rem; font-weight: 800; color: var(--heading-color); }
+.login-subtitle { color: var(--primary); font-weight: 700; margin-bottom: 1rem; text-transform: lowercase; }
+.login-input { font-size: 1rem; font-weight: 500; padding: 0.8rem 1rem; }
+.login-button { font-size: 1rem; padding: 0.75rem 1rem; border-radius: 9999px; }
+
+/* Sidebar add button polish */
+.sidebar-add { padding: 14px; font-size: 1rem; box-shadow: 0 10px 20px rgba(255,106,0,0.12); text-align:center; }
+

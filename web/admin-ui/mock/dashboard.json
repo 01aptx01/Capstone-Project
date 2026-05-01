@@ -1,0 +1,9 @@
+{
+  "overview": {
+    "sales_today": 1458.5,
+    "orders": 342,
+    "active_machines": 48,
+    "alerts": 12
+  },
+  "realtime": [10, 20, 120, 220, 320, 200, 150, 80]
+}
