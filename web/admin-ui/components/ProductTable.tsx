@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Modal from "./Modal.tsx";
 
 type Product = {
   id: string;
@@ -13,17 +12,11 @@ type Product = {
   unit_price?: number;
   status?: string;
   image?: string;
-  description?: string;
 };
 
 export default function ProductTable() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Product | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: "", unit_price: "" });
 
   const load = async () => {
     setLoading(true);
@@ -33,6 +26,10 @@ export default function ProductTable() {
       setProducts(data);
     } catch (e) {
       console.error(e);
+      // Fallback to mock data if API fails
+      const mockRes = await fetch("/mock/products.json");
+      const mockData = await mockRes.json();
+      setProducts(mockData);
     } finally {
       setLoading(false);
     }
@@ -42,91 +39,75 @@ export default function ProductTable() {
     load();
   }, []);
 
-  const openDetails = async (id: string) => {
-    try {
-      const res = await fetch(`/api/products/${id}`);
-      const data = await res.json();
-      setSelected(data);
-      setOpen(true);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const submitCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setCreating(true);
-    try {
-      const payload = { name: form.name, unit_price: Number(form.unit_price || 0) };
-      const res = await fetch("/api/products", { method: "POST", body: JSON.stringify(payload), headers: { "Content-Type": "application/json" } });
-      if (res.ok) {
-        await load();
-        setCreateOpen(false);
-        setForm({ name: "", unit_price: "" });
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCreating(false);
-    }
-  };
-
   return (
-    <div className="rounded-lg p-4" style={{ backgroundColor: "var(--surface)", border: "1px solid var(--border)" }}>
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold" style={{ color: "var(--foreground)" }}>Products</h3>
-        <div>
-          <button
-            onClick={() => setCreateOpen(true)}
-            className="rounded px-3 py-1 text-sm"
-            style={{ backgroundColor: "var(--primary)", color: "white" }}
-          >
-            + เพิ่มสินค้า
-          </button>
-        </div>
-      </div>
-
+    <div className="bg-white border border-[#E2E8F0] rounded-[24px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
       <div className="overflow-x-auto">
-        <table className="w-full table-auto">
+        <table className="w-full border-collapse">
           <thead>
-            <tr style={{ color: "var(--muted)", fontSize: "0.875rem" }}>
-              <th className="pb-2">Product Info</th>
-              <th className="pb-2">Category</th>
-              <th className="pb-2">Machines</th>
-              <th className="pb-2">Quantity</th>
-              <th className="pb-2">Unit Price</th>
-              <th className="pb-2">Status</th>
+            <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
+              <th className="px-6 py-4 text-left text-[12px] font-bold text-[#94A3B8] uppercase tracking-wider">Product Info</th>
+              <th className="px-6 py-4 text-left text-[12px] font-bold text-[#94A3B8] uppercase tracking-wider">Category</th>
+              <th className="px-6 py-4 text-left text-[12px] font-bold text-[#94A3B8] uppercase tracking-wider">Machines</th>
+              <th className="px-6 py-4 text-left text-[12px] font-bold text-[#94A3B8] uppercase tracking-wider">Quantity</th>
+              <th className="px-6 py-4 text-left text-[12px] font-bold text-[#94A3B8] uppercase tracking-wider">Unit Price</th>
+              <th className="px-6 py-4 text-left text-[12px] font-bold text-[#94A3B8] uppercase tracking-wider">Status</th>
+              <th className="px-6 py-4 text-center text-[12px] font-bold text-[#94A3B8] uppercase tracking-wider">Action</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-[#E2E8F0]">
             {loading ? (
               <tr>
-                <td colSpan={6} className="py-8 text-center text-sm text-gray-500">Loading...</td>
+                <td colSpan={7} className="px-6 py-12 text-center text-[#64748B] text-[14px]">
+                  Loading products...
+                </td>
               </tr>
             ) : (
               products.map((p) => (
-                <tr
-                  key={p.id}
-                  style={{ borderTop: "1px solid var(--border)", cursor: "pointer" }}
-                  onClick={() => openDetails(p.id)}
-                >
-                  <td className="py-3 text-sm" style={{ color: "var(--foreground)" }}>
-                    <div className="flex items-center gap-3">
-                      <img src={p.image || "/product/img/pao-cream.png"} alt={p.name} className="h-8 w-8 rounded" />
+                <tr key={p.id} className="hover:bg-[#F8FAFC] transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-[#FFF7ED] rounded-xl flex items-center justify-center text-xl shadow-sm overflow-hidden border border-[#FFDAB5]/30">
+                        <img 
+                          src={p.image || "/product/img/pao-cream.png"} 
+                          alt="" 
+                          className="w-8 h-8 object-contain"
+                          onError={(e) => {
+                            (e.target as any).src = "https://cdn-icons-png.flaticon.com/512/3081/3081918.png";
+                          }}
+                        />
+                      </div>
                       <div>
-                        <div className="font-medium">{p.name}</div>
-                        <div className="text-xs" style={{ color: "var(--muted)" }}>{p.code || p.id}</div>
+                        <div className="text-[15px] font-bold text-[#0F172A] mb-0.5">{p.name}</div>
+                        <div className="text-[12px] font-medium text-[#94A3B8]">{p.code || p.id}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 text-sm" style={{ color: "var(--muted)" }}>{p.category}</td>
-                  <td className="py-3 text-sm" style={{ color: "var(--muted)" }}>{p.machines} Active</td>
-                  <td className="py-3 text-sm" style={{ color: "var(--foreground)" }}>{p.quantity}</td>
-                  <td className="py-3 text-sm" style={{ color: "var(--foreground)" }}>฿{(p.unit_price ?? 0).toFixed(2)}</td>
-                  <td className="py-3 text-sm" style={{ color: "var(--muted)" }}>
-                    <span className={`px-3 py-1 rounded-full text-xs`} style={{ backgroundColor: p.status === "in_stock" ? "#ECFDF5" : p.status === "low_stock" ? "#FFF7ED" : "#FEF2F2", color: p.status === "in_stock" ? "#065F46" : p.status === "low_stock" ? "#92400E" : "#991B1B" }}>
+                  <td className="px-6 py-4 text-[14px] font-medium text-[#475569]">{p.category}</td>
+                  <td className="px-6 py-4 text-[14px] font-bold text-[#475569]">
+                    {p.machines} <span className="font-medium text-[#94A3B8]">Active</span>
+                  </td>
+                  <td className="px-6 py-4 text-[16px] font-extrabold text-[#0F172A]">{p.quantity}</td>
+                  <td className="px-6 py-4 text-[15px] font-bold text-[#0F172A]">฿{(p.unit_price ?? 0).toFixed(2)}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex px-3 py-1.5 rounded-lg text-[12px] font-bold border ${
+                      p.status === "in_stock" 
+                        ? "bg-[#ECFDF5] text-[#065F46] border-[#D1FAE5]" 
+                        : p.status === "low_stock" 
+                        ? "bg-[#FFF7ED] text-[#92400E] border-[#FFEDD5]" 
+                        : "bg-[#FEF2F2] text-[#991B1B] border-[#FEE2E2]"
+                    }`}>
                       {p.status === "in_stock" ? "In Stock" : p.status === "low_stock" ? "Low Stock" : "Out of Stock"}
                     </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#E2E8F0] text-[#94A3B8] hover:text-[#0F172A] hover:border-[#CBD5E1] transition-all">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      </button>
+                      <button className="w-9 h-9 flex items-center justify-center rounded-lg border border-[#E2E8F0] text-[#94A3B8] hover:text-[#0F172A] hover:border-[#CBD5E1] transition-all">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -135,42 +116,26 @@ export default function ProductTable() {
         </table>
       </div>
 
-      <Modal open={open} onClose={() => setOpen(false)} title={selected?.name}>
-        {selected ? (
-          <div>
-            <div className="flex gap-4">
-              <img src={selected.image || "/product/img/pao-cream.png"} alt="" className="h-24 w-24 rounded" />
-              <div>
-                <div className="text-lg font-semibold">{selected.name}</div>
-                <div className="text-sm text-gray-500">{selected.category}</div>
-                <div className="mt-2">{selected.description}</div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div>Loading...</div>
-        )}
-      </Modal>
-
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create product">
-        <form onSubmit={submitCreate}>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm text-gray-600">Name</label>
-              <input value={form.name} onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))} className="w-full rounded border p-2" />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-600">Unit price</label>
-              <input value={form.unit_price} onChange={(e) => setForm((s) => ({ ...s, unit_price: e.target.value }))} className="w-full rounded border p-2" />
-            </div>
-            <div className="text-right">
-              <button type="submit" disabled={creating} className="rounded bg-blue-600 px-3 py-1 text-white">{creating ? "Creating..." : "Create"}</button>
-            </div>
-          </div>
-        </form>
-      </Modal>
+      {/* Pagination Footer */}
+      <div className="bg-[#F8FAFC] px-6 py-5 border-t border-[#E2E8F0] flex items-center justify-between">
+        <div className="text-[14px] font-bold text-[#64748B]">
+          Showing 1-5 of 5 results
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="w-10 h-10 flex items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#94A3B8] cursor-not-allowed">
+            <span>‹</span>
+          </button>
+          <button className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#FF6A00] text-white font-bold shadow-[0_4px_12px_rgba(255,106,0,0.2)]">
+            1
+          </button>
+          <button className="w-10 h-10 flex items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#94A3B8] hover:bg-[#F1F5F9] transition-all">
+            <span>›</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
+
 
 
