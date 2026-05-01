@@ -5,28 +5,7 @@ import CartSidebar, { CartItem } from "../components/CartSidebar";
 import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
-import {
-  BanknoteArrowUp,
-  Check,
-  CreditCard,
-  Nfc,
-  PackageOpen,
-  PhoneCall,
-  ScanLine,
-  Smartphone,
-  SquareDashedMousePointer,
-} from "lucide-react";
-
-// ==========================================
-// MOCK DATA & TYPES
-// ==========================================
-// Products will be fetched from the server
-// const mockProducts: Product[] = [
-//   { id: 1, name: "เปามดแดง", desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี", price: 32, heatingTime: 15, image: "/product/img/pao-moddaeng.png" },
-//   { id: 2, name: "เปาหมูสับ", desc: "หมูสับไข่เค็ม รสกลมกล่อม", price: 32, heatingTime: 20, image: "/product/img/pao-moosub.png" },
-//   { id: 3, name: "เปากุ้ง", desc: "เนื้อกุ้งเด้งเต็มคำ", price: 32, heatingTime: 15, image: "/product/img/pao-shrimp.png" },
-//   { id: 4, name: "เปาครีม", desc: "ครีมคัสตาร์ด หอมหวานละมุน", price: 25, heatingTime: 12, image: "/product/img/pao-cream.png" }
-// ];
+import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer, } from "lucide-react";
 
 type ModalType =
   | "none"
@@ -55,7 +34,6 @@ const testBtnStyle: React.CSSProperties = {
   fontWeight: "bold",
   fontSize: "18px",
   border: "none",
-  marginTop: "10px",
   cursor: "pointer",
 };
 
@@ -70,13 +48,13 @@ export default function VendingPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
 
   // -- Payment States --
-  const [selectedPaymentMethod, setSelectedPaymentMethod] =
-    useState<PaymentMethod | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
   const [isOmiseLoaded, setIsOmiseLoaded] = useState(false); // เช็คว่า Omise โหลดเสร็จหรือยัง
   const [realQrCode, setRealQrCode] = useState<string | null>(null); // เก็บ QR Code จริงจาก Backend
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเก็บรอบการดึงสถานะจ่ายเงิน
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
+  const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
 
   // -- Flow & Queue States --
   const [isAfterPayment, setIsAfterPayment] = useState(false);
@@ -84,21 +62,40 @@ export default function VendingPage() {
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
 
   // -- Timers States --
-  const [paymentCountdown, setPaymentCountdown] = useState<number>(60);
+  const [paymentCountdown, setPaymentCountdown] = useState<number>(180);
   const [pointsCountdown, setPointsCountdown] = useState<number>(10);
 
   const MOCK_USER_POINTS = 38;
 
+  const attemptClosePaymentModal = () => {
+    if (paymentStep === 2) {
+      setIsCancelPaymentConfirmOpen(true);
+      return;
+    }
+    closePaymentModal();
+  };
+
+  const confirmCancelPayment = () => {
+    setIsCancelPaymentConfirmOpen(false);
+    closePaymentModal();
+  };
+
+  const dismissCancelPaymentConfirm = () => {
+    setIsCancelPaymentConfirmOpen(false);
+  };
+
+  useEffect(() => {
+    if (activeModal !== "payment" || paymentStep === 1) {
+      setIsCancelPaymentConfirmOpen(false);
+    }
+  }, [activeModal, paymentStep]);
+
   // ==========================================
   // DERIVED DATA (คำนวณค่าจาก State อัตโนมัติ)
   // ==========================================
-  const totalHeatingTime = cart.reduce(
-    (sum, item) => sum + item.heatingTime * item.qty,
-    0,
-  );
+  const totalHeatingTime = cart.reduce((sum, item) => sum + item.heatingTime * item.qty, 0,);
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const totalProcessTime =
-    3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
+  const totalProcessTime = 3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
 
   // ฟังก์ชันหาว่าตอนนี้อยู่สเต็ปไหนของการอุ่น
   const getProcessStatus = () => {
@@ -125,25 +122,29 @@ export default function VendingPage() {
     const fetchProducts = async () => {
       setIsLoadingProducts(true);
       try {
-        const apiUrl =
-          process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(
-          `${apiUrl}/api/products?machine_id=MP1-001`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch products");
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        // const response = await fetch(`${apiUrl}/api/products?machine_id=MP1-001`,);
+        // if (!response.ok) throw new Error("Failed to fetch products");
 
-        const data = await response.json();
+        // const data = await response.json();
         // Map DB fields to Frontend interface
-        const mappedProducts: Product[] = data.map((p: any) => ({
-          id: p.id,
-          name: p.name,
-          desc: p.description,
-          price: p.price,
-          heatingTime: p.heating_time,
-          image: p.image_url,
-        }));
+        // const mappedProducts: Product[] = data.map((p: any) => ({
+        //   id: p.id,
+        //   name: p.name,
+        //   desc: p.description,
+        //   price: p.price,
+        //   heatingTime: p.heating_time,
+        //   image: p.image_url,
+        // }));
 
-        setProducts(mappedProducts);
+        const mockProducts: Product[] = [
+          { id: 1, name: "เปามดแดง", desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี", price: 32, heatingTime: 15, image: "/product/img/pao-moddaeng.png" },
+          { id: 2, name: "เปาหมูสับ", desc: "หมูสับไข่เค็ม รสกลมกล่อม", price: 32, heatingTime: 20, image: "/product/img/pao-moosub.png" },
+          { id: 3, name: "เปากุ้ง", desc: "เนื้อกุ้งเด้งเต็มคำ", price: 32, heatingTime: 15, image: "/product/img/pao-shrimp.png" },
+          { id: 4, name: "เปาครีม", desc: "ครีมคัสตาร์ด หอมหวานละมุน", price: 25, heatingTime: 12, image: "/product/img/pao-cream.png" }
+        ];
+
+        setProducts(mockProducts);
       } catch (err) {
         console.error("Error fetching products:", err);
       } finally {
@@ -162,10 +163,7 @@ export default function VendingPage() {
     let timer: NodeJS.Timeout;
     if (activeModal === "payment") {
       if (paymentCountdown > 0) {
-        timer = setInterval(
-          () => setPaymentCountdown((prev) => prev - 1),
-          1000,
-        );
+        timer = setInterval(() => setPaymentCountdown((prev) => prev - 1), 1000,);
       } else {
         closePaymentModal();
       }
@@ -215,17 +213,13 @@ export default function VendingPage() {
     setCart([]);
     setRealQrCode(null);
 
-    // ไหลไปหน้าสะสมแต้ม
+    // ไปหน้าสะสมแต้ม
     setIsAfterPayment(true);
     setPhoneNumber("");
     setActiveModal("numpad");
   };
 
-  const processPayment = async (paymentData: {
-    type: "token" | "source";
-    id: string;
-    amount: number;
-  }) => {
+  const processPayment = async (paymentData: { type: "token" | "source"; id: string; amount: number; }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
@@ -312,32 +306,7 @@ export default function VendingPage() {
     }, 2000);
   };
 
-  const handleOmiseCheckout = (paymentMethod: "card" | "visa" | "mastercard" | "unionpay") => {
-    if (typeof window !== "undefined" && (window as any).OmiseCard) {
-      const OmiseCard = (window as any).OmiseCard;
-      OmiseCard.configure({
-        publicKey: process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY,
-        currency: "THB",
-        frameLabel: "MOD.PAO Vending",
-        submitLabel: "ชำระเงิน / Pay Now",
-      });
-
-      OmiseCard.open({
-        amount: totalPrice * 100,
-        onCreateTokenSuccess: (nonce: string) => {
-          // nonce will be 'tokn_xxx' for cards
-          processPayment({ type: "token", id: nonce, amount: totalPrice * 100 });
-        },
-        onFormClosed: () => {
-          console.log("Card payment form closed");
-        },
-      });
-    } else {
-      alert("Payment gateway (OmiseCard) is still loading...");
-    }
-  };
-
-  // --- 💡 ฟังก์ชันสร้าง QR Code ทันที (ข้ามหน้าต่าง Omise) ---
+  // --- ฟังก์ชันสร้าง QR Code ---
   const handleDirectPromptPay = async () => {
     if (!(window as any).Omise) {
       alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
@@ -347,7 +316,7 @@ export default function VendingPage() {
     const Omise = (window as any).Omise;
     Omise.setPublicKey(process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY);
 
-    // 1. Create Source ID for PromptPay
+    // Create Source ID for PromptPay
     Omise.createSource(
       "promptpay",
       {
@@ -361,14 +330,15 @@ export default function VendingPage() {
           return;
         }
 
-        const sourceId = response.id; // src_xxx
+        const sourceId = response.id;
 
-        // 2. Send sourceId to Backend
+        // Send sourceId to Backend
         setPaymentStep(2);
         processPayment({ type: "source", id: sourceId, amount: totalPrice * 100 });
       },
     );
   };
+
   // ==========================================
   // EVENT HANDLERS
   // ==========================================
@@ -410,6 +380,8 @@ export default function VendingPage() {
     setPaymentStep(1);
     setRealQrCode(null);
     setCurrentChargeId(null);
+
+    // ตั้งเวลาและเปิด Modal
     setPaymentCountdown(180);
     setActiveModal("payment");
   };
@@ -445,8 +417,7 @@ export default function VendingPage() {
   };
   const displayFormattedPhone = () => {
     if (!phoneNumber) return "xxx-xxxxxxx";
-    if (phoneNumber.length > 3)
-      return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+    if (phoneNumber.length > 3) return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
     return phoneNumber;
   };
 
@@ -498,7 +469,7 @@ export default function VendingPage() {
       } else {
         console.error("[Frontend] Omise Tokenization Failed:", response);
         alert(`Tokenization Error: ${response.message || "Unknown error"}`);
-        
+
         // Reset UI on failure
         setTimeout(() => {
           closePaymentModal();
@@ -579,7 +550,11 @@ export default function VendingPage() {
           className="modal-overlay"
           onClick={
             activeModal === "payment"
-              ? closePaymentModal
+              ? () => {
+                if (paymentStep === 1) {
+                  closePaymentModal();
+                }
+              }
               : () => setActiveModal("none")
           }
         >
@@ -801,7 +776,9 @@ export default function VendingPage() {
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
               <button
                 className="timeout-close-btn danger"
-                onClick={closePaymentModal}
+                onClick={() => {
+                  attemptClosePaymentModal();
+                }}
               >
                 <span>{paymentCountdown}</span>
                 <span style={{ fontSize: "28px", lineHeight: 1 }}>&times;</span>
@@ -814,7 +791,9 @@ export default function VendingPage() {
                     <div className="modal-payment">
                       <button
                         className="modal-action-payment-btn"
-                        onClick={() => setSelectedPaymentMethod("promptpay")}
+                        onClick={() => {
+                          setSelectedPaymentMethod("promptpay");
+                        }}
                         disabled={!isOmiseLoaded}
                       >
                         <Image
@@ -828,7 +807,9 @@ export default function VendingPage() {
                       </button>
                       <button
                         className="modal-action-payment-btn"
-                        onClick={() => setSelectedPaymentMethod("visa")}
+                        onClick={() => {
+                          setSelectedPaymentMethod("visa");
+                        }}
                         disabled={!isOmiseLoaded}
                       >
                         <Image
@@ -841,7 +822,9 @@ export default function VendingPage() {
                       </button>
                       <button
                         className="modal-action-payment-btn"
-                        onClick={() => setSelectedPaymentMethod("unionpay")}
+                        onClick={() => {
+                          setSelectedPaymentMethod("unionpay");
+                        }}
                         disabled={!isOmiseLoaded}
                       >
                         <Image
@@ -854,7 +837,9 @@ export default function VendingPage() {
                       </button>
                       <button
                         className="modal-action-payment-btn"
-                        onClick={() => setSelectedPaymentMethod("mastercard")}
+                        onClick={() => {
+                          setSelectedPaymentMethod("mastercard");
+                        }}
                         disabled={!isOmiseLoaded}
                       >
                         <Image
@@ -892,7 +877,10 @@ export default function VendingPage() {
                         </div>
                         <button
                           className="modal-confirm-btn"
-                          onClick={handleDirectPromptPay}
+                          onClick={() => {
+                            setPaymentCountdown(180);
+                            handleDirectPromptPay();
+                          }}
                         >
                           รับทราบ และแสดง QR Code
                         </button>
@@ -925,15 +913,6 @@ export default function VendingPage() {
                             กำลังสร้าง QR Code...
                           </div>
                         )}
-                        <p
-                          style={{
-                            color: "#475569",
-                            fontWeight: 600,
-                            marginTop: "15px",
-                          }}
-                        >
-                          กรุณาสแกนภายใน 3:00 นาที
-                        </p>
                         <button
                           style={testBtnStyle}
                           onClick={simulatePromptPaySuccess}
@@ -970,13 +949,13 @@ export default function VendingPage() {
                           </div>
                           <button
                             className="modal-confirm-btn"
-                            onClick={() => setPaymentStep(2)}
+                            onClick={() => {
+                              setPaymentCountdown(180);
+                              setPaymentStep(2);
+                            }}
                           >
                             ดำเนินการแตะบัตร
                           </button>
-                          {/* <button className="modal-confirm-btn" onClick={() => setPaymentStep(2)}>
-                          ดำเนินการแตะบัตร
-                        </button> */}
                         </>
                       )}
 
@@ -994,9 +973,9 @@ export default function VendingPage() {
                           <p style={{ color: "#64748b", fontSize: "14px" }}>
                             กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง
                           </p>
-                          {/* 💡 กดเพื่อจำลองการแตะบัตร NFC */}
+                          {/* กดเพื่อจำลองการแตะบัตร NFC */}
                           <button style={testBtnStyle} onClick={simulateNfcTap}>
-                            [Test] Simulate Visa Tap (Auto-Token)
+                            [Test] Simulate Visa Tap
                           </button>
                         </>
                       )}
@@ -1004,19 +983,51 @@ export default function VendingPage() {
                   )}
 
                 {/* ปุ่มย้อนกลับ */}
-                {selectedPaymentMethod !== null && (
+                {selectedPaymentMethod !== null && paymentStep === 1 && (
                   <button
                     className="modal-back-btn"
                     onClick={() => {
-                      if (paymentStep === 2) setPaymentStep(1);
-                      else setSelectedPaymentMethod(null);
+                      setSelectedPaymentMethod(null);
                     }}
                   >
-                    {paymentStep === 2
-                      ? "ย้อนกลับไปอ่านวิธีใช้"
-                      : "เปลี่ยนช่องทางการชำระเงิน"}
+                    เปลี่ยนช่องทางการชำระเงิน
                   </button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* PaymentConfirmOpenModal */}
+          {activeModal === "payment" && isCancelPaymentConfirmOpen && (
+            <div
+              className="confirm-overlay"
+              onClick={(e) => {
+                e.stopPropagation();
+                dismissCancelPaymentConfirm();
+              }}
+            >
+              <div
+                className="confirm-modal-box"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="confirm-title">ยืนยันการยกเลิก</div>
+                <div className="confirm-desc">
+                  ต้องการยกเลิกการชำระเงินและกลับไปหน้าเลือกสินค้าใช่หรือไม่?
+                </div>
+                <div className="confirm-actions">
+                  <button
+                    className="confirm-btn modal-action-btn"
+                    onClick={dismissCancelPaymentConfirm}
+                  >
+                    กลับไปชำระเงิน
+                  </button>
+                  <button
+                    className="confirm-btn danger"
+                    onClick={confirmCancelPayment}
+                  >
+                    ยกเลิกการชำระเงิน
+                  </button>
+                </div>
               </div>
             </div>
           )}

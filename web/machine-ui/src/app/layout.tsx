@@ -26,11 +26,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="th">
-      {/* เพิ่ม suppressHydrationWarning เพื่อข้ามการเช็ค Attribute ที่ถูกแทรกโดย Extension */}
-      <body
-        className={`${kanit.className} ${madimiOne.variable}`}
-        suppressHydrationWarning
-      >
+      <body className={`${kanit.className} ${madimiOne.variable}`} suppressHydrationWarning>
         {children}
       </body>
     </html>
