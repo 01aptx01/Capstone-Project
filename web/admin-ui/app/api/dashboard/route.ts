@@ -1,4 +1,4 @@
-import dashboard from "../../../mock/dashboard.json";
+import dashboard from "@/lib/mock/dashboard.json";
 
 export async function GET() {
   return new Response(JSON.stringify(dashboard), {

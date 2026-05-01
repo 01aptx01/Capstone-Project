@@ -1,4 +1,4 @@
-import machines from "../../../mock/machines.json";
+import machines from "@/lib/mock/machines.json";
 
 export async function GET() {
   return new Response(JSON.stringify(machines), {

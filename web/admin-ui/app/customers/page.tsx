@@ -1,5 +1,5 @@
-import ReportCard from "../../components/ReportCard";
-import CouponTable from "../../components/CouponTable";
+import ReportCard from "@/components/dashboard/ReportCard";
+import CouponTable from "@/components/customers/CouponTable";
 
 export const metadata = { title: 'Customers & Promotions' };
 

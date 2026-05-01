@@ -1,4 +1,4 @@
-import products from "../../../mock/products.json";
+import products from "@/lib/mock/products.json";
 
 export async function GET() {
   return new Response(JSON.stringify(products), {

@@ -3,7 +3,7 @@
 import { use } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import machinesData from "../../../mock/machines.json";
+import machinesData from "@/lib/mock/machines.json";
 
 interface PageProps {
   params: Promise<{ id: string }>;

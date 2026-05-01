@@ -1,4 +1,4 @@
-import ProductTable from "../../components/ProductTable";
+import ProductTable from "@/components/products/ProductTable";
 
 export const metadata = { title: 'Inventory Management' };
 
