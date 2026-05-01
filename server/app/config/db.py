@@ -10,15 +10,7 @@ logger = logging.getLogger(__name__)
 
 class DatabaseManager:
     def __init__(self, pool_name="app_pool", pool_size=5, max_retries=30, retry_delay=1):
-        """
-        Initialize Database Manager และสร้าง Connection Pool เตรียมไว้
-        
-        Args:
-            pool_name: ชื่อของ pool
-            pool_size: จำนวน connection ใน pool
-            max_retries: จำนวนครั้งที่พยายาม retry (สำหรับ startup)
-            retry_delay: เวลา delay ระหว่าง retry (วินาที)
-        """
+        """Initialize Database Manager และสร้าง Connection Pool เตรียมไว้"""
         self.db_config = {
             "host": os.getenv("DB_HOST", "localhost"),
             "user": os.getenv("DB_USER", "root"),

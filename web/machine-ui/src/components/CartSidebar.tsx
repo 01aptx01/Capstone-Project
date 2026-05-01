@@ -1,5 +1,4 @@
 "use client";
-import React from 'react';
 import { Product } from './ProductCard';
 import { ShoppingCart, Trash2, ScanQrCode, Timer } from 'lucide-react';
 
