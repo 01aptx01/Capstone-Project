@@ -2,22 +2,19 @@
   {
     "id": "MP-001",
     "name": "MOD PAO Building LX",
-    "location": "อาคารการเรียนรู้",
-    "status": "active",
-    "uptime": 99.8
+    "location": "อาคารการเรียนรู้พหุวิทยาการ Learning Exchange",
+    "status": "online"
   },
   {
     "id": "MP-002",
     "name": "MOD PAO Building N7",
-    "location": "อาคาร N7",
-    "status": "active",
-    "uptime": 98.7
+    "location": "อาคารปฏิบัติการพื้นฐานทางวิทยาศาสตร์ N7",
+    "status": "online"
   },
   {
     "id": "MP-003",
     "name": "MOD PAO Canteen KFC",
-    "location": "โรงอาหาร",
-    "status": "maintenance",
-    "uptime": 95.2
+    "location": "อาคารพระจอมเกล้าราชานุสรณ์ 190 ปี",
+    "status": "online"
   }
 ]
