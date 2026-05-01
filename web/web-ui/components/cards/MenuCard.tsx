@@ -40,7 +40,7 @@ export function MenuCard({ item }: { item: MenuItem }) {
           </span>
           <button
             onClick={handleBook} // เรียกใช้งานฟังก์ชันที่รับ e ไว้
-            className="px-5 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200"
+            className="px-5 py-1.5 rounded-full text-15 font-semibold border transition-all duration-200"
             style={
               added
                 ? {
@@ -55,7 +55,7 @@ export function MenuCard({ item }: { item: MenuItem }) {
                   }
             }
           >
-            {added ? "✓ ซื้อแล้ว" : "ซื้อ"}
+            {added ? "✓ เพิ่มลงในตะกร้าแล้ว" : "สั่งซื้อ"}
           </button>
         </div>
       </div>

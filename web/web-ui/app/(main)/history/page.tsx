@@ -1,64 +1,44 @@
 // app/(main)/history/page.tsx
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { ORDER_HISTORY } from "@/lib/constants";
 import { HistoryCard } from "@/components/cards/HistoryCard";
-import { QRScannerModal } from "@/components/Ui/QRScannerModal";
-import { CancelConfirmModal } from "@/components/Ui/CancelConfirmModal"; // 1. นำเข้า Component ใหม่
-import { ORDER_HISTORY, OrderHistory } from "@/lib/constants";
 
 export default function HistoryPage() {
-  const [scanOrder, setScanOrder] = useState<OrderHistory | null>(null);
-  const [cancelOrder, setCancelOrder] = useState<OrderHistory | null>(null); // 2. เพิ่ม State สำหรับยกเลิกออเดอร์
-
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50 pb-10 relative">
-      <div className="px-5 md:px-10 pt-8 max-w-4xl mx-auto">
-        
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6 md:mb-8">
+    // 🚨 1. เอา min-h-screen ออก เพื่อไม่ให้ความสูงหน้าเพจไปกวน Layout หลัก
+    // 🚨 2. ใส่ pb-32 เพื่อดันเนื้อหาให้พ้นระยะของเมนูด้านล่าง (BottomNav)
+    <div className="flex flex-col pb-32">
+      
+      {/* 🚨 3. เอา sticky และ z-10 ออกเด็ดขาด เพื่อไม่ให้ไปบังเมนูด้านบน */}
+      <div className="px-5 pt-8 pb-4">
+        <h1 className="text-2xl font-extrabold text-gray-800 tracking-tight">
           ประวัติการสั่งซื้อ
         </h1>
-
-        <div className="flex flex-col gap-4">
-          {ORDER_HISTORY.map((order) => (
-            <HistoryCard 
-              key={order.id} 
-              order={order} 
-              onScan={() => setScanOrder(order)} 
-              onCancel={() => setCancelOrder(order)} // 3. กดแล้วส่งข้อมูลเข้า State ยกเลิก
-            />
-          ))}
-        </div>
-
-        {ORDER_HISTORY.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-4xl mb-3">🧾</p>
-            <p>ยังไม่มีประวัติการสั่งซื้อ</p>
-          </div>
-        )}
-
       </div>
 
-      {/* เรียกใช้ Modal สแกน QR */}
-      {scanOrder && (
-        <QRScannerModal 
-          orderNumber={scanOrder.orderNumber} 
-          onClose={() => setScanOrder(null)} 
-        />
-      )}
+      {/* รายการออเดอร์ */}
+      <div className="p-5 flex flex-col gap-4 max-w-md mx-auto w-full">
+        {ORDER_HISTORY.length > 0 ? (
+          ORDER_HISTORY.map((order) => (
+            <HistoryCard key={order.id} order={order} />
+          ))
+        ) : (
+          /* กรณีไม่มีประวัติการสั่งซื้อเลย */
+          <div className="flex flex-col items-center justify-center text-gray-400 mt-20 opacity-60">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-4">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            <p className="font-bold text-lg text-gray-500">ยังไม่มีประวัติการสั่งซื้อ</p>
+          </div>
+        )}
+      </div>
 
-      {/* 4. เรียกใช้ Modal ยืนยันการยกเลิก */}
-      {cancelOrder && (
-        <CancelConfirmModal 
-          orderNumber={cancelOrder.orderNumber}
-          onClose={() => setCancelOrder(null)}
-          onConfirm={() => {
-            alert(`จำลอง: ยกเลิกคำสั่งซื้อ ${cancelOrder.orderNumber} สำเร็จแล้ว!`);
-            setCancelOrder(null);
-            // TODO: ใส่ Logic ยิง API ไปลบข้อมูลที่ฝั่ง Backend ตรงนี้
-          }}
-        />
-      )}
     </div>
   );
 }

@@ -116,6 +116,15 @@ export const COUPONS: Coupon[] = [
     expiry: "หมดอายุ 4 พ.ค. 2026",
   },
 ];
+export interface OrderHistory {
+  id: string;
+  orderNumber: string;
+  datetime: string;
+  items: string;
+  total: number;
+  // 🚨 เหลือสถานะแค่ 2 แบบ
+  status: "ready_to_scan" | "completed";
+} 
 
 // ─── Order History ────────────────────────────────────────────────────────────
 export interface OrderHistory {
@@ -124,18 +133,21 @@ export interface OrderHistory {
   datetime: string;
   items: string;
   total: number;
-  status: "pending" | "completed" | "cancelled";
+  // 🚨 เหลือสถานะแค่ 2 แบบ
+  status: "ready_to_scan" | "completed";
 }
 
 export const ORDER_HISTORY: OrderHistory[] = [
+  // 1. สถานะ "พร้อมสแกน" (จ่ายเงินแล้ว รอไปรับของที่ตู้)
   {
     id: "1",
-    orderNumber: "1112", // 🚨 รายการรอล่าสุด
-    datetime: "2026-05-01 20:00", // อัปเดตเวลาให้ใกล้เคียงปัจจุบัน
+    orderNumber: "1112", 
+    datetime: "2026-05-02 08:30",
     items: "เปามันแกว x1, เปาหมูสับ x1",
     total: 45,
-    status: "pending",
+    status: "ready_to_scan", 
   },
+  // 2. สถานะ "เสร็จสิ้น" (รับของที่ตู้ไปแล้ว)
   {
     id: "2",
     orderNumber: "1111",
@@ -143,13 +155,5 @@ export const ORDER_HISTORY: OrderHistory[] = [
     items: "เปามดแดง x2",
     total: 50,
     status: "completed",
-  },
-  {
-    id: "3",
-    orderNumber: "1110",
-    datetime: "2026-04-14 12:15",
-    items: "เปาไก่เห็ด x1",
-    total: 25,
-    status: "cancelled",
-  },
+  }
 ];
