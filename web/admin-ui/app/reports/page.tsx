@@ -1,7 +1,7 @@
-import ReportCard from "../../components/ReportCard";
-import RevenueChart from "../../components/RevenueChart";
-import EfficiencyChart from "../../components/EfficiencyChart";
-import SalesByLocation from "../../components/SalesByLocation";
+import ReportCard from "@/components/dashboard/ReportCard";
+import RevenueChart from "@/components/dashboard/RevenueChart";
+import EfficiencyChart from "@/components/dashboard/EfficiencyChart";
+import SalesByLocation from "@/components/dashboard/SalesByLocation";
 
 export const metadata = { title: 'Reports & Analytics' };
 

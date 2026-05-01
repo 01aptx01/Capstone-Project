@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import couponsData from "../mock/coupons.json";
+import couponsData from "@/lib/mock/coupons.json";
 
 export default function CouponTable() {
   const [activeTab, setActiveTab] = useState("ทั้งหมด");

@@ -1,5 +1,5 @@
-import MachineCard from "../../components/MachineCard";
-import machinesData from "../../mock/machines.json";
+import MachineCard from "@/components/machines/MachineCard";
+import machinesData from "@/lib/mock/machines.json";
 
 export const metadata = { title: 'Manage Machines' };
 
