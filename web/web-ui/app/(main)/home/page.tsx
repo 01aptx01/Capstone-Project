@@ -13,7 +13,8 @@ export default function HomePage() {
       : MENU_ITEMS.filter((m) => m.category === activeCategory);
 
   return (
-    <div className="pb-10">
+    // 🚨 เปลี่ยนจาก pb-10 เป็น pb-40 เพื่อดันพื้นที่ด้านล่างให้พ้นตะกร้าและป๊อปอัปอย่างจุใจ[cite: 11]
+    <div className="pb-40">
       {/* Hero section */}
       <div className="px-5 md:px-10 pt-6 pb-4">
         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 leading-snug">

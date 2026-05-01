@@ -1,9 +1,9 @@
 // context/CartContext.tsx
 "use client";
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { CartFullModal } from "@/components/Ui/CartFullModal";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { Coupon } from "@/lib/constants";
+// 🚨 เอา CartFullModal ออกไปแล้วเพราะเราไม่ได้ใช้แบบเดิม
 
 export interface CartItem {
   id: string | number;
@@ -26,63 +26,68 @@ interface CartContextType {
   removeItem: (id: string | number) => void;
   clearCart: () => void;
   
-  // 🚨 ระบบชำระเงินใหม่
   orderStatus: OrderStatus;
   paymentMethod: string | null;
   timeLeft: number;
   startCheckout: (method: string) => void;
   cancelOrder: () => void;
   completeOrder: () => void;
+  
+  // 🚨 เพิ่มสถานะเปิด/ปิด Toast ตะกร้าเต็ม
+  showCartFullToast: boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isFullModalOpen, setIsFullModalOpen] = useState(false);
   const [animations, setAnimations] = useState<{ id: number; x: number; y: number; img?: string }[]>([]);
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
 
-  // 🚨 State สำหรับระบบชำระเงิน
   const [orderStatus, setOrderStatus] = useState<OrderStatus>("idle");
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number>(1800); // 30 นาที = 1800 วินาที
+  const [timeLeft, setTimeLeft] = useState<number>(1800); 
   const [showTimeoutModal, setShowTimeoutModal] = useState(false);
+
+  // 🚨 State สำหรับแจ้งเตือนตะกร้าเต็ม
+  const [showCartFullToast, setShowCartFullToast] = useState(false);
+  // 🚨 ตัวแปรลับเอาไว้จำ "จำนวนของที่กำลังลอยอยู่บนฟ้า" ป้องกันการกดรัวๆ
+  const pendingAddCount = useRef(0);
 
   const cartCount = cartItems.reduce((sum, item) => sum + item.qty, 0);
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
 
-  // 🚨 ฟังก์ชันเริ่มการชำระเงิน (กดหลังจากเลือก พร้อมเพย์/ทรูมันนี่)
+  // ฟังก์ชันกระตุ้นป๊อปอัปแจ้งเตือนให้เด้งขึ้นมา 3 วินาทีแล้วหายไป
+  const triggerCartFullToast = useCallback(() => {
+    setShowCartFullToast(true);
+    setTimeout(() => setShowCartFullToast(false), 5000);
+  }, []);
+
   const startCheckout = (method: string) => {
     setOrderStatus("pending");
     setPaymentMethod(method);
-    setTimeLeft(1800); // รีเซ็ตเวลา 30 นาที
+    setTimeLeft(1800); 
   };
 
-// 🚨 แก้ไขฟังก์ชันนี้
   const cancelOrder = () => {
     setOrderStatus("idle");
     setPaymentMethod(null);
     setTimeLeft(1800);
-    clearCart(); // 👈 เพิ่มบรรทัดนี้ เพื่อล้างตะกร้าทันทีที่กดยกเลิก
+    clearCart(); 
   };
 
-  // 🚨 ฟังก์ชันชำระเงินสำเร็จ
   const completeOrder = () => {
     setOrderStatus("completed");
     setPaymentMethod(null);
     clearCart();
-    // หน่วงเวลาเล็กน้อยแล้วกลับสู่สถานะปกติ
     setTimeout(() => setOrderStatus("idle"), 2000);
   };
 
-  // 🚨 Effect จับเวลาถอยหลัง 30 นาที
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (orderStatus === "pending" && timeLeft > 0) {
       timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
     } else if (orderStatus === "pending" && timeLeft <= 0) {
-      // เวลาหมด!
       setShowTimeoutModal(true);
       cancelOrder();
     }
@@ -90,16 +95,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [orderStatus, timeLeft]);
 
   const addToCart = useCallback((e: React.MouseEvent<HTMLButtonElement>, item: Omit<CartItem, 'qty'>) => {
-    // 🚨 ป้องกันการเพิ่มของลงตะกร้า ถ้ารอจ่ายเงินอยู่
     if (orderStatus === "pending") {
       alert("กรุณาชำระเงินรายการปัจจุบันให้เสร็จสิ้น หรือยกเลิกรายการก่อนครับ");
       return;
     }
 
-    if (cartCount >= 3) {
-      setIsFullModalOpen(true);
+    // 🚨 เช็คจำนวนในตะกร้า + ของที่กำลังลอยอยู่บนฟ้า ถ้าเกิน 3 ชิ้น โชว์แจ้งเตือนทันที!
+    if (cartCount + pendingAddCount.current >= 3) {
+      triggerCartFullToast();
       return;
     }
+
+    // ถ้ายังไม่เกิน 3 ชิ้น ให้จดจำว่ามีของกำลังลอยไปเพิ่ม 1 ชิ้น
+    pendingAddCount.current += 1;
 
     const rect = e.currentTarget.getBoundingClientRect();
     const startX = rect.left + rect.width / 2;
@@ -114,15 +122,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return [...prev, { ...item, qty: 1 }];
       });
       setAnimations((prev) => prev.filter((anim) => anim.id !== animId));
+      // ของลงตะกร้าเสร็จแล้ว หักลบของที่อยู่บนฟ้าออก
+      pendingAddCount.current -= 1;
     }, 600);
-  }, [cartCount, orderStatus]);
+  }, [cartCount, orderStatus, triggerCartFullToast]);
 
   const updateQty = (id: string | number, delta: number) => {
     setCartItems((prev) => prev.map((item) => {
       if (item.id === id) {
         const newQty = item.qty + delta;
+        // 🚨 ถ้ากดบวกเพิ่มในตะกร้าแล้วเกิน 3 ชิ้น ให้โชว์ป๊อปอัปสั่น
         if (delta > 0 && cartCount >= 3) {
-          setIsFullModalOpen(true);
+          triggerCartFullToast();
           return item;
         }
         if (newQty < 1) return item; 
@@ -140,11 +151,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <CartContext.Provider value={{ cartItems, cartCount, totalPrice, appliedCoupon, setAppliedCoupon, addToCart, updateQty, removeItem, clearCart, orderStatus, paymentMethod, timeLeft, startCheckout, cancelOrder, completeOrder }}>
+    <CartContext.Provider value={{ cartItems, cartCount, totalPrice, appliedCoupon, setAppliedCoupon, addToCart, updateQty, removeItem, clearCart, orderStatus, paymentMethod, timeLeft, startCheckout, cancelOrder, completeOrder, showCartFullToast }}>
       {children}
-      {isFullModalOpen && <CartFullModal onClose={() => setIsFullModalOpen(false)} />}
 
-      {/* 🚨 ป๊อปอัปแจ้งเตือนเวลาหมด (แสดงทับทุกหน้า) */}
       {showTimeoutModal && (
         <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-5 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-3xl p-6 md:p-8 max-w-sm w-full text-center shadow-2xl animate-scale-in">
