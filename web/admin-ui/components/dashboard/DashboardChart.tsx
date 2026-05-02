@@ -13,8 +13,61 @@ function formatCurrency(n: number) {
 }
 
 export default function DashboardChart() {
-  const [period, setPeriod] = useState("Day");
+  const [viewMode, setViewMode] = useState<"realtime" | "historical">("realtime");
+  const [realtimePeriod, setRealtimePeriod] = useState("Day");
+  const [historicalPeriod, setHistoricalPeriod] = useState("Day");
+  
+  const [dateRange, setDateRange] = useState({ start: "", end: "" });
+  const [monthRange, setMonthRange] = useState({ start: "", end: "" });
+  const [yearRange, setYearRange] = useState({ start: new Date().getFullYear().toString(), end: new Date().getFullYear().toString() });
+  
+  const [histData, setHistData] = useState<number[]>([1200, 2400, 1800, 3200, 2800]);
+  const [histLabels, setHistLabels] = useState<string[]>(["T1", "T2", "T3", "T4", "T5"]);
+
   const [data, setData] = useState({ day: fallbackDay, week: fallbackWeek, month: fallbackMonth });
+
+  useEffect(() => {
+    if (viewMode !== "historical") return;
+    let count = 0;
+    let newLabels: string[] = [];
+    
+    if (historicalPeriod === "Day" && dateRange.start && dateRange.end) {
+       const s = new Date(dateRange.start);
+       const e = new Date(dateRange.end);
+       const diffDays = Math.round((e.getTime() - s.getTime()) / (1000 * 3600 * 24)) + 1;
+       count = Math.max(1, Math.min(diffDays, 31));
+       for (let i = 0; i < count; i++) {
+          const d = new Date(s);
+          d.setDate(d.getDate() + i);
+          newLabels.push(`${d.getDate()}/${d.getMonth()+1}`);
+       }
+    } else if (historicalPeriod === "Month" && monthRange.start && monthRange.end) {
+       const s = new Date(monthRange.start);
+       const e = new Date(monthRange.end);
+       const diffMonths = (e.getFullYear() - s.getFullYear()) * 12 + e.getMonth() - s.getMonth() + 1;
+       count = Math.max(1, Math.min(diffMonths, 24));
+       for(let i = 0; i < count; i++) {
+          const d = new Date(s);
+          d.setMonth(d.getMonth() + i);
+          const m = d.toLocaleString('default', { month: 'short' });
+          newLabels.push(`${m} '${d.getFullYear().toString().slice(2)}`);
+       }
+    } else if (historicalPeriod === "Year" && yearRange.start && yearRange.end) {
+       const s = parseInt(yearRange.start);
+       const e = parseInt(yearRange.end);
+       count = Math.max(1, Math.min(e - s + 1, 10));
+       for (let i = 0; i < count; i++) {
+          newLabels.push(`${s + i}`);
+       }
+    } else {
+       count = 5;
+       newLabels = Array.from({length: 5}, (_, i) => `T${i+1}`);
+    }
+
+    const newData = Array.from({length: count}, () => Math.floor(Math.random() * 4000) + 500);
+    setHistData(newData);
+    setHistLabels(newLabels);
+  }, [viewMode, historicalPeriod, dateRange, monthRange, yearRange]);
 
   useEffect(() => {
     let mounted = true;
@@ -40,13 +93,17 @@ export default function DashboardChart() {
   useEffect(() => {
     function onPeriodChange(e: Event) {
       const detail = (e as CustomEvent).detail;
-      if (detail && detail.period) setPeriod(detail.period);
+      if (detail && detail.period && viewMode === "realtime") {
+        setRealtimePeriod(detail.period);
+      }
     }
     window.addEventListener("dashboard-period-change", onPeriodChange as EventListener);
     return () => window.removeEventListener("dashboard-period-change", onPeriodChange as EventListener);
-  }, []);
+  }, [viewMode]);
 
-  const active = period === "Day" ? data.day : period === "Week" ? data.week : data.month;
+  const active = viewMode === "historical" 
+    ? histData 
+    : (realtimePeriod === "Day" ? data.day : realtimePeriod === "Week" ? data.week : data.month);
 
   const chartRef = useRef<HTMLDivElement | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
@@ -111,7 +168,7 @@ export default function DashboardChart() {
 
   // Projection for Month (memoized)
   const { projPath, projPoint } = useMemo(() => {
-    if (period !== "Month" || points.length < 2) return { projPath: null, projPoint: null };
+    if (viewMode === "historical" || realtimePeriod !== "Month" || points.length < 2) return { projPath: null, projPoint: null };
     const last = points[points.length - 1];
     const prev = points[points.length - 2];
     const projectedV = Math.max(0, Math.round(last.v + (last.v - prev.v) * 0.6));
@@ -120,7 +177,7 @@ export default function DashboardChart() {
     const projX = padding + innerWidth; // next slot
     const projY = (1 - Math.min(projectedV / maxValue, 1)) * chartHeight;
     return { projPath: `M ${last.x.toFixed(2)} ${last.y.toFixed(2)} L ${projX.toFixed(2)} ${projY.toFixed(2)}`, projPoint: { x: projX, y: projY, v: projectedV } };
-  }, [period, points, chartWidth, maxValue, chartHeight]);
+  }, [viewMode, realtimePeriod, points, chartWidth, maxValue, chartHeight]);
 
   // Tooltip state & handlers
   const [tooltip, setTooltip] = useState<{ show: boolean; x: number; y: number; label: string | number; value: number | null; index: number }>({ show: false, x: 0, y: 0, label: "", value: null, index: 0 });
@@ -148,11 +205,14 @@ export default function DashboardChart() {
 
   // Dynamic labels depending on period and data length
   const labels = (() => {
-    if (period === "Day") {
+    if (viewMode === "historical") {
+      return histLabels;
+    }
+    if (realtimePeriod === "Day") {
       const dayLabels = ["6am", "8am", "10am", "12pm", "2pm", "4pm", "6pm", "8pm"];
       return active.length === dayLabels.length ? dayLabels : active.map((_, i) => `T${i + 1}`);
     }
-    if (period === "Week") {
+    if (realtimePeriod === "Week") {
       const wk = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       return active.length === wk.length ? wk : active.map((_, i) => `D${i + 1}`);
     }
@@ -165,28 +225,121 @@ export default function DashboardChart() {
 
   return (
     <div className="bg-white border border-[#E2E8F0] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-      <div className="flex items-center justify-between mb-10">
-        <h3 className="text-[18px] font-bold text-[#334155]">
-          แนวโน้มยอดขาย <span className="text-[#64748B] font-medium ml-1">(Real-time)</span>
-        </h3>
-        <div className="flex bg-[#F1F5F9] p-1 rounded-xl">
-          {["Day", "Week", "Month"].map((p) => (
-            <button
-              key={p}
-              onClick={() => {
-                setPeriod(p);
-                try {
-                  window.dispatchEvent(new CustomEvent("dashboard-period-change", { detail: { period: p } }));
-                } catch (e) {}
-              }}
-              className={`px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${
-                period === p ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+      <div className="flex flex-col mb-10 gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h3 className="text-[18px] font-bold text-[#334155]">
+              แนวโน้มยอดขาย
+            </h3>
+            <div className="flex items-center bg-[#F1F5F9] p-1 rounded-xl">
+              <button
+                onClick={() => setViewMode("realtime")}
+                className={`px-3 py-1 rounded-lg text-[13px] font-bold transition-all ${
+                  viewMode === "realtime" ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+                }`}
+              >
+                Real-time
+              </button>
+              <button
+                onClick={() => setViewMode("historical")}
+                className={`px-3 py-1 rounded-lg text-[13px] font-bold transition-all ${
+                  viewMode === "historical" ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+                }`}
+              >
+                Historical
+              </button>
+            </div>
+          </div>
+          <div className="flex bg-[#F1F5F9] p-1 rounded-xl">
+            {(viewMode === "realtime" ? ["Day", "Week", "Month"] : ["Day", "Month", "Year"]).map((p) => (
+              <button
+                key={p}
+                onClick={() => {
+                  if (viewMode === "realtime") {
+                    setRealtimePeriod(p);
+                    try {
+                      window.dispatchEvent(new CustomEvent("dashboard-period-change", { detail: { period: p } }));
+                    } catch (e) {}
+                  } else {
+                    setHistoricalPeriod(p);
+                  }
+                }}
+                className={`px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${
+                  (viewMode === "realtime" ? realtimePeriod : historicalPeriod) === p ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Filters Row */}
+        <AnimatePresence>
+        {viewMode === "historical" && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-center gap-4 pt-2 border-t border-[#E2E8F0] overflow-hidden"
+          >
+            <span className="text-[14px] font-medium text-[#64748B]">ระบุช่วงเวลา:</span>
+            {historicalPeriod === "Day" && (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="date" 
+                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  value={dateRange.start}
+                  onChange={(e) => setDateRange(s => ({...s, start: e.target.value}))}
+                />
+                <span className="text-[#64748B] text-[13px] font-medium">ถึง</span>
+                <input 
+                  type="date" 
+                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  value={dateRange.end}
+                  onChange={(e) => setDateRange(s => ({...s, end: e.target.value}))}
+                />
+              </div>
+            )}
+            {historicalPeriod === "Month" && (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="month" 
+                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  value={monthRange.start}
+                  onChange={(e) => setMonthRange(s => ({...s, start: e.target.value}))}
+                />
+                <span className="text-[#64748B] text-[13px] font-medium">ถึง</span>
+                <input 
+                  type="month" 
+                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  value={monthRange.end}
+                  onChange={(e) => setMonthRange(s => ({...s, end: e.target.value}))}
+                />
+              </div>
+            )}
+            {historicalPeriod === "Year" && (
+              <div className="flex items-center gap-2">
+                <input 
+                  type="number" 
+                  placeholder="YYYY"
+                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a] w-24"
+                  value={yearRange.start}
+                  onChange={(e) => setYearRange(s => ({...s, start: e.target.value}))}
+                />
+                <span className="text-[#64748B] text-[13px] font-medium">ถึง</span>
+                <input 
+                  type="number" 
+                  placeholder="YYYY"
+                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a] w-24"
+                  value={yearRange.end}
+                  onChange={(e) => setYearRange(s => ({...s, end: e.target.value}))}
+                />
+              </div>
+            )}
+          </motion.div>
+        )}
+        </AnimatePresence>
       </div>
 
       <div className="relative h-[300px] w-full flex">
@@ -324,5 +477,3 @@ export default function DashboardChart() {
     </div>
   );
 }
-
-

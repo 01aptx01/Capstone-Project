@@ -1,5 +1,6 @@
 "use client";
 
+import PageWrapper from "@/components/layout/PageWrapper";
 import MachineCard from "@/components/machines/MachineCard";
 import machinesData from "@/lib/mock/machines.json";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
@@ -23,48 +24,24 @@ export default function MachinesPage() {
   const { openAddMachine, openExportModal } = useUI();
 
   return (
-    <div className="max-w-[1400px] mx-auto py-10 px-6 space-y-12">
-      {/* Premium Header Section */}
-      <div className="relative overflow-hidden rounded-[40px] p-10 bg-white border border-[#E2E8F0] shadow-[0_20px_60px_rgb(0,0,0,0.03)] animate-in opacity-0">
-        {/* Animated Mesh Gradient Background */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none">
-          <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[80%] bg-[#f47b2a] rounded-full blur-[120px] animate-pulse"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[70%] bg-orange-400 rounded-full blur-[100px] animate-pulse delay-700"></div>
+    <PageWrapper>
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8 animate-in opacity-0">
+        <div>
+          <h1 className="text-3xl font-black text-[#334155] tracking-tight mb-2">
+            จัดการตู้สินค้า
+          </h1>
+          <p className="text-slate-400 font-medium">
+            ติดตามสถานะ สต็อกสินค้า และประสิทธิภาพของตู้จำหน่ายสินค้าอัตโนมัติแบบ Real-time
+          </p>
         </div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <div className="flex items-center gap-3 mb-4 animate-in opacity-0 delay-100">
-              <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center">
-                <i className="fi fi-rr-vending-machine text-2xl text-[#f47b2a]"></i>
-              </div>
-              <span className="text-slate-500 font-black uppercase tracking-[0.2em] text-[12px]">Inventory Fleet</span>
-            </div>
-            <h1 className="text-[42px] font-black text-[#334155] mb-2 tracking-tight leading-tight animate-in opacity-0 delay-200">
-              จัดการตู้สินค้า <span className="text-[#f47b2a]">.</span>
-            </h1>
-            <p className="text-slate-400 text-[18px] font-medium max-w-xl animate-in opacity-0 delay-300">
-              ติดตามสถานะ สต็อกสินค้า และประสิทธิภาพของตู้จำหน่ายสินค้าอัตโนมัติแบบ Real-time
-            </p>
-          </div>
-          
-          <div className="flex items-center gap-4 animate-in opacity-0 delay-500">
-            <button 
-              onClick={() => openExportModal(machineSections, "จัดการตู้สินค้า")}
-              className="px-6 py-4 bg-slate-50 border border-slate-200 text-[#334155] rounded-2xl font-bold hover:bg-slate-100 transition-all flex items-center gap-3 active:scale-95"
-            >
-              <i className="fi fi-rr-download text-lg"></i>
-              <span>Export รายงาน</span>
-            </button>
-            <button 
-              onClick={openAddMachine}
-              className="px-8 py-4 bg-[#f47b2a] text-white rounded-2xl font-black shadow-[0_20px_40px_rgba(244,123,42,0.2)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.3)] hover:-translate-y-1 transition-all flex items-center gap-3 active:translate-y-0 active:scale-95"
-            >
-              <i className="fi fi-rr-plus text-lg"></i>
-              <span>เพิ่มตู้สินค้า</span>
-            </button>
-          </div>
-        </div>
+        <button 
+          onClick={() => openExportModal(machineSections, "จัดการตู้สินค้า")}
+          className="px-6 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
+        >
+          <i className="fi fi-rr-download text-sm"></i>
+          <span>Export</span>
+        </button>
       </div>
 
       {/* Stats Summary - Quick Glance */}
@@ -94,10 +71,13 @@ export default function MachinesPage() {
             <span className="w-2 h-8 bg-[#f47b2a] rounded-full"></span>
             รายชื่อตู้ทั้งหมด
           </h2>
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl">
-            <button className="px-5 py-2 bg-white rounded-xl shadow-sm text-sm font-black text-[#f47b2a]">Grid</button>
-            <button className="px-5 py-2 text-sm font-bold text-slate-400 hover:text-slate-600">List</button>
-          </div>
+          <button 
+            onClick={openAddMachine}
+            className="px-5 py-2.5 bg-[#f47b2a] text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
+          >
+            <i className="fi fi-rr-plus text-sm"></i>
+            <span>เพิ่มตู้สินค้า</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pb-16">
@@ -134,7 +114,7 @@ export default function MachinesPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }
 

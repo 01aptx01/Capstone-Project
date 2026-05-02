@@ -80,7 +80,7 @@ export default function ReportCard({
         )}
       </div>
       <div>
-        <div className="text-[12px] font-black text-[#94A3B8] mb-1 uppercase tracking-wider">{title}</div>
+        <div className="text-[15px] font-black text-[#475569] mb-1.5">{title}</div>
         <div className="text-[28px] font-black text-[#334155] leading-none flex items-baseline gap-1.5">
           {value}
           {subValue && <span className="text-[13px] font-bold text-[#CBD5E1] tracking-wide">{subValue}</span>}

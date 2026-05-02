@@ -42,15 +42,6 @@ export default function Sidebar() {
       </div>
 
       <nav className="sidebar-nav relative">
-        {/* Sliding Indicator (Premium Version) */}
-        <div 
-          className="active-glow-indicator shadow-[0_10px_30px_rgba(244,123,42,0.1)]" 
-          style={{
-            top: activeIndex >= 0 ? `${30 + (activeIndex * 60)}px` : '30px',
-            opacity: activeIndex >= 0 ? 1 : 0
-          }}
-        />
-        
         {nav.map((item, index) => {
           const active =
             pathname === item.href ||
@@ -86,18 +77,6 @@ export default function Sidebar() {
             position: relative;
           }
 
-          .active-glow-indicator {
-            position: absolute;
-            left: 18px;
-            right: 18px;
-            height: 52px;
-            background: white;
-            border: 1.5px solid rgba(244, 123, 42, 0.1);
-            border-radius: 18px;
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            pointer-events: none;
-          }
-
           @keyframes slideIn {
             from { opacity: 0; transform: translateX(-5px); }
             to { opacity: 1; transform: translateX(0); }
@@ -108,7 +87,7 @@ export default function Sidebar() {
       <div className="sidebar-spacer" />
 
       <div className="sidebar-bottom px-6 pb-10">
-        <button
+        {/* <button
           onClick={openAddMachine}
           className="add-btn mb-8 relative group overflow-hidden"
         >
@@ -120,7 +99,7 @@ export default function Sidebar() {
             <span className="tracking-tight">เพิ่มตู้ใหม่</span>
           </div>
           <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:left-[100%] transition-all duration-1000"></div>
-        </button>
+        </button> */}
 
         <div className="bottom-links space-y-2">
           <Link href="/settings" className={`bottom-link group ${pathname === '/settings' ? 'active' : ''}`}>
@@ -140,7 +119,7 @@ export default function Sidebar() {
 
       <style dangerouslySetInnerHTML={{ __html: `
         .sidebar {
-          background: #F8FAFC;
+          background: #FFFFFF;
           box-shadow: 20px 0 60px rgba(15, 23, 42, 0.02);
           border-right: 1px solid rgba(15, 23, 42, 0.04);
         }
@@ -189,7 +168,7 @@ export default function Sidebar() {
         }
 
         .sidebar-link.active {
-          transform: scale(1.02) translateX(4px) !important;
+          transform: translateX(4px) !important;
         }
 
         .sidebar-link .icon-container {

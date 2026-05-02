@@ -1,15 +1,15 @@
 "use client";
 
+import PageWrapper from "@/components/layout/PageWrapper";
 import DashboardChart from "@/components/dashboard/DashboardChart";
 import DashboardCard from "@/components/dashboard/DashboardCard";
-import HeaderDateSelector from "@/components/dashboard/HeaderDateSelector";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 
 const dashboardSections: ExportSection[] = [
   {
     id: "overview",
     label: "ข้อมูลภาพรวม (Overview Stats)",
-    description: "ยอดขายรวม, จำนวนคำสั่งซื้อ, และตู้ที่ทำงานอยู่",
+    description: "ยอดขายรวม, จำนวนคำสั่งซื้อ, และตู้ที่พร้อมใช้งาน",
     columns: [
       { key: "metric", label: "หัวข้อ" },
       { key: "value", label: "ค่าที่ได้" },
@@ -18,7 +18,7 @@ const dashboardSections: ExportSection[] = [
     fetchData: async () => [
       { metric: "ยอดขายวันนี้", value: "฿1,458.50", trend: "+12.5%" },
       { metric: "จำนวนคำสั่งซื้อ", value: "342", trend: "+8.2%" },
-      { metric: "ตู้ที่ทำงานอยู่", value: "48/50", trend: "-" },
+      { metric: "ตู้ที่พร้อมใช้งาน", value: "3/3", trend: "-" },
       { metric: "แจ้งเตือนสต็อกต่ำ", value: "12", trend: "+2" },
     ],
   },
@@ -62,19 +62,17 @@ export default function Home() {
   const { openExportModal } = useUI();
 
   return (
-    <div className="min-h-screen mesh-primary py-8 px-8">
-      <div className="max-w-[1400px] mx-auto">
+    <PageWrapper>
       {/* Header Section */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-[28px] font-bold text-[#334155] mb-1">
-            ภาพรวม <span className="text-[#64748B] font-medium text-[20px] ml-1">(Overview)</span>
+            แดชบอร์ดภาพรวม
           </h1>
-          <p className="text-[#64748B] text-[15px]">ภาพรวมข้อมูลการทำงานของตู้ทั้งหมดในวันนี้</p>
+          <p className="text-[#64748B] text-[15px]">ภาพรวมข้อมูลการทำงานของตู้ทั้งหมด รายงานและสถิติวิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก</p>
         </div>
 
         <div className="flex items-center gap-3">
-          <HeaderDateSelector />
           <button 
             onClick={() => openExportModal(dashboardSections, "ภาพรวม Dashboard")}
             className="flex items-center gap-2 bg-[#f47b2a] hover:bg-[#d35e11] text-white px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(244,123,42,0.15)] transition-all"
@@ -115,9 +113,9 @@ export default function Home() {
         </div>
         <div className="animate-scale-in opacity-0 delay-200">
           <DashboardCard 
-            title="ตู้ที่ทำงานอยู่" 
-            value="48" 
-            subValue="/ 50"
+            title="ตู้ที่พร้อมใช้งาน" 
+            value="3" 
+            subValue="/ 3"
             icon={<i className="fi fi-rr-vending-machine"></i>} 
             accentColor="#f59e0b"
             href="/machines"
@@ -140,8 +138,7 @@ export default function Home() {
       <div className="mb-8">
         <DashboardChart />
       </div>
-    </div>
-    </div>
+    </PageWrapper>
   );
 }
 

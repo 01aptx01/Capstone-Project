@@ -5,13 +5,13 @@ import { useState } from "react";
 export default function RevenueChart() {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  // Data points for the chart
   const data = [
     { label: "ม.ค.", val: 40, projected: false },
     { label: "ก.พ.", val: 35, projected: false },
     { label: "มี.ค.", val: 55, projected: false },
     { label: "เม.ย.", val: 85, projected: false },
-    { label: "พ.ค.", val: 110, projected: true },
+    { label: "พ.ค.", val: 110, projected: false },
+    { label: "มิ.ย.", val: 95, projected: false },
   ];
 
   const maxVal = 130;
@@ -27,52 +27,30 @@ export default function RevenueChart() {
     projected: d.projected
   }));
 
-  // Create Bezier curve path
+  // Create straight line path
   const getCurvePath = (pts: typeof points) => {
-    if (pts.length < 2) return "";
+    if (pts.length === 0) return "";
     let path = `M ${pts[0].x} ${pts[0].y}`;
-    
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = pts[i];
-      const p1 = pts[i + 1];
-      const cp1x = p0.x + (p1.x - p0.x) / 2;
-      const cp1y = p0.y;
-      const cp2x = p0.x + (p1.x - p0.x) / 2;
-      const cp2y = p1.y;
-      path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y}`;
+    for (let i = 1; i < pts.length; i++) {
+      path += ` L ${pts[i].x} ${pts[i].y}`;
     }
     return path;
   };
 
-  const actualPoints = points.filter(p => !p.projected);
+  const actualPoints = points;
   const lastActual = actualPoints[actualPoints.length - 1];
-  const firstProjected = points.find(p => p.projected);
   
   const linePath = getCurvePath(actualPoints);
   const areaPath = `${linePath} L ${lastActual.x} ${height - padding} L ${padding} ${height - padding} Z`;
-  
-  // Simple projection line
-  const projectionPath = `M ${lastActual.x} ${lastActual.y} L ${firstProjected?.x} ${firstProjected?.y}`;
 
   return (
     <div className="vibrant-card !rounded-[40px] p-10 h-full shadow-2xl shadow-orange-900/[0.03] group/chart">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-[24px] font-black text-[#334155] tracking-tight">Revenue Analytics</h3>
-            <span className="px-3 py-1 bg-orange-100 text-[#f47b2a] text-[12px] font-black rounded-full uppercase tracking-wider">Live</span>
+            <h3 className="text-[24px] font-black text-[#334155] tracking-tight">กราฟยอดการขาย</h3>
           </div>
-          <p className="text-[14px] font-semibold text-slate-400">Financial performance & growth projection</p>
-        </div>
-        <div className="flex items-center gap-8 bg-slate-50/50 p-2 px-6 rounded-2xl border border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#f47b2a] shadow-[0_0_8px_rgba(244,123,42,0.4)]"></span>
-            <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Actual</span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="w-4 h-1 bg-slate-200 rounded-full"></span>
-            <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">Projected</span>
-          </div>
+          <p className="text-[14px] font-semibold text-slate-400">วิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก</p>
         </div>
       </div>
 
@@ -96,7 +74,7 @@ export default function RevenueChart() {
         )}
 
         {/* Y Axis */}
-        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[10px] font-black text-slate-300 pr-6 py-[50px] opacity-60">
+        <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-[13px] font-bold text-slate-500 pr-6 py-[50px]">
           <span>150k</span>
           <span>100k</span>
           <span>50k</span>
@@ -129,19 +107,8 @@ export default function RevenueChart() {
             />
           ))}
 
-          {/* Area */}
-          <path d={areaPath} fill="url(#areaGradient)" className="animate-in fade-in duration-1000" />
+          {/* Area (Removed for clean styling) */}
 
-          {/* Projection Line */}
-          <path 
-            d={projectionPath} 
-            stroke="#E2E8F0" 
-            strokeWidth="4" 
-            strokeDasharray="10 10" 
-            strokeLinecap="round"
-            className="animate-in fade-in slide-in-from-left duration-1000 delay-300"
-          />
-          
           {/* Main Curve */}
           <path 
             d={linePath} 
@@ -186,7 +153,7 @@ export default function RevenueChart() {
                 cy={p.y} 
                 r={hoveredIndex === i ? "10" : "7"} 
                 fill="white" 
-                stroke={p.projected ? "#E2E8F0" : "#f47b2a"} 
+                stroke="#f47b2a" 
                 strokeWidth={hoveredIndex === i ? "5" : "4"} 
                 className="transition-all duration-300 animate-scale-in"
                 style={{ animationDelay: `${i * 100}ms` }}
@@ -199,7 +166,7 @@ export default function RevenueChart() {
         </svg>
 
         {/* X Axis */}
-        <div className="absolute left-0 bottom-0 w-full flex justify-between px-[50px] text-[11px] font-black text-slate-400 uppercase tracking-widest opacity-80">
+        <div className="absolute left-0 bottom-0 w-full flex justify-between px-[50px] text-[14px] font-bold text-slate-600 uppercase tracking-widest">
           {data.map((d, i) => (
             <span key={i} className={hoveredIndex === i ? "text-[#f47b2a] transition-colors" : ""}>{d.label}</span>
           ))}
