@@ -1,0 +1,34 @@
+[
+  {
+    "id": "n1",
+    "title": "Machine #12 low stock",
+    "body": "Product A is below 10% stock at Machine #12.",
+    "time": "2026-05-02T09:22:00Z",
+    "read": false,
+    "type": "alert"
+  },
+  {
+    "id": "n2",
+    "title": "New order received",
+    "body": "Order #4521 from Customer X was processed.",
+    "time": "2026-05-02T08:05:00Z",
+    "read": false,
+    "type": "order"
+  },
+  {
+    "id": "n3",
+    "title": "Maintenance scheduled",
+    "body": "Routine maintenance for Machine #3 tomorrow at 10:00.",
+    "time": "2026-05-01T16:30:00Z",
+    "read": true,
+    "type": "info"
+  },
+  {
+    "id": "n4",
+    "title": "Promo coupon expiring",
+    "body": "Coupon SPRING20 will expire in 2 days.",
+    "time": "2026-04-30T12:00:00Z",
+    "read": true,
+    "type": "promo"
+  }
+]

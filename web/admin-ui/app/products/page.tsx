@@ -1,4 +1,5 @@
 import ProductTable from "@/components/products/ProductTable";
+import ExportDropdown from "@/components/ui/ExportDropdown";
 
 export const metadata = { title: 'Inventory Management' };
 
@@ -15,10 +16,7 @@ export default function ProductsPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 bg-white border border-[#E2E8F0] px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-sm hover:bg-[#F8FAFC] transition-all">
-            <span>📥</span>
-            Export
-          </button>
+          <ExportDropdown fetchUrl="/api/products" filename="products" title="Products" />
           <button className="flex items-center gap-2 bg-[#FF6A00] hover:bg-[#E55F00] text-white px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(255,106,0,0.15)] transition-all">
             <span>+</span>
             เพิ่มสินค้า

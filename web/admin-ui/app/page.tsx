@@ -1,5 +1,6 @@
 import DashboardChart from "@/components/dashboard/DashboardChart";
 import DashboardCard from "@/components/dashboard/DashboardCard";
+import HeaderDateSelector from "@/components/dashboard/HeaderDateSelector";
 
 export default function Home() {
   return (
@@ -14,11 +15,7 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white border border-[#E2E8F0] px-4 py-2.5 rounded-xl shadow-sm cursor-pointer hover:bg-[#F8FAFC] transition-all">
-            <span className="text-lg">📅</span>
-            <span className="text-[14px] font-bold text-[#0F172A]">วันนี้ (Today)</span>
-            <span className="text-[#64748B] ml-1">▼</span>
-          </div>
+          <HeaderDateSelector />
           <button className="flex items-center gap-2 bg-[#FF6A00] hover:bg-[#E55F00] text-white px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(255,106,0,0.15)] transition-all">
             <span>📥</span>
             Export
@@ -34,7 +31,8 @@ export default function Home() {
           icon="₿" 
           trend="12.5%" 
           trendDirection="up" 
-          accentColor="#FFF7ED" 
+          accentColor="#FFF7ED"
+          href="/sales"
         />
         <DashboardCard 
           title="จำนวนคำสั่งซื้อ" 
@@ -42,14 +40,16 @@ export default function Home() {
           icon="📄" 
           trend="8.2%" 
           trendDirection="up" 
-          accentColor="#FFF7ED" 
+          accentColor="#FFF7ED"
+          href="/orders"
         />
         <DashboardCard 
           title="ตู้ที่ทำงานอยู่" 
           value="48" 
           subValue="/ 50"
           icon="📟" 
-          accentColor="#FFF7ED" 
+          accentColor="#FFF7ED"
+          href="/machines"
         />
         <DashboardCard 
           title="แจ้งเตือนสต็อกต่ำ" 
@@ -59,6 +59,7 @@ export default function Home() {
           trendDirection="neutral" 
           accentColor="#FEF2F2" 
           valueColor="#DC2626"
+          href="/alerts"
         />
       </div>
 
