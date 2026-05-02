@@ -6,104 +6,135 @@ export default function SecurityView() {
   const [twoFA, setTwoFA] = useState(false);
 
   return (
-    <div className="security-view animate-in">
-      <div className="security-header">
-        <h1>ความปลอดภัย</h1>
-        <p>จัดการการตั้งค่าความปลอดภัยและการเข้าถึงบัญชีของคุณ</p>
+    <div className="security-view animate-in opacity-0">
+      <div className="security-header mb-12">
+        <h1 className="text-[42px] font-black text-[#334155] mb-3 tracking-tighter">ความปลอดภัย</h1>
+        <p className="text-[18px] text-slate-500 font-medium">จัดการการตั้งค่าความปลอดภัยและการเข้าถึงบัญชีของคุณด้วยระบบมาตรฐานสากล</p>
       </div>
 
-      <div className="security-grid">
-        <div className="security-card">
-          <div className="card-header">
-            <div className="icon-box"><i className="fi fi-rr-key"></i></div>
+      <div className="security-grid grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="glass !rounded-[40px] p-10 animate-slide-left opacity-0 delay-150 shadow-[0_10px_30px_rgba(0,0,0,0.02)] border-white/60 bg-white">
+          <div className="card-header flex gap-6 mb-10 items-start">
+            <div className="w-16 h-16 rounded-2xl bg-orange-50 text-[#f47b2a] flex items-center justify-center text-[28px] shadow-sm shrink-0 border border-orange-100/50">
+              <i className="fi fi-rr-key"></i>
+            </div>
             <div className="title-box">
-              <h3>เปลี่ยนรหัสผ่าน</h3>
-              <p>เราขอแนะนำให้คุณใช้รหัสผ่านที่รัดกุมที่คุณไม่ได้ใช้ที่อื่น</p>
+              <h3 className="text-[24px] font-black text-[#334155] mb-2 tracking-tight">เปลี่ยนรหัสผ่าน</h3>
+              <p className="text-slate-500 font-medium leading-relaxed">เราขอแนะนำให้คุณใช้รหัสผ่านที่รัดกุมและเปลี่ยนเป็นประจำเพื่อความปลอดภัยสูงสุด</p>
             </div>
           </div>
           
-          <div className="card-content">
+          <div className="card-content space-y-6">
             <div className="input-group">
-              <label>รหัสผ่านปัจจุบัน</label>
-              <input type="password" placeholder="••••••••" />
+              <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">รหัสผ่านปัจจุบัน</label>
+              <input type="password" placeholder="••••••••" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-5 w-full font-bold tracking-widest" />
             </div>
             <div className="input-group">
-              <label>รหัสผ่านใหม่</label>
-              <input type="password" placeholder="••••••••" />
+              <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">รหัสผ่านใหม่</label>
+              <input type="password" placeholder="••••••••" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-5 w-full font-bold tracking-widest" />
             </div>
             <div className="input-group">
-              <label>ยืนยันรหัสผ่านใหม่</label>
-              <input type="password" placeholder="••••••••" />
+              <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ยืนยันรหัสผ่านใหม่</label>
+              <input type="password" placeholder="••••••••" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-5 w-full font-bold tracking-widest" />
             </div>
-            <button className="btn-primary">อัปเดตรหัสผ่าน</button>
+            <button className="btn-primary !w-full !py-4 !text-[16px] !rounded-2xl mt-4 shadow-xl">อัปเดตรหัสผ่านใหม่</button>
           </div>
         </div>
 
-        <div className="security-card">
-          <div className="card-header">
-            <div className="icon-box"><i className="fi fi-rr-shield-check"></i></div>
-            <div className="title-box">
-              <h3>การยืนยันตัวตนสองชั้น (2FA)</h3>
-              <p>เพิ่มชั้นความปลอดภัยอีกระดับให้กับบัญชีของคุณ</p>
+        <div className="glass !rounded-[40px] p-10 animate-slide-right opacity-0 delay-300 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border-white bg-white flex flex-col">
+          <div className="card-header flex gap-6 mb-10 items-start">
+            <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-500 flex items-center justify-center text-[28px] shadow-sm shrink-0 border border-blue-100/50">
+              <i className="fi fi-rr-shield-check"></i>
             </div>
-            <div className="toggle-switch">
-              <input 
-                type="checkbox" 
-                id="2fa-toggle" 
-                checked={twoFA} 
-                onChange={() => setTwoFA(!twoFA)} 
-              />
-              <label htmlFor="2fa-toggle"></label>
+            <div className="title-box flex-1">
+              <div className="flex justify-between items-start">
+                <h3 className="text-[24px] font-black text-[#334155] mb-2 tracking-tight">ยืนยันตัวตนสองชั้น (2FA)</h3>
+                <div className="toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    id="2fa-toggle" 
+                    checked={twoFA} 
+                    onChange={() => setTwoFA(!twoFA)} 
+                    className="hidden"
+                  />
+                  <label htmlFor="2fa-toggle" className={`block w-16 h-9 rounded-full relative cursor-pointer transition-all duration-500 ${twoFA ? 'bg-[#10B981]' : 'bg-slate-200'}`}>
+                    <div className={`absolute top-1 w-7 h-7 bg-white rounded-full transition-all duration-500 shadow-md ${twoFA ? 'left-8' : 'left-1'}`}></div>
+                  </label>
+                </div>
+              </div>
+              <p className="text-slate-500 font-medium leading-relaxed">เพิ่มชั้นความปลอดภัยอีกระดับด้วยรหัสยืนยันตัวตนจากสมาร์ทโฟนของคุณ</p>
             </div>
           </div>
           
-          <div className="card-content">
-            <div className={`status-banner ${twoFA ? 'active' : 'inactive'}`}>
-              <i className={twoFA ? "fi fi-rr-check-circle" : "fi fi-rr-info"}></i>
-              <span>{twoFA ? 'เปิดใช้งาน 2FA แล้ว' : 'ยังไม่ได้เปิดใช้งาน 2FA'}</span>
+          <div className="card-content flex-1 flex flex-col">
+            <div className={`status-banner p-6 rounded-[24px] mb-8 flex items-center gap-4 transition-all duration-500 ${twoFA ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${twoFA ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                <i className={twoFA ? "fi fi-rr-check" : "fi fi-rr-lock"}></i>
+              </div>
+              <span className="text-[17px] font-bold">{twoFA ? 'ระบบ 2FA เปิดใช้งานอยู่' : 'ระบบ 2FA ปิดอยู่ (ไม่แนะนำ)'}</span>
             </div>
-            <p className="description">
-              เมื่อเปิดใช้งาน คุณจะต้องป้อนรหัสความปลอดภัยจากแอปยืนยันตัวตนของคุณนอกเหนือจากรหัสผ่านเพื่อเข้าสู่ระบบ
+            
+            <p className="text-slate-500 font-medium leading-relaxed mb-10 text-[15px]">
+              เมื่อเปิดใช้งาน คุณจะต้องป้อนรหัสความปลอดภัยจากแอปยืนยันตัวตน (เช่น Google Authenticator) ทุกครั้งที่เข้าสู่ระบบจากอุปกรณ์ใหม่
             </p>
-            {twoFA && (
-              <button className="btn-outline">กำหนดค่าแอปยืนยันตัวตน</button>
-            )}
+            
+            <div className="mt-auto">
+              {twoFA ? (
+                <button className="glass !bg-white !text-slate-700 !border-slate-200 hover:!border-blue-400 hover:!text-blue-500 !py-4 !w-full !rounded-2xl font-bold transition-all">กำหนดค่าแอปยืนยันตัวตน</button>
+              ) : (
+                <button 
+                  onClick={() => setTwoFA(true)}
+                  className="btn-primary !bg-[#334155] !text-white hover:!bg-[#334155] !py-4 !w-full !rounded-2xl shadow-lg"
+                >
+                  เริ่มต้นตั้งค่า 2FA
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="security-card full-width">
-          <div className="card-header">
-            <div className="icon-box"><i className="fi fi-rr-laptop"></i></div>
-            <div className="title-box">
-              <h3>เซสชันที่ใช้งานอยู่</h3>
-              <p>รายการอุปกรณ์ที่เข้าสู่ระบบบัญชีของคุณในขณะนี้</p>
+        <div className="glass lg:col-span-2 !rounded-[40px] p-10 animate-in opacity-0 delay-500 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border-white bg-white">
+          <div className="card-header border-b border-slate-200/50 pb-8 mb-10">
+            <div className="flex gap-6 items-center">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center text-[28px] shadow-sm shrink-0">
+                <i className="fi fi-rr-laptop"></i>
+              </div>
+              <div className="title-box">
+                <h3 className="text-[24px] font-black text-[#334155] mb-1 tracking-tight">เซสชันที่ใช้งานอยู่</h3>
+                <p className="text-slate-500 font-medium">รายการอุปกรณ์ที่เข้าสู่ระบบบัญชีของคุณในขณะนี้</p>
+              </div>
             </div>
           </div>
           
-          <div className="session-list">
-            <div className="session-item">
-              <div className="device-icon"><i className="fi fi-rr-computer"></i></div>
-              <div className="session-info">
-                <div className="device">Windows PC • Chrome</div>
-                <div className="location">กรุงเทพฯ, ประเทศไทย • <span className="current-badge">เซสชันปัจจุบัน</span></div>
+          <div className="session-list space-y-6">
+            {[
+              { icon: "fi fi-rr-desktop", device: "Windows PC • Chrome", location: "กรุงเทพฯ, ประเทศไทย", current: true, time: "ใช้งานเมื่อครู่" },
+              { icon: "fi fi-rr-smartphone", device: "iPhone 13 • Safari", location: "กรุงเทพฯ, ประเทศไทย", current: false, time: "2 ชั่วโมงที่แล้ว" }
+            ].map((session, idx) => (
+              <div key={idx} className="session-item glass !bg-white !border-slate-100 p-6 rounded-[30px] flex items-center gap-6 group hover:!border-[#f47b2a]/30 transition-all duration-300">
+                <div className="w-16 h-16 rounded-2xl bg-slate-50 text-slate-400 flex items-center justify-center text-2xl group-hover:bg-orange-50 group-hover:text-[#f47b2a] transition-all">
+                  <i className={session.icon}></i>
+                </div>
+                <div className="session-info flex-1">
+                  <div className="flex items-center gap-3 mb-1">
+                    <span className="text-[18px] font-black text-[#334155]">{session.device}</span>
+                    {session.current && <span className="bg-emerald-100 text-emerald-600 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-emerald-200">Current Session</span>}
+                  </div>
+                  <div className="text-[14px] font-bold text-slate-400 flex items-center gap-2">
+                    <i className="fi fi-rr-marker text-[12px]"></i> {session.location} • {session.time}
+                  </div>
+                </div>
+                {!session.current && (
+                  <button className="w-12 h-12 rounded-xl text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all" title="Logout from device">
+                    <i className="fi fi-rr-exit text-xl"></i>
+                  </button>
+                )}
               </div>
-              <div className="session-time">ใช้งานเมื่อครู่</div>
-            </div>
-            <div className="session-item">
-              <div className="device-icon"><i className="fi fi-rr-smartphone"></i></div>
-              <div className="session-info">
-                <div className="device">iPhone 13 • Safari</div>
-                <div className="location">กรุงเทพฯ, ประเทศไทย</div>
-              </div>
-              <div className="session-time">2 ชั่วโมงที่แล้ว</div>
-              <button className="btn-icon-only" title="Logout from device">
-                <i className="fi fi-rr-sign-out-alt"></i>
-              </button>
-            </div>
+            ))}
           </div>
           
-          <div className="card-footer">
-            <button className="btn-danger-text">ออกจากระบบเซสชันอื่นๆ ทั้งหมด</button>
+          <div className="card-footer mt-10 pt-8 border-top border-slate-200/50 flex justify-center">
+            <button className="text-[15px] font-black text-red-500 hover:text-red-600 hover:underline px-8 py-3 rounded-full hover:bg-red-50 transition-all">ออกจากระบบเซสชันอื่นๆ ทั้งหมด</button>
           </div>
         </div>
       </div>
@@ -111,306 +142,11 @@ export default function SecurityView() {
       <style jsx>{`
         .security-view {
           padding: 40px;
-          max-width: 1200px;
+          max-width: 1300px;
           margin: 0 auto;
-        }
-
-        .security-header {
-          margin-bottom: 40px;
-        }
-
-        .security-header h1 {
-          font-size: 2rem;
-          font-weight: 800;
-          color: var(--text-dark);
-          margin: 0 0 8px 0;
-        }
-
-        .security-header p {
-          color: var(--muted);
-          font-size: 1.1rem;
-        }
-
-        .security-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 30px;
-        }
-
-        .security-card {
-          background: white;
-          border-radius: 24px;
-          padding: 30px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-          display: flex;
-          flex-direction: column;
-        }
-
-        .full-width {
-          grid-column: span 2;
-        }
-
-        .card-header {
-          display: flex;
-          gap: 20px;
-          margin-bottom: 30px;
-          align-items: flex-start;
-        }
-
-        .icon-box {
-          width: 50px;
-          height: 50px;
-          background: #f8f9fa;
-          border-radius: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.25rem;
-          color: var(--primary);
-        }
-
-        .title-box h3 {
-          margin: 0 0 5px 0;
-          font-size: 1.15rem;
-          font-weight: 700;
-          color: var(--text-dark);
-        }
-
-        .title-box p {
-          margin: 0;
-          font-size: 0.9rem;
-          color: var(--muted);
-          line-height: 1.5;
-        }
-
-        .card-content {
-          flex: 1;
-        }
-
-        .input-group {
-          margin-bottom: 20px;
-        }
-
-        .input-group label {
-          display: block;
-          font-size: 0.9rem;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 8px;
-        }
-
-        .input-group input {
-          width: 100%;
-          padding: 12px 16px;
-          border: 2px solid #f0f0f0;
-          border-radius: 12px;
-          font-family: inherit;
-          transition: 0.3s;
-        }
-
-        .input-group input:focus {
-          border-color: var(--primary);
-          outline: none;
-          box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.1);
-        }
-
-        .btn-primary {
-          background: var(--primary);
-          color: white;
-          border: none;
-          padding: 14px 24px;
-          border-radius: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: 0.3s;
-          width: 100%;
-          margin-top: 10px;
-        }
-
-        .btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(255, 107, 0, 0.2);
-        }
-
-        .btn-outline {
-          background: white;
-          color: var(--text-dark);
-          border: 2px solid #eee;
-          padding: 12px 24px;
-          border-radius: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: 0.3s;
-          width: 100%;
-        }
-
-        .btn-outline:hover {
-          background: #f8f9fa;
-          border-color: #ddd;
-        }
-
-        .status-banner {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 15px;
-          border-radius: 14px;
-          margin-bottom: 20px;
-          font-weight: 600;
-          font-size: 0.95rem;
-        }
-
-        .status-banner.active {
-          background: #ecfdf5;
-          color: #059669;
-        }
-
-        .status-banner.inactive {
-          background: #fef2f2;
-          color: #dc2626;
-        }
-
-        .description {
-          font-size: 0.95rem;
-          color: var(--muted);
-          line-height: 1.6;
-          margin-bottom: 25px;
-        }
-
-        /* Toggle Switch */
-        .toggle-switch {
-          margin-left: auto;
-        }
-
-        .toggle-switch input {
-          display: none;
-        }
-
-        .toggle-switch label {
-          display: block;
-          width: 50px;
-          height: 28px;
-          background: #ddd;
-          border-radius: 20px;
-          position: relative;
-          cursor: pointer;
-          transition: 0.3s;
-        }
-
-        .toggle-switch label::after {
-          content: '';
-          position: absolute;
-          width: 22px;
-          height: 22px;
-          background: white;
-          border-radius: 50%;
-          top: 3px;
-          left: 3px;
-          transition: 0.3s;
-        }
-
-        .toggle-switch input:checked + label {
-          background: var(--primary);
-        }
-
-        .toggle-switch input:checked + label::after {
-          left: 25px;
-        }
-
-        /* Sessions */
-        .session-list {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-
-        .session-item {
-          display: flex;
-          align-items: center;
-          padding: 20px;
-          background: #f8f9fa;
-          border-radius: 18px;
-          gap: 20px;
-        }
-
-        .device-icon {
-          width: 44px;
-          height: 44px;
-          background: white;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.2rem;
-          color: var(--muted);
-          box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-        }
-
-        .session-info {
-          flex: 1;
-        }
-
-        .device {
-          font-weight: 700;
-          color: var(--text-dark);
-          margin-bottom: 4px;
-        }
-
-        .location {
-          font-size: 0.85rem;
-          color: var(--muted);
-        }
-
-        .current-badge {
-          color: #10b981;
-          font-weight: 700;
-        }
-
-        .session-time {
-          font-size: 0.85rem;
-          color: var(--muted);
-        }
-
-        .btn-icon-only {
-          background: none;
-          border: none;
-          color: var(--muted);
-          font-size: 1.1rem;
-          cursor: pointer;
-          padding: 10px;
-          border-radius: 10px;
-          transition: 0.3s;
-        }
-
-        .btn-icon-only:hover {
-          background: #fee2e2;
-          color: #ef4444;
-        }
-
-        .card-footer {
-          margin-top: 30px;
-          padding-top: 20px;
-          border-top: 1px solid #f0f0f0;
-        }
-
-        .btn-danger-text {
-          background: none;
-          border: none;
-          color: #ef4444;
-          font-weight: 700;
-          cursor: pointer;
-          font-size: 0.95rem;
-        }
-
-        @media (max-width: 900px) {
-          .security-grid {
-            grid-template-columns: 1fr;
-          }
-          .full-width {
-            grid-column: span 1;
-          }
         }
       `}</style>
     </div>
   );
 }
+

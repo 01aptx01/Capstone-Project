@@ -20,48 +20,50 @@ export default function ProfileView() {
   };
 
   return (
-    <div className="profile-container animate-in">
+    <div className="profile-container animate-in opacity-0">
       {/* Upper Section: Cover & Identity */}
-      <div className="profile-hero">
+      <div className="profile-hero animate-scale-in">
         <div className="hero-bg">
           <div className="mesh-gradient"></div>
           <div className="hero-pattern"></div>
         </div>
         
         <div className="hero-content">
-          <div className="avatar-section">
-            <div className="avatar-container">
-              <Image src="/Pao.png" alt="Admin" width={140} height={140} className="avatar-img" />
-              <div className="status-indicator online"></div>
+          <div className="avatar-section animate-float">
+            <div className="avatar-container glass !p-1.5 !rounded-[42px] border-white/50">
+              <div className="relative overflow-hidden rounded-[38px] bg-slate-100">
+                <Image src="/Pao.png" alt="Admin" width={140} height={140} className="avatar-img transition-transform duration-700 hover:scale-110" />
+              </div>
+              <div className="status-indicator online animate-pulse"></div>
               <button className="edit-avatar-btn">
                 <i className="fi fi-rr-camera"></i>
               </button>
             </div>
             <div className="identity-text">
               <div className="name-row">
-                <h1>{formData.name}</h1>
-                <span className="verified-badge" title="Verified Staff">
+                <h1 className="text-slate-800 drop-shadow-sm">{formData.name}</h1>
+                <span className="verified-badge bg-slate-200/50 backdrop-blur-md p-1.5 rounded-full border border-slate-300 text-[#f47b2a]" title="Verified Staff">
                   <i className="fi fi-rr-badge-check"></i>
                 </span>
               </div>
               <div className="meta-row">
-                <span className="meta-item"><i className="fi fi-rr-briefcase"></i> {formData.role}</span>
-                <span className="meta-item"><i className="fi fi-rr-marker"></i> {formData.location}</span>
-                <span className="meta-item"><i className="fi fi-rr-calendar"></i> เข้าร่วมเมื่อ {formData.joined}</span>
+                <span className="meta-item text-slate-600"><i className="fi fi-rr-briefcase !text-slate-400"></i> {formData.role}</span>
+                <span className="meta-item text-slate-600"><i className="fi fi-rr-marker !text-slate-400"></i> {formData.location}</span>
+                <span className="meta-item text-slate-600"><i className="fi fi-rr-calendar !text-slate-400"></i> เข้าร่วมเมื่อ {formData.joined}</span>
               </div>
             </div>
           </div>
 
           <div className="hero-actions">
             {!isEditing ? (
-              <button className="btn-edit" onClick={() => setIsEditing(true)}>
+              <button className="btn-edit !bg-white !text-slate-700 hover:!bg-[#f47b2a] hover:!text-white transition-all duration-300 shadow-xl" onClick={() => setIsEditing(true)}>
                 <i className="fi fi-rr-settings-sliders"></i>
                 จัดการโปรไฟล์
               </button>
             ) : (
               <div className="edit-buttons">
-                <button className="btn-cancel" onClick={() => setIsEditing(false)}>ยกเลิก</button>
-                <button className="btn-save" onClick={handleSave}>บันทึกข้อมูล</button>
+                <button className="btn-cancel glass !bg-slate-100 !text-slate-700 !border-slate-200 hover:!bg-slate-200" onClick={() => setIsEditing(false)}>ยกเลิก</button>
+                <button className="btn-save !bg-[#f47b2a] !text-white hover:!bg-[#EA580C]" onClick={handleSave}>บันทึกข้อมูล</button>
               </div>
             )}
           </div>
@@ -70,121 +72,125 @@ export default function ProfileView() {
 
       <div className="profile-grid">
         {/* Left: Detailed Info */}
-        <div className="grid-left">
-          <div className="glass-card info-card">
-            <div className="card-header">
-              <h3><i className="fi fi-rr-info"></i> ข้อมูลบัญชี</h3>
+        <div className="grid-left animate-slide-left opacity-0 delay-150">
+          <div className="glass info-card !rounded-[40px] p-10 mb-8 shadow-2xl border-white/40 bg-white">
+            <div className="card-header border-b border-slate-200/50 pb-6 mb-8">
+              <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
+                <i className="fi fi-rr-info text-[#f47b2a] text-[28px]"></i> ข้อมูลบัญชี
+              </h3>
             </div>
             <div className="info-form">
               <div className="form-row">
                 <div className="form-group">
-                  <label>ชื่อ-นามสกุล</label>
+                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ชื่อ-นามสกุล</label>
                   {isEditing ? (
-                    <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                    <input type="text" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-4 w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                   ) : (
-                    <div className="static-value">{formData.name}</div>
+                    <div className="static-value text-[18px] font-bold text-slate-700">{formData.name}</div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label>ตำแหน่ง</label>
-                  <div className="static-value">{formData.role}</div>
+                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ตำแหน่ง</label>
+                  <div className="static-value text-[18px] font-bold text-slate-700">{formData.role}</div>
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>อีเมล</label>
+                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">อีเมล</label>
                   {isEditing ? (
-                    <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                    <input type="email" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-4 w-full" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                   ) : (
-                    <div className="static-value">{formData.email}</div>
+                    <div className="static-value text-[18px] font-bold text-slate-700">{formData.email}</div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label>เบอร์โทรศัพท์</label>
+                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">เบอร์โทรศัพท์</label>
                   {isEditing ? (
-                    <input type="text" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                    <input type="text" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-4 w-full" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                   ) : (
-                    <div className="static-value">{formData.phone}</div>
+                    <div className="static-value text-[18px] font-bold text-slate-700">{formData.phone}</div>
                   )}
                 </div>
               </div>
 
-              <div className="form-group full">
-                <label>เกี่ยวกับฉัน</label>
+              <div className="form-group full mt-4">
+                <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">เกี่ยวกับฉัน</label>
                 {isEditing ? (
-                  <textarea rows={3} value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
+                  <textarea rows={4} className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !p-4 w-full" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
                 ) : (
-                  <p className="bio-text">{formData.bio}</p>
+                  <p className="bio-text text-[16px] text-slate-600 leading-relaxed font-medium">{formData.bio}</p>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="glass-card activity-card">
-            <div className="card-header">
-              <h3><i className="fi fi-rr-time-past"></i> กิจกรรมล่าสุด</h3>
-              <button className="btn-text">ดูทั้งหมด</button>
+          <div className="glass activity-card !rounded-[40px] p-10 shadow-2xl border-white/40 bg-white">
+            <div className="card-header border-b border-slate-200/50 pb-6 mb-8 flex justify-between items-center">
+              <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
+                <i className="fi fi-rr-time-past text-[#f47b2a] text-[28px]"></i> กิจกรรมล่าสุด
+              </h3>
+              <button className="text-[14px] font-bold text-[#f47b2a] hover:underline px-4 py-2 rounded-full hover:bg-[#f47b2a]/5 transition-all">ดูทั้งหมด</button>
             </div>
-            <div className="timeline">
-              <div className="timeline-item">
-                <div className="timeline-icon bg-orange"><i className="fi fi-rr-box"></i></div>
-                <div className="timeline-info">
-                  <p>เติมสินค้าในตู้ <strong>Vending Central Ladprao</strong></p>
-                  <span>10 นาทีที่แล้ว</span>
+            <div className="timeline space-y-8">
+              {[
+                { icon: "fi fi-rr-box", color: "from-[#f47b2a] to-[#FB923C]", bg: "bg-orange-50", title: "เติมสินค้าในตู้", machine: "Vending Central Ladprao", time: "10 นาทีที่แล้ว" },
+                { icon: "fi fi-rr-refresh", color: "from-[#3B82F6] to-[#60A5FA]", bg: "bg-blue-50", title: "อัปเดตเฟิร์มแวร์ตู้", machine: "#M-045", time: "3 ชั่วโมงที่แล้ว" },
+                { icon: "fi fi-rr-coins", color: "from-[#10B981] to-[#34D399]", bg: "bg-emerald-50", title: "ตรวจสอบยอดเงินสดประจำวัน", machine: "", time: "เมื่อวานนี้, 18:30" }
+              ].map((item, idx) => (
+                <div key={idx} className="timeline-item flex gap-6 group">
+                  <div className={`w-14 h-14 rounded-[20px] bg-gradient-to-br ${item.color} flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}>
+                    <i className={item.icon}></i>
+                  </div>
+                  <div className="timeline-info py-1">
+                    <p className="text-[17px] font-bold text-[#334155] mb-1">
+                      {item.title} {item.machine && <strong className="text-[#f47b2a]">{item.machine}</strong>}
+                    </p>
+                    <span className="text-[14px] font-semibold text-slate-400">{item.time}</span>
+                  </div>
                 </div>
-              </div>
-              <div className="timeline-item">
-                <div className="timeline-icon bg-blue"><i className="fi fi-rr-refresh"></i></div>
-                <div className="timeline-info">
-                  <p>อัปเดตเฟิร์มแวร์ตู้ <strong>#M-045</strong></p>
-                  <span>3 ชั่วโมงที่แล้ว</span>
-                </div>
-              </div>
-              <div className="timeline-item">
-                <div className="timeline-icon bg-green"><i className="fi fi-rr-coins"></i></div>
-                <div className="timeline-info">
-                  <p>ตรวจสอบยอดเงินสดประจำวัน</p>
-                  <span>เมื่อวานนี้, 18:30</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Right: Stats & Badges */}
-        <div className="grid-right">
-          <div className="glass-card completion-card">
-            <div className="progress-header">
-              <span className="label">ความสมบูรณ์ของโปรไฟล์</span>
-              <span className="value">85%</span>
+        {/* Right: Stats & Progress */}
+        <div className="grid-right animate-slide-right opacity-0 delay-300">
+          <div className="vibrant-card completion-card !rounded-[40px] !border-none !bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] text-slate-700 p-10 mb-8 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#f47b2a] blur-[100px] opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity"></div>
+            <div className="relative z-10">
+              <div className="progress-header flex justify-between items-end mb-4">
+                <div className="flex flex-col">
+                  <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-1">Profile Completion</span>
+                  <span className="text-[32px] font-black leading-none text-slate-800">85%</span>
+                </div>
+                <div className="w-12 h-12 rounded-full border-2 border-slate-200 flex items-center justify-center text-slate-400 group-hover:border-[#f47b2a] group-hover:text-[#f47b2a] transition-colors">
+                  <i className="fi fi-rr-star"></i>
+                </div>
+              </div>
+              <div className="progress-bar h-3 bg-slate-100 rounded-full mb-6 overflow-hidden">
+                <div className="progress-fill h-full bg-gradient-to-r from-[#f47b2a] to-[#FB923C] shadow-[0_0_20px_rgba(244,123,42,0.3)] rounded-full" style={{ width: '85%' }}></div>
+              </div>
+              <p className="text-[14px] font-medium text-slate-500 leading-relaxed">เพิ่มรูปหน้าปกเพื่อเพิ่มความสมบูรณ์เป็น 100% และรับเหรียญตรา &quot;Admin Elite&quot;</p>
             </div>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: '85%' }}></div>
-            </div>
-            <p>เพิ่มรูปหน้าปกเพื่อเพิ่มความสมบูรณ์เป็น 100%</p>
           </div>
 
-          <div className="glass-card stats-card">
-            <div className="stat-row">
-              <div className="stat-box">
-                <span className="stat-val">12</span>
-                <span className="stat-lbl">ตู้ที่ดูแล</span>
-              </div>
-              <div className="stat-box">
-                <span className="stat-val">4.8</span>
-                <span className="stat-lbl">เรตติ้ง</span>
-              </div>
-            </div>
-            <div className="stat-row">
-              <div className="stat-box">
-                <span className="stat-val">1.2k</span>
-                <span className="stat-lbl">ยอดขายรวม</span>
-              </div>
-              <div className="stat-box">
-                <span className="stat-val">100%</span>
-                <span className="stat-lbl">Uptime</span>
-              </div>
+          <div className="glass stats-card !rounded-[40px] p-2 shadow-2xl border-white/40 bg-white">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { val: "12", lbl: "ตู้ที่ดูแล", icon: "fi fi-rr-box", color: "text-blue-500", bg: "bg-blue-50" },
+                { val: "4.8", lbl: "เรตติ้ง", icon: "fi fi-rr-star", color: "text-amber-500", bg: "bg-amber-50" },
+                { val: "1.2k", lbl: "ยอดขายรวม", icon: "fi fi-rr-bank", color: "text-[#f47b2a]", bg: "bg-orange-50" },
+                { val: "100%", lbl: "Uptime", icon: "fi fi-rr-bolt", color: "text-emerald-500", bg: "bg-emerald-50" }
+              ].map((stat, idx) => (
+                <div key={idx} className="vibrant-card !rounded-[32px] !border-none !bg-white p-8 flex flex-col items-center justify-center group hover:!bg-slate-50 transition-all duration-500">
+                  <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform`}>
+                    <i className={stat.icon}></i>
+                  </div>
+                  <span className="stat-val text-[28px] font-black text-slate-800">{stat.val}</span>
+                  <span className="stat-lbl text-[12px] font-black text-slate-400 uppercase tracking-widest">{stat.lbl}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -192,49 +198,51 @@ export default function ProfileView() {
 
       <style jsx>{`
         .profile-container {
-          max-width: 1200px;
+          max-width: 1300px;
           margin: 0 auto;
-          padding: 20px;
+          padding: 30px;
         }
 
-        /* Hero Section */
         .profile-hero {
           position: relative;
-          border-radius: 32px;
+          border-radius: 48px;
           overflow: hidden;
-          background: white;
+          background: #F1F5F9;
           box-shadow: 0 20px 50px rgba(0,0,0,0.05);
-          margin-bottom: 30px;
+          margin-bottom: 40px;
+          height: 380px;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
         }
 
         .hero-bg {
-          height: 180px;
-          position: relative;
-          background: linear-gradient(135deg, var(--sidebar-accent), #FF8C38);
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, #F8FAFC, #E2E8F0);
         }
 
         .mesh-gradient {
           position: absolute;
           inset: 0;
           background-image: 
-            radial-gradient(at 0% 0%, hsla(28,100%,74%,1) 0, transparent 50%), 
-            radial-gradient(at 50% 0%, hsla(10,100%,64%,1) 0, transparent 50%), 
-            radial-gradient(at 100% 0%, hsla(42,100%,70%,1) 0, transparent 50%);
-          opacity: 0.6;
+            radial-gradient(at 0% 0%, rgba(244, 123, 42, 0.15) 0, transparent 50%), 
+            radial-gradient(at 50% 0%, rgba(203, 213, 225, 0.4) 0, transparent 50%), 
+            radial-gradient(at 100% 0%, rgba(244, 123, 42, 0.1) 0, transparent 50%);
+          opacity: 0.8;
         }
 
         .hero-pattern {
           position: absolute;
           inset: 0;
-          background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+          background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
 
         .hero-content {
-          padding: 0 40px 30px;
+          padding: 0 50px 50px;
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
-          margin-top: -50px;
           position: relative;
           z-index: 5;
         }
@@ -242,395 +250,128 @@ export default function ProfileView() {
         .avatar-section {
           display: flex;
           align-items: flex-end;
-          gap: 25px;
+          gap: 35px;
         }
 
         .avatar-container {
           position: relative;
-          padding: 5px;
-          background: white;
-          border-radius: 42px;
-          box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-
-        .avatar-img {
-          border-radius: 38px;
-          display: block;
-          object-fit: cover;
-          background: #f8f9fa;
+        .avatar-container:hover {
+          transform: translateY(-5px) scale(1.02);
         }
 
         .status-indicator {
           position: absolute;
-          bottom: 8px;
-          right: 8px;
-          width: 22px;
-          height: 22px;
+          bottom: 15px;
+          right: 15px;
+          width: 28px;
+          height: 28px;
           border-radius: 50%;
-          border: 4px solid white;
+          border: 5px solid white;
+          z-index: 10;
         }
 
-        .status-indicator.online { background: #10b981; }
+        .status-indicator.online { background: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
 
         .edit-avatar-btn {
           position: absolute;
           inset: 0;
-          background: rgba(0,0,0,0.3);
+          background: rgba(0,0,0,0.4);
           color: white;
           border: none;
           border-radius: 38px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.5rem;
+          font-size: 1.8rem;
           cursor: pointer;
           opacity: 0;
           transition: 0.3s;
+          z-index: 5;
         }
 
-        .avatar-container:hover .edit-avatar-btn {
-          opacity: 1;
-        }
+        .avatar-container:hover .edit-avatar-btn { opacity: 1; }
 
         .identity-text h1 {
-          font-size: 2.2rem;
-          font-weight: 850;
-          color: #0f172a;
+          font-size: 3.5rem;
+          font-weight: 900;
           margin: 0;
-          letter-spacing: -0.5px;
+          letter-spacing: -2px;
+          line-height: 1;
         }
 
         .name-row {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 8px;
-        }
-
-        .verified-badge {
-          color: #3b82f6;
-          font-size: 1.4rem;
-          display: flex;
+          gap: 15px;
+          margin-bottom: 12px;
         }
 
         .meta-row {
           display: flex;
-          gap: 20px;
+          gap: 25px;
           flex-wrap: wrap;
         }
 
         .meta-item {
-          font-size: 0.95rem;
-          color: var(--muted);
-          font-weight: 500;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .meta-item i {
-          color: var(--primary);
-        }
-
-        .btn-edit {
-          background: #0f172a;
-          color: white;
-          border: none;
-          padding: 14px 28px;
-          border-radius: 99px;
+          font-size: 1.1rem;
           font-weight: 700;
           display: flex;
           align-items: center;
           gap: 10px;
-          cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 10px 25px rgba(15, 23, 42, 0.15);
         }
 
-        .btn-edit:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 15px 35px rgba(15, 23, 42, 0.25);
-          background: #000;
+        .btn-edit {
+          padding: 16px 32px;
+          border-radius: 20px;
+          font-weight: 800;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+          font-size: 1.1rem;
         }
 
         /* Grid Layout */
         .profile-grid {
           display: grid;
-          grid-template-columns: 1.6fr 1fr;
-          gap: 25px;
-        }
-
-        .glass-card {
-          background: white;
-          border-radius: 28px;
-          padding: 30px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-          border: 1px solid rgba(0,0,0,0.03);
-          margin-bottom: 25px;
-        }
-
-        .card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 25px;
-        }
-
-        .card-header h3 {
-          font-size: 1.2rem;
-          font-weight: 800;
-          color: #0f172a;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin: 0;
-        }
-
-        /* Form Styling */
-        .info-form {
-          display: flex;
-          flex-direction: column;
-          gap: 24px;
+          grid-template-columns: 1.7fr 1fr;
+          gap: 35px;
         }
 
         .form-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
+          gap: 30px;
         }
 
-        .form-group label {
-          display: block;
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: var(--muted);
-          margin-bottom: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-        }
-
-        .static-value {
-          font-weight: 600;
-          color: #0f172a;
-          padding: 12px 0;
-          font-size: 1.05rem;
-        }
-
-        .info-form input, .info-form textarea {
-          width: 100%;
-          padding: 14px 18px;
-          background: #f8f9fa;
-          border: 2px solid #f0f0f0;
-          border-radius: 14px;
-          font-family: inherit;
-          font-size: 1rem;
-          font-weight: 600;
-          color: #0f172a;
-          transition: 0.3s;
-        }
-
-        .info-form input:focus {
-          border-color: var(--primary);
-          background: white;
-          outline: none;
-          box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.1);
-        }
-
-        .bio-text {
-          font-size: 1.05rem;
-          color: #0f172a;
-          line-height: 1.6;
-          font-weight: 500;
-        }
-
-        /* Timeline */
-        .timeline {
+        .edit-buttons {
           display: flex;
-          flex-direction: column;
-          gap: 25px;
-        }
-
-        .timeline-item {
-          display: flex;
-          gap: 18px;
-          position: relative;
-        }
-
-        .timeline-item::after {
-          content: '';
-          position: absolute;
-          left: 20px;
-          top: 45px;
-          bottom: -20px;
-          width: 2px;
-          background: #f0f0f0;
-        }
-
-        .timeline-item:last-child::after { display: none; }
-
-        .timeline-icon {
-          width: 42px;
-          height: 42px;
-          border-radius: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          flex-shrink: 0;
-          box-shadow: 0 8px 15px rgba(0,0,0,0.1);
-        }
-
-        .bg-orange { background: var(--primary); }
-        .bg-blue { background: #3b82f6; }
-        .bg-green { background: #10b981; }
-
-        .timeline-info p {
-          margin: 0 0 5px 0;
-          font-weight: 600;
-          color: #0f172a;
-          font-size: 0.95rem;
-        }
-
-        .timeline-info span {
-          font-size: 0.8rem;
-          color: var(--muted);
-          font-weight: 600;
-        }
-
-        /* Right Side Cards */
-        .completion-card {
-          background: linear-gradient(135deg, var(--sidebar-accent), #FF8C38);
-          color: white;
-          box-shadow: 0 15px 30px rgba(255, 106, 0, 0.2);
-          border: none;
-        }
-
-        .progress-header {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 12px;
-          font-weight: 700;
-          font-size: 0.9rem;
-        }
-
-        .progress-bar {
-          height: 10px;
-          background: rgba(255,255,255,0.2);
-          border-radius: 10px;
-          margin-bottom: 15px;
-          overflow: hidden;
-        }
-
-        .progress-fill {
-          height: 100%;
-          background: white;
-          border-radius: 10px;
-          box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-        }
-
-        .completion-card p {
-          font-size: 0.85rem;
-          color: rgba(255,255,255,0.9);
-          margin: 0;
-          font-weight: 500;
-        }
-
-        .stats-card {
-          padding: 10px;
-          background: #f8f9fa;
-        }
-
-        .stat-row {
-          display: flex;
-          gap: 10px;
-          margin-bottom: 10px;
-        }
-
-        .stat-row:last-child { margin-bottom: 0; }
-
-        .stat-box {
-          flex: 1;
-          background: white;
-          padding: 25px 15px;
-          border-radius: 20px;
-          text-align: center;
-          box-shadow: 0 5px 15px rgba(0,0,0,0.02);
-        }
-
-        .stat-val {
-          display: block;
-          font-size: 1.6rem;
-          font-weight: 850;
-          color: #0f172a;
-          margin-bottom: 4px;
-        }
-
-        .stat-lbl {
-          font-size: 0.8rem;
-          font-weight: 700;
-          color: var(--muted);
-          text-transform: uppercase;
-        }
-
-        .badge-grid {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
           gap: 15px;
         }
 
-        .badge-item {
-          aspect-ratio: 1;
-          background: #f8f9fa;
-          border-radius: 16px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.5rem;
+        .btn-cancel, .btn-save {
+          padding: 14px 28px;
+          border-radius: 18px;
+          font-weight: 800;
           cursor: pointer;
-          transition: 0.3s;
-          border: 2px solid transparent;
+          transition: all 0.3s ease;
+          font-size: 1rem;
         }
 
-        .badge-item:hover {
-          transform: scale(1.1) rotate(5deg);
-          border-color: var(--primary);
-          background: white;
-          box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-        }
-
-        /* Edit Controls */
-        .edit-buttons {
-          display: flex;
-          gap: 12px;
-        }
-
-        .btn-cancel {
-          padding: 12px 24px;
-          border-radius: 14px;
-          border: 2px solid #eee;
-          background: white;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        .btn-save {
-          padding: 12px 24px;
-          border-radius: 14px;
-          border: none;
-          background: var(--primary);
-          color: white;
-          font-weight: 700;
-          cursor: pointer;
-        }
-
-        @media (max-width: 900px) {
+        @media (max-width: 1100px) {
           .profile-grid { grid-template-columns: 1fr; }
-          .hero-content { flex-direction: column; align-items: center; text-align: center; }
-          .avatar-section { flex-direction: column; align-items: center; }
-          .hero-actions { margin-top: 20px; }
-          .form-row { grid-template-columns: 1fr; }
+          .hero-content { flex-direction: column; align-items: center; text-align: center; height: auto; padding-top: 100px; }
+          .avatar-section { flex-direction: column; align-items: center; gap: 20px; }
+          .hero-actions { margin-top: 30px; }
+          .profile-hero { height: auto; }
+          .identity-text h1 { font-size: 2.5rem; }
+          .meta-row { justify-content: center; }
         }
       `}</style>
     </div>
   );
 }
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const fallbackDay = [20, 40, 120, 240, 310, 210, 140, 80];
 const fallbackWeek = [800, 920, 760, 1100, 1300, 1250, 1480];
@@ -165,7 +166,7 @@ export default function DashboardChart() {
   return (
     <div className="bg-white border border-[#E2E8F0] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
       <div className="flex items-center justify-between mb-10">
-        <h3 className="text-[18px] font-bold text-[#0F172A]">
+        <h3 className="text-[18px] font-bold text-[#334155]">
           แนวโน้มยอดขาย <span className="text-[#64748B] font-medium ml-1">(Real-time)</span>
         </h3>
         <div className="flex bg-[#F1F5F9] p-1 rounded-xl">
@@ -179,7 +180,7 @@ export default function DashboardChart() {
                 } catch (e) {}
               }}
               className={`px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${
-                period === p ? "bg-white text-[#0F172A] shadow-sm" : "text-[#64748B] hover:text-[#0F172A]"
+                period === p ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
               }`}
             >
               {p}
@@ -217,21 +218,24 @@ export default function DashboardChart() {
               >
                 <defs>
                   <linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#FF6A00" stopOpacity="0.12" />
-                    <stop offset="100%" stopColor="#FF6A00" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#f47b2a" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="#f47b2a" stopOpacity="0" />
                   </linearGradient>
                   <linearGradient id="strokeGrad" x1="0" x2="1">
                     <stop offset="0%" stopColor="#FF8A3D" />
-                    <stop offset="100%" stopColor="#FF6A00" />
+                    <stop offset="100%" stopColor="#f47b2a" />
                   </linearGradient>
                   <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="8" stdDeviation="16" floodColor="#FF6A00" floodOpacity="0.12" />
+                    <feDropShadow dx="0" dy="8" stdDeviation="16" floodColor="#f47b2a" floodOpacity="0.12" />
                   </filter>
                 </defs>
 
-                {areaD && <path d={areaD} fill="url(#areaGrad)" stroke="none" />}
+                {areaD && <motion.path initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }} d={areaD} fill="url(#areaGrad)" stroke="none" />}
                 {pathD && (
-                  <path
+                  <motion.path
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 1.5, ease: "easeInOut" }}
                     d={pathD}
                     className="chart-line"
                     stroke="url(#strokeGrad)"
@@ -242,20 +246,25 @@ export default function DashboardChart() {
                   />
                 )}
 
-                {projPath && <path d={projPath} fill="none" stroke="#FF6A00" strokeWidth={2} strokeDasharray="6 6" opacity={0.9} />}
+                {projPath && <path d={projPath} fill="none" stroke="#f47b2a" strokeWidth={2} strokeDasharray="6 6" opacity={0.9} />}
 
                 {/* markers */}
                 {points.map((p, i) => (
-                  <g key={`m-${i}`}>
-                    <circle cx={p.x} cy={p.y} r={10} fill="#FF6A00" opacity={0.12} />
-                    <circle cx={p.x} cy={p.y} r={6} fill="#FFFFFF" stroke="#FF6A00" strokeWidth={2} />
-                  </g>
+                  <motion.g 
+                    key={`m-${i}`}
+                    initial={{ opacity: 0, scale: 0 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.1, duration: 0.5, type: "spring" }}
+                  >
+                    <circle cx={p.x} cy={p.y} r={10} fill="#f47b2a" opacity={0.12} />
+                    <circle cx={p.x} cy={p.y} r={6} fill="#FFFFFF" stroke="#f47b2a" strokeWidth={2} />
+                  </motion.g>
                 ))}
 
                 {projPoint && (
                   <g key="proj">
-                    <circle cx={projPoint.x} cy={projPoint.y} r={10} fill="#FF6A00" opacity={0.06} />
-                    <circle cx={projPoint.x} cy={projPoint.y} r={6} fill="#FFFFFF" stroke="#FF6A00" strokeWidth={2} strokeDasharray="2 2" />
+                    <circle cx={projPoint.x} cy={projPoint.y} r={10} fill="#f47b2a" opacity={0.06} />
+                    <circle cx={projPoint.x} cy={projPoint.y} r={6} fill="#FFFFFF" stroke="#f47b2a" strokeWidth={2} strokeDasharray="2 2" />
                   </g>
                 )}
               </svg>
@@ -272,20 +281,33 @@ export default function DashboardChart() {
                 const barW = 48;
                 const isHighlighted = labels[i] === "2pm" || labels[i] === "Week 4";
                 return (
-                  <div key={i} style={{ position: "absolute", left: p.x - barW / 2, bottom: 0, width: barW, height: chartHeight }} className="flex items-end justify-center">
-                    <div style={{ position: "absolute", bottom: heightPx + 10, left: "50%", transform: "translateX(-50%)" }} className="text-[12px] font-bold text-[#0F172A]">
+                  <motion.div 
+                    key={i} 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1, duration: 0.5, type: "spring" }}
+                    style={{ position: "absolute", left: p.x - barW / 2, bottom: 0, width: barW, height: chartHeight }} className="flex items-end justify-center group"
+                  >
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: i * 0.1 + 0.3 }}
+                      style={{ position: "absolute", bottom: heightPx + 10, left: "50%", transform: "translateX(-50%)" }} className="text-[12px] font-bold text-[#334155] opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
                       {typeof v === "number" ? `฿${v}` : v}
-                    </div>
-                    <div
-                      className={`w-full rounded-lg transition-all duration-300 ${
-                        isHighlighted ? "bg-gradient-to-t from-[#FF8A3D] to-[#FF6A00] border-[#FF6A00]" : "bg-gradient-to-t from-[#FFE6CC] to-[#FFDAB5]"
+                    </motion.div>
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: `${heightPercent}%` }}
+                      transition={{ duration: 1, ease: "easeOut", delay: i * 0.05 }}
+                      className={`w-full rounded-lg transition-colors duration-300 ${
+                        isHighlighted ? "bg-gradient-to-t from-[#FF8A3D] to-[#f47b2a] border-[#f47b2a] shadow-lg shadow-orange-500/20" : "bg-gradient-to-t from-[#FFE6CC] to-[#FFDAB5] hover:from-[#FFDAB5] hover:to-[#FFC58F]"
                       }`}
-                      style={{ height: `${heightPercent}%` }}
                     />
                     <div style={{ position: "absolute", bottom: -28, left: "50%", transform: "translateX(-50%)" }} className="whitespace-nowrap text-[12px] font-bold text-[#64748B]">
                       {labels[i]}
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
 
@@ -302,4 +324,5 @@ export default function DashboardChart() {
     </div>
   );
 }
+
 

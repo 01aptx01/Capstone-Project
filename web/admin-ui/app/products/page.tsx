@@ -44,103 +44,112 @@ export default function ProductsPage() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto py-8 px-4">
+    <div className="max-w-[1400px] mx-auto py-8 px-4 space-y-12">
       {/* Header Section */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between animate-in opacity-0">
         <div>
-          <h1 className="text-[28px] font-bold text-[#0F172A] mb-1">
-            จัดการคลังสินค้าส่วนกลาง
+          <h1 className="text-[36px] font-black text-[#334155] mb-2 tracking-tight">
+            คลังสินค้าส่วนกลาง
           </h1>
-          <p className="text-[#64748B] text-[15px]">Manage all products across active vending machines.</p>
+          <p className="text-[#64748B] text-[16px] font-medium">จัดการรายการสินค้า สต็อก และราคาทุกตู้จำหน่ายในระบบ</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <button 
             onClick={() => openExportModal(productSections, "คลังสินค้า (Inventory)")}
-            className="flex items-center gap-2 px-6 py-3 bg-white border border-[#E2E8F0] rounded-xl text-[15px] font-bold text-[#64748B] hover:border-[#FF6A00] hover:text-[#FF6A00] transition-all"
+            className="btn-primary !bg-white !text-[#475569] !border-[#E2E8F0] !border !shadow-sm hover:!border-[#f47b2a] hover:!text-[#f47b2a]"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            Export
+            <i className="fi fi-rr-download flex items-center"></i>
+            Export รายงาน
           </button>
           <button 
             onClick={openAddProduct}
-            className="btn-primary px-5 py-2.5 text-[14px]"
+            className="btn-primary"
           >
-            <span>+</span>
-            เพิ่มสินค้า
+            <i className="fi fi-rr-plus flex items-center"></i>
+            เพิ่มสินค้าใหม่
           </button>
         </div>
       </div>
 
       {/* Filter Section */}
-      <div className="vibrant-card p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
-          <div>
-            <label className="block text-[12px] font-bold text-[#94A3B8] uppercase mb-2 tracking-wider">Category Filter</label>
-            <div className="relative">
+      <div className="vibrant-card !rounded-[32px] p-8 animate-in opacity-0 delay-100 shadow-xl shadow-orange-900/[0.02]">
+        <div className="flex items-center gap-3 mb-8 border-b border-slate-50 pb-5">
+          <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-[#f47b2a]">
+            <i className="fi fi-rr-filter text-lg"></i>
+          </div>
+          <h2 className="text-[18px] font-black text-[#334155]">ตัวกรองสินค้า</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-end">
+          <div className="space-y-3">
+            <label className="block text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.1em] ml-1">หมวดหมู่สินค้า</label>
+            <div className="relative group">
+              <i className="fi fi-rr-apps absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors"></i>
               <select 
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-[14px] font-medium text-[#0F172A] outline-none appearance-none cursor-pointer hover:border-[#FF6A00]/30 transition-colors"
+                className="w-full bg-slate-50 border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[#334155] outline-none appearance-none cursor-pointer hover:bg-slate-100 focus:bg-white focus:border-orange-100 transition-all shadow-inner"
               >
                 <option>All Categories</option>
                 <option>หมูสับ/หมูแดง</option>
                 <option>ไส้หวาน</option>
                 <option>มังสวิรัติ</option>
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B] text-[10px]">▼</div>
+              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
             </div>
           </div>
           
-          <div>
-            <label className="block text-[12px] font-bold text-[#94A3B8] uppercase mb-2 tracking-wider">Machine Location</label>
-            <div className="relative">
+          <div className="space-y-3">
+            <label className="block text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.1em] ml-1">สถานที่ติดตั้ง (ตู้)</label>
+            <div className="relative group">
+              <i className="fi fi-rr-marker absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors"></i>
               <select 
                 value={machine}
                 onChange={(e) => setMachine(e.target.value)}
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-[14px] font-medium text-[#0F172A] outline-none appearance-none cursor-pointer hover:border-[#FF6A00]/30 transition-colors"
+                className="w-full bg-slate-50 border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[#334155] outline-none appearance-none cursor-pointer hover:bg-slate-100 focus:bg-white focus:border-orange-100 transition-all shadow-inner"
               >
                 <option>All Machines</option>
                 <option>Machine 1</option>
                 <option>Machine 2</option>
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B] text-[10px]">▼</div>
+              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
             </div>
           </div>
 
-          <div>
-            <label className="block text-[12px] font-bold text-[#94A3B8] uppercase mb-2 tracking-wider">Stock Status</label>
-            <div className="relative">
+          <div className="space-y-3">
+            <label className="block text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.1em] ml-1">สถานะสต็อก</label>
+            <div className="relative group">
+              <i className="fi fi-rr-box-open absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors"></i>
               <select 
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-[14px] font-medium text-[#0F172A] outline-none appearance-none cursor-pointer hover:border-[#FF6A00]/30 transition-colors"
+                className="w-full bg-slate-50 border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[#334155] outline-none appearance-none cursor-pointer hover:bg-slate-100 focus:bg-white focus:border-orange-100 transition-all shadow-inner"
               >
                 <option>All Statuses</option>
                 <option value="in_stock">In Stock</option>
                 <option value="low_stock">Low Stock</option>
                 <option value="out_of_stock">Out of Stock</option>
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B] text-[10px]">▼</div>
+              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
             </div>
           </div>
 
           <button 
             onClick={handleClear}
-            className="h-[46px] border border-[#E2E8F0] text-[#64748B] font-bold text-[14px] rounded-xl hover:bg-[#F8FAFC] hover:text-[#0F172A] transition-all flex items-center justify-center gap-2"
+            className="h-[54px] bg-white border-2 border-slate-100 text-[#64748B] font-black text-[14px] rounded-[18px] hover:bg-slate-50 hover:border-slate-200 transition-all flex items-center justify-center gap-2 active:scale-95"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-            Clear Filters
+            <i className="fi fi-rr-refresh text-lg"></i>
+            ล้างตัวกรอง
           </button>
         </div>
       </div>
 
       {/* Table Section */}
-      <ProductTable category={category} machine={machine} status={status} />
+      <div className="animate-in opacity-0 delay-200">
+        <ProductTable category={category} machine={machine} status={status} />
+      </div>
     </div>
   );
 }
+

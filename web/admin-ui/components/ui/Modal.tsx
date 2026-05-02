@@ -27,20 +27,20 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md modal-overlay-enter" 
+        className="absolute inset-0 bg-slate-900/80 modal-overlay-enter" 
         onClick={onClose} 
       />
       
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-lg bg-white rounded-[32px] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.3)] overflow-hidden modal-content-enter border border-white/20" 
+        className="relative w-full max-w-lg bg-white rounded-[32px] shadow-[0_32px_100px_rgb(0,0,0,0.08)] overflow-hidden modal-content-enter border border-[#E2E8F0]" 
         role="dialog" 
         aria-modal="true" 
         aria-label={title}
       >
         {/* Header */}
         <div className="px-8 pt-8 pb-4 flex items-center justify-between">
-          <h3 className="text-[22px] font-black text-[#0F172A]">{title}</h3>
+          <h3 className="text-[22px] font-black text-[#334155]">{title}</h3>
           <button 
             onClick={onClose} 
             className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -60,3 +60,4 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     </div>
   );
 }
+

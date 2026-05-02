@@ -2,6 +2,7 @@
 
 import salesData from "@/lib/mock/sales.json";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
+import ReportCard from "@/components/dashboard/ReportCard";
 
 const salesSections: ExportSection[] = [
   {
@@ -38,62 +39,140 @@ export default function SalesPage() {
   const { openExportModal } = useUI();
   const data = salesData;
 
+  const getStatusBadge = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-emerald-100">Paid</span>;
+      case 'processing':
+        return <span className="px-3 py-1 bg-amber-50 text-amber-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-amber-100">Processing</span>;
+      case 'failed':
+        return <span className="px-3 py-1 bg-rose-50 text-rose-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-rose-100">Failed</span>;
+      default:
+        return <span className="px-3 py-1 bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-slate-100">{status}</span>;
+    }
+  };
+
   return (
-    <div className="max-w-[1200px] mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
+    <div className="max-w-[1400px] mx-auto py-8 px-4 space-y-12">
+      {/* Header Section */}
+      <div className="flex items-center justify-between animate-in opacity-0">
         <div>
-          <h1 className="text-[28px] font-bold text-[#0F172A]">ยอดขาย</h1>
-          <p className="text-[#64748B]">รายละเอียดยอดขายวันนี้</p>
+          <h1 className="text-[36px] font-black text-[#334155] mb-2 tracking-tight">
+            ประวัติธุรกรรม
+          </h1>
+          <p className="text-[#64748B] text-[16px] font-medium">ติดตามยอดขายและการชำระเงินแบบ Real-time</p>
         </div>
         <button 
           onClick={() => openExportModal(salesSections, "ยอดขาย (Sales)")}
-          className="flex items-center gap-2 px-6 py-3 bg-white border border-[#E2E8F0] rounded-xl text-[15px] font-bold text-[#64748B] hover:border-[#FF6A00] hover:text-[#FF6A00] transition-all"
+          className="btn-primary"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          Export
+          <i className="fi fi-rr-download flex items-center"></i>
+          Export ข้อมูลการขาย
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-[#64748B]">วันนี้</div>
-          <div className="text-2xl font-extrabold">฿{data.summary.today}</div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="animate-in opacity-0 delay-100">
+          <ReportCard 
+            title="ยอดขายวันนี้" 
+            value={`฿${data.summary.today.toLocaleString()}`} 
+            icon={<i className="fi fi-rr-stats"></i>}
+            iconBg="#EEF2FF"
+            iconColor="#4F46E5"
+            trend={`${data.summary.change_percent}%`}
+            trendDirection={data.summary.change_percent >= 0 ? "up" : "down"}
+          />
         </div>
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-[#64748B]">เมื่อวาน</div>
-          <div className="text-2xl font-extrabold">฿{data.summary.yesterday}</div>
+        <div className="animate-in opacity-0 delay-200">
+          <ReportCard 
+            title="ยอดขายเมื่อวาน" 
+            value={`฿${data.summary.yesterday.toLocaleString()}`} 
+            icon={<i className="fi fi-rr-time-past"></i>}
+            iconBg="#F0F9FF"
+            iconColor="#0EA5E9"
+          />
         </div>
-        <div className="bg-white rounded-lg p-4 shadow-sm">
-          <div className="text-sm text-[#64748B]">เปลี่ยนแปลง</div>
-          <div className="text-2xl font-extrabold">{data.summary.change_percent}%</div>
+        <div className="animate-in opacity-0 delay-300">
+          <ReportCard 
+            title="เฉลี่ยต่อออเดอร์" 
+            value="฿42.50" 
+            icon={<i className="fi fi-rr-receipt"></i>}
+            iconBg="#FDF2F8"
+            iconColor="#DB2777"
+            trend="2.4%"
+          />
         </div>
       </div>
 
-      <div className="bg-white rounded-lg p-4 shadow-sm">
-        <h2 className="font-bold mb-3">รายการธุรกรรม (ล่าสุด)</h2>
+      {/* Table Section */}
+      <div className="vibrant-card !rounded-[32px] overflow-hidden animate-in opacity-0 delay-400">
+        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+          <h2 className="text-[20px] font-black text-[#334155]">รายการธุรกรรมล่าสุด</h2>
+          <div className="flex gap-4">
+             <div className="relative">
+              <i className="fi fi-rr-marker absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+              <select className="pl-11 pr-10 py-2.5 bg-slate-50 border-none rounded-2xl text-[14px] font-bold focus:ring-2 focus:ring-orange-100 appearance-none cursor-pointer min-w-[200px]">
+                <option>ทุกจุดติดตั้ง</option>
+                <option>MOD PAO Building LX</option>
+                <option>MOD PAO Building N7</option>
+              </select>
+              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"></i>
+            </div>
+          </div>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full">
             <thead>
-              <tr className="text-sm text-[#64748B]"><th className="py-2">Order</th><th>Time</th><th>Machine</th><th>Amount</th><th>Status</th></tr>
+              <tr className="bg-slate-50/50">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Transaction ID</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Time</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Machine</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Amount</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Status</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-right">Details</th>
+              </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-50">
               {data.transactions.map((t: { orderId: string; time: string; machine: string; amount: number; status: string }) => (
-                <tr key={t.orderId} className="border-t border-[#EEF2F6]">
-                  <td className="py-3">{t.orderId}</td>
-                  <td>{t.time}</td>
-                  <td>{t.machine}</td>
-                  <td>฿{t.amount}</td>
-                  <td>{t.status}</td>
+                <tr key={t.orderId} className="group hover:bg-slate-50/50 transition-colors">
+                  <td className="px-8 py-5">
+                    <span className="text-[15px] font-black text-[#334155]">{t.orderId}</span>
+                  </td>
+                  <td className="px-8 py-5 text-[14px] font-semibold text-[#64748B]">
+                    {t.time}
+                  </td>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-2">
+                      <i className="fi fi-rr-vending-machine text-slate-300"></i>
+                      <span className="text-[14px] font-bold text-slate-600">{t.machine}</span>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5">
+                    <span className="text-[16px] font-black text-[#334155]">฿{t.amount.toLocaleString()}</span>
+                  </td>
+                  <td className="px-8 py-5">
+                    {getStatusBadge(t.status)}
+                  </td>
+                  <td className="px-8 py-5 text-right">
+                    <button className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-[#f47b2a] hover:border-orange-200 transition-all shadow-sm">
+                      <i className="fi fi-rr-arrow-right text-lg"></i>
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <div className="p-8 bg-slate-50/30 border-t border-slate-50 flex items-center justify-between">
+          <p className="text-[13px] font-black text-slate-400 uppercase tracking-wider">Transaction History Page 1 of 42</p>
+          <div className="flex gap-2">
+            <button className="px-5 py-2.5 bg-white border border-slate-100 rounded-xl text-[13px] font-black text-slate-400 hover:bg-slate-50 transition-all">Previous</button>
+            <button className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-black text-[#334155] hover:bg-slate-50 transition-all">Next Page</button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+

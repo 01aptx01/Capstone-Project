@@ -62,11 +62,12 @@ export default function Home() {
   const { openExportModal } = useUI();
 
   return (
-    <div className="max-w-[1200px] mx-auto py-8 px-4">
+    <div className="min-h-screen mesh-primary py-8 px-8">
+      <div className="max-w-[1400px] mx-auto">
       {/* Header Section */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-[28px] font-bold text-[#0F172A] mb-1">
+          <h1 className="text-[28px] font-bold text-[#334155] mb-1">
             ภาพรวม <span className="text-[#64748B] font-medium text-[20px] ml-1">(Overview)</span>
           </h1>
           <p className="text-[#64748B] text-[15px]">ภาพรวมข้อมูลการทำงานของตู้ทั้งหมดในวันนี้</p>
@@ -76,7 +77,7 @@ export default function Home() {
           <HeaderDateSelector />
           <button 
             onClick={() => openExportModal(dashboardSections, "ภาพรวม Dashboard")}
-            className="flex items-center gap-2 bg-[#FF6A00] hover:bg-[#E55F00] text-white px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(255,106,0,0.15)] transition-all"
+            className="flex items-center gap-2 bg-[#f47b2a] hover:bg-[#d35e11] text-white px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(244,123,42,0.15)] transition-all"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -94,10 +95,10 @@ export default function Home() {
           <DashboardCard 
             title="ยอดขายวันนี้" 
             value="฿1,458.50" 
-            icon="₿" 
+            icon={<i className="fi fi-rr-stats"></i>} 
             trend="12.5%" 
             trendDirection="up" 
-            accentColor="#FFF7ED"
+            accentColor="#3b82f6"
             href="/sales"
           />
         </div>
@@ -105,10 +106,10 @@ export default function Home() {
           <DashboardCard 
             title="จำนวนคำสั่งซื้อ" 
             value="342" 
-            icon="📄" 
+            icon={<i className="fi fi-rr-shopping-cart"></i>} 
             trend="8.2%" 
             trendDirection="up" 
-            accentColor="#FFF7ED"
+            accentColor="#10b981"
             href="/orders"
           />
         </div>
@@ -117,8 +118,8 @@ export default function Home() {
             title="ตู้ที่ทำงานอยู่" 
             value="48" 
             subValue="/ 50"
-            icon="📟" 
-            accentColor="#FFF7ED"
+            icon={<i className="fi fi-rr-vending-machine"></i>} 
+            accentColor="#f59e0b"
             href="/machines"
           />
         </div>
@@ -126,11 +127,10 @@ export default function Home() {
           <DashboardCard 
             title="แจ้งเตือนสต็อกต่ำ" 
             value="12" 
-            icon="⚠️" 
+            icon={<i className="fi fi-rr-warning"></i>} 
             trend="+2" 
             trendDirection="neutral" 
-            accentColor="#FEF2F2" 
-            valueColor="#DC2626"
+            accentColor="#ef4444" 
             href="/alerts"
           />
         </div>
@@ -141,7 +141,9 @@ export default function Home() {
         <DashboardChart />
       </div>
     </div>
+    </div>
   );
 }
+
 
 
