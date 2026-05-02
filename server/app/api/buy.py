@@ -3,7 +3,7 @@ import logging
 import os
 from flask import Blueprint, request, jsonify
 from app.services.omise_service import OmisePaymentService
-from app.services.buy_service import InventoryService
+from app.services.buy_service import InventoryService, AlreadyClaimedError, InsufficientStockError
 from app.services.hardware_service import HardwareAgentService
 from app.realtime.socketio_gateway import emit_job_start
 
@@ -52,10 +52,29 @@ class BuyController:
 
         logger.info(f"[Dispense] Starting dispense for charge {charge_id}. Cart: {cart}")
 
-        # Step 1: Deduct stock in database (ใช้ OOP Service)
-        stock_ok = self.inventory_service.deduct_stock(machine_code, cart, charge_id)
+        # Step 1: Deduct stock in database + atomic payment claim (RC-6/RC-7 guard)
+        try:
+            stock_ok = self.inventory_service.deduct_stock(machine_code, cart, charge_id)
+        except AlreadyClaimedError:
+            # RC-6: อีก thread (webhook/poll) claim ไปแล้ว → ปลอดภัย ไม่ต้อง refund
+            logger.warning(f"[Dispense] charge {charge_id} already claimed — skipping (RC-6)")
+            return False
+        except InsufficientStockError:
+            # RC-7: TOCTOU — สต๊อกหมดระหว่างรอ Omise แต่เงินถูกตัดไปแล้ว → refund
+            logger.error(f"[Dispense] Stock exhausted after charge for {charge_id} (TOCTOU) — triggering refund")
+            import threading as _t
+            from app.realtime.socketio_gateway import _auto_refund
+            _t.Thread(target=_auto_refund, args=(charge_id,), daemon=True).start()
+            return False
+        except Exception as exc:
+            logger.error(f"[Dispense] Unexpected error in deduct_stock for {charge_id}: {exc}")
+            import threading as _t
+            from app.realtime.socketio_gateway import _auto_refund
+            _t.Thread(target=_auto_refund, args=(charge_id,), daemon=True).start()
+            return False
+
         if not stock_ok:
-            logger.error(f"[Dispense] Stock deduction failed for charge_id: {charge_id}")
+            logger.error(f"[Dispense] Stock deduction returned False for charge_id: {charge_id}")
             return False
 
         # Step 2: Notify hardware agent to dispense (ใช้ OOP Service)
