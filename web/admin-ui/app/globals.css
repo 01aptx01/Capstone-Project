@@ -205,6 +205,13 @@ h3 { font-size: 1rem; font-weight: 700; color: var(--heading-color); margin: 0; 
 .dashboard-metric__title { color: var(--muted-color); font-size: 0.875rem; }
 .dashboard-metric__value { margin-top: 0.5rem; font-size: 1.5rem; font-weight: 800; color: var(--heading-color); letter-spacing: -0.01em; }
 
+/* Make numeric values use tabular numbers so they don't shift width */
+.dashboard-metric .value-number {
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum";
+  font-feature-settings: "tnum";
+}
+
 /* Login-specific improvements for clarity */
 .login-title { font-size: 1.5rem; font-weight: 800; color: var(--heading-color); }
 .login-subtitle { color: var(--primary); font-weight: 700; margin-bottom: 1rem; text-transform: lowercase; }
