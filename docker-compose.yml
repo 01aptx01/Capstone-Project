@@ -28,6 +28,8 @@ services:
     container_name: vending-server
     env_file:
       - .env
+    environment:
+      - AGENT_URL=http://client:5000/dispense
     ports:
       - "8000:8000"
     depends_on:
@@ -45,7 +47,7 @@ services:
       context: ./web/machine-ui
       args:
         - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
-        - NEXT_PUBLIC_API_URL=http://192.168.100.2:8000
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
     container_name: vending-machine-ui
     ports:
       - "3000:3000"
