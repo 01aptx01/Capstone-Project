@@ -59,12 +59,10 @@ export default function MachinesPage() {
 
       {/* Machines Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
-        {machinesData.map((machine: { id: string; name: string; location: string }) => (
+        {machinesData.map((machine: any) => (
           <MachineCard 
             key={machine.id}
-            id={machine.id}
-            name={machine.name}
-            location={machine.location}
+            {...machine}
           />
         ))}
 
