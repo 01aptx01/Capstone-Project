@@ -5,6 +5,7 @@ CREATE DATABASE IF NOT EXISTS vending;
 USE vending;
 
 -- Drop order
+DROP TABLE IF EXISTS machine_job_events;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS machine_slots;
@@ -107,6 +108,22 @@ CREATE TABLE order_items (
   CONSTRAINT fk_order_items_product
     FOREIGN KEY (product_id) REFERENCES products(product_id)
     ON UPDATE CASCADE ON DELETE RESTRICT
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE machine_job_events (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  machine_code VARCHAR(20) NOT NULL,
+  job_id VARCHAR(64) NOT NULL,
+  order_charge_id VARCHAR(64) NULL,
+  event_type VARCHAR(50) NOT NULL,
+  state VARCHAR(50) NULL,
+  seq INT NOT NULL,
+  payload_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_mje_machine (machine_code),
+  KEY idx_mje_job (job_id),
+  KEY idx_mje_charge (order_charge_id),
+  KEY idx_mje_created (created_at)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- =====================

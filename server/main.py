@@ -9,6 +9,7 @@ load_dotenv()
 from app.api.buy import buy_api
 from app.api.products import products_api
 from app.api.health import health_api
+from app.api.machine_events import machine_events_api
 from app.config.db import init_db
 
 # Configure logger
@@ -23,7 +24,7 @@ class ServerApp:
         
         # รันการตั้งค่าต่างๆ ตามลำดับ
         logger.info("🔧 [ServerApp] Initializing database connection pool...")
-        init_db()  # ✅ สร้าง connection pool (พร้อม retry logic)
+        init_db()
         
         self._verify_environment()
         self._setup_extensions()
@@ -45,6 +46,7 @@ class ServerApp:
         self.app.register_blueprint(buy_api)
         self.app.register_blueprint(products_api)
         self.app.register_blueprint(health_api)
+        self.app.register_blueprint(machine_events_api)
 
     def _register_routes(self):
         @self.app.route("/")
