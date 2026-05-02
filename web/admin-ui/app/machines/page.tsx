@@ -59,17 +59,21 @@ export default function MachinesPage() {
 
       {/* Machines Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
-        {machinesData.map((machine: any) => (
-          <MachineCard 
-            key={machine.id}
-            {...machine}
-          />
+        {machinesData.map((machine: any, index: number) => (
+          <div 
+            key={machine.id} 
+            className="animate-in opacity-0"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
+            <MachineCard {...machine} />
+          </div>
         ))}
 
         {/* Add New Machine Placeholder/Card */}
         <div 
           onClick={openAddMachine}
-          className="group border-2 border-dashed border-[#E2E8F0] rounded-2xl p-4 flex flex-col items-center justify-center min-h-[340px] hover:border-[#FF6A00] hover:bg-[#FFF7ED]/50 transition-all cursor-pointer"
+          className="group border-2 border-dashed border-[#E2E8F0] rounded-2xl p-4 flex flex-col items-center justify-center min-h-[340px] hover:border-[#FF6A00] hover:bg-[#FFF7ED]/50 transition-all cursor-pointer animate-in opacity-0"
+          style={{ animationDelay: `${machinesData.length * 100}ms` }}
         >
           <div className="w-16 h-16 bg-[#F8FAFC] rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
             <span className="text-[32px] text-[#94A3B8] group-hover:text-[#FF6A00]">+</span>

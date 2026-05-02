@@ -60,7 +60,6 @@ body {
   padding: 20px 16px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   box-shadow: 0 4px 20px rgba(255, 106, 0, 0.15);
 }
 .sidebar-brand { display:flex; gap:12px; align-items:center; }
@@ -104,43 +103,70 @@ body {
 
 /* Header styles */
 .app-header { 
-  background: var(--surface); 
+  background: rgba(255, 255, 255, 0.8); 
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border); 
   display:flex; 
   align-items:center; 
   justify-content:space-between; 
-  padding: 0 24px; 
-  height: 72px; 
+  padding: 0 32px; 
+  height: 80px; 
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 .header-search { 
-  width:400px; 
+  width: 100%;
+  max-width: 540px; 
   display:flex; 
   align-items:center; 
   gap:12px; 
   background: #F1F5F9; 
   border: 1px solid transparent; 
-  padding:10px 18px; 
-  border-radius: 9999px; 
-  transition: all 0.3s ease;
+  padding:12px 20px; 
+  border-radius: 14px; 
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
 .header-search:focus-within {
   background: white;
   border-color: var(--primary);
-  box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.08);
+  box-shadow: 0 10px 25px rgba(255, 106, 0, 0.1), inset 0 0 0 1px var(--primary);
 }
-.app-header .left { display:flex; align-items:center; gap:12px; }
-.app-header .center { flex:1; display:flex; justify-content:center; }
-.header-search { width:760px; max-width: calc(100% - 360px); display:flex; align-items:center; gap:10px; background:#F6F9FB; border:1px solid var(--border); padding:8px 14px; border-radius:9999px; box-shadow: 0 10px 30px rgba(9,26,39,0.04); }
 .header-search .icon { color: var(--muted); display:flex; align-items:center; justify-content:center; }
-.header-search input { border:0; outline:none; background:transparent; width:100%; font-size:0.95rem; color:var(--foreground); }
+.header-search input { border:0; outline:none; background:transparent; width:100%; font-size:0.95rem; color:var(--foreground); font-weight: 500; }
 
-.header-actions { display:flex; align-items:center; gap:12px; }
-.bell { position:relative; width:40px; height:40px; display:flex; align-items:center; justify-content:center; border-radius:10px; background:transparent; color:var(--muted); }
-.bell .badge { position:absolute; top:8px; right:8px; width:9px; height:9px; border-radius:999px; background:var(--primary); box-shadow: 0 0 0 6px rgba(255,106,0,0.06); }
-.header-divider { width:1px; height:28px; background:var(--border); border-radius:2px; margin:0 6px; }
-.profile { display:flex; align-items:center; gap:10px; padding-left:6px; }
-.profile .avatar { width:36px; height:36px; border-radius:9999px; overflow:hidden; border:1px solid var(--border); }
-.profile .name { font-size:0.95rem; font-weight:700; color:var(--foreground); }
+.header-actions { display:flex; align-items:center; gap:20px; }
+.bell { 
+  position:relative; 
+  width:44px; 
+  height:44px; 
+  display:flex; 
+  align-items:center; 
+  justify-content:center; 
+  border-radius: 12px; 
+  background: #F8FAFC; 
+  color: var(--muted); 
+  transition: all 0.2s ease;
+  border: 1px solid var(--border);
+}
+.bell:hover { background: white; color: var(--primary); border-color: var(--primary-glow); transform: translateY(-1px); }
+.bell .badge { position:absolute; top:-4px; right:-4px; width:10px; height:10px; border-radius:999px; background:var(--primary); border: 2px solid white; box-shadow: 0 4px 8px var(--primary-glow); }
+.header-divider { width:1px; height:32px; background:var(--border); margin:0 4px; }
+.profile { 
+  display:flex; 
+  align-items:center; 
+  gap:12px; 
+  padding: 6px 12px 6px 6px; 
+  background: #F8FAFC;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.profile:hover { background: white; border-color: var(--primary-glow); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+.profile .avatar { width:36px; height:36px; border-radius:10px; overflow:hidden; border:1px solid rgba(0,0,0,0.05); }
+.profile .name { font-size:0.9rem; font-weight:800; color:var(--foreground); }
 
 
 
@@ -269,8 +295,74 @@ html, body, #__next { height: 100%; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes bounceIn {
+  0% { opacity: 0; transform: scale(0.3); }
+  50% { opacity: 1; transform: scale(1.05); }
+  70% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -1000px 0; }
+  100% { background-position: 1000px 0; }
+}
+
 .animate-in {
   animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-right {
+  animation: slideInRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-slide-left {
+  animation: slideInLeft 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-bounce-in {
+  animation: bounceIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Staggered Delay Helpers */
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+
+.shimmer {
+  background: linear-gradient(to right, #f1f5f9 4%, #f8fafc 25%, #f1f5f9 36%);
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}
+
+/* Modal Overlay & Content Transitions */
+.modal-overlay-enter {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.modal-content-enter {
+  animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 /* Page specific overrides */

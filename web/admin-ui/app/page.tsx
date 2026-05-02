@@ -90,42 +90,50 @@ export default function Home() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 items-stretch">
-        <DashboardCard 
-          title="ยอดขายวันนี้" 
-          value="฿1,458.50" 
-          icon="₿" 
-          trend="12.5%" 
-          trendDirection="up" 
-          accentColor="#FFF7ED"
-          href="/sales"
-        />
-        <DashboardCard 
-          title="จำนวนคำสั่งซื้อ" 
-          value="342" 
-          icon="📄" 
-          trend="8.2%" 
-          trendDirection="up" 
-          accentColor="#FFF7ED"
-          href="/orders"
-        />
-        <DashboardCard 
-          title="ตู้ที่ทำงานอยู่" 
-          value="48" 
-          subValue="/ 50"
-          icon="📟" 
-          accentColor="#FFF7ED"
-          href="/machines"
-        />
-        <DashboardCard 
-          title="แจ้งเตือนสต็อกต่ำ" 
-          value="12" 
-          icon="⚠️" 
-          trend="+2" 
-          trendDirection="neutral" 
-          accentColor="#FEF2F2" 
-          valueColor="#DC2626"
-          href="/alerts"
-        />
+        <div className="animate-scale-in opacity-0">
+          <DashboardCard 
+            title="ยอดขายวันนี้" 
+            value="฿1,458.50" 
+            icon="₿" 
+            trend="12.5%" 
+            trendDirection="up" 
+            accentColor="#FFF7ED"
+            href="/sales"
+          />
+        </div>
+        <div className="animate-scale-in opacity-0 delay-100">
+          <DashboardCard 
+            title="จำนวนคำสั่งซื้อ" 
+            value="342" 
+            icon="📄" 
+            trend="8.2%" 
+            trendDirection="up" 
+            accentColor="#FFF7ED"
+            href="/orders"
+          />
+        </div>
+        <div className="animate-scale-in opacity-0 delay-200">
+          <DashboardCard 
+            title="ตู้ที่ทำงานอยู่" 
+            value="48" 
+            subValue="/ 50"
+            icon="📟" 
+            accentColor="#FFF7ED"
+            href="/machines"
+          />
+        </div>
+        <div className="animate-scale-in opacity-0 delay-300">
+          <DashboardCard 
+            title="แจ้งเตือนสต็อกต่ำ" 
+            value="12" 
+            icon="⚠️" 
+            trend="+2" 
+            trendDirection="neutral" 
+            accentColor="#FEF2F2" 
+            valueColor="#DC2626"
+            href="/alerts"
+          />
+        </div>
       </div>
 
       {/* Chart Section */}

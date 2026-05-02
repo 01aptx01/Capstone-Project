@@ -90,17 +90,19 @@ export default function Sidebar() {
             <div className="sidebar-brand-sub opacity-80">VENDING MGMT</div>
           </div>
         </Link>
-
-        <div className="sidebar-top-avatar">
-          <Image src="/Pao.png" alt="avatar" width={28} height={28} className="rounded-full" />
-        </div>
       </div>
 
       <nav className="sidebar-nav">
-        {nav.map((item) => {
+        {nav.map((item, index) => {
           const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
-            <Link key={item.name} href={item.href} className={`sidebar-link ${active ? "active" : ""}`} aria-current={active ? "page" : undefined}>
+            <Link 
+              key={item.name} 
+              href={item.href} 
+              className={`sidebar-link ${active ? "active" : ""} animate-slide-left opacity-0`} 
+              style={{ animationDelay: `${index * 80}ms` }}
+              aria-current={active ? "page" : undefined}
+            >
               <span className="icon-container"><Icon name={item.icon} /></span>
               <span className="label">{item.name}</span>
             </Link>

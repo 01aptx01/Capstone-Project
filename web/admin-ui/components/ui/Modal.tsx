@@ -27,13 +27,13 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" 
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-md modal-overlay-enter" 
         onClick={onClose} 
       />
       
       {/* Modal Container */}
       <div 
-        className="relative w-full max-w-lg bg-white rounded-[28px] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] overflow-hidden animate-in scale-in duration-300" 
+        className="relative w-full max-w-lg bg-white rounded-[32px] shadow-[0_25px_70px_-15px_rgba(0,0,0,0.3)] overflow-hidden modal-content-enter border border-white/20" 
         role="dialog" 
         aria-modal="true" 
         aria-label={title}
