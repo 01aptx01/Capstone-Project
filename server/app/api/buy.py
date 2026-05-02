@@ -57,7 +57,7 @@ class BuyController:
             return False
 
         # Step 2: Notify hardware agent to dispense (ใช้ OOP Service)
-        agent_ok = self.hardware_agent.notify_dispense(machine_code, cart)
+        agent_ok = self.hardware_agent.notify_dispense(machine_code, cart, charge_id=charge_id)
         if not agent_ok:
             logger.error(f"[Dispense] Hardware agent notification failed for charge_id: {charge_id}")
             self.inventory_service.update_dispense_status(charge_id, "failed")

@@ -31,6 +31,7 @@ services:
       - .env
     environment:
       - AGENT_URL=http://client:5000/dispense
+      - AGENT_BASE_URL=http://client:5000
     ports:
       - "8000:8000"
     depends_on:
@@ -42,6 +43,8 @@ services:
     container_name: vending-pi
     ports:
       - "5000:5000"
+    environment:
+      - EVENT_SINK_URL=http://server:8000/api/machines/events
 
   machine-ui:
     build:
@@ -49,6 +52,7 @@ services:
       args:
         - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_AGENT_BASE_URL=${NEXT_PUBLIC_AGENT_BASE_URL}
     container_name: vending-machine-ui
     ports:
       - "3000:3000"

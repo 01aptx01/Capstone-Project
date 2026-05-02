@@ -24,6 +24,13 @@ const PROCESS_STEPS = [
   "พร้อมทาน",
 ];
 
+type AgentJobState =
+  | "TRANSFER_TO_OVEN"
+  | "HEATING"
+  | "DISPENSING"
+  | "DONE"
+  | "ERROR";
+
 // สไตล์ปุ่ม Test เพื่อลดความซ้ำซ้อนใน JSX
 const testBtnStyle: React.CSSProperties = {
   padding: "10px",
@@ -55,6 +62,12 @@ export default function VendingPage() {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเก็บรอบการดึงสถานะจ่ายเงิน
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
   const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
+
+  // -- Agent Job (Hardware) States --
+  const [agentJobState, setAgentJobState] = useState<AgentJobState | null>(null);
+  const [agentCurrentItemIndex, setAgentCurrentItemIndex] = useState<number>(0);
+  const lastAgentSeqRef = useRef<number>(0);
+  const agentEventSourceRef = useRef<EventSource | null>(null);
 
   // -- Flow & Queue States --
   const [isAfterPayment, setIsAfterPayment] = useState(false);
@@ -114,7 +127,21 @@ export default function VendingPage() {
     }
     return { step: 0, itemIndex: 0 };
   };
-  const { step: currentStep, itemIndex: currentItemIndex } = getProcessStatus();
+
+  const mapAgentStateToStep = (state: AgentJobState): number => {
+    if (state === "TRANSFER_TO_OVEN") return 0;
+    if (state === "HEATING") return 1;
+    if (state === "DISPENSING") return 2;
+    return 3; // DONE / ERROR
+  };
+
+  const fallbackStatus = getProcessStatus();
+  const currentStep = agentJobState ? mapAgentStateToStep(agentJobState) : fallbackStatus.step;
+  const currentItemIndex = agentJobState ? agentCurrentItemIndex : fallbackStatus.itemIndex;
+  const isProcessCompleted = agentJobState
+    ? agentJobState === "DONE" || agentJobState === "ERROR"
+    : currentStep === 3;
+  const isProcessSuccess = agentJobState ? agentJobState === "DONE" : currentStep === 3;
   const progressLineWidth = `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
 
   // Fetch Products from Server
@@ -184,11 +211,126 @@ export default function VendingPage() {
   // Timer: นับถอยหลังระบบอุ่นสินค้ารวม
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (activeModal === "processing" && globalTimeLeft > 0) {
+    if (activeModal === "processing" && globalTimeLeft > 0 && !agentJobState) {
       interval = setInterval(() => setGlobalTimeLeft((prev) => prev - 1), 1000);
     }
     return () => clearInterval(interval);
-  }, [activeModal, globalTimeLeft]);
+  }, [activeModal, globalTimeLeft, agentJobState]);
+
+  // Agent SSE: drive processing by real job events
+  useEffect(() => {
+    if (activeModal !== "processing") {
+      if (agentEventSourceRef.current) {
+        agentEventSourceRef.current.close();
+        agentEventSourceRef.current = null;
+      }
+      setAgentJobState(null);
+      setAgentCurrentItemIndex(0);
+      lastAgentSeqRef.current = 0;
+      return;
+    }
+
+    if (!currentChargeId) return;
+
+    const agentBaseUrl = process.env.NEXT_PUBLIC_AGENT_BASE_URL || "http://localhost:5000";
+    const jobId = currentChargeId;
+
+    const buildAgentItemsPayload = () => {
+      const map = new Map<number, { product_id: number; quantity: number; heating_time: number; name?: string }>();
+      for (const it of queue) {
+        const productId = (it as any).id;
+        const heatingTime = (it as any).heatingTime;
+        const name = (it as any).name;
+        if (typeof productId !== "number") continue;
+        const existing = map.get(productId);
+        if (existing) {
+          existing.quantity += 1;
+        } else {
+          map.set(productId, {
+            product_id: productId,
+            quantity: 1,
+            heating_time: typeof heatingTime === "number" ? heatingTime : 15,
+            name,
+          });
+        }
+      }
+      return Array.from(map.values());
+    };
+
+    const ensureJobStarted = async () => {
+      try {
+        await fetch(`${agentBaseUrl.replace(/\/$/, "")}/jobs/start`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            machine_code: "MP1-001",
+            job_id: jobId,
+            order_charge_id: jobId,
+            items: buildAgentItemsPayload(),
+          }),
+        });
+      } catch (e) {
+        // ignore; SSE will fallback to local timer if agent not reachable
+      }
+    };
+
+    let closed = false;
+    const start = async () => {
+      await ensureJobStarted();
+      if (closed) return;
+
+      if (agentEventSourceRef.current) {
+        agentEventSourceRef.current.close();
+        agentEventSourceRef.current = null;
+      }
+
+      const lastSeq = lastAgentSeqRef.current;
+      const url = `${agentBaseUrl.replace(/\/$/, "")}/jobs/${encodeURIComponent(jobId)}/events?last_seq=${lastSeq}`;
+      const es = new EventSource(url);
+      agentEventSourceRef.current = es;
+
+      es.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const seq = Number(data?.seq);
+          if (!Number.isNaN(seq)) lastAgentSeqRef.current = seq;
+
+          const state = data?.state as AgentJobState | undefined;
+          if (state) setAgentJobState(state);
+
+          const payload = data?.payload || {};
+          const remainingSeconds = payload?.remaining_seconds;
+          if (typeof remainingSeconds === "number") {
+            setGlobalTimeLeft(remainingSeconds);
+          }
+          const idx = payload?.current_item_index;
+          if (typeof idx === "number") {
+            setAgentCurrentItemIndex(idx);
+          }
+        } catch (e) {
+          // ignore malformed events
+        }
+      };
+
+      es.onerror = () => {
+        try {
+          es.close();
+        } catch {
+          // ignore
+        }
+      };
+    };
+
+    start();
+
+    return () => {
+      closed = true;
+      if (agentEventSourceRef.current) {
+        agentEventSourceRef.current.close();
+        agentEventSourceRef.current = null;
+      }
+    };
+  }, [activeModal, currentChargeId, queue]);
 
   // ==========================================
   // PAYMENT API LOGIC
@@ -1044,15 +1186,15 @@ export default function VendingPage() {
             >
               {/* ส่วนหัว */}
               <div
-                className={`processing-header ${currentStep === 3 ? "success-theme" : ""}`}
+                className={`processing-header ${isProcessSuccess ? "success-theme" : ""}`}
               >
                 <div className="processing-title">
-                  {currentStep === 3
+                  {isProcessSuccess
                     ? "อร่อยให้อร่อยนะครับ!"
                     : "กรุณารอสักครู่..."}
                 </div>
                 <div className="processing-subtitle">
-                  {currentStep === 3
+                  {isProcessSuccess
                     ? "🎉 สินค้าของคุณพร้อมแล้ว!"
                     : PROCESS_STEPS[currentStep]}
                 </div>
@@ -1123,9 +1265,9 @@ export default function VendingPage() {
 
               {/* ส่วนล่าง */}
               <div
-                className={`processing-bottom-area ${currentStep === 3 ? "success-theme" : ""}`}
+                className={`processing-bottom-area ${isProcessSuccess ? "success-theme" : ""}`}
               >
-                {currentStep < 3 ? (
+                {!isProcessCompleted ? (
                   <div className="stepper-container">
                     <div
                       className="stepper-progress-line"
