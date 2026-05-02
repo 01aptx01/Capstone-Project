@@ -72,6 +72,7 @@ export default function VendingPage() {
   // -- Timers States --
   const [paymentCountdown, setPaymentCountdown] = useState<number>(180);
   const [pointsCountdown, setPointsCountdown] = useState<number>(10);
+  const [numpadCountdown, setNumpadCountdown] = useState<number>(60);
 
   const MOCK_USER_POINTS = 38;
 
@@ -249,6 +250,24 @@ export default function VendingPage() {
     return () => clearInterval(timer);
   }, [activeModal, pointsCountdown, isAfterPayment]);
 
+  // Timer: นับถอยหลังหน้ารับเบอร์โทร (Numpad)
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (activeModal === "numpad") {
+      if (numpadCountdown > 0) {
+        timer = setInterval(() => setNumpadCountdown((prev) => prev - 1), 1000);
+      } else {
+        // ถ้าเวลาหมดแล้วเป็นการสะสมแต้มหลังจ่าย ให้ข้ามไปเลย
+        if (isAfterPayment) {
+          startHeatingProcess();
+        } else {
+          setActiveModal("none");
+        }
+      }
+    }
+    return () => clearInterval(timer);
+  }, [activeModal, numpadCountdown, isAfterPayment]);
+
   // Timer: นับถอยหลังระบบอุ่นสินค้ารวม
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -278,6 +297,7 @@ export default function VendingPage() {
     // ไปหน้าสะสมแต้ม
     setIsAfterPayment(true);
     setPhoneNumber("");
+    setNumpadCountdown(60);
     setActiveModal("numpad");
   };
 
@@ -366,7 +386,7 @@ export default function VendingPage() {
         if (res.ok) {
           const data = await res.json();
           console.log(`[Frontend] Poll result for ${chargeId}:`, data.status);
-          if (data.status === "PAID") {
+          if (data.status === "PAID" || data.status === "paid") {
             console.log("[Frontend] Payment confirmed via polling!");
             handlePaymentSuccess();
           }
@@ -486,6 +506,7 @@ export default function VendingPage() {
   };
   const handleOpenNumpad = () => {
     setIsAfterPayment(false);
+    setNumpadCountdown(60);
     setActiveModal("numpad");
     setPhoneNumber("");
   };
@@ -736,11 +757,17 @@ export default function VendingPage() {
               className="numpad-modal-box"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* ปุ่ม Timeout / Close ของ Numpad */}
               <button
-                className="modal-close-btn"
-                onClick={() => setActiveModal("none")}
+                className="timeout-close-btn"
+                onClick={
+                  isAfterPayment
+                    ? startHeatingProcess // ถ้าหลังจ่ายเงินให้ข้าม
+                    : () => setActiveModal("none") // ถ้าก่อนจ่ายให้ปิด
+                }
               >
-                &times;
+                <span>{numpadCountdown}</span>
+                <span className="points-close-icon">&times;</span>
               </button>
               <div className="numpad-title">
                 {isAfterPayment

@@ -692,9 +692,9 @@ body {
 .numpad-modal-box {
     background-color: white;
     border-radius: 24px;
-    padding: 30px 20px 20px 20px;
-    width: 360px;
-    height: 460px;
+    padding: 60px 20px 20px 20px;
+    width: 400px;
+    height: 465px;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     display: flex;
@@ -706,7 +706,7 @@ body {
 .numpad-title {
     font-size: 20px;
     font-weight: 600;
-    margin-bottom: 15px;
+    margin-bottom: 5px;
     color: #333;
 }
 
@@ -720,7 +720,7 @@ body {
     width: 90%;
     text-align: center;
     margin-bottom: 20px;
-    min-height: 60px;
+    min-height: 50px;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -730,7 +730,7 @@ body {
 .numpad-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: 5px;
     width: 80%;
 }
 
