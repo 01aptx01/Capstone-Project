@@ -19,15 +19,15 @@ type UIContextType = {
   openAddMachine: () => void;
   closeAddMachine: () => void;
   isEditMachineOpen: boolean;
-  editingMachine: any | null;
-  openEditMachine: (machine: any) => void;
+  editingMachine: Record<string, unknown> | null;
+  openEditMachine: (machine: Record<string, unknown>) => void;
   closeEditMachine: () => void;
   isAddProductOpen: boolean;
   openAddProduct: () => void;
   closeAddProduct: () => void;
   isEditProductOpen: boolean;
-  editingProduct: any | null;
-  openEditProduct: (product: any) => void;
+  editingProduct: Record<string, unknown> | null;
+  openEditProduct: (product: Record<string, unknown>) => void;
   closeEditProduct: () => void;
   isExportModalOpen: boolean;
   exportSections: ExportSection[];
@@ -41,11 +41,11 @@ const UIContext = createContext<UIContextType | undefined>(undefined);
 export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isAddMachineOpen, setIsAddMachineOpen] = useState(false);
   const [isEditMachineOpen, setIsEditMachineOpen] = useState(false);
-  const [editingMachine, setEditingMachine] = useState<any | null>(null);
+  const [editingMachine, setEditingMachine] = useState<Record<string, unknown> | null>(null);
   
   const [isAddProductOpen, setIsAddProductOpen] = useState(false);
   const [isEditProductOpen, setIsEditProductOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Record<string, unknown> | null>(null);
 
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportSections, setExportSections] = useState<ExportSection[]>([]);
@@ -54,7 +54,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const openAddMachine = () => setIsAddMachineOpen(true);
   const closeAddMachine = () => setIsAddMachineOpen(false);
 
-  const openEditMachine = (machine: any) => {
+  const openEditMachine = (machine: Record<string, unknown>) => {
     setEditingMachine(machine);
     setIsEditMachineOpen(true);
   };
@@ -66,7 +66,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const openAddProduct = () => setIsAddProductOpen(true);
   const closeAddProduct = () => setIsAddProductOpen(false);
 
-  const openEditProduct = (product: any) => {
+  const openEditProduct = (product: Record<string, unknown>) => {
     setEditingProduct(product);
     setIsEditProductOpen(true);
   };
@@ -117,3 +117,4 @@ export function useUI() {
   }
   return context;
 }
+

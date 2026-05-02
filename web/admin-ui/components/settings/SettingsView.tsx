@@ -19,12 +19,12 @@ export default function SettingsView() {
   return (
     <div className="settings-view animate-in">
       <div className="settings-header">
-        <h1>ตั้งค่า</h1>
+        <h1 className="gradient-text">ตั้งค่า</h1>
         <p>ปรับแต่งการใช้งานและจัดการการแจ้งเตือนของระบบ</p>
       </div>
 
       <div className="settings-sections">
-        <div className="settings-card">
+        <div className="settings-card vibrant-card animate-in" style={{ animationDelay: '0.1s' }}>
           <div className="card-header">
             <div className="icon-box"><i className="fi fi-rr-palette"></i></div>
             <div className="title-box">
@@ -71,19 +71,22 @@ export default function SettingsView() {
                 <label>ภาษา (Language)</label>
                 <span>เลือกภาษาที่ต้องการใช้งานในระบบ</span>
               </div>
-              <select 
-                className="select-input" 
-                value={appearance.language} 
-                onChange={(e) => setAppearance({...appearance, language: e.target.value})}
-              >
-                <option value="th">ไทย (Thai)</option>
-                <option value="en">English (US)</option>
-              </select>
+              <div className="select-wrapper">
+                <select 
+                  className="select-input" 
+                  value={appearance.language} 
+                  onChange={(e) => setAppearance({...appearance, language: e.target.value})}
+                >
+                  <option value="th">ไทย (Thai)</option>
+                  <option value="en">English (US)</option>
+                </select>
+                <i className="fi fi-rr-angle-small-down"></i>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="settings-card">
+        <div className="settings-card vibrant-card animate-in" style={{ animationDelay: '0.2s' }}>
           <div className="card-header">
             <div className="icon-box"><i className="fi fi-rr-bell"></i></div>
             <div className="title-box">
@@ -143,7 +146,7 @@ export default function SettingsView() {
           </div>
         </div>
 
-        <div className="settings-card full-width">
+        <div className="settings-card vibrant-card full-width animate-in" style={{ animationDelay: '0.3s' }}>
           <div className="card-header">
             <div className="icon-box"><i className="fi fi-rr-time-forward"></i></div>
             <div className="title-box">
@@ -155,32 +158,42 @@ export default function SettingsView() {
           <div className="card-content grid-2-cols">
             <div className="setting-item vertical">
               <label>เขตเวลา (Timezone)</label>
-              <select className="select-input full-width">
-                <option>(GMT+07:00) Bangkok, Hanoi, Jakarta</option>
-                <option>(GMT+00:00) UTC</option>
-              </select>
+              <div className="select-wrapper full-width">
+                <select className="select-input full-width">
+                  <option>(GMT+07:00) Bangkok, Hanoi, Jakarta</option>
+                  <option>(GMT+00:00) UTC</option>
+                </select>
+                <i className="fi fi-rr-angle-small-down"></i>
+              </div>
             </div>
             <div className="setting-item vertical">
               <label>รูปแบบวันที่ (Date Format)</label>
-              <select className="select-input full-width">
-                <option>DD/MM/YYYY</option>
-                <option>MM/DD/YYYY</option>
-                <option>YYYY-MM-DD</option>
-              </select>
+              <div className="select-wrapper full-width">
+                <select className="select-input full-width">
+                  <option>DD/MM/YYYY</option>
+                  <option>MM/DD/YYYY</option>
+                  <option>YYYY-MM-DD</option>
+                </select>
+                <i className="fi fi-rr-angle-small-down"></i>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="settings-footer">
-        <button className="btn-secondary">คืนค่าเริ่มต้น</button>
-        <button className="btn-primary">บันทึกการตั้งค่า</button>
+      <div className="settings-footer animate-in" style={{ animationDelay: '0.4s' }}>
+        <button className="btn-secondary">
+          <i className="fi fi-rr-refresh"></i> คืนค่าเริ่มต้น
+        </button>
+        <button className="btn-primary">
+          <i className="fi fi-rr-disk"></i> บันทึกการตั้งค่า
+        </button>
       </div>
 
       <style jsx>{`
         .settings-view {
           padding: 40px;
-          max-width: 1000px;
+          max-width: 1100px;
           margin: 0 auto;
         }
 
@@ -189,30 +202,34 @@ export default function SettingsView() {
         }
 
         .settings-header h1 {
-          font-size: 2rem;
-          font-weight: 800;
-          color: var(--text-dark);
+          font-size: 2.5rem;
+          font-weight: 900;
           margin: 0 0 8px 0;
+          letter-spacing: -1px;
+        }
+
+        .gradient-text {
+          background: linear-gradient(135deg, #FF6B00 0%, #FF9E00 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
 
         .settings-header p {
-          color: var(--muted);
+          color: #64748b;
           font-size: 1.1rem;
         }
 
         .settings-sections {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 30px;
+          gap: 24px;
         }
 
         .settings-card {
-          background: white;
-          border-radius: 24px;
-          padding: 30px;
-          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+          padding: 32px;
           display: flex;
           flex-direction: column;
+          height: 100%;
         }
 
         .full-width {
@@ -222,42 +239,48 @@ export default function SettingsView() {
         .card-header {
           display: flex;
           gap: 20px;
-          margin-bottom: 30px;
-          align-items: flex-start;
+          margin-bottom: 32px;
+          align-items: center;
         }
 
         .icon-box {
-          width: 50px;
-          height: 50px;
-          background: #f8f9fa;
-          border-radius: 14px;
+          width: 54px;
+          height: 54px;
+          background: rgba(255, 107, 0, 0.1);
+          border: 1px solid rgba(255, 107, 0, 0.2);
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.25rem;
-          color: var(--primary);
+          font-size: 1.5rem;
+          color: #FF6B00;
+          backdrop-filter: blur(10px);
         }
 
         .title-box h3 {
-          margin: 0 0 5px 0;
-          font-size: 1.15rem;
-          font-weight: 700;
-          color: var(--text-dark);
+          margin: 0 0 4px 0;
+          font-size: 1.25rem;
+          font-weight: 800;
+          color: #1e293b;
         }
 
         .title-box p {
           margin: 0;
-          font-size: 0.9rem;
-          color: var(--muted);
+          font-size: 0.95rem;
+          color: #64748b;
           line-height: 1.5;
+        }
+
+        .card-content {
+          flex: 1;
         }
 
         .setting-item {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 15px 0;
-          border-bottom: 1px solid #f8f9fa;
+          padding: 20px 0;
+          border-bottom: 1px solid #f1f5f9;
         }
 
         .setting-item:last-child {
@@ -267,45 +290,73 @@ export default function SettingsView() {
         .setting-item.vertical {
           flex-direction: column;
           align-items: flex-start;
-          gap: 10px;
+          gap: 12px;
           border-bottom: none;
         }
 
         .setting-info label {
           display: block;
           font-weight: 700;
-          color: var(--text-dark);
+          color: #1e293b;
           margin-bottom: 4px;
+          font-size: 1rem;
         }
 
         .setting-info span {
-          font-size: 0.85rem;
-          color: var(--muted);
+          font-size: 0.9rem;
+          color: #64748b;
+        }
+
+        .setting-item.vertical label {
+          font-weight: 700;
+          color: #1e293b;
+          font-size: 1rem;
+        }
+
+        .select-wrapper {
+          position: relative;
+          min-width: 140px;
+        }
+
+        .select-wrapper.full-width {
+          width: 100%;
+        }
+
+        .select-wrapper i {
+          position: absolute;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          pointer-events: none;
+          font-size: 1.2rem;
         }
 
         .select-input {
-          padding: 10px 16px;
-          border: 2px solid #f0f0f0;
-          border-radius: 10px;
+          width: 100%;
+          padding: 12px 36px 12px 16px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
           font-family: inherit;
           font-weight: 600;
-          color: var(--text-dark);
+          color: #1e293b;
           outline: none;
           transition: 0.3s;
+          appearance: none;
+          cursor: pointer;
         }
 
         .select-input:focus {
-          border-color: var(--primary);
-        }
-
-        .select-input.full-width {
-          width: 100%;
+          border-color: #FF6B00;
+          background: rgba(255, 107, 0, 0.05);
+          box-shadow: 0 0 0 4px rgba(255, 107, 0, 0.1);
         }
 
         .grid-2-cols {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 20px;
+          gap: 32px;
         }
 
         /* Toggle Switch */
@@ -315,13 +366,14 @@ export default function SettingsView() {
 
         .toggle-switch label {
           display: block;
-          width: 50px;
+          width: 52px;
           height: 28px;
-          background: #ddd;
+          background: #e2e8f0;
           border-radius: 20px;
           position: relative;
           cursor: pointer;
-          transition: 0.3s;
+          transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          border: 1px solid #cbd5e1;
         }
 
         .toggle-switch label::after {
@@ -331,62 +383,87 @@ export default function SettingsView() {
           height: 22px;
           background: white;
           border-radius: 50%;
-          top: 3px;
-          left: 3px;
-          transition: 0.3s;
+          top: 2px;
+          left: 2px;
+          transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         .toggle-switch input:checked + label {
-          background: var(--primary);
+          background: linear-gradient(135deg, #FF6B00 0%, #FF9E00 100%);
+          border-color: rgba(255, 107, 0, 0.3);
         }
 
         .toggle-switch input:checked + label::after {
-          left: 25px;
+          left: 26px;
         }
 
         .settings-footer {
-          margin-top: 40px;
+          margin-top: 48px;
           display: flex;
           justify-content: flex-end;
-          gap: 15px;
+          gap: 16px;
         }
 
         .btn-primary {
-          background: var(--primary);
+          background: linear-gradient(135deg, #FF6B00 0%, #FF9E00 100%);
           color: white;
           border: none;
-          padding: 14px 30px;
-          border-radius: 14px;
-          font-weight: 700;
+          padding: 16px 32px;
+          border-radius: 16px;
+          font-weight: 800;
+          font-size: 1rem;
           cursor: pointer;
-          transition: 0.3s;
+          transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          box-shadow: 0 8px 25px rgba(255, 107, 0, 0.2);
         }
 
         .btn-primary:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 25px rgba(255, 107, 0, 0.2);
+          transform: translateY(-4px) scale(1.02);
+          box-shadow: 0 12px 35px rgba(255, 107, 0, 0.4);
         }
 
         .btn-secondary {
-          background: #f5f5f5;
-          color: var(--text-dark);
-          border: none;
-          padding: 14px 30px;
-          border-radius: 14px;
+          background: white;
+          color: #475569;
+          border: 1px solid #cbd5e1;
+          padding: 16px 32px;
+          border-radius: 16px;
           font-weight: 700;
+          font-size: 1rem;
           cursor: pointer;
           transition: 0.3s;
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
 
-        @media (max-width: 800px) {
+        .btn-secondary:hover {
+          background: #f8fafc;
+          border-color: #94a3b8;
+          transform: translateY(-2px);
+        }
+
+        @media (max-width: 900px) {
           .settings-sections {
             grid-template-columns: 1fr;
           }
           .grid-2-cols {
             grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          .full-width {
+            grid-column: span 1;
+          }
+          .settings-view {
+            padding: 20px;
           }
         }
       `}</style>
     </div>
   );
 }
+

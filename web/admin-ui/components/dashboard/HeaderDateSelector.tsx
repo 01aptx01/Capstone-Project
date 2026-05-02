@@ -55,7 +55,7 @@ export default function HeaderDateSelector() {
         tabIndex={0}
       >
         <span className="text-lg">📅</span>
-        <span className="text-[14px] font-bold text-[#0F172A]">{selected.label}</span>
+        <span className="text-[14px] font-bold text-[#334155]">{selected.label}</span>
         <span className="text-[#64748B] ml-1">▼</span>
       </div>
 
@@ -75,3 +75,4 @@ export default function HeaderDateSelector() {
     </div>
   );
 }
+
