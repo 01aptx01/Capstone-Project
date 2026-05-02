@@ -31,11 +31,17 @@ class OmisePaymentService:
             "metadata": metadata or {}
         }
         
+        from datetime import datetime, timedelta
+        import pytz
+
         if payment_type == "token":
             charge_data["card"] = payment_id
         elif payment_type in ["source", "promptpay"]:
             charge_data["source"] = payment_id
             charge_data["return_uri"] = self.return_uri
+            # ให้ PromptPay QR หมดอายุใน 5 นาที เพื่อไม่ให้ค้าง Pending ใน Dashboard
+            expires_at = datetime.now(pytz.utc) + timedelta(minutes=5)
+            charge_data["expires_at"] = expires_at.isoformat()
         else:
             logger.error(f"❌ [Omise] Unsupported payment type: {payment_type}")
             return None
@@ -95,3 +101,29 @@ class OmisePaymentService:
         except Exception as e:
             logger.error(f"❌ [Omise] Unexpected error during refund for charge {charge_id}: {type(e).__name__}: {e}")
             return None
+
+    def cancel_charge(self, charge_id: str):
+        """
+        Attempt to reverse or expire a pending charge.
+        Omise allows reversing uncaptured credit card charges.
+        For PromptPay, it might not be natively cancellable but we can try reverse() or let it expire.
+        """
+        if not charge_id or charge_id.startswith("draft_"):
+            return True
+            
+        try:
+            omise.api_secret = self.api_secret
+            charge = omise.Charge.retrieve(charge_id)
+            if charge.status == "pending":
+                # สำหรับ PromptPay หรือรายการที่ยัง pending ลองสั่ง reverse หรือ update ให้ expire
+                # (Omise Python SDK ใช้คำสั่ง reverse() สำหรับยกเลิกรายการ)
+                charge.reverse()
+                logger.info(f"✅ [Omise] Charge {charge_id} reversed/cancelled successfully.")
+                return True
+            return True
+        except BaseError as oe:
+            logger.warning(f"⚠️ [Omise] Could not reverse charge {charge_id}: {oe}")
+            return False
+        except Exception as e:
+            logger.warning(f"⚠️ [Omise] Error cancelling charge {charge_id}: {e}")
+            return False

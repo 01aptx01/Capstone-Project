@@ -15,7 +15,7 @@ from app.api.buy import buy_api
 from app.api.products import products_api
 from app.api.health import health_api
 from app.api.machine_events import machine_events_api
-from app.config.db import init_db
+from app.config.db import init_db, get_db
 from app.realtime.socketio_gateway import make_socketio_app
 
 # Configure logger
@@ -70,8 +70,42 @@ class ServerApp:
         def health():
             return {"status": "server-ok"}
 
+    def _background_sweeper(self):
+        """Background job to sweep and auto-cancel zombie orders stuck in pending_payment."""
+        logger.info("🧹 [Sweeper] Background zombie order sweeper started")
+        while True:
+            try:
+                db = get_db()
+                cur = db.cursor()
+                # Update any pending_payment order older than 15 minutes to cancelled
+                cur.execute(
+                    """
+                    UPDATE orders
+                    SET status = 'cancelled'
+                    WHERE status = 'pending_payment'
+                      AND created_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+                    """
+                )
+                db.commit()
+                if cur.rowcount > 0:
+                    logger.info(f"🧹 [Sweeper] Auto-cancelled {cur.rowcount} zombie order(s)")
+            except Exception as e:
+                logger.error(f"❌ [Sweeper] Error in sweeper: {e}")
+            finally:
+                if 'cur' in locals():
+                    cur.close()
+                if 'db' in locals():
+                    db.close()
+            
+            # Sleep for 5 minutes (300 seconds) before next sweep
+            eventlet.sleep(300)
+
     def run(self):
         logger.info(f"🚀 Starting server on {self.host}:{self.port}")
+        
+        # Start background sweeper
+        eventlet.spawn(self._background_sweeper)
+
         socketio_enabled = os.getenv("SOCKETIO_ENABLED", "1") != "0"
         if socketio_enabled:
             listener = eventlet.listen((self.host, self.port))

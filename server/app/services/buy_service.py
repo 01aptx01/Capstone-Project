@@ -12,6 +12,7 @@ class AlreadyClaimedError(Exception):
     """Raised when deduct_stock detects the charge was already processed (RC-6 guard)."""
     pass
 
+
 class InventoryService:
     def __init__(self, db_provider=None):
         self.get_db = db_provider or get_db
@@ -105,7 +106,7 @@ class InventoryService:
         except Exception as e:
             logger.error(f"❌ [InventoryService] check_stock error: {e}")
             return False
-            
+
         finally:
             cur.close()
             db.close()
@@ -131,8 +132,8 @@ class InventoryService:
 
             cur.execute(
                 """
-                INSERT INTO orders (machine_code, charge_id, total_price, payment_method, payment_status, dispense_status)
-                VALUES (%s, %s, %s, %s, 'pending', 'pending')
+                INSERT INTO orders (machine_code, charge_id, total_price, payment_method, status)
+                VALUES (%s, %s, %s, %s, 'pending_payment')
                 """,
                 (machine_code, charge_id, total_price, payment_method),
             )
@@ -163,6 +164,34 @@ class InventoryService:
             cur.close()
             db.close()
 
+    def upgrade_draft_order(self, draft_id: str, real_charge_id: str, payment_method: str) -> bool:
+        """เปลี่ยน Draft Order (ที่เพิ่งรอแตะบัตร) ให้มี charge_id จริงหลังจากชำระแล้ว"""
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+
+        try:
+            cur.execute(
+                """
+                UPDATE orders
+                SET charge_id = %s, payment_method = %s
+                WHERE charge_id = %s AND status = 'pending_payment'
+                """,
+                (real_charge_id, payment_method, draft_id),
+            )
+            db.commit()
+            if cur.rowcount == 0:
+                logger.warning(f"⚠️ [InventoryService] Cannot upgrade draft {draft_id} — not found or wrong status")
+                return False
+            logger.info(f"✅ [InventoryService] Upgraded draft {draft_id} to real charge {real_charge_id}")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"❌ [InventoryService] upgrade_draft_order error: {e}")
+            return False
+        finally:
+            cur.close()
+            db.close()
+
     def deduct_stock(self, machine_code: str, cart_items: list, charge_id: str = None) -> bool:
         db = self.get_db()
         cur = db.cursor(dictionary=True)
@@ -176,26 +205,25 @@ class InventoryService:
                 return False
 
             # ─── RC-6 Guard: Atomic "claim" ───────────────────────────────────────
-            # อัปเดต payment_status → 'paid' เฉพาะเมื่อยังเป็น 'pending' เท่านั้น
+            # อัปเดต status → 'paid' เฉพาะเมื่อยังเป็น 'pending_payment' เท่านั้น
             # ถ้า rowcount == 0 แสดงว่า Thread อื่น (webhook หรือ poll) claim ไปแล้ว
             # → หยุดทันทีเพื่อป้องกัน Double Dispense
             if charge_id:
                 cur.execute(
                     """
                     UPDATE orders
-                    SET payment_status = 'paid'
-                    WHERE charge_id = %s AND payment_status = 'pending'
+                    SET status = 'paid'
+                    WHERE charge_id = %s AND status = 'pending_payment'
                     """,
                     (charge_id,),
                 )
                 if cur.rowcount == 0:
-                    # อาจถูก claim แล้ว หรือ charge_id ไม่มีอยู่
                     cur.execute(
-                        "SELECT payment_status FROM orders WHERE charge_id = %s",
+                        "SELECT status FROM orders WHERE charge_id = %s",
                         (charge_id,),
                     )
                     row = cur.fetchone()
-                    if row and row["payment_status"] == "paid":
+                    if row and row["status"] == "paid":
                         logger.warning(
                             f"⚠️ [InventoryService] deduct_stock: charge {charge_id} already claimed "
                             f"(Double Dispense prevented)"
@@ -204,7 +232,8 @@ class InventoryService:
                         raise AlreadyClaimedError(charge_id)
                     else:
                         logger.error(
-                            f"❌ [InventoryService] deduct_stock: charge {charge_id} not found or wrong state"
+                            f"❌ [InventoryService] deduct_stock: charge {charge_id} not found or wrong state "
+                            f"(current: {row['status'] if row else 'NOT FOUND'})"
                         )
                         db.rollback()
                         return False
@@ -213,16 +242,14 @@ class InventoryService:
             for item in cart_items:
                 product_id = int(item["product_id"])
                 qty = int(item["quantity"])
-
                 self._deduct_from_slots(cur, machine_code, product_id, qty)
 
-            # เมื่อทุกอย่างผ่านเรียบร้อย ทำการยืนยันข้อมูล
             db.commit()
             logger.info(f"✅ [InventoryService] Stock deducted successfully for charge {charge_id}")
             return True
 
         except AlreadyClaimedError:
-            # RC-6: อีก thread จัดการไปแล้ว ไม่ต้อง rollback เพิ่ม (ทำไปแล้วใน guard)
+            # RC-6: อีก thread จัดการไปแล้ว (rollback ทำใน guard แล้ว)
             raise
 
         except InsufficientStockError as e:
@@ -239,8 +266,13 @@ class InventoryService:
             cur.close()
             db.close()
 
-
-    def update_dispense_status(self, charge_id: str, dispense_status: str) -> None:
+    def update_order_status(self, charge_id: str, status: str) -> None:
+        """อัปเดต status ของออเดอร์ตาม Unified State Machine
+        
+        Valid statuses:
+          pending_payment | cancelled | payment_failed | paid |
+          dispensing | completed | dispense_failed | refunded
+        """
         db = self.get_db()
         cur = db.cursor(dictionary=True)
 
@@ -248,15 +280,52 @@ class InventoryService:
             cur.execute(
                 """
                 UPDATE orders
-                SET dispense_status = %s
+                SET status = %s
                 WHERE charge_id = %s
                 """,
-                (dispense_status, charge_id),
+                (status, charge_id),
             )
             db.commit()
+            logger.info(f"✅ [InventoryService] Order {charge_id} → status='{status}'")
         except Exception as e:
             db.rollback()
-            logger.error(f"❌ [InventoryService] update_dispense_status error for charge {charge_id}: {e}")
+            logger.error(f"❌ [InventoryService] update_order_status error for charge {charge_id}: {e}")
+        finally:
+            cur.close()
+            db.close()
+
+    def cancel_order(self, charge_id: str) -> bool:
+        """ยกเลิกออเดอร์ — ใช้ได้เฉพาะตอนยังรอจ่ายเงิน (pending_payment)
+        
+        Returns True ถ้ายกเลิกสำเร็จ, False ถ้าออเดอร์อยู่ในสถานะที่ยกเลิกไม่ได้
+        """
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+
+        try:
+            cur.execute(
+                """
+                UPDATE orders
+                SET status = 'cancelled'
+                WHERE charge_id = %s AND status = 'pending_payment'
+                """,
+                (charge_id,),
+            )
+            db.commit()
+            if cur.rowcount == 0:
+                cur.execute("SELECT status FROM orders WHERE charge_id = %s", (charge_id,))
+                row = cur.fetchone()
+                current = row["status"] if row else "NOT FOUND"
+                logger.warning(
+                    f"⚠️ [InventoryService] Cannot cancel charge {charge_id} — current status: '{current}'"
+                )
+                return False
+            logger.info(f"✅ [InventoryService] Order {charge_id} cancelled")
+            return True
+        except Exception as e:
+            db.rollback()
+            logger.error(f"❌ [InventoryService] cancel_order error for charge {charge_id}: {e}")
+            return False
         finally:
             cur.close()
             db.close()

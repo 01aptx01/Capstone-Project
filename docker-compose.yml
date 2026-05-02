@@ -8,6 +8,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: vending
+      TZ: Asia/Bangkok
     volumes:
       - db_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -34,6 +35,7 @@ services:
       - AGENT_BASE_URL=http://client:5000
       - SOCKETIO_ENABLED=1
       - DISPATCH_MODE=socket
+      - TZ=Asia/Bangkok
     ports:
       - "8000:8000"
     depends_on:
@@ -54,6 +56,7 @@ services:
       - MACHINE_SECRET_KEY=${MACHINE_SECRET_KEY:-}
       - AGENT_DB_PATH=/data/agent.db
       - EVENT_SINK_URL=http://server:8000/api/machines/events
+      - TZ=Asia/Bangkok
 
   machine-ui:
     build:
@@ -62,6 +65,8 @@ services:
         - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
         - NEXT_PUBLIC_AGENT_BASE_URL=${NEXT_PUBLIC_AGENT_BASE_URL}
+    environment:
+      - TZ=Asia/Bangkok
     container_name: vending-machine-ui
     ports:
       - "3000:3000"
