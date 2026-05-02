@@ -3,9 +3,17 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 
+type Notification = {
+  id: string;
+  title: string;
+  body: string;
+  time: string;
+  read: boolean;
+};
+
 export default function Header() {
   const [open, setOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -40,7 +48,7 @@ export default function Header() {
     }
   }
 
-  function markAllRead(e?: any) {
+  function markAllRead(e?: React.MouseEvent) {
     // prevent the click from bubbling to document listener
     try {
       e?.stopPropagation();

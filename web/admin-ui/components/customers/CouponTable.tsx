@@ -1,27 +1,61 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import couponsData from "@/lib/mock/coupons.json";
 
 export default function CouponTable() {
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
+  const [search, setSearch] = useState("");
 
   const tabs = ["ทั้งหมด", "กำลังใช้งาน (Active)", "หมดอายุ"];
 
+  const filteredCoupons = useMemo(() => {
+    const now = new Date();
+    const q = search.trim().toLowerCase();
+    return couponsData.filter((coupon) => {
+      let tabMatch = true;
+      const expiry = coupon.expiry ? new Date(coupon.expiry) : null;
+      if (activeTab === "กำลังใช้งาน (Active)") {
+        tabMatch = coupon.status === "active" && (!expiry || expiry >= now);
+      } else if (activeTab === "หมดอายุ") {
+        tabMatch = !!expiry && expiry < now;
+      }
+
+      const searchMatch =
+        q === "" ||
+        (coupon.name && coupon.name.toLowerCase().includes(q)) ||
+        (coupon.id && coupon.id.toLowerCase().includes(q));
+
+      return tabMatch && searchMatch;
+    });
+  }, [activeTab, search]);
+
   return (
     <div className="bg-white border border-[#E2E8F0] rounded-[24px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-      {/* Table Header / Tabs */}
-      <div className="px-8 py-6 border-bottom border-[#F1F5F9] flex justify-between items-center">
+      {/* Table Header */}
+      <div className="px-8 py-6 border-bottom border-[#F1F5F9] flex items-center justify-between">
         <h3 className="text-[18px] font-black text-[#0F172A]">รายการคูปองและโปรโมชัน</h3>
+      </div>
+
+      {/* Search & Tabs */}
+      <div className="px-8 py-4 border-t border-[#F1F5F9] flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 w-full max-w-lg">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาชื่อหรือรหัสคูปอง"
+            className="w-full px-4 py-2 rounded-lg border border-[#E2E8F0] bg-white text-[14px] placeholder:text-[#94A3B8]"
+          />
+        </div>
         <div className="flex bg-[#F1F5F9] p-1 rounded-xl">
           {tabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
               className={`px-4 py-2 rounded-lg text-[13px] font-bold transition-all ${
-                activeTab === tab 
-                ? "bg-white text-[#FF6A00] shadow-sm" 
-                : "text-[#64748B] hover:text-[#0F172A]"
+                activeTab === tab
+                  ? "bg-white text-[#FF6A00] shadow-sm"
+                  : "text-[#64748B] hover:text-[#0F172A]"
               }`}
             >
               {tab}
@@ -44,7 +78,7 @@ export default function CouponTable() {
             </tr>
           </thead>
           <tbody className="divide-y divide-[#F1F5F9]">
-            {couponsData.map((coupon) => (
+            {filteredCoupons.map((coupon) => (
               <tr key={coupon.id} className="hover:bg-[#FDFBFA] transition-colors group">
                 <td className="px-8 py-6">
                   <div className="flex items-center gap-4">

@@ -1,0 +1,42 @@
+[
+  {
+    "id": "CUST-001",
+    "name": "สมชาย ใจดี",
+    "email": "somchai@example.com",
+    "points": 120,
+    "status": "active",
+    "joined": "2025-11-01"
+  },
+  {
+    "id": "CUST-002",
+    "name": "สมหญิง แสนดี",
+    "email": "samying@example.com",
+    "points": 40,
+    "status": "inactive",
+    "joined": "2024-06-12"
+  },
+  {
+    "id": "CUST-003",
+    "name": "ทดสอบ นาย",
+    "email": "test1@example.com",
+    "points": 560,
+    "status": "active",
+    "joined": "2023-03-22"
+  },
+  {
+    "id": "CUST-004",
+    "name": "ปวีณา สวัสดิ์",
+    "email": "paveena@example.com",
+    "points": 0,
+    "status": "active",
+    "joined": "2026-01-10"
+  },
+  {
+    "id": "CUST-005",
+    "name": "วัฒนา ดีมาก",
+    "email": "wattana@example.com",
+    "points": 220,
+    "status": "inactive",
+    "joined": "2022-09-05"
+  }
+]
