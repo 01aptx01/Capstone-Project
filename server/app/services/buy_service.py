@@ -8,6 +8,10 @@ logger = logging.getLogger(__name__)
 class InsufficientStockError(Exception):
     pass
 
+class AlreadyClaimedError(Exception):
+    """Raised when deduct_stock detects the charge was already processed (RC-6 guard)."""
+    pass
+
 class InventoryService:
     def __init__(self, db_provider=None):
         self.get_db = db_provider or get_db
@@ -171,31 +175,60 @@ class InventoryService:
                 db.rollback()
                 return False
 
+            # ─── RC-6 Guard: Atomic "claim" ───────────────────────────────────────
+            # อัปเดต payment_status → 'paid' เฉพาะเมื่อยังเป็น 'pending' เท่านั้น
+            # ถ้า rowcount == 0 แสดงว่า Thread อื่น (webhook หรือ poll) claim ไปแล้ว
+            # → หยุดทันทีเพื่อป้องกัน Double Dispense
+            if charge_id:
+                cur.execute(
+                    """
+                    UPDATE orders
+                    SET payment_status = 'paid'
+                    WHERE charge_id = %s AND payment_status = 'pending'
+                    """,
+                    (charge_id,),
+                )
+                if cur.rowcount == 0:
+                    # อาจถูก claim แล้ว หรือ charge_id ไม่มีอยู่
+                    cur.execute(
+                        "SELECT payment_status FROM orders WHERE charge_id = %s",
+                        (charge_id,),
+                    )
+                    row = cur.fetchone()
+                    if row and row["payment_status"] == "paid":
+                        logger.warning(
+                            f"⚠️ [InventoryService] deduct_stock: charge {charge_id} already claimed "
+                            f"(Double Dispense prevented)"
+                        )
+                        db.rollback()
+                        raise AlreadyClaimedError(charge_id)
+                    else:
+                        logger.error(
+                            f"❌ [InventoryService] deduct_stock: charge {charge_id} not found or wrong state"
+                        )
+                        db.rollback()
+                        return False
+            # ──────────────────────────────────────────────────────────────────────
+
             for item in cart_items:
                 product_id = int(item["product_id"])
                 qty = int(item["quantity"])
 
                 self._deduct_from_slots(cur, machine_code, product_id, qty)
 
-            if charge_id:
-                cur.execute(
-                    """
-                    UPDATE orders
-                    SET payment_status = 'paid'
-                    WHERE charge_id = %s
-                    """,
-                    (charge_id,),
-                )
-
             # เมื่อทุกอย่างผ่านเรียบร้อย ทำการยืนยันข้อมูล
             db.commit()
             logger.info(f"✅ [InventoryService] Stock deducted successfully for charge {charge_id}")
             return True
 
+        except AlreadyClaimedError:
+            # RC-6: อีก thread จัดการไปแล้ว ไม่ต้อง rollback เพิ่ม (ทำไปแล้วใน guard)
+            raise
+
         except InsufficientStockError as e:
             db.rollback()
             logger.error(f"❌ [InventoryService] deduct_stock insufficient for charge {charge_id}: {e}")
-            return False
+            raise  # re-raise ให้ caller จัดการ refund
 
         except Exception as e:
             db.rollback()
@@ -205,6 +238,7 @@ class InventoryService:
         finally:
             cur.close()
             db.close()
+
 
     def update_dispense_status(self, charge_id: str, dispense_status: str) -> None:
         db = self.get_db()
