@@ -29,6 +29,7 @@
   --shadow-success: 0 10px 24px rgba(16, 185, 129, 0.22);
   --shadow-danger: 0 10px 24px rgba(239, 68, 68, 0.22);
   
+  --text-dark: #0F172A;
   --font-inter: Inter, system-ui, -apple-system, sans-serif;
 }
 
@@ -424,4 +425,37 @@ html, body, #__next { height: 100%; }
 .notification-dropdown .item .title { font-weight:700; color:var(--foreground); font-size:0.95rem; }
 .notification-dropdown .item .body { color:var(--muted); font-size:0.9rem; margin-top:4px; }
 .notification-empty { padding:20px; text-align:center; color:var(--muted); }
+
+.profile.active {
+  border-color: var(--primary);
+  background: white;
+  box-shadow: 0 4px 12px rgba(255, 106, 0, 0.08);
+}
+
+/* Profile dropdown */
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 280px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(2,6,23,0.15);
+  padding: 8px;
+  z-index: 100;
+  transform-origin: top right;
+}
+.profile-dropdown .profile-header { padding: 12px 10px 16px; display:flex; gap:14px; align-items:center; }
+.profile-dropdown .avatar-large { width:44px; height:44px; border-radius:10px; overflow:hidden; border:1px solid var(--border); flex-shrink:0; }
+.profile-dropdown .info .name { font-weight:800; color:var(--foreground); font-size:1rem; line-height: 1.2; }
+.profile-dropdown .info .email { color:var(--muted); font-size:0.75rem; margin-top:3px; }
+.profile-dropdown .divider { height:1px; background:var(--border); margin:4px 8px; opacity:0.5; }
+.profile-dropdown .menu-group { padding: 4px; }
+.profile-dropdown .menu-item { display:flex; gap:12px; padding:10px 12px; border-radius:10px; color:var(--foreground); font-weight:600; font-size:0.9rem; transition:all 0.2s ease; cursor:pointer; text-decoration: none; }
+.profile-dropdown .menu-item:hover { background: var(--card-accent); color: var(--primary); transform: translateX(2px); }
+.profile-dropdown .menu-item.logout { color: var(--danger); }
+.profile-dropdown .menu-item.logout:hover { background: #FFF1F1; color: var(--danger); }
+.profile-dropdown .menu-item .icon { font-size:1.1rem; filter: grayscale(1); transition: all 0.2s ease; }
+.profile-dropdown .menu-item:hover .icon { filter: grayscale(0); }
 

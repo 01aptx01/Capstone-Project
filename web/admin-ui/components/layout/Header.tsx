@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 type Notification = {
@@ -13,23 +14,33 @@ type Notification = {
 
 export default function Header() {
   const [open, setOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const btnRef = useRef<HTMLButtonElement | null>(null);
+  const profileBtnRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const profileDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       const target = e.target as Node | null;
-      if (btnRef.current && btnRef.current.contains(target)) return;
-      if (dropdownRef.current && dropdownRef.current.contains(target)) return;
-      setOpen(false);
+      
+      // Handle Notifications dropdown
+      if (open && !btnRef.current?.contains(target) && !dropdownRef.current?.contains(target)) {
+        setOpen(false);
+      }
+      
+      // Handle Profile dropdown
+      if (profileOpen && !profileBtnRef.current?.contains(target) && !profileDropdownRef.current?.contains(target)) {
+        setProfileOpen(false);
+      }
     }
-    if (open) document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
-  }, [open]);
+  }, [open, profileOpen]);
 
   async function toggle() {
     const willOpen = !open;
@@ -117,11 +128,57 @@ export default function Header() {
 
         <div className="header-divider" />
 
-        <div className="profile">
-          <div className="avatar">
-            <Image src="/Pao.png" alt="Admin" width={36} height={36} />
+        <div style={{ position: "relative" }}>
+          <div 
+            ref={profileBtnRef}
+            className={`profile ${profileOpen ? "active" : ""}`} 
+            onClick={() => setProfileOpen(!profileOpen)}
+          >
+            <div className="avatar">
+              <Image src="/Pao.png" alt="Admin" width={36} height={36} />
+            </div>
+            <div className="name">Admin</div>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={`transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} style={{ color: "var(--muted)", marginLeft: 4 }}>
+              <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
-          <div className="name">Admin</div>
+
+          {profileOpen && (
+            <div className="profile-dropdown animate-in" ref={profileDropdownRef}>
+              <div className="profile-header">
+                <div className="avatar-large">
+                  <Image src="/Pao.png" alt="Admin" width={48} height={48} />
+                </div>
+                <div className="info">
+                  <div className="name">Mod Pao Admin</div>
+                  <div className="email">admin@modpao.vending</div>
+                </div>
+              </div>
+              
+              <div className="divider" />
+              
+              <div className="menu-group">
+                <Link href="/profile" className="menu-item">
+                  <i className="fi fi-rr-user"></i>
+                  <span>โปรไฟล์</span>
+                </Link>
+                <Link href="/security" className="menu-item">
+                  <i className="fi fi-rr-shield-check"></i>
+                  <span>ความปลอดภัย</span>
+                </Link>
+                <Link href="/settings" className="menu-item">
+                  <i className="fi fi-rr-settings"></i>
+                  <span>ตั้งค่า</span>
+                </Link>
+              </div>
+              <div className="menu-group">
+                <Link href="/logout" className="menu-item logout">
+                  <i className="fi fi-rr-exit"></i>
+                  <span>ออกจากระบบ</span>
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

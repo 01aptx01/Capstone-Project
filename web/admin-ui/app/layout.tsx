@@ -23,6 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
+      <head>
+        <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.1.0/uicons-regular-rounded/css/uicons-regular-rounded.css' />
+      </head>
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         <UIProvider>
           <div className="flex h-screen">
