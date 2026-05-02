@@ -81,11 +81,20 @@ export default function ProductTable({ category, machine, status }: ProductTable
           </thead>
           <tbody className="divide-y divide-[#E2E8F0]">
             {loading ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-12 text-center text-[#64748B] text-[14px]">
-                  Loading products...
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  <td colSpan={7} className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl shimmer" />
+                      <div className="space-y-2">
+                        <div className="w-32 h-4 rounded-md shimmer" />
+                        <div className="w-20 h-3 rounded-md shimmer" />
+                      </div>
+                      <div className="ml-auto w-24 h-8 rounded-lg shimmer" />
+                    </div>
+                  </td>
+                </tr>
+              ))
             ) : filteredProducts.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-6 py-12 text-center text-[#64748B] text-[14px]">
@@ -93,8 +102,12 @@ export default function ProductTable({ category, machine, status }: ProductTable
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((p) => (
-                <tr key={p.id} className="hover:bg-[#F8FAFC] transition-colors group">
+              filteredProducts.map((p, index) => (
+                <tr 
+                  key={p.id} 
+                  className="hover:bg-[#F8FAFC] transition-colors group animate-in opacity-0"
+                  style={{ animationDelay: `${index * 50}ms` }}
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-[#FFF7ED] rounded-xl flex items-center justify-center text-xl shadow-sm overflow-hidden border border-[#FFDAB5]/30">
