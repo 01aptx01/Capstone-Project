@@ -32,7 +32,7 @@ const productSections: ExportSection[] = [
 ];
 
 export default function ProductsPage() {
-  const { openExportModal } = useUI();
+  const { openExportModal, openAddProduct } = useUI();
   const [category, setCategory] = useState("All Categories");
   const [machine, setMachine] = useState("All Machines");
   const [status, setStatus] = useState("All Statuses");
@@ -66,7 +66,10 @@ export default function ProductsPage() {
             </svg>
             Export
           </button>
-          <button className="btn-primary px-5 py-2.5 text-[14px]">
+          <button 
+            onClick={openAddProduct}
+            className="btn-primary px-5 py-2.5 text-[14px]"
+          >
             <span>+</span>
             เพิ่มสินค้า
           </button>
