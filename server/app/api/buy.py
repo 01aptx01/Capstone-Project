@@ -1,9 +1,11 @@
 import json
 import logging
+import os
 from flask import Blueprint, request, jsonify
 from app.services.omise_service import OmisePaymentService
 from app.services.buy_service import InventoryService
 from app.services.hardware_service import HardwareAgentService
+from app.realtime.socketio_gateway import emit_job_start
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -57,12 +59,21 @@ class BuyController:
             return False
 
         # Step 2: Notify hardware agent to dispense (ใช้ OOP Service)
-        agent_ok = self.hardware_agent.notify_dispense(machine_code, cart, charge_id=charge_id)
-        if not agent_ok:
-            logger.error(f"[Dispense] Hardware agent notification failed for charge_id: {charge_id}")
-            self.inventory_service.update_dispense_status(charge_id, "failed")
+        dispatch_mode = (os.environ.get("DISPATCH_MODE") or "socket").lower()
+        if dispatch_mode == "http":
+            agent_ok = self.hardware_agent.notify_dispense(machine_code, cart, charge_id=charge_id)
+            if not agent_ok:
+                logger.error(f"[Dispense] Hardware agent notification failed for charge_id: {charge_id}")
+                self.inventory_service.update_dispense_status(charge_id, "failed")
         else:
-            self.inventory_service.update_dispense_status(charge_id, "dispensed")
+            # Socket.IO dispatch to machine room. Do NOT mark dispensed here.
+            # The server will update orders.dispense_status when machine reports DONE/ERROR.
+            emit_job_start(
+                machine_code,
+                job_id=str(charge_id),
+                order_charge_id=str(charge_id),
+                items=cart,
+            )
 
         # Clean up the pending order
         self.pending_orders.pop(charge_id, None)

@@ -3,6 +3,7 @@ from flask import Flask
 from flask_cors import CORS
 
 from routes import routes
+from ws_client import start_ws_client
 
 # Configure Logging
 logging.basicConfig(
@@ -21,6 +22,9 @@ def create_app() -> Flask:
 
 
 app = create_app()
+
+# Start background Socket.IO client (server <-> agent room by MACHINE_ID)
+start_ws_client()
 
 logger.info("🚀 Hardware Agent starting on port 5000...")
 

@@ -56,6 +56,8 @@ def ingest_machine_event():
                 (machine_code, job_id, order_charge_id, event_type, state, seq, payload_json)
             VALUES
                 (%s, %s, %s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+                id = id
             """,
             (
                 machine_code,

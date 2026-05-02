@@ -6,6 +6,7 @@ import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
 import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer, } from "lucide-react";
+import { useJobSocket, AgentJobState } from "../hooks/useJobSocket";
 
 type ModalType =
   | "none"
@@ -24,12 +25,7 @@ const PROCESS_STEPS = [
   "พร้อมทาน",
 ];
 
-type AgentJobState =
-  | "TRANSFER_TO_OVEN"
-  | "HEATING"
-  | "DISPENSING"
-  | "DONE"
-  | "ERROR";
+
 
 // สไตล์ปุ่ม Test เพื่อลดความซ้ำซ้อนใน JSX
 const testBtnStyle: React.CSSProperties = {
@@ -64,10 +60,8 @@ export default function VendingPage() {
   const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
 
   // -- Agent Job (Hardware) States --
-  const [agentJobState, setAgentJobState] = useState<AgentJobState | null>(null);
-  const [agentCurrentItemIndex, setAgentCurrentItemIndex] = useState<number>(0);
-  const lastAgentSeqRef = useRef<number>(0);
-  const agentEventSourceRef = useRef<EventSource | null>(null);
+  // These are now driven by the useJobSocket hook below (Socket.IO → Server)
+  // instead of EventSource → local Agent SSE endpoint.
 
   // -- Flow & Queue States --
   const [isAfterPayment, setIsAfterPayment] = useState(false);
@@ -102,6 +96,28 @@ export default function VendingPage() {
       setIsCancelPaymentConfirmOpen(false);
     }
   }, [activeModal, paymentStep]);
+
+  // ==========================================
+  // SOCKET.IO JOB STATE (replaces local Agent SSE)
+  // ==========================================
+  // Connect to Server Socket.IO and listen for job_event_broadcast events
+  // in the machine's room — no direct connection to the local agent needed.
+  const {
+    agentJobState,
+    agentCurrentItemIndex,
+    globalTimeLeft: socketGlobalTimeLeft,
+    isConnected: isServerSocketConnected,
+  } = useJobSocket({
+    activeJobId: activeModal === "processing" ? currentChargeId : null,
+  });
+
+  // Sync socket-driven remaining time into local globalTimeLeft state
+  // (fallback local timer still runs if socket has no data yet)
+  useEffect(() => {
+    if (activeModal === "processing" && socketGlobalTimeLeft > 0) {
+      setGlobalTimeLeft(socketGlobalTimeLeft);
+    }
+  }, [socketGlobalTimeLeft, activeModal]);
 
   // ==========================================
   // DERIVED DATA (คำนวณค่าจาก State อัตโนมัติ)
@@ -217,120 +233,6 @@ export default function VendingPage() {
     return () => clearInterval(interval);
   }, [activeModal, globalTimeLeft, agentJobState]);
 
-  // Agent SSE: drive processing by real job events
-  useEffect(() => {
-    if (activeModal !== "processing") {
-      if (agentEventSourceRef.current) {
-        agentEventSourceRef.current.close();
-        agentEventSourceRef.current = null;
-      }
-      setAgentJobState(null);
-      setAgentCurrentItemIndex(0);
-      lastAgentSeqRef.current = 0;
-      return;
-    }
-
-    if (!currentChargeId) return;
-
-    const agentBaseUrl = process.env.NEXT_PUBLIC_AGENT_BASE_URL || "http://localhost:5000";
-    const jobId = currentChargeId;
-
-    const buildAgentItemsPayload = () => {
-      const map = new Map<number, { product_id: number; quantity: number; heating_time: number; name?: string }>();
-      for (const it of queue) {
-        const productId = (it as any).id;
-        const heatingTime = (it as any).heatingTime;
-        const name = (it as any).name;
-        if (typeof productId !== "number") continue;
-        const existing = map.get(productId);
-        if (existing) {
-          existing.quantity += 1;
-        } else {
-          map.set(productId, {
-            product_id: productId,
-            quantity: 1,
-            heating_time: typeof heatingTime === "number" ? heatingTime : 15,
-            name,
-          });
-        }
-      }
-      return Array.from(map.values());
-    };
-
-    const ensureJobStarted = async () => {
-      try {
-        await fetch(`${agentBaseUrl.replace(/\/$/, "")}/jobs/start`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            machine_code: "MP1-001",
-            job_id: jobId,
-            order_charge_id: jobId,
-            items: buildAgentItemsPayload(),
-          }),
-        });
-      } catch (e) {
-        // ignore; SSE will fallback to local timer if agent not reachable
-      }
-    };
-
-    let closed = false;
-    const start = async () => {
-      await ensureJobStarted();
-      if (closed) return;
-
-      if (agentEventSourceRef.current) {
-        agentEventSourceRef.current.close();
-        agentEventSourceRef.current = null;
-      }
-
-      const lastSeq = lastAgentSeqRef.current;
-      const url = `${agentBaseUrl.replace(/\/$/, "")}/jobs/${encodeURIComponent(jobId)}/events?last_seq=${lastSeq}`;
-      const es = new EventSource(url);
-      agentEventSourceRef.current = es;
-
-      es.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          const seq = Number(data?.seq);
-          if (!Number.isNaN(seq)) lastAgentSeqRef.current = seq;
-
-          const state = data?.state as AgentJobState | undefined;
-          if (state) setAgentJobState(state);
-
-          const payload = data?.payload || {};
-          const remainingSeconds = payload?.remaining_seconds;
-          if (typeof remainingSeconds === "number") {
-            setGlobalTimeLeft(remainingSeconds);
-          }
-          const idx = payload?.current_item_index;
-          if (typeof idx === "number") {
-            setAgentCurrentItemIndex(idx);
-          }
-        } catch (e) {
-          // ignore malformed events
-        }
-      };
-
-      es.onerror = () => {
-        try {
-          es.close();
-        } catch {
-          // ignore
-        }
-      };
-    };
-
-    start();
-
-    return () => {
-      closed = true;
-      if (agentEventSourceRef.current) {
-        agentEventSourceRef.current.close();
-        agentEventSourceRef.current = null;
-      }
-    };
-  }, [activeModal, currentChargeId, queue]);
 
   // ==========================================
   // PAYMENT API LOGIC

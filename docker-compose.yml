@@ -32,6 +32,8 @@ services:
     environment:
       - AGENT_URL=http://client:5000/dispense
       - AGENT_BASE_URL=http://client:5000
+      - SOCKETIO_ENABLED=1
+      - DISPATCH_MODE=socket
     ports:
       - "8000:8000"
     depends_on:
@@ -43,7 +45,14 @@ services:
     container_name: vending-pi
     ports:
       - "5000:5000"
+    volumes:
+      - agent_data:/data
     environment:
+      - EVENT_SINK_MODE=socket
+      - SERVER_SOCKET_URL=http://server:8000
+      - MACHINE_ID=${MACHINE_ID:-MP1-001}
+      - MACHINE_SECRET_KEY=${MACHINE_SECRET_KEY:-}
+      - AGENT_DB_PATH=/data/agent.db
       - EVENT_SINK_URL=http://server:8000/api/machines/events
 
   machine-ui:
@@ -61,3 +70,4 @@ services:
 
 volumes:
   db_data:
+  agent_data:

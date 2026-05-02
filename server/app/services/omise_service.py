@@ -66,3 +66,32 @@ class OmisePaymentService:
             logger.error(f"❌ [Omise] UNEXPECTED SYSTEM ERROR: {type(e).__name__}: {e}")
             logger.exception("Full traceback:")
             return None
+
+    def create_refund(self, charge_id: str, amount: int = None):
+        """
+        Issue a refund for a given charge_id via Omise API.
+        - charge_id: the Omise charge ID (e.g. 'chrg_test_xxx')
+        - amount:    refund amount in satangs (THB × 100). None = full refund.
+        Returns the Refund object on success, None on failure.
+        """
+        if not charge_id:
+            logger.error("❌ [Omise] create_refund called with empty charge_id")
+            return None
+        try:
+            omise.api_secret = self.api_secret  # ensure key is set
+            charge = omise.Charge.retrieve(charge_id)
+            refund_kwargs = {}
+            if amount is not None:
+                refund_kwargs["amount"] = int(amount)
+            refund = charge.refund(**refund_kwargs)
+            logger.info(
+                f"✅ [Omise] Refund created for charge {charge_id}: "
+                f"refund_id={refund.id} amount={refund.amount} status={refund.status}"
+            )
+            return refund
+        except BaseError as oe:
+            logger.error(f"❌ [Omise] Refund API error for charge {charge_id}: {oe}")
+            return None
+        except Exception as e:
+            logger.error(f"❌ [Omise] Unexpected error during refund for charge {charge_id}: {type(e).__name__}: {e}")
+            return None

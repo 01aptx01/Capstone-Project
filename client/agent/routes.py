@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 import requests
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
+from ws_outbox import enqueue_event
+
 routes = Blueprint("routes", __name__)
 logger = logging.getLogger(__name__)
 
@@ -142,9 +144,8 @@ class JobManager:
         self._forward_event(job, event)
 
     def _forward_event(self, job: Job, event: Dict[str, Any]) -> None:
+        sink_mode = (os.environ.get("EVENT_SINK_MODE") or "socket").lower()
         sink_url = os.environ.get("EVENT_SINK_URL")
-        if not sink_url:
-            return
 
         payload = {
             "machine_code": job.machine_code,
@@ -155,6 +156,13 @@ class JobManager:
             "seq": event.get("seq"),
             "payload": event.get("payload"),
         }
+
+        # Always persist locally first (offline-first)
+        enqueue_event(payload)
+
+        # Optional legacy HTTP sink (kept for compatibility)
+        if sink_mode != "http" or not sink_url:
+            return
 
         def _send():
             try:
