@@ -3,9 +3,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; 
 import { EditProfileModal } from "@/components/Ui/EditProfileModal"; 
 
 export default function ProfilePage() {
+  const router = useRouter();
+  
   const [user, setUser] = useState({
     name: "มดเปา", 
     phone: "066-879-1011",
@@ -34,6 +37,12 @@ export default function ProfilePage() {
       return <img src={avatarData} alt={user.name} className="w-full h-full object-cover" />;
     }
     return <span className="text-5xl">{avatarData}</span>;
+  };
+
+  // 🚨 ฟังก์ชันออกจากระบบ
+  const handleLogout = () => {
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    router.push("/login");
   };
 
   return (
@@ -94,21 +103,16 @@ export default function ProfilePage() {
                   <span className="font-bold text-gray-700 group-hover:text-[#FF8A33] transition-colors">{menu.label}</span>
                 </div>
                 
-                {/* 🚨 ส่วนที่แก้ไข: ฝั่งขวามี Badge และลูกศร */}
                 <div className="flex items-center gap-3">
-                  
-                  {/* แสดง Badge ถ้าเป็นเมนูคูปอง และมีจำนวนมากกว่า 0 */}
                   {menu.id === "coupons" && availableCoupons > 0 && (
                     <span className="bg-[#FF8A33] text-white text-[13px] md:text-xs font-bold px-4 py-1 rounded-full shadow-sm">
                       {availableCoupons} พร้อมใช้
                     </span>
                   )}
-
                   <div className="text-gray-300 group-hover:text-[#FF8A33] transition-colors">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
                   </div>
                 </div>
-
               </Link>
             ))}
           </div>
@@ -116,7 +120,10 @@ export default function ProfilePage() {
 
         {/* ปุ่มออกจากระบบ */}
         <div className="mt-8 flex justify-center">
-          <button className="flex items-center gap-2 text-[#FF5A5A] font-bold py-3 px-6 hover:bg-red-50 rounded-xl transition-colors">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 text-[#FF5A5A] font-bold py-3 px-6 hover:bg-red-50 rounded-xl transition-colors"
+          >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             ออกจากระบบ
           </button>
