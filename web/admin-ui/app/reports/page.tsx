@@ -66,7 +66,7 @@ export default function ReportsPage() {
             </button>
           </div>
         </div>
-        <div className="flex justify-end animate-in opacity-0 delay-100">
+        <div className="flex justify-end animate-in opacity-0 delay-100 relative z-50">
            <HeaderDateSelector />
         </div>
       </div>
