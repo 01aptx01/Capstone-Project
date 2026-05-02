@@ -12,7 +12,7 @@ export default function MachineCard({ id, name, location }: MachineCardProps) {
   return (
     <Link 
       href={`/machines/${id}`} 
-      className="group bg-white border border-[#E2E8F0] rounded-[24px] p-4 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_20px_50px_rgba(255,106,0,0.1)] hover:border-[#FF6A00] transition-all duration-300 transform hover:-translate-y-1"
+      className="group vibrant-card p-4 transition-all duration-300"
     >
       {/* Placeholder Image Area */}
       <div className="bg-[#F1F5F9] rounded-[20px] aspect-[4/3] flex items-center justify-center mb-6 group-hover:bg-[#FFF7ED] transition-colors overflow-hidden relative">
@@ -36,7 +36,7 @@ export default function MachineCard({ id, name, location }: MachineCardProps) {
         <p className="text-[13px] font-medium text-[#64748B] mb-4 line-clamp-1">
           {location}
         </p>
-        <span className="inline-flex items-center px-3 py-1 bg-[#10B981] text-white text-[11px] font-black rounded-lg shadow-[0_4px_12px_rgba(16,185,129,0.25)]">
+        <span className="inline-flex items-center px-3 py-1 bg-[#10B981] text-white text-[11px] font-black rounded-lg shadow-[0_6px_16px_rgba(16,185,129,0.3)]">
           {id}
         </span>
       </div>

@@ -14,7 +14,13 @@ type Product = {
   image?: string;
 };
 
-export default function ProductTable() {
+interface ProductTableProps {
+  category: string;
+  machine: string;
+  status: string;
+}
+
+export default function ProductTable({ category, machine, status }: ProductTableProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -26,7 +32,6 @@ export default function ProductTable() {
       setProducts(data);
     } catch (e) {
       console.error(e);
-      // Fallback to mock data if API fails
       const mockRes = await fetch("/mock/products.json");
       const mockData = await mockRes.json();
       setProducts(mockData);
@@ -36,11 +41,29 @@ export default function ProductTable() {
   };
 
   useEffect(() => {
-    load();
+    const fetchData = async () => {
+      await load();
+    };
+    fetchData();
   }, []);
 
+  // Filtering Logic
+  const filteredProducts = products.filter(p => {
+    const matchCategory = category === "All Categories" || p.category === category;
+    const matchStatus = status === "All Statuses" || p.status === status;
+    
+    // Mock machine logic: 
+    // Machine 1 shows products with quantity > 50
+    // Machine 2 shows products with quantity <= 150
+    let matchMachine = true;
+    if (machine === "Machine 1") matchMachine = (p.quantity || 0) > 50;
+    if (machine === "Machine 2") matchMachine = (p.quantity || 0) <= 150;
+
+    return matchCategory && matchStatus && matchMachine;
+  });
+
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-[24px] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+    <div className="vibrant-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -61,8 +84,14 @@ export default function ProductTable() {
                   Loading products...
                 </td>
               </tr>
+            ) : filteredProducts.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-[#64748B] text-[14px]">
+                  No products found matching your filters.
+                </td>
+              </tr>
             ) : (
-              products.map((p) => (
+              filteredProducts.map((p) => (
                 <tr key={p.id} className="hover:bg-[#F8FAFC] transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
@@ -72,7 +101,7 @@ export default function ProductTable() {
                           alt="" 
                           className="w-8 h-8 object-contain"
                           onError={(e) => {
-                            (e.target as any).src = "https://cdn-icons-png.flaticon.com/512/3081/3081918.png";
+                            e.currentTarget.src = "https://cdn-icons-png.flaticon.com/512/3081/3081918.png";
                           }}
                         />
                       </div>
@@ -119,7 +148,7 @@ export default function ProductTable() {
       {/* Pagination Footer */}
       <div className="bg-[#F8FAFC] px-6 py-5 border-t border-[#E2E8F0] flex items-center justify-between">
         <div className="text-[14px] font-bold text-[#64748B]">
-          Showing 1-5 of 5 results
+          Showing 1-{filteredProducts.length} of {filteredProducts.length} results
         </div>
         <div className="flex items-center gap-2">
           <button className="w-10 h-10 flex items-center justify-center rounded-xl border border-[#E2E8F0] bg-white text-[#94A3B8] cursor-not-allowed">
