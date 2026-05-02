@@ -1,20 +1,4 @@
-// ─── All SVG Icons ────────────────────────────────────────────────────────────
-
-export function ModPaoLogo({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="14" cy="16" r="12" fill="white" />
-      <path d="M9 6 Q10 3 11 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <path d="M13 4 Q14 1 15 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <circle cx="10.5" cy="15" r="1.5" fill="#FF8235" />
-      <circle cx="17.5" cy="15" r="1.5" fill="#FF8235" />
-      <path d="M10 19 Q14 22 18 19" stroke="#FF8235" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <text x="30" y="22" fontFamily="Georgia, serif" fontWeight="700" fontSize="16" fill="white" letterSpacing="1">
-        MOD PAO
-      </text>
-    </svg>
-  );
-}
+// ─── All SVG Icons ───────────────────────────────────────────────────────────
 
 export function HamburgerIcon() {
   return (
@@ -26,8 +10,8 @@ export function HamburgerIcon() {
 
 export function CloseIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M6 6l12 12M18 6L6 18" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" />
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path d="M6 6l12 12M18 6L6 18" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }
@@ -110,7 +94,7 @@ export function IconCart() {
 
 export function IconMenu() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
       <path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );

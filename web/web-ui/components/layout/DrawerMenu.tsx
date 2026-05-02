@@ -3,7 +3,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { IconHome, IconRedeem, IconHistory, IconProfile, IconLogout } from "@/components/icons";
 
 interface DrawerMenuProps {
@@ -13,13 +13,20 @@ interface DrawerMenuProps {
 
 export function DrawerMenu({ open, onClose }: DrawerMenuProps) {
   const pathname = usePathname();
+  const router = useRouter();
   
-  // ตรวจสอบว่า Path ปัจจุบันตรงกับเมนูไหม
   const isActive = (path: string) => pathname === path;
+
+  // 🚨 ฟังก์ชันออกจากระบบ (ปิดเมนู แล้วเปลี่ยนหน้า)
+  const handleLogout = () => {
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    onClose(); 
+    router.push("/login"); 
+  };
 
   return (
     <>
-      {/* Overlay: ใช้ top-[64px] เพื่อให้อยู่ใต้ Header พอดี */}
+      {/* Overlay */}
       <div 
         className={`fixed inset-0 top-[64px] bg-black/40 z-[60] transition-opacity duration-300 md:hidden ${
           open ? "opacity-100 visible" : "opacity-0 invisible"
@@ -27,7 +34,7 @@ export function DrawerMenu({ open, onClose }: DrawerMenuProps) {
         onClick={onClose}
       />
 
-      {/* แผงเมนู: ปรับ top-[64px] และเพิ่ม Padding ด้านบนเล็กน้อยกันกระแทก */}
+      {/* แผงเมนู */}
       <div className={`fixed top-[64px] left-0 right-0 w-full bg-white z-[70] shadow-lg transform transition-transform duration-300 ease-in-out md:hidden ${
           open ? "translate-y-0" : "-translate-y-full"
         }`}
@@ -63,7 +70,10 @@ export function DrawerMenu({ open, onClose }: DrawerMenuProps) {
               onClick={onClose} 
             />
             
-            <button className="w-full flex items-center justify-center gap-2 text-red-500 font-bold py-5 bg-red-50/30 border-t border-gray-50 hover:bg-red-50 transition-colors">
+            <button 
+              onClick={handleLogout}
+              className="w-full flex items-center justify-center gap-2 text-red-500 font-bold py-5 bg-red-50/30 border-t border-gray-50 hover:bg-red-50 transition-colors"
+            >
               <IconLogout />
               ออกจากระบบ
             </button>
@@ -79,7 +89,7 @@ export function DrawerMenu({ open, onClose }: DrawerMenuProps) {
   );
 }
 
-// ปรับปรุง MenuLink ให้แสดงแถบสีส้มเมื่อ Active
+// MenuLink component
 function MenuLink({ href, icon, label, active, onClick }: any) {
   return (
     <Link 
@@ -87,12 +97,11 @@ function MenuLink({ href, icon, label, active, onClick }: any) {
       onClick={onClick}
       className={`flex justify-between items-center px-6 py-5 transition-all border-b border-gray-50 last:border-0 ${
         active 
-          ? "bg-orange-50 text-[#FF8A33]" // พื้นหลังส้มอ่อน ตัวหนังสือส้มเข้ม
+          ? "bg-orange-50 text-[#FF8A33]" 
           : "text-gray-700 hover:bg-gray-50"
       }`}
     >
       <div className="flex items-center gap-3">
-        {/* แสดง Icon และเปลี่ยนสีตามสถานะ */}
         <span className={active ? "text-[#FF8A33]" : "text-gray-400"}>
           {icon}
         </span>

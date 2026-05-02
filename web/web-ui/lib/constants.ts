@@ -122,7 +122,6 @@ export interface OrderHistory {
   datetime: string;
   items: string;
   total: number;
-  // 🚨 เหลือสถานะแค่ 2 แบบ
   status: "ready_to_scan" | "completed";
 } 
 

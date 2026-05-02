@@ -1,27 +1,27 @@
 // components/cards/MenuCard.tsx
 "use client";
 
-import { useState } from "react";
 import { MenuItem } from "@/lib/constants";
 import { BaoImage } from "./BaoImage";
 import { COLORS } from "@/lib/constants";
 import { useCart } from "@/context/CartContext";
 
 export function MenuCard({ item }: { item: MenuItem }) {
-  const [added, setAdded] = useState(false);
-  const { addToCart } = useCart(); 
+  // 🚨 ดึงข้อมูลตะกร้า และฟังก์ชันจัดการตะกร้ามาใช้
+  const { cartItems, addToCart, updateQty, removeItem } = useCart(); 
 
-  const handleBook = (e: React.MouseEvent<HTMLButtonElement>) => {
-    // 🚨 แก้ตรงนี้: ส่งข้อมูลทั้งหมดของสินค้าชิ้นนั้นเข้าไปในตะกร้า
+  // 🚨 เช็คว่าสินค้านี้อยู่ในตะกร้าหรือยัง และมีกี่ชิ้น
+  const cartItem = cartItems.find((c) => c.id === item.id);
+  const qty = cartItem ? cartItem.qty : 0;
+
+  const handleAdd = (e: React.MouseEvent<HTMLButtonElement>) => {
+    // ส่งข้อมูลทั้งหมดของสินค้าชิ้นนั้นเข้าไปในตะกร้า
     addToCart(e, {
       id: item.id,
       name: item.name,
       price: item.price,
-      image: item.image || "", // ถ้าคุณใช้ชื่อ property อื่นเช่น img ให้เปลี่ยนให้ตรงนะครับ
+      image: item.image || "", 
     }); 
-    
-    setAdded(true);
-    setTimeout(() => setAdded(false), 1500);
   };
 
   return (
@@ -38,25 +38,40 @@ export function MenuCard({ item }: { item: MenuItem }) {
           <span className="font-bold text-lg" style={{ color: COLORS.accent }}>
             {item.price} ฿
           </span>
-          <button
-            onClick={handleBook} // เรียกใช้งานฟังก์ชันที่รับ e ไว้
-            className="px-5 py-1.5 rounded-full text-15 font-semibold border transition-all duration-200"
-            style={
-              added
-                ? {
-                    backgroundColor: COLORS.accent,
-                    borderColor: COLORS.accent,
-                    color: "white",
-                  }
-                : {
-                    backgroundColor: COLORS.accent,
-                    borderColor: COLORS.accent,
-                    color: "white",
-                  }
-            }
-          >
-            {added ? "✓ เพิ่มลงในตะกร้าแล้ว" : "สั่งซื้อ"}
-          </button>
+
+          {/* 🚨 สลับ UI ตามจำนวนในตะกร้า */}
+          {qty > 0 ? (
+            // 🟢 UI แบบใหม่: สไตล์มินิมอล ขอบเทาอ่อน พื้นขาว ตัวเลขดำ ปุ่มสีส้มตอน Hover
+            <div className="flex items-center justify-between bg-white border border-gray-200 rounded-full px-1.5 py-1 w-[100px] shadow-sm animate-fade-in">
+              <button
+                onClick={() => qty === 1 ? removeItem(item.id) : updateQty(item.id, -1)}
+                className="w-7 h-7 flex items-center justify-center text-gray-400 font-bold text-xl hover:text-[#FF8A33] hover:bg-orange-50 rounded-full transition-colors active:scale-90"
+              >
+                -
+              </button>
+              <span className="font-extrabold text-sm text-gray-800 w-6 text-center">{qty}</span>
+              <button
+                onClick={handleAdd}
+                className="w-7 h-7 flex items-center justify-center text-gray-400 font-bold text-xl hover:text-[#FF8A33] hover:bg-orange-50 rounded-full transition-colors active:scale-90"
+              >
+                +
+              </button>
+            </div>
+          ) : (
+            // 🟠 ปุ่มสั่งซื้อปกติ (โชว์เมื่อยังไม่มีของในตะกร้า)
+            <button
+              onClick={handleAdd}
+              className="px-5 py-1.5 rounded-full text-sm font-semibold border transition-all duration-200 active:scale-95 hover:opacity-90"
+              style={{
+                backgroundColor: COLORS.accent,
+                borderColor: COLORS.accent,
+                color: "white",
+              }}
+            >
+              สั่งซื้อ
+            </button>
+          )}
+          
         </div>
       </div>
     </div>
