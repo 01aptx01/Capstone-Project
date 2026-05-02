@@ -112,8 +112,7 @@ def _get_pending_orders(machine_code: str) -> list[dict]:
             SELECT order_id, charge_id
             FROM orders
             WHERE machine_code = %s
-              AND payment_status = 'paid'
-              AND dispense_status = 'pending'
+              AND status = 'paid'
               AND charge_id IS NOT NULL
             ORDER BY created_at ASC
             LIMIT 20
@@ -210,8 +209,7 @@ def _auto_refund(charge_id: str) -> None:
                 cur.execute(
                     """
                     UPDATE orders
-                    SET dispense_status = 'failed_to_dispense',
-                        payment_status = 'refunded'
+                    SET status = 'refunded'
                     WHERE charge_id = %s
                     """,
                     (charge_id,),
@@ -230,7 +228,7 @@ def _auto_refund(charge_id: str) -> None:
         else:
             logger.error(
                 f"❌ [AutoRefund] Refund failed for charge {charge_id}; "
-                "order remains as dispense_status=failed — manual action required"
+                "order remains as status='dispense_failed' — manual action required"
             )
     except ValueError as ve:
         # OmisePaymentService raises ValueError when OMISE_SECRET_KEY is missing
@@ -276,20 +274,21 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
             ),
         )
 
-        # Update dispense_status only on terminal states
-        if order_charge_id and event_type == "job.state" and state in ("DONE", "ERROR"):
+        # Update status on terminal machine states
+        if order_charge_id and event_type == "job.state" and state in ("DONE", "ERROR", "DISPENSING"):
             if state == "DONE":
-                dispense_status = "dispensed"
-            else:
-                # ERROR: mark as failed_to_dispense so it can be identified for refund
-                dispense_status = "failed"
+                new_status = "completed"
+            elif state == "DISPENSING":
+                new_status = "dispensing"
+            else:  # ERROR
+                new_status = "dispense_failed"
             cur.execute(
                 """
                 UPDATE orders
-                SET dispense_status = %s
+                SET status = %s
                 WHERE charge_id = %s
                 """,
-                (dispense_status, order_charge_id),
+                (new_status, order_charge_id),
             )
 
         # touch last_active

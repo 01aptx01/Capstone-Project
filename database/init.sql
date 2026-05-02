@@ -76,8 +76,16 @@ CREATE TABLE orders (
   charge_id VARCHAR(64) NULL,
   total_price DECIMAL(10,2) NOT NULL,
   payment_method ENUM('cash','qr_code','credit_card') NOT NULL,
-  payment_status ENUM('pending','paid','failed') NOT NULL DEFAULT 'pending',
-  dispense_status ENUM('pending','dispensed','failed') NOT NULL DEFAULT 'pending',
+  status ENUM(
+    'pending_payment',
+    'cancelled',
+    'payment_failed',
+    'paid',
+    'dispensing',
+    'completed',
+    'dispense_failed',
+    'refunded'
+  ) NOT NULL DEFAULT 'pending_payment',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_orders_charge_id (charge_id),
   KEY idx_orders_machine (machine_code),

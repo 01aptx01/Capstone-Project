@@ -57,6 +57,7 @@ export default function VendingPage() {
   const [realQrCode, setRealQrCode] = useState<string | null>(null); // เก็บ QR Code จริงจาก Backend
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเก็บรอบการดึงสถานะจ่ายเงิน
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
+  const currentChargeIdRef = useRef<string | null>(null); // เก็บค่าล่าสุดไว้ใช้ใน setInterval/setTimeout
   const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
 
   // -- Agent Job (Hardware) States --
@@ -79,11 +80,29 @@ export default function VendingPage() {
       setIsCancelPaymentConfirmOpen(true);
       return;
     }
-    closePaymentModal();
+    cancelAndClosePaymentModal();
   };
 
-  const confirmCancelPayment = () => {
+  const confirmCancelPayment = async () => {
     setIsCancelPaymentConfirmOpen(false);
+    await cancelAndClosePaymentModal();
+  };
+
+  const cancelAndClosePaymentModal = async () => {
+    const chargeIdToCancel = currentChargeIdRef.current;
+    if (chargeIdToCancel) {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        await fetch(`${apiUrl}/api/buy/cancel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ charge_id: chargeIdToCancel }),
+        });
+        console.log(`[Frontend] Auto-Cancelled order for charge: ${chargeIdToCancel}`);
+      } catch (err) {
+        console.error("[Frontend] Cancel API error:", err);
+      }
+    }
     closePaymentModal();
   };
 
@@ -96,6 +115,11 @@ export default function VendingPage() {
       setIsCancelPaymentConfirmOpen(false);
     }
   }, [activeModal, paymentStep]);
+
+  // Sync state to ref for timers
+  useEffect(() => {
+    currentChargeIdRef.current = currentChargeId;
+  }, [currentChargeId]);
 
   // ==========================================
   // SOCKET.IO JOB STATE (replaces local Agent SSE)
@@ -199,9 +223,10 @@ export default function VendingPage() {
     let timer: NodeJS.Timeout;
     if (activeModal === "payment") {
       if (paymentCountdown > 0) {
-        timer = setInterval(() => setPaymentCountdown((prev) => prev - 1), 1000,);
+        timer = setInterval(() => setPaymentCountdown((prev) => prev - 1), 1000);
       } else {
-        closePaymentModal();
+        // เมื่อเวลาหมด ให้ทำการ Cancel order ที่ค้างอยู่ด้วย
+        cancelAndClosePaymentModal();
       }
     }
     return () => clearInterval(timer);
@@ -275,6 +300,7 @@ export default function VendingPage() {
           amount: paymentData.amount,
           payment_type: paymentData.type,
           payment_id: paymentData.id,
+          draft_id: currentChargeId?.startsWith("draft_") ? currentChargeId : undefined,
         }),
       });
 
@@ -321,8 +347,7 @@ export default function VendingPage() {
 
       // Safeguard: Reset to home screen to prevent freeze
       setTimeout(() => {
-        closePaymentModal();
-        setActiveModal("none");
+        cancelAndClosePaymentModal();
       }, 3000);
     } finally {
       clearTimeout(timeoutId);
@@ -385,6 +410,32 @@ export default function VendingPage() {
         processPayment({ type: "source", id: sourceId, amount: totalPrice * 100 });
       },
     );
+  };
+
+  const handleProceedToTap = async () => {
+    setPaymentCountdown(180);
+    setPaymentStep(2);
+
+    // สร้าง Draft Order ใน Database เพื่อให้มีสถานะ "รอจ่าย" โผล่ขึ้นมาในระบบ
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const response = await fetch(`${apiUrl}/api/buy/create-draft`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          machine_code: "MP1-001",
+          cart: cart.map((item) => ({ product_id: item.id, quantity: item.qty })),
+          amount: totalPrice * 100,
+          payment_method: "credit_card",
+        }),
+      });
+      const data = await response.json();
+      if (data.charge_id) {
+        setCurrentChargeId(data.charge_id);
+      }
+    } catch (err) {
+      console.error("[Frontend] Error creating draft order:", err);
+    }
   };
 
   // ==========================================
@@ -520,8 +571,7 @@ export default function VendingPage() {
 
         // Reset UI on failure
         setTimeout(() => {
-          closePaymentModal();
-          setActiveModal("none");
+          cancelAndClosePaymentModal();
         }, 2000);
       }
     });
@@ -600,7 +650,7 @@ export default function VendingPage() {
             activeModal === "payment"
               ? () => {
                 if (paymentStep === 1) {
-                  closePaymentModal();
+                  cancelAndClosePaymentModal();
                 }
               }
               : () => setActiveModal("none")
@@ -997,10 +1047,7 @@ export default function VendingPage() {
                           </div>
                           <button
                             className="modal-confirm-btn"
-                            onClick={() => {
-                              setPaymentCountdown(180);
-                              setPaymentStep(2);
-                            }}
+                            onClick={handleProceedToTap}
                           >
                             ดำเนินการแตะบัตร
                           </button>
