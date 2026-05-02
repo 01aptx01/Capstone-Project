@@ -123,13 +123,13 @@ export default function VendingPage() {
       setIsLoadingProducts(true);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(`${apiUrl}/api/products?machine_id=MP1-001`,);
+        const response = await fetch(`${apiUrl}/api/products?machine_code=MP1-001`,);
         if (!response.ok) throw new Error("Failed to fetch products");
 
         const data = await response.json();
         // Map DB fields to Frontend interface
         const mappedProducts: Product[] = data.map((p: any) => ({
-          id: p.id,
+          id: p.product_id,
           name: p.name,
           desc: p.description,
           price: p.price,
@@ -226,8 +226,8 @@ export default function VendingPage() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          machine_id: "MP1-001",
-          cart: cart.map((item) => ({ id: item.id, qty: item.qty })),
+          machine_code: "MP1-001",
+          cart: cart.map((item) => ({ product_id: item.id, quantity: item.qty })),
           amount: paymentData.amount,
           payment_type: paymentData.type,
           payment_id: paymentData.id,

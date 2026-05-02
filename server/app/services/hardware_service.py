@@ -12,7 +12,7 @@ class HardwareAgentService:
 
     def notify_dispense(self, machine_code: str, cart_items: list) -> bool:
         payload = {
-            "machine_id": machine_code,
+            "machine_code": machine_code,
             "items": cart_items
         }
         

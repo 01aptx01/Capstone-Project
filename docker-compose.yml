@@ -9,7 +9,8 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: vending
     volumes:
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     ports:
       - "3307:3306"
     healthcheck:
@@ -53,3 +54,6 @@ services:
       - "3000:3000"
     depends_on:
       - server
+
+volumes:
+  db_data:
