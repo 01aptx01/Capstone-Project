@@ -120,6 +120,7 @@ CREATE TABLE machine_job_events (
   seq INT NOT NULL,
   payload_json JSON NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_mje_job_seq (job_id, seq),
   KEY idx_mje_machine (machine_code),
   KEY idx_mje_job (job_id),
   KEY idx_mje_charge (order_charge_id),

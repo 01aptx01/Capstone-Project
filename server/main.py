@@ -1,16 +1,22 @@
 import os
 import logging
+from dotenv import load_dotenv
+load_dotenv()
+
+import eventlet
+eventlet.monkey_patch()
+import eventlet.wsgi
+
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flasgger import Swagger
-from dotenv import load_dotenv
-load_dotenv()
 
 from app.api.buy import buy_api
 from app.api.products import products_api
 from app.api.health import health_api
 from app.api.machine_events import machine_events_api
 from app.config.db import init_db
+from app.realtime.socketio_gateway import make_socketio_app
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -30,6 +36,9 @@ class ServerApp:
         self._setup_extensions()
         self._register_blueprints()
         self._register_routes()
+
+        # Wrap Flask with Socket.IO gateway (Rooms by MACHINE_ID)
+        self.wsgi_app = make_socketio_app(self.app)
 
     def _verify_environment(self):
         omise_key = os.environ.get("OMISE_SECRET_KEY")
@@ -63,7 +72,12 @@ class ServerApp:
 
     def run(self):
         logger.info(f"🚀 Starting server on {self.host}:{self.port}")
-        self.app.run(host=self.host, port=self.port)
+        socketio_enabled = os.getenv("SOCKETIO_ENABLED", "1") != "0"
+        if socketio_enabled:
+            listener = eventlet.listen((self.host, self.port))
+            eventlet.wsgi.server(listener, self.wsgi_app)
+        else:
+            self.app.run(host=self.host, port=self.port)
 
 if __name__ == "__main__":
     host = os.getenv("SERVER_HOST", "0.0.0.0")

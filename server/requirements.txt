@@ -5,3 +5,5 @@ flasgger
 omise
 requests
 python-dotenv
+python-socketio
+eventlet
