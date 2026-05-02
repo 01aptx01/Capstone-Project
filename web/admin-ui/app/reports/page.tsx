@@ -1,9 +1,11 @@
 "use client";
 
+import PageWrapper from "@/components/layout/PageWrapper";
 import ReportCard from "@/components/dashboard/ReportCard";
 import RevenueChart from "@/components/dashboard/RevenueChart";
-import EfficiencyChart from "@/components/dashboard/EfficiencyChart";
 import SalesByLocation from "@/components/dashboard/SalesByLocation";
+import SalesByFlavor from "@/components/dashboard/SalesByFlavor";
+import HeaderDateSelector from "@/components/dashboard/HeaderDateSelector";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 
 const reportSections: ExportSection[] = [
@@ -17,10 +19,10 @@ const reportSections: ExportSection[] = [
       { key: "trend", label: "แนวโน้ม" },
     ],
     fetchData: async () => [
-      { metric: "ยอดขายรวมเดือนนี้ (฿)", value: "124,500", trend: "+18.5%" },
-      { metric: "ยอดขายเฉลี่ยต่อตู้ (฿)", value: "24,900", trend: "+5.2%" },
+      { metric: "ยอดขายรวม (฿)", value: "124,500", trend: "+18.5%" },
+      { metric: "ยอดเฉลี่ยต่อตู้ (฿)", value: "24,900", trend: "+5.2%" },
       { metric: "คำสั่งซื้อทั้งหมด", value: "3,842", trend: "+12.0%" },
-      { metric: "ความเสถียรระบบ (Uptime)", value: "99.8%", trend: "คงที่" },
+      { metric: "จำนวนการแจ้งปัญหา", value: "12 ครั้ง", trend: "ลดลง" },
     ],
   },
   {
@@ -44,23 +46,28 @@ export default function ReportsPage() {
   const { openExportModal } = useUI();
 
   return (
-    <div className="max-w-[1400px] mx-auto py-8 px-6 space-y-8">
+    <PageWrapper>
       {/* Header Section */}
-      <div className="flex items-center justify-between animate-in opacity-0">
-        <div>
-          <h1 className="text-[32px] font-black text-[#334155] mb-2 tracking-tight">
-            รายงานและสถิติ
-          </h1>
-          <p className="text-[#64748B] text-[15px] font-medium">วิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก</p>
+      <div className="flex flex-col gap-6 mb-8">
+        <div className="flex items-center justify-between animate-in opacity-0">
+          <div>
+            <h1 className="text-[32px] font-black text-[#334155] mb-2 tracking-tight">
+              รายงานและสถิติ
+            </h1>
+            <p className="text-[#64748B] text-[15px] font-medium">วิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก</p>
+          </div>
+          <div className="flex gap-4">
+            <button 
+              onClick={() => openExportModal(reportSections, "สถิติและรายงาน (Reports)")}
+              className="btn-primary !py-3 !px-6"
+            >
+              <i className="fi fi-rr-download flex items-center"></i>
+              Export
+            </button>
+          </div>
         </div>
-        <div className="flex gap-4">
-          <button 
-            onClick={() => openExportModal(reportSections, "สถิติและรายงาน (Reports)")}
-            className="btn-primary !py-3 !px-6"
-          >
-            <i className="fi fi-rr-download flex items-center"></i>
-            Export
-          </button>
+        <div className="flex justify-end animate-in opacity-0 delay-100">
+           <HeaderDateSelector />
         </div>
       </div>
 
@@ -69,7 +76,7 @@ export default function ReportsPage() {
         <div className="animate-in opacity-0 delay-100 h-full">
           <ReportCard
             isFeatured={true}
-            title="ยอดขายรวมเดือนนี้"
+            title="ยอดขายรวม"
             value="฿124,500"
             trend="18.5%"
             subValue="เทียบกับเดือนที่แล้ว (฿105,000)"
@@ -77,12 +84,13 @@ export default function ReportsPage() {
         </div>
         <div className="animate-in opacity-0 delay-200 h-full">
           <ReportCard
-            title="เฉลี่ยต่อตู้"
+            title="ยอดเฉลี่ยต่อตู้"
             value="฿24,900"
             subValue="/เดือน"
             trend="5.2%"
             icon={<i className="fi fi-rr-box-open"></i>}
-            iconBg="#4F46E5"
+            iconBg="#FFFFFF"
+            iconColor="#f47b2a"
           />
         </div>
         <div className="animate-in opacity-0 delay-300 h-full">
@@ -92,35 +100,34 @@ export default function ReportsPage() {
             subValue="ออเดอร์"
             trend="12.0%"
             icon={<i className="fi fi-rr-shopping-cart"></i>}
-            iconBg="#10B981"
+            iconBg="#FFFFFF"
+            iconColor="#f47b2a"
           />
         </div>
         <div className="animate-in opacity-0 delay-400 h-full">
           <ReportCard
-            title="ความเสถียรระบบ"
-            value="99.8%"
-            trend="คงที่"
-            trendDirection="neutral"
+            title="จำนวนการแจ้งปัญหา"
+            value="12"
+            subValue="ครั้ง"
+            trend="2"
+            trendDirection="down"
             icon={<i className="fi fi-rr-bolt"></i>}
-            iconBg="#EF4444"
+            iconBg="#FFFFFF"
+            iconColor="#f47b2a"
           />
         </div>
       </div>
 
       {/* Main Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 animate-in opacity-0 delay-500">
-          <RevenueChart />
-        </div>
-        <div className="lg:col-span-1 animate-in opacity-0 delay-500">
-          <EfficiencyChart />
-        </div>
+      <div className="mb-8 animate-in opacity-0 delay-500">
+        <RevenueChart />
       </div>
 
       {/* Bottom Section */}
-      <div className="animate-in opacity-0 delay-700 pb-16">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in opacity-0 delay-700 pb-16">
         <SalesByLocation />
+        <SalesByFlavor />
       </div>
-    </div>
+    </PageWrapper>
   );
 }

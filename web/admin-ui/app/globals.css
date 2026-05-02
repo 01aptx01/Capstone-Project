@@ -15,7 +15,7 @@
   --danger: #ef4444;
 
   /* Sidebar Specific */
-  --sidebar-surface: #f8fafc;
+  --sidebar-surface: #ffffff;
   --sidebar-accent: #f47b2a;
   --sidebar-item-bg: #ffffff;
   --sidebar-foreground: #64748b;
@@ -115,16 +115,15 @@ body {
   gap: 8px;
 }
 .sidebar-link {
+  position: relative;
+  height: 54px; /* ปรับให้คงที่ */
+  margin-bottom: 8px;
+  padding: 0 18px !important;
+  border-radius: 18px !important;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: var(--radius-xl);
-  color: var(--foreground);
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  border: 1px solid transparent;
+  transition: all 0.3s ease !important;
+  border: 1.5px solid transparent !important; /* จองพื้นที่ border ไว้กันเมนูกระตุก */
 }
 .sidebar-link:hover {
   background: var(--card-accent);
@@ -144,11 +143,10 @@ body {
 
 /* Active State Design System */
 .sidebar-link.active {
-  background: white;
-  color: var(--primary);
-  border-color: var(--primary);
-  box-shadow: 0 4px 15px rgba(244, 123, 42, 0.08);
-  transform: translateX(4px);
+  background: white !important;
+  border: 1.5px solid rgba(244, 123, 42, 0.1) !important;
+  box-shadow: 0 10px 25px rgba(244, 123, 42, 0.08);
+  transform: translateX(4px) !important;
 }
 .sidebar-link.active .icon-container {
   color: var(--primary);

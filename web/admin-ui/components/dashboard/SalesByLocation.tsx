@@ -15,13 +15,6 @@ export default function SalesByLocation() {
           <h3 className="text-[22px] font-black text-[#334155] tracking-tight mb-1">Sales by Location</h3>
           <p className="text-[14px] font-semibold text-slate-400">Distribution across campus</p>
         </div>
-        <button className="p-3 bg-slate-50 hover:bg-orange-50 text-slate-400 hover:text-[#f47b2a] rounded-2xl border border-slate-100 hover:border-orange-100 transition-all duration-300">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="1"/>
-            <circle cx="19" cy="12" r="1"/>
-            <circle cx="5" cy="12" r="1"/>
-          </svg>
-        </button>
       </div>
 
       <div className="space-y-8">
@@ -54,12 +47,6 @@ export default function SalesByLocation() {
             </div>
           </div>
         ))}
-      </div>
-
-      <div className="mt-10 pt-8 border-t border-slate-100">
-        <button className="w-full py-4 bg-slate-50 hover:bg-slate-100 text-[#64748B] text-[13px] font-black uppercase tracking-[0.15em] rounded-2xl transition-all duration-300">
-          View Detailed Analytics
-        </button>
       </div>
     </div>
   );

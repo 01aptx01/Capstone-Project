@@ -1,5 +1,6 @@
 "use client";
 
+import PageWrapper from "@/components/layout/PageWrapper";
 import ordersData from "@/lib/mock/orders.json";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import ReportCard from "@/components/dashboard/ReportCard";
@@ -53,7 +54,7 @@ export default function OrdersPage() {
   };
 
   return (
-    <div className="max-w-[1400px] mx-auto py-8 px-4 space-y-12">
+    <PageWrapper>
       {/* Header Section */}
       <div className="flex items-center justify-between animate-in opacity-0">
         <div>
@@ -178,7 +179,7 @@ export default function OrdersPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }
 

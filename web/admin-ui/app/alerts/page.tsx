@@ -1,5 +1,6 @@
 "use client";
 
+import PageWrapper from "@/components/layout/PageWrapper";
 import alertsData from "@/lib/mock/alerts.json";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 
@@ -38,7 +39,7 @@ export default function AlertsPage() {
   };
 
   return (
-    <div className="max-w-[1200px] mx-auto py-8 px-4">
+    <PageWrapper>
       <div className="flex items-center justify-between mb-8 animate-in opacity-0">
         <div>
           <h1 className="text-[32px] font-black text-[#334155] tracking-tight">การแจ้งเตือน</h1>
@@ -46,10 +47,10 @@ export default function AlertsPage() {
         </div>
         <button 
           onClick={() => openExportModal(alertSections, "การแจ้งเตือน (Alerts)")}
-          className="btn-primary !bg-white !text-[#64748B] !border-[#E2E8F0] !border !shadow-sm hover:!border-[#f47b2a] hover:!text-[#f47b2a]"
+          className="px-6 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
         >
-          <i className="fi fi-rr-download flex items-center"></i>
-          Export รายงาน
+          <i className="fi fi-rr-download text-sm"></i>
+          <span>Export รายงาน</span>
         </button>
       </div>
 
@@ -94,7 +95,7 @@ export default function AlertsPage() {
           ))}
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }
 

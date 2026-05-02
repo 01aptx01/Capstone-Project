@@ -1,5 +1,6 @@
 "use client";
 
+import PageWrapper from "@/components/layout/PageWrapper";
 import ReportCard from "@/components/dashboard/ReportCard";
 import CouponTable from "@/components/customers/CouponTable";
 import couponsData from "@/lib/mock/coupons.json";
@@ -43,7 +44,7 @@ export default function CustomersPage() {
   const { openExportModal } = useUI();
 
   return (
-    <div className="max-w-[1400px] mx-auto py-8 px-4 space-y-10">
+    <PageWrapper>
       {/* Header Section */}
       <div className="flex items-center justify-between animate-in opacity-0">
         <div>
@@ -55,10 +56,10 @@ export default function CustomersPage() {
         <div className="flex gap-4">
           <button 
             onClick={() => openExportModal(customerSections, "ลูกค้า & โปรโมชัน")}
-            className="btn-primary !bg-white !text-[#475569] !border-[#E2E8F0] !border !shadow-sm hover:!border-[#f47b2a] hover:!text-[#f47b2a]"
+            className="px-6 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
           >
-            <i className="fi fi-rr-download flex items-center"></i>
-            Export ข้อมูล
+            <i className="fi fi-rr-download text-sm"></i>
+            <span>Export ข้อมูล</span>
           </button>
           <button className="btn-primary">
             <i className="fi fi-rr-plus flex items-center"></i>
@@ -123,7 +124,7 @@ export default function CustomersPage() {
           <CouponTable />
         </div>
       </div>
-    </div>
+    </PageWrapper>
   );
 }
 
