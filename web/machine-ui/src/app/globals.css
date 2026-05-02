@@ -560,7 +560,7 @@ body {
     background-color: #fef2f2;
 }
 
-/* --- Confirm Cancel Payment (in-app) --- */
+/* --- Confirm Cancel Payment --- */
 .confirm-overlay {
     position: absolute;
     inset: 0;

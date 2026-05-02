@@ -123,28 +123,21 @@ export default function VendingPage() {
       setIsLoadingProducts(true);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        // const response = await fetch(`${apiUrl}/api/products?machine_id=MP1-001`,);
-        // if (!response.ok) throw new Error("Failed to fetch products");
+        const response = await fetch(`${apiUrl}/api/products?machine_id=MP1-001`,);
+        if (!response.ok) throw new Error("Failed to fetch products");
 
-        // const data = await response.json();
+        const data = await response.json();
         // Map DB fields to Frontend interface
-        // const mappedProducts: Product[] = data.map((p: any) => ({
-        //   id: p.id,
-        //   name: p.name,
-        //   desc: p.description,
-        //   price: p.price,
-        //   heatingTime: p.heating_time,
-        //   image: p.image_url,
-        // }));
+        const mappedProducts: Product[] = data.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          desc: p.description,
+          price: p.price,
+          heatingTime: p.heating_time,
+          image: p.image_url,
+        }));
 
-        const mockProducts: Product[] = [
-          { id: 1, name: "เปามดแดง", desc: "ไส้หมูแดงเข้มข้น หวานกำลังดี", price: 32, heatingTime: 15, image: "/product/img/pao-moddaeng.png" },
-          { id: 2, name: "เปาหมูสับ", desc: "หมูสับไข่เค็ม รสกลมกล่อม", price: 32, heatingTime: 20, image: "/product/img/pao-moosub.png" },
-          { id: 3, name: "เปากุ้ง", desc: "เนื้อกุ้งเด้งเต็มคำ", price: 32, heatingTime: 15, image: "/product/img/pao-shrimp.png" },
-          { id: 4, name: "เปาครีม", desc: "ครีมคัสตาร์ด หอมหวานละมุน", price: 25, heatingTime: 12, image: "/product/img/pao-cream.png" }
-        ];
-
-        setProducts(mockProducts);
+        setProducts(mappedProducts);
       } catch (err) {
         console.error("Error fetching products:", err);
       } finally {
@@ -221,7 +214,9 @@ export default function VendingPage() {
 
   const processPayment = async (paymentData: { type: "token" | "source"; id: string; amount: number; }) => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+    const timeoutMs = 60000;
+    const startedAt = Date.now();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -239,8 +234,9 @@ export default function VendingPage() {
         }),
       });
 
-      clearTimeout(timeoutId);
-      console.log("[Frontend] Backend response status:", response.status);
+      console.log("[Frontend] Backend response status:", response.status, {
+        elapsedMs: Date.now() - startedAt,
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -253,6 +249,10 @@ export default function VendingPage() {
       const result = await response.json();
       console.log("[Frontend] Backend result:", result);
 
+      if (result?.charge_id) {
+        setCurrentChargeId(result.charge_id);
+      }
+
       if (paymentData.type === "source" && result.qr_code) {
         setRealQrCode(result.qr_code);
         setPaymentStep(2);
@@ -261,14 +261,16 @@ export default function VendingPage() {
         handlePaymentSuccess();
       }
     } catch (err: any) {
-      clearTimeout(timeoutId);
       console.error("[Frontend] CRITICAL: Payment Process Failed", {
         message: err.message,
         name: err.name,
+        elapsedMs: Date.now() - startedAt,
       });
 
       if (err.name === "AbortError") {
-        alert("ระบบเชื่อมต่อล่าช้า กรุณาลองใหม่อีกครั้ง (Request Timeout)");
+        alert(
+          `ระบบเชื่อมต่อล่าช้า กรุณาลองใหม่อีกครั้ง (Timeout ${Math.round(timeoutMs / 1000)}s)`,
+        );
       } else {
         alert(`เกิดข้อผิดพลาด: ${err.message}`);
       }
@@ -278,6 +280,8 @@ export default function VendingPage() {
         closePaymentModal();
         setActiveModal("none");
       }, 3000);
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
