@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 interface DashboardCardProps {
   title: string;
   value: string | number;
@@ -7,6 +9,7 @@ interface DashboardCardProps {
   trendDirection?: "up" | "down" | "neutral";
   accentColor?: string;
   valueColor?: string;
+  href?: string;
 }
 
 export default function DashboardCard({ 
@@ -17,13 +20,14 @@ export default function DashboardCard({
   trend, 
   trendDirection = "neutral", 
   accentColor = "var(--card-accent)",
-  valueColor = "#0F172A"
+  valueColor = "#0F172A",
+  href
 }: DashboardCardProps) {
   const trendBg = trendDirection === "up" ? "#ECFDF5" : trendDirection === "down" ? "#FEF2F2" : "#FFF7ED";
   const trendColor = trendDirection === "up" ? "#065F46" : trendDirection === "down" ? "#991B1B" : "#C2410C";
   const trendIcon = trendDirection === "up" ? "↗" : trendDirection === "down" ? "↘" : "";
 
-  return (
+  const card = (
     <div className="dashboard-metric bg-white border border-[#E2E8F0] rounded-lg p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] transition-all duration-300 h-full flex flex-col justify-between relative overflow-hidden">
       <div className="flex items-center">
         <div className="flex items-center gap-4">
@@ -54,6 +58,16 @@ export default function DashboardCard({
       )}
     </div>
   );
+
+  if (href) {
+    return (
+      <Link href={href} className="block">
+        {card}
+      </Link>
+    );
+  }
+
+  return card;
 }
 
 
