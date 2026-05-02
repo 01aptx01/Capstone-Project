@@ -57,16 +57,9 @@ export default function Sidebar() {
               }}
             >
               <span className="icon-container relative">
-                <i className={`fi ${active ? item.icon.replace('fi-rr-', 'fi-sr-') : item.icon} transition-all duration-500 ${active ? 'scale-110 text-[#f47b2a]' : 'text-slate-400 group-hover:text-slate-600'}`}></i>
-                {active && <span className="absolute -inset-2 bg-orange-400/10 blur-md rounded-full -z-10 animate-pulse"></span>}
+                <i className={`fi ${active ? item.icon.replace('fi-rr-', 'fi-sr-') : item.icon} transition-all duration-100 ${active ? 'scale-110 text-[#f47b2a]' : 'text-slate-400 group-hover:text-slate-600'}`}></i>
               </span>
-              <span className={`label transition-all duration-300 ${active ? 'text-[#334155]' : 'text-slate-500 group-hover:text-slate-700'}`}>{item.name}</span>
-              {active && (
-                <div className="ml-auto flex items-center gap-1 animate-in fade-in slide-in-from-left-2 duration-500">
-                  <div className="w-1 h-1 rounded-full bg-[#f47b2a]"></div>
-                  <div className="w-1.5 h-4 bg-[#f47b2a] rounded-full"></div>
-                </div>
-              )}
+              <span className={`label transition-all duration-100 ${active ? 'text-[#f47b2a]' : 'text-slate-500 group-hover:text-slate-700'}`}>{item.name}</span>
             </Link>
           );
         })}
@@ -159,7 +152,7 @@ export default function Sidebar() {
           padding: 0 18px !important;
           border-radius: 18px !important;
           border: 1.5px solid transparent !important;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          transition: all 0.1s ease !important;
         }
 
         .sidebar-link:hover:not(.active) {
@@ -168,6 +161,7 @@ export default function Sidebar() {
         }
 
         .sidebar-link.active {
+          background: #FFF7ED !important;
           transform: translateX(4px) !important;
         }
 
