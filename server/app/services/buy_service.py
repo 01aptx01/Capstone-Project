@@ -4,36 +4,94 @@ from app.config.db import get_db
 # Configure logger
 logger = logging.getLogger(__name__)
 
+
+class InsufficientStockError(Exception):
+    pass
+
 class InventoryService:
     def __init__(self, db_provider=None):
         self.get_db = db_provider or get_db
 
-    def _get_machine_id(self, cursor, machine_code: str):
-        cursor.execute("SELECT id FROM machines WHERE machine_code = %s", (machine_code,))
-        machine = cursor.fetchone()
-        return machine["id"] if machine else None
+    def _ensure_machine_exists(self, cursor, machine_code: str) -> bool:
+        cursor.execute(
+            "SELECT machine_code FROM machines WHERE machine_code = %s",
+            (machine_code,),
+        )
+        return cursor.fetchone() is not None
+
+    def _get_product_price(self, cursor, product_id: int) -> float:
+        cursor.execute("SELECT price FROM products WHERE product_id = %s", (product_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"Unknown product_id: {product_id}")
+        return float(row["price"])
+
+    def _deduct_from_slots(self, cursor, machine_code: str, product_id: int, quantity: int):
+        cursor.execute(
+            """
+            SELECT id, quantity
+            FROM machine_slots
+            WHERE machine_code = %s AND product_id = %s AND quantity > 0
+            ORDER BY slot_number
+            FOR UPDATE
+            """,
+            (machine_code, product_id),
+        )
+        slots = cursor.fetchall()
+
+        remaining = quantity
+        for slot in slots:
+            if remaining <= 0:
+                break
+
+            available = int(slot["quantity"])
+            take = min(available, remaining)
+
+            cursor.execute(
+                """
+                UPDATE machine_slots
+                SET quantity = quantity - %s
+                WHERE id = %s AND quantity >= %s
+                """,
+                (take, slot["id"], take),
+            )
+
+            if cursor.rowcount == 0:
+                raise InsufficientStockError(
+                    f"Slot deduction failed for machine_code={machine_code}, product_id={product_id}"
+                )
+
+            remaining -= take
+
+        if remaining > 0:
+            raise InsufficientStockError(
+                f"Insufficient stock for machine_code={machine_code}, product_id={product_id} (need {quantity}, missing {remaining})"
+            )
 
     def check_stock(self, machine_code: str, cart_items: list) -> bool:
         db = self.get_db()
         cur = db.cursor(dictionary=True)
 
         try:
-            machine_id = self._get_machine_id(cur, machine_code)
-            if not machine_id:
+            if not self._ensure_machine_exists(cur, machine_code):
                 logger.error(f"❌ [InventoryService] check_stock: Machine {machine_code} not found")
                 return False
 
             for item in cart_items:
-                product_id = item["id"]
-                qty = item["qty"]
+                product_id = item["product_id"]
+                qty = item["quantity"]
 
-                cur.execute("""
-                    SELECT quantity FROM stock 
-                    WHERE machine_id = %s AND product_id = %s
-                """, (machine_id, product_id))
-                
+                cur.execute(
+                    """
+                    SELECT COALESCE(SUM(quantity), 0) AS quantity
+                    FROM machine_slots
+                    WHERE machine_code = %s AND product_id = %s
+                    """,
+                    (machine_code, product_id),
+                )
+
                 stock = cur.fetchone()
-                if not stock or stock["quantity"] < qty:
+                if not stock or int(stock["quantity"]) < int(qty):
                     logger.warning(f"⚠️ [InventoryService] Product {product_id} is out of stock or low (Needed: {qty})")
                     return False
 
@@ -48,49 +106,123 @@ class InventoryService:
             cur.close()
             db.close()
 
+    def create_pending_order(
+        self,
+        machine_code: str,
+        cart_items: list,
+        charge_id: str,
+        payment_method: str,
+        total_price: float,
+    ) -> bool:
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+
+        try:
+            db.start_transaction()
+
+            if not self._ensure_machine_exists(cur, machine_code):
+                logger.error(f"❌ [InventoryService] create_pending_order: Machine {machine_code} not found")
+                db.rollback()
+                return False
+
+            cur.execute(
+                """
+                INSERT INTO orders (machine_code, charge_id, total_price, payment_method, payment_status, dispense_status)
+                VALUES (%s, %s, %s, %s, 'pending', 'pending')
+                """,
+                (machine_code, charge_id, total_price, payment_method),
+            )
+            order_id = cur.lastrowid
+
+            for item in cart_items:
+                product_id = int(item["product_id"])
+                qty = int(item["quantity"])
+                price = self._get_product_price(cur, product_id)
+                cur.execute(
+                    """
+                    INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
+                    VALUES (%s, %s, %s, %s)
+                    """,
+                    (order_id, product_id, qty, price),
+                )
+
+            db.commit()
+            logger.info(f"✅ [InventoryService] Pending order created for charge {charge_id} (order_id={order_id})")
+            return True
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"❌ [InventoryService] create_pending_order error for charge {charge_id}: {e}")
+            return False
+
+        finally:
+            cur.close()
+            db.close()
+
     def deduct_stock(self, machine_code: str, cart_items: list, charge_id: str = None) -> bool:
         db = self.get_db()
         cur = db.cursor(dictionary=True)
 
         try:
-            machine_id = self._get_machine_id(cur, machine_code)
-            if not machine_id:
+            db.start_transaction()
+
+            if not self._ensure_machine_exists(cur, machine_code):
                 logger.error(f"❌ [InventoryService] deduct_stock: Machine {machine_code} not found")
+                db.rollback()
                 return False
 
             for item in cart_items:
-                product_id = item["id"]
-                qty = item["qty"]
+                product_id = int(item["product_id"])
+                qty = int(item["quantity"])
 
-                # Deduct stock (ใช้เงื่อนไข quantity >= %s เพื่อป้องกันสต๊อกติดลบระดับ Database)
-                cur.execute("""
-                    UPDATE stock
-                    SET quantity = quantity - %s
-                    WHERE machine_id = %s AND product_id = %s AND quantity >= %s
-                """, (qty, machine_id, product_id, qty))
+                self._deduct_from_slots(cur, machine_code, product_id, qty)
 
-                # ถ้าตัดสต๊อกไม่สำเร็จ (เช่น จำนวนไม่พอ) ให้ Rollback ทันที
-                if cur.rowcount == 0:
-                    logger.error(f"❌ [InventoryService] Insufficient stock for product {product_id} in machine {machine_id}")
-                    db.rollback()
-                    return False
-
-                # Record transaction
-                cur.execute("""
-                    INSERT INTO transactions (machine_id, product_id, quantity, charge_id)
-                    VALUES (%s, %s, %s, %s)
-                """, (machine_id, product_id, qty, charge_id))
+            if charge_id:
+                cur.execute(
+                    """
+                    UPDATE orders
+                    SET payment_status = 'paid'
+                    WHERE charge_id = %s
+                    """,
+                    (charge_id,),
+                )
 
             # เมื่อทุกอย่างผ่านเรียบร้อย ทำการยืนยันข้อมูล
             db.commit()
             logger.info(f"✅ [InventoryService] Stock deducted successfully for charge {charge_id}")
             return True
 
+        except InsufficientStockError as e:
+            db.rollback()
+            logger.error(f"❌ [InventoryService] deduct_stock insufficient for charge {charge_id}: {e}")
+            return False
+
         except Exception as e:
             db.rollback()
             logger.error(f"❌ [InventoryService] deduct_stock error for charge {charge_id}: {e}")
             return False
 
+        finally:
+            cur.close()
+            db.close()
+
+    def update_dispense_status(self, charge_id: str, dispense_status: str) -> None:
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+
+        try:
+            cur.execute(
+                """
+                UPDATE orders
+                SET dispense_status = %s
+                WHERE charge_id = %s
+                """,
+                (dispense_status, charge_id),
+            )
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            logger.error(f"❌ [InventoryService] update_dispense_status error for charge {charge_id}: {e}")
         finally:
             cur.close()
             db.close()

@@ -37,7 +37,7 @@ class BuyController:
             if 'cart' in metadata:
                 order = {
                     "cart": json.loads(metadata['cart']),
-                    "machine_id": metadata.get('machine_id', 'MP1-001')
+                    "machine_code": metadata.get('machine_code') or metadata.get('machine_id', 'MP1-001')
                 }
                 logger.info(f"[Dispense] Recovered order from Omise metadata for charge: {charge_id}")
 
@@ -46,20 +46,23 @@ class BuyController:
             return False
 
         cart = order["cart"]
-        machine_id = order["machine_id"]
+        machine_code = order["machine_code"]
 
         logger.info(f"[Dispense] Starting dispense for charge {charge_id}. Cart: {cart}")
 
         # Step 1: Deduct stock in database (ใช้ OOP Service)
-        stock_ok = self.inventory_service.deduct_stock(machine_id, cart, charge_id)
+        stock_ok = self.inventory_service.deduct_stock(machine_code, cart, charge_id)
         if not stock_ok:
             logger.error(f"[Dispense] Stock deduction failed for charge_id: {charge_id}")
             return False
 
         # Step 2: Notify hardware agent to dispense (ใช้ OOP Service)
-        agent_ok = self.hardware_agent.notify_dispense(machine_id, cart)
+        agent_ok = self.hardware_agent.notify_dispense(machine_code, cart)
         if not agent_ok:
             logger.error(f"[Dispense] Hardware agent notification failed for charge_id: {charge_id}")
+            self.inventory_service.update_dispense_status(charge_id, "failed")
+        else:
+            self.inventory_service.update_dispense_status(charge_id, "dispensed")
 
         # Clean up the pending order
         self.pending_orders.pop(charge_id, None)
@@ -71,23 +74,43 @@ class BuyController:
     # =============================================
 
     def checkout(self):
-        data = request.json
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"status": "ERROR", "message": "Invalid JSON body"}), 400
+
         logger.info(f"[Checkout] Received request: {data}")
         
         payment_type = data.get("payment_type")
         payment_id = data.get("payment_id")
         amount = data.get("amount")
-        cart = data.get("cart", [])
-        machine_id = data.get("machine_id", "MP1-001")
+        raw_cart = data.get("cart", [])
+        machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
+
+        # Normalize cart to: [{product_id, quantity}]
+        cart = []
+        for item in raw_cart:
+            if not isinstance(item, dict):
+                continue
+            product_id = item.get("product_id")
+            if product_id is None:
+                product_id = item.get("id")
+            quantity = item.get("quantity")
+            if quantity is None:
+                quantity = item.get("qty")
+            cart.append({"product_id": int(product_id), "quantity": int(quantity)})
+
+        # Map Omise request type -> business payment method
+        payment_method = "qr_code" if payment_type == "source" else "credit_card"
+        total_price = (float(amount) / 100.0) if amount is not None else 0.0
 
         # Step 1: Strict Stock Validation
-        if not self.inventory_service.check_stock(machine_id, cart):
-            logger.warning(f"[Checkout] Stock validation failed for machine {machine_id}")
+        if not self.inventory_service.check_stock(machine_code, cart):
+            logger.warning(f"[Checkout] Stock validation failed for machine {machine_code}")
             return jsonify({"status": "ERROR", "message": "One or more items are out of stock"}), 400
 
         # Step 2: Create Omise Charge
         metadata = {
-            "machine_id": machine_id,
+            "machine_code": machine_code,
             "cart": json.dumps(cart)
         }
         
@@ -100,7 +123,19 @@ class BuyController:
 
         # Step 3: Persistence (Local Cache)
         self.payment_statuses[charge.id] = charge.status
-        self.pending_orders[charge.id] = {"cart": cart, "machine_id": machine_id}
+        self.pending_orders[charge.id] = {"cart": cart, "machine_code": machine_code}
+
+        # Step 3.5: Persist order to DB (pending)
+        persisted = self.inventory_service.create_pending_order(
+            machine_code=machine_code,
+            cart_items=cart,
+            charge_id=charge.id,
+            payment_method=payment_method,
+            total_price=total_price,
+        )
+        if not persisted:
+            logger.error(f"[Checkout] Failed to persist pending order for charge {charge.id}")
+            return jsonify({"status": "ERROR", "message": "Failed to persist order"}), 500
 
         # Step 4: Unified Response
         if charge.status == "successful":
@@ -127,7 +162,10 @@ class BuyController:
 
     def omise_webhook(self):
         """Omise Webhook Listener"""
-        event = request.json
+        event = request.get_json(silent=True)
+        if not isinstance(event, dict):
+            return jsonify({"message": "Invalid JSON body"}), 400
+
         logger.info(f"[Webhook] Received Omise event: {event.get('key')}")
 
         if event.get("key") == "charge.complete":
@@ -159,7 +197,10 @@ class BuyController:
 
     def mock_pay(self):
         """Development Bypass for Payment"""
-        data = request.json
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"status": "ERROR", "message": "Invalid JSON body"}), 400
+
         charge_id = data.get("charge_id")
 
         if not charge_id:

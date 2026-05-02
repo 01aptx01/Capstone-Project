@@ -17,21 +17,31 @@ class ProductService:
         cur = db.cursor(dictionary=True)
 
         try:
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT
-                    p.id,
+                    p.product_id,
                     p.name,
                     p.description,
                     p.price,
                     p.heating_time,
                     p.image_url,
-                    COALESCE(s.quantity, 0) AS stock
+                    COALESCE(SUM(ms.quantity), 0) AS stock
                 FROM products p
-                LEFT JOIN stock s ON s.product_id = p.id
-                LEFT JOIN machines m ON m.id = s.machine_id
-                WHERE m.machine_code = %s OR s.machine_id IS NULL
-                ORDER BY p.id
-            """, (machine_code,))
+                LEFT JOIN machine_slots ms
+                    ON ms.machine_code = %s
+                    AND ms.product_id = p.product_id
+                GROUP BY
+                    p.product_id,
+                    p.name,
+                    p.description,
+                    p.price,
+                    p.heating_time,
+                    p.image_url
+                ORDER BY p.product_id
+                """,
+                (machine_code,),
+            )
 
             products = cur.fetchall()
 
@@ -67,7 +77,7 @@ class ProductController:
 
     def get_products(self):
         """List available products with stock"""
-        machine_code = request.args.get("machine_id", "MP1-001")
+        machine_code = request.args.get("machine_code") or request.args.get("machine_id", "MP1-001")
         logger.info(f"[ProductController] Fetching products for machine: {machine_code}")
 
         try:

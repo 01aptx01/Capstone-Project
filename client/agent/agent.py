@@ -17,7 +17,7 @@ routes = Blueprint("routes", __name__)
 @routes.route("/dispense", methods=["POST"])
 def dispense():
     data = request.json
-    machine_id = data.get("machine_id")
+    machine_id = data.get("machine_code") or data.get("machine_id")
     items = data.get("items", [])
 
     logger.info(f"[Agent] Received dispense request for machine {machine_id}")
