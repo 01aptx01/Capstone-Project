@@ -1,3 +1,14 @@
+# =============================================================================
+# Published URLs from host (default port mapping)
+# -----------------------------------------------------------------------------
+#   db (MySQL)       localhost:3307   -> container :3306
+#   server (API)     http://localhost:8000   (Flask + Socket.IO + /apidocs)
+#   client (agent)   http://localhost:5000
+#   machine-ui       http://localhost:3000
+#   admin-ui         http://localhost:3001
+#   swagger-ui       http://localhost:8081  (host; avoids Jenkins on 8080)
+# =============================================================================
+
 services:
   db:
     image: mysql:8
@@ -34,8 +45,14 @@ services:
       - SOCKETIO_ENABLED=1
       - DISPATCH_MODE=socket
       - TZ=Asia/Bangkok
-      # Set comma-separated allowed origins for CORS (add machine-ui domain in production)
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:8080,http://machine-ui:3000,http://admin-ui:3000
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:8081,http://machine-ui:3000,http://admin-ui:3000
+      - DOCKER_URL_SERVER=http://localhost:8000
+      - DOCKER_URL_MACHINE_UI=http://localhost:3000
+      - DOCKER_URL_ADMIN_UI=http://localhost:3001
+      - DOCKER_URL_SWAGGER=http://localhost:8081
+      - DOCKER_URL_AGENT=http://localhost:5000
+      - DOCKER_URL_DB=mysql://localhost:3307
+      - DOCKER_PUBLISHED_PORT_SERVER=8000
       # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
       # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
     ports:
@@ -65,6 +82,9 @@ services:
       - AGENT_DB_PATH=/data/agent.db
       - EVENT_SINK_URL=http://server:8000/api/machines/events
       - TZ=Asia/Bangkok
+      - DOCKER_URL_AGENT=http://localhost:5000
+      - DOCKER_URL_SERVER=http://localhost:8000
+      - DOCKER_PUBLISHED_PORT_AGENT=5000
 
   machine-ui:
     build:
@@ -75,6 +95,8 @@ services:
         - NEXT_PUBLIC_AGENT_BASE_URL=${NEXT_PUBLIC_AGENT_BASE_URL:-}
     environment:
       - TZ=Asia/Bangkok
+      - DOCKER_PUBLISHED_PORT=3000
+      - DOCKER_HOST_URL=http://localhost:3000
     container_name: vending-machine-ui
     ports:
       - "3000:3000"
@@ -88,6 +110,8 @@ services:
         - NEXT_PUBLIC_ADMIN_API_URL=${NEXT_PUBLIC_ADMIN_API_URL:-http://localhost:8000}
     environment:
       - TZ=Asia/Bangkok
+      - DOCKER_PUBLISHED_PORT=3001
+      - DOCKER_HOST_URL=http://localhost:3001
     container_name: vending-admin-ui
     ports:
       - "3001:3000"
@@ -98,13 +122,22 @@ services:
     image: swaggerapi/swagger-ui:v5.17.14
     container_name: vending-swagger-ui
     ports:
-      - "8080:8080"
+      - "8081:8080"
     environment:
       URL: /openapi.yaml
     volumes:
       - ./swagger.yaml:/usr/share/nginx/html/openapi.yaml:ro
     depends_on:
       - server
+    command:
+      - /bin/sh
+      - -c
+      - |
+        printf '\n=== vending-swagger-ui ===\n'
+        printf '  Host browser:  http://localhost:8081\n'
+        printf '  Local (in container):   http://127.0.0.1:8080\n'
+        printf '  Network (listen):       http://0.0.0.0:8080\n\n'
+        exec /docker-entrypoint.sh nginx -g 'daemon off;'
 
 volumes:
   db_data:

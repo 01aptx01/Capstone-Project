@@ -4,6 +4,21 @@ info:
   description: |
     Flask backend for smart vending: catalog, Omise checkout, machine events, members, and admin CRUD under `/api/admin`.
     Interactive docs (Flasgger) are also served by the server at `/apidocs` when the app is running.
+
+    **Socket.IO (same host/port as HTTP, e.g. `http://localhost:8000`):**
+    - Machines: HMAC auth per `FLEET_SECRET` (see agent docs).
+    - Admin dashboard: join Socket.IO with auth JSON `{ "role": "admin" }` when `ADMIN_SOCKET_SECRET` is unset, or `{ "admin_token": "<secret>" }` when set. Server emits event **`dashboard_update`** to room `admin` after each machine event ingest (telemetry for live dashboards).
+
+    **Docker Compose — default published ports on the host:**
+    | Service | Host URL |
+    |---------|----------|
+    | MySQL (`db`) | `localhost:3307` |
+    | API + Socket.IO (`server`) | `http://localhost:8000` |
+    | Hardware agent (`client`) | `http://localhost:5000` |
+    | machine-ui | `http://localhost:3000` |
+    | admin-ui | `http://localhost:3001` |
+    | swagger-ui (this spec in UI) | `http://localhost:8081` (host; avoids Jenkins on 8080) |
+    | Flasgger (same server) | `http://localhost:8000/apidocs` |
   version: "2.0.0"
 
 host: localhost:8000
@@ -576,3 +591,77 @@ paths:
           description: Not found
         "409":
           description: Code conflict
+
+  /api/admin/dashboard/summary:
+    get:
+      tags: [Admin]
+      summary: Dashboard KPIs (sales today, online machines, top products)
+      responses:
+        "200":
+          description: Summary payload
+          schema:
+            type: object
+            properties:
+              total_sales_today: { type: number }
+              active_machines: { type: integer }
+              top_products:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    product_id: { type: integer }
+                    name: { type: string }
+                    total_sold: { type: integer }
+
+  /api/admin/reports/sales:
+    get:
+      tags: [Admin]
+      summary: Daily revenue time series for charting
+      parameters:
+        - name: days
+          in: query
+          type: integer
+          default: 30
+          maximum: 365
+          description: Number of calendar days ending today (inclusive)
+      responses:
+        "200":
+          description: Series of completed-order aggregates by day
+          schema:
+            type: object
+            properties:
+              days: { type: integer }
+              series:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string }
+                    revenue: { type: number }
+                    count: { type: integer }
+
+  /api/admin/alerts:
+    get:
+      tags: [Admin]
+      summary: Low stock slots and recent machine ERROR events
+      parameters:
+        - name: stock_threshold
+          in: query
+          type: integer
+          default: 5
+          description: Flag slots where quantity is strictly below this value
+      responses:
+        "200":
+          description: Alerts payload
+          schema:
+            type: object
+            properties:
+              stock_threshold: { type: integer }
+              low_stock:
+                type: array
+                items:
+                  type: object
+              machine_errors:
+                type: array
+                items:
+                  type: object

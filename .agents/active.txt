@@ -1,2 +1,2 @@
-Admin-ui wired to Flask /api/admin (browser via NEXT_PUBLIC_ADMIN_API_URL): products, machines, orders, customers metrics, coupons. Next mock routes kept: dashboard, notifications, alerts, sales. Mock route handlers removed for products, machines, orders.
-Next: optional admin auth, coupon create modal wiring, backend aggregates for coupon usage / order line counts.
+Phase 2.3/2.4: admin Socket.IO room `admin` + `dashboard_update` emits; REST GET /api/admin/dashboard/summary, /reports/sales, /alerts. Env ADMIN_SOCKET_SECRET optional.
+Next: wire admin-ui DashboardChart/alerts to these endpoints + Socket.IO client with auth.

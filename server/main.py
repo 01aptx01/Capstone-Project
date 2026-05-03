@@ -15,6 +15,35 @@ from app.realtime.socketio_gateway import make_socketio_app
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+
+def _print_docker_service_urls() -> None:
+    """Log host vs in-container URLs (set by docker-compose environment)."""
+    s = os.environ.get("DOCKER_URL_SERVER", "http://localhost:8000")
+    mu = os.environ.get("DOCKER_URL_MACHINE_UI", "http://localhost:3000")
+    au = os.environ.get("DOCKER_URL_ADMIN_UI", "http://localhost:3001")
+    sw = os.environ.get("DOCKER_URL_SWAGGER", "http://localhost:8081")
+    ag = os.environ.get("DOCKER_URL_AGENT", "http://localhost:5000")
+    db = os.environ.get("DOCKER_URL_DB", "mysql://localhost:3307")
+    pub = os.environ.get("DOCKER_PUBLISHED_PORT_SERVER", "8000")
+    lines = [
+        "",
+        "=== vending-server (Flask + Socket.IO) ===",
+        f"  Host browser:  {s}",
+        f"  Local (in container):   http://127.0.0.1:{pub}",
+        f"  Network (listen):       http://0.0.0.0:{pub}",
+        "",
+        "=== Other services (from host) ===",
+        f"  machine-ui:    {mu}",
+        f"  admin-ui:      {au}",
+        f"  swagger-ui:    {sw}",
+        f"  agent (Pi):    {ag}",
+        f"  MySQL (db):    {db}",
+        "",
+    ]
+    for line in lines:
+        logger.info(line)
+
+
 class ServerApp:
     def __init__(self, host: str = "0.0.0.0", port: int = 8000):
         self.host = host
@@ -108,7 +137,8 @@ class ServerApp:
 
     def run(self):
         logger.info(f"🚀 Starting server on {self.host}:{self.port}")
-        
+        _print_docker_service_urls()
+
         # Start all background sweepers
         eventlet.spawn(self._background_sweeper)
         eventlet.spawn(self._user_maintenance_sweeper)

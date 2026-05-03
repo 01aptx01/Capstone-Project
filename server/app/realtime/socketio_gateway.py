@@ -79,6 +79,25 @@ sio = socketio.Server(
     engineio_logger=False,
 )
 
+ADMIN_ROOM = "admin"
+
+
+def _verify_admin_auth(auth: Optional[Dict[str, Any]]) -> bool:
+    """Admin dashboard Socket.IO clients join ADMIN_ROOM when auth passes."""
+    admin_secret = os.environ.get("ADMIN_SOCKET_SECRET")
+    if not admin_secret:
+        return isinstance(auth, dict) and auth.get("role") == "admin"
+    return isinstance(auth, dict) and auth.get("admin_token") == admin_secret
+
+
+def emit_dashboard_update(payload: Dict[str, Any]) -> None:
+    """Broadcast telemetry to all admin dashboard clients."""
+    try:
+        sio.emit("dashboard_update", payload, room=ADMIN_ROOM)
+    except Exception as e:
+        logger.warning(f"[SocketIO] emit dashboard_update failed: {e}")
+
+
 _online_machines: Dict[str, str] = {}
 
 
@@ -329,9 +348,30 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
         except Exception as _be:
             logger.warning(f"⚠️ [SocketIO] broadcast job_event_broadcast failed: {_be}")
 
+    emit_dashboard_update(
+        {
+            "type": "machine_event",
+            "machine_code": machine_code,
+            "event_type": event_type,
+            "state": state,
+            "job_id": job_id,
+            "ts": _now_ts(),
+        }
+    )
+
 
 @sio.event
 def connect(sid, environ, auth):
+    # Admin dashboard (browser) — join fleet-wide telemetry room
+    if isinstance(auth, dict) and (
+        "admin_token" in auth or auth.get("role") == "admin"
+    ):
+        if not _verify_admin_auth(auth):
+            raise ConnectionRefusedError("invalid admin token")
+        sio.enter_room(sid, ADMIN_ROOM)
+        logger.info(f"[SocketIO] admin dashboard connected (sid={sid})")
+        return
+
     ok, machine_code, reason = _verify_machine_auth(auth)
     if not ok:
         raise ConnectionRefusedError(reason)

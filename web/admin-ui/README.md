@@ -14,9 +14,20 @@ From the project root:
 docker compose up --build
 ```
 
-- **admin-ui** → [http://localhost:3001](http://localhost:3001) (maps host `3001` → container `3000`). Build arg `NEXT_PUBLIC_ADMIN_API_URL` defaults to `http://localhost:8000` so the **browser** on your machine can call Flask on the host.
-- **swagger-ui** → [http://localhost:8080](http://localhost:8080) — loads `swagger.yaml` from the repo via a read-only volume. Use **Try it out** against `http://localhost:8000` (CORS includes `http://localhost:8080`).
-- The Flask app also serves Flasgger at **`/apidocs`** on port 8000 using the same `swagger.yaml` file mounted into the server container.
+On startup, **server**, **agent (Pi)**, **machine-ui**, **admin-ui**, and **swagger-ui** print a short URL block (`Host browser` vs in-container `Local` / `Network`). See the comment table at the top of [`docker-compose.yml`](../../docker-compose.yml) for the canonical port map.
+
+| Service | From your host |
+|---------|----------------|
+| API + Socket.IO | `http://localhost:8000` |
+| machine-ui | `http://localhost:3000` |
+| admin-ui | `http://localhost:3001` |
+| swagger-ui | `http://localhost:8081` |
+| agent (Pi) | `http://localhost:5000` |
+| MySQL | `localhost:3307` |
+
+- **admin-ui** maps host **3001** → container **3000**. Build arg `NEXT_PUBLIC_ADMIN_API_URL` defaults to `http://localhost:8000` for the browser.
+- **swagger-ui** loads `swagger.yaml` read-only; **Try it out** uses `http://localhost:8000` (CORS includes `http://localhost:8081`). Host port **8081** avoids clashing with Jenkins on **8080**.
+- Flasgger: **`http://localhost:8000/apidocs`** (same `swagger.yaml` mount on the server).
 
 ## Getting Started
 

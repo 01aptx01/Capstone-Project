@@ -10,3 +10,6 @@ from app.api.admin import admin_machines  # noqa: E402, F401
 from app.api.admin import admin_customers  # noqa: E402, F401
 from app.api.admin import admin_orders  # noqa: E402, F401
 from app.api.admin import admin_coupons  # noqa: E402, F401
+from app.api.admin import admin_dashboard  # noqa: E402, F401
+from app.api.admin import admin_reports  # noqa: E402, F401
+from app.api.admin import admin_alerts  # noqa: E402, F401
