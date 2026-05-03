@@ -76,15 +76,7 @@ export default function Header() {
 
   return (
     <header className="app-header">
-      <div className="center">
-        <div className="header-search">
-          <span className="icon">
-            <i className="fi fi-rr-search"></i>
-          </span>
-          <input aria-label="Search" placeholder="ค้นหาตู้สินค้า, สินค้า หรือรายงาน..." />
-          <div className="search-shortcut">⌘K</div>
-        </div>
-      </div>
+      <div className="center"></div>
 
       <div className="header-actions">
         <div style={{ position: "relative" }}>
@@ -190,28 +182,7 @@ export default function Header() {
           border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
         }
 
-        .header-search {
-          background: rgba(0, 0, 0, 0.03) !important;
-          border: 1px solid transparent !important;
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-        }
 
-        .header-search:focus-within {
-          background: white !important;
-          border-color: var(--primary) !important;
-          box-shadow: 0 10px 25px rgba(244, 123, 42, 0.08) !important;
-          width: 600px;
-        }
-
-        .search-shortcut {
-          background: white;
-          padding: 2px 6px;
-          border-radius: 6px;
-          font-size: 0.7rem;
-          font-weight: 800;
-          color: var(--muted);
-          border: 1px solid rgba(0,0,0,0.1);
-        }
 
         .bell {
           background: transparent !important;

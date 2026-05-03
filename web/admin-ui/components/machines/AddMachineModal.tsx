@@ -14,7 +14,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
     name: "",
     location: "",
     serialNumber: "",
-    type: "vending-cool",
+    password: "",
   });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,30 +36,21 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
 
   return (
     <Modal open={open} onClose={onClose} title="เพิ่มตู้สินค้าใหม่">
-      <div className="relative overflow-hidden">
-        {/* Background Decorative Element */}
-        <div className="absolute top-0 right-0 -z-10 p-12 opacity-5 pointer-events-none">
-          <svg width="240" height="240" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5" className="text-[#f47b2a]">
-            <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-            <path d="M9 6h6M9 10h6M9 14h6"></path>
-          </svg>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-8 relative z-10 p-2">
           {/* Section: Visual Identity */}
           <div className="flex flex-col items-center justify-center gap-4 mb-4">
-            <div className="relative group">
-              <div className={`w-36 h-36 rounded-[40px] border-4 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all duration-700 ${
+            <div className="relative group w-full max-w-sm mx-auto">
+              <div className={`w-full h-52 rounded-[48px] border-4 border-dashed flex flex-col items-center justify-center overflow-hidden transition-all duration-700 ${
                 imagePreview ? 'border-[#f47b2a] bg-white shadow-2xl shadow-orange-100' : 'border-slate-100 bg-slate-50 hover:border-orange-200 hover:bg-orange-50'
               }`}>
                 {imagePreview ? (
                   <img src={imagePreview} alt="Preview" className="w-full h-full object-cover animate-in fade-in scale-95" />
                 ) : (
                   <div className="text-center px-4">
-                    <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm mx-auto mb-3 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
-                      <i className="fi fi-rr-camera text-[24px] text-slate-300 group-hover:text-[#f47b2a]"></i>
+                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-sm mx-auto mb-4 group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">
+                      <i className="fi fi-rr-camera text-[32px] text-slate-300 group-hover:text-[#f47b2a]"></i>
                     </div>
-                    <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest group-hover:text-[#f47b2a]">อัปโหลดรูปภาพ</span>
+                    <span className="text-[13px] font-black text-slate-400 uppercase tracking-widest group-hover:text-[#f47b2a]">อัปโหลดรูปภาพตู้สินค้า</span>
                   </div>
                 )}
               </div>
@@ -121,28 +112,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
             </div>
 
             {/* Row 2: Technical Specs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="group space-y-2">
-                <label className="text-[11px] font-black text-slate-400 ml-2 uppercase tracking-[0.2em] group-focus-within:text-[#f47b2a] transition-colors">ประเภทตู้ (Machine Type)</label>
-                <div className="relative">
-                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#f47b2a] transition-colors pointer-events-none">
-                    <i className="fi fi-rr-layers"></i>
-                  </span>
-                  <select
-                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-[24px] outline-none focus:border-[#f47b2a]/30 focus:bg-white focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[#334155] appearance-none cursor-pointer"
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  >
-                    <option value="vending-cool">ตู้แช่เย็น (Cooling)</option>
-                    <option value="vending-hot">ตู้เครื่องดื่มร้อน (Hot)</option>
-                    <option value="vending-snack">ตู้ขนม (Snacks)</option>
-                  </select>
-                  <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none">
-                    <i className="fi fi-rr-angle-small-down text-xl"></i>
-                  </span>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 gap-6">
               <div className="group space-y-2">
                 <label className="text-[11px] font-black text-slate-400 ml-2 uppercase tracking-[0.2em] group-focus-within:text-[#f47b2a] transition-colors">Serial Number</label>
                 <div className="relative">
@@ -151,10 +121,28 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                   </span>
                   <input
                     type="text"
+                    required
                     placeholder="SN-XXXXXX"
                     className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-[24px] outline-none focus:border-[#f47b2a]/30 focus:bg-white focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[#334155]"
                     value={formData.serialNumber}
                     onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="group space-y-2">
+                <label className="text-[11px] font-black text-slate-400 ml-2 uppercase tracking-[0.2em] group-focus-within:text-[#f47b2a] transition-colors">Password</label>
+                <div className="relative">
+                  <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#f47b2a] transition-colors">
+                    <i className="fi fi-rr-lock"></i>
+                  </span>
+                  <input
+                    type="password"
+                    required
+                    placeholder="ระบุรหัสผ่าน..."
+                    className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-[24px] outline-none focus:border-[#f47b2a]/30 focus:bg-white focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[#334155]"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   />
                 </div>
               </div>
@@ -172,16 +160,12 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
             </button>
             <button
               type="submit"
-              className="flex-[2] px-8 py-5 bg-gradient-to-r from-[#f47b2a] to-[#FB923C] text-white rounded-[28px] text-[16px] font-black shadow-[0_20px_40px_rgba(244,123,42,0.25)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.35)] hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group"
+              className="flex-1 px-8 py-5 bg-gradient-to-r from-[#f47b2a] to-[#FB923C] text-white rounded-[28px] text-[16px] font-black shadow-[0_20px_40px_rgba(244,123,42,0.25)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.35)] hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group"
             >
-              <span>ยืนยันการเพิ่มตู้สินค้า</span>
-              <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform">
-                <i className="fi fi-rr-arrow-small-right text-xl"></i>
-              </div>
+              ยืนยัน
             </button>
           </div>
         </form>
-      </div>
     </Modal>
   );
 }

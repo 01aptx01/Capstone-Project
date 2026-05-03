@@ -1,9 +1,11 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import machinesData from "@/lib/mock/machines.json";
+import MachineChart from "@/components/machines/MachineChart";
+import ManageStock from "@/components/machines/ManageStock";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -12,8 +14,18 @@ interface PageProps {
 export default function MachineDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const [isManageStock, setIsManageStock] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const machine = machinesData.find(m => m.id === id) || { name: "MOD PAO Building LX", id: id };
+
+  const handleSaveStock = () => {
+    setIsManageStock(false);
+    setToastMessage(`Successfully updated stock for machine ${machine.name}`);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+  };
 
   const metrics = [
     { title: "ยอดขาย", value: "฿1,458.5", color: "#1e293b" },
@@ -49,7 +61,10 @@ export default function MachineDetailPage({ params }: PageProps) {
         </div>
 
         <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-[#334155] text-white rounded-xl text-[14px] font-bold shadow-[0_8px_20px_rgba(30,41,59,0.2)] hover:bg-[#1e293b] hover:-translate-y-0.5 transition-all">
+          <button 
+            onClick={() => setIsManageStock(true)}
+            className="flex items-center gap-2 px-6 py-2.5 bg-[#334155] text-white rounded-xl text-[14px] font-bold shadow-[0_8px_20px_rgba(30,41,59,0.2)] hover:bg-[#1e293b] hover:-translate-y-0.5 transition-all"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
               <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
@@ -68,25 +83,42 @@ export default function MachineDetailPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {metrics.map((m, i) => (
-          <div key={i} className="bg-white border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-            <div className="text-[13px] font-bold text-[#64748B] mb-2">{m.title}</div>
-            <div className="text-[28px] font-black leading-tight" style={{ color: m.color }}>
-              {m.value}
-            </div>
+      {isManageStock ? (
+        <ManageStock 
+          onCancel={() => setIsManageStock(false)} 
+          onSave={handleSaveStock} 
+        />
+      ) : (
+        <>
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {metrics.map((m, i) => (
+              <div key={i} className="bg-white border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+                <div className="text-[13px] font-bold text-[#64748B] mb-2">{m.title}</div>
+                <div className="text-[28px] font-black leading-tight" style={{ color: m.color }}>
+                  {m.value}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Graph Section */}
-      <div className="bg-white border border-[#E2E8F0] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
-        <h3 className="text-[18px] font-black text-[#1e293b] mb-8">กราฟยอดขาย</h3>
-        <div className="bg-[#F8FAFC] border-2 border-dashed border-[#E2E8F0] rounded-[20px] h-[300px] flex items-center justify-center">
-          <div className="text-[#94A3B8] font-bold">[พื้นที่แสดงกราฟ]</div>
+          {/* Graph Section */}
+          <div className="animate-in fade-in delay-200 duration-500 fill-mode-both">
+            <MachineChart />
+          </div>
+        </>
+      )}
+
+      {toastMessage && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-8 fade-in duration-300">
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-6 py-3.5 rounded-2xl shadow-[0_8px_30px_rgba(16,185,129,0.15)] flex items-center gap-3 font-black text-[14px]">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+              <i className="fi fi-rr-check-circle"></i>
+            </div>
+            {toastMessage}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
