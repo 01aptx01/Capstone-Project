@@ -13,7 +13,7 @@ type ModalType =
   | "info"
   | "usage"
   | "numpad"
-  | "report"
+  | "contact"
   | "payment"
   | "processing"
   | "points_result";
@@ -203,6 +203,8 @@ export default function VendingPage() {
           price: p.price,
           heatingTime: p.heating_time,
           image: p.image_url,
+          category: p.category,
+          stock: p.stock,
         }));
 
         setProducts(mappedProducts);
@@ -661,6 +663,7 @@ export default function VendingPage() {
         onDecrease={handleDecrease}
         onRemove={handleRemove}
         onOpenInfo={() => setActiveModal("info")}
+        onOpenContact={() => setActiveModal("contact")}
       />
 
       {/* --- OVERLAY & MODALS --- */}
@@ -697,7 +700,7 @@ export default function VendingPage() {
               </button>
               <button
                 className="modal-action-btn"
-                onClick={() => setActiveModal("report")}
+                onClick={() => setActiveModal("contact")}
               >
                 รายงานปัญหา
               </button>
@@ -853,7 +856,7 @@ export default function VendingPage() {
           )}
 
           {/* Modal 5: Report (รายงานปัญหา) */}
-          {activeModal === "report" && (
+          {activeModal === "contact" && (
             <div
               className="report-modal-box"
               onClick={(e) => e.stopPropagation()}
@@ -864,7 +867,7 @@ export default function VendingPage() {
               >
                 &times;
               </button>
-              <div className="report-title">รายงานปัญหา</div>
+              <div className="report-title">ติดต่อเจ้าหน้าที่</div>
               {/* เบอร์โทรศัพท์ */}
               <div className="report-phone">
                 <PhoneCall />

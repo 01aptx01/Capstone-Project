@@ -130,20 +130,37 @@ body {
     height: 110px;
     border-radius: 50%;
     background-color: #eef0f5;
-    margin-bottom: 12px;
+    margin-bottom: 16px;
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
     border: 4px solid #fff;
+    position: relative;
 }
 
 .product-image img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    border-radius: 50%;
 }
+
+.category-badge {
+    position: absolute;
+    bottom: -10px;
+    padding: 4px 16px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 800;
+    z-index: 2;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.category-sweet { color: #f43f5e; background: #fdfdec; }
+.category-meat { color: #ef4444; background: #fef2f2; }
+.category-vegetarian { color: #059669; background: #ecfdf5; }
 
 .product-title {
     font-size: 16px;
@@ -152,20 +169,41 @@ body {
     text-align: center;
 }
 
+.category-label {
+    font-size: 12px;
+    color: #f59e0b;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.low-stock-text {
+    font-size: 11px;
+    font-weight: 600;
+    color: #ef4444;
+    margin-top: -6px;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
 .product-desc {
     font-size: 11px;
     color: #888;
     text-align: center;
-    margin-bottom: 10px;
-    height: 33px;
+    margin-bottom: 8px;
     overflow: hidden;
+    height: 33px;
 }
 
 .product-price {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 20px;
     font-weight: 700;
     color: #f47b2a;
-    margin-bottom: 12px;
+    margin-top: 2px;
+    margin-bottom: 8px;
 }
 
 .heating-info {
