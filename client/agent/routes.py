@@ -111,8 +111,8 @@ class JobManager:
         return expanded
 
     def _estimate_total_seconds(self, job: Job) -> int:
-        transfer = 3
-        dispense = 3
+        transfer = 5
+        dispense = 5
         expanded = self._expand_queue(job)
         heating = sum(int(x.get("heating_time", 15)) for x in expanded)
         return int(transfer + heating + dispense)
@@ -223,7 +223,7 @@ def _run_mock_job(job: Job) -> None:
                 payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
             ),
         )
-        tick(3)
+        tick(5)
 
         job.state = "HEATING"
         job_manager.publish(
@@ -267,7 +267,7 @@ def _run_mock_job(job: Job) -> None:
                 payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
             ),
         )
-        tick(3)
+        tick(5)
 
         job.state = "DONE"
         job.remaining_seconds = 0

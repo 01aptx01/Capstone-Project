@@ -133,31 +133,32 @@ export default function VendingPage() {
     globalTimeLeft: socketGlobalTimeLeft,
     isConnected: isServerSocketConnected,
   } = useJobSocket({
-    activeJobId: activeModal === "processing" ? currentChargeId : null,
+    activeJobId: (isAfterPayment || activeModal === "processing") ? currentChargeId : null,
   });
 
   // Sync socket-driven remaining time into local globalTimeLeft state
   // (fallback local timer still runs if socket has no data yet)
   useEffect(() => {
-    if (activeModal === "processing" && socketGlobalTimeLeft > 0) {
+    if ((isAfterPayment || activeModal === "processing") && agentJobState) {
       setGlobalTimeLeft(socketGlobalTimeLeft);
     }
-  }, [socketGlobalTimeLeft, activeModal]);
+  }, [socketGlobalTimeLeft, activeModal, isAfterPayment, agentJobState]);
 
   // ==========================================
   // DERIVED DATA (คำนวณค่าจาก State อัตโนมัติ)
   // ==========================================
   const totalHeatingTime = cart.reduce((sum, item) => sum + item.heatingTime * item.qty, 0,);
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const totalProcessTime = 3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
+  const totalProcessTime = 5 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 5;
 
   // ฟังก์ชันหาว่าตอนนี้อยู่สเต็ปไหนของการอุ่น
   const getProcessStatus = () => {
     if (queue.length === 0) return { step: 0, itemIndex: 0 };
     if (globalTimeLeft === 0) return { step: 3, itemIndex: 0 };
-    if (globalTimeLeft <= 3) return { step: 2, itemIndex: queue.length - 1 };
+    if (globalTimeLeft <= 5) return { step: 2, itemIndex: queue.length - 1 };
+    if (globalTimeLeft > totalProcessTime - 5) return { step: 0, itemIndex: 0 };
 
-    const elapsedHeating = totalProcessTime - 3 - globalTimeLeft;
+    const elapsedHeating = totalProcessTime - 5 - globalTimeLeft;
     let accumulatedTime = 0;
 
     for (let i = 0; i < queue.length; i++) {
@@ -223,61 +224,66 @@ export default function VendingPage() {
   // ==========================================
   // Timer: นับถอยหลังการชำระเงิน
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (activeModal === "payment") {
-      if (paymentCountdown > 0) {
-        timer = setInterval(() => setPaymentCountdown((prev) => prev - 1), 1000);
-      } else {
-        // เมื่อเวลาหมด ให้ทำการ Cancel order ที่ค้างอยู่ด้วย
-        cancelAndClosePaymentModal();
-      }
-    }
+    if (activeModal !== "payment") return;
+    const timer = setInterval(() => {
+      setPaymentCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
     return () => clearInterval(timer);
+  }, [activeModal]);
+
+  useEffect(() => {
+    if (activeModal === "payment" && paymentCountdown === 0) {
+      cancelAndClosePaymentModal();
+    }
   }, [activeModal, paymentCountdown]);
 
   // Timer: นับถอยหลังการโชว์คะแนนสะสม
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (activeModal === "points_result") {
-      if (pointsCountdown > 0) {
-        timer = setInterval(() => setPointsCountdown((prev) => prev - 1), 1000);
+    if (activeModal !== "points_result") return;
+    const timer = setInterval(() => {
+      setPointsCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activeModal]);
+
+  useEffect(() => {
+    if (activeModal === "points_result" && pointsCountdown === 0) {
+      if (isAfterPayment) {
+        startHeatingProcess();
       } else {
-        if (isAfterPayment) {
-          startHeatingProcess();
-        } else {
-          setActiveModal("none");
-        }
+        setActiveModal("none");
       }
     }
-    return () => clearInterval(timer);
   }, [activeModal, pointsCountdown, isAfterPayment]);
 
   // Timer: นับถอยหลังหน้ารับเบอร์โทร (Numpad)
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (activeModal === "numpad") {
-      if (numpadCountdown > 0) {
-        timer = setInterval(() => setNumpadCountdown((prev) => prev - 1), 1000);
+    if (activeModal !== "numpad") return;
+    const timer = setInterval(() => {
+      setNumpadCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [activeModal]);
+
+  useEffect(() => {
+    if (activeModal === "numpad" && numpadCountdown === 0) {
+      if (isAfterPayment) {
+        startHeatingProcess();
       } else {
-        // ถ้าเวลาหมดแล้วเป็นการสะสมแต้มหลังจ่าย ให้ข้ามไปเลย
-        if (isAfterPayment) {
-          startHeatingProcess();
-        } else {
-          setActiveModal("none");
-        }
+        setActiveModal("none");
       }
     }
-    return () => clearInterval(timer);
   }, [activeModal, numpadCountdown, isAfterPayment]);
 
   // Timer: นับถอยหลังระบบอุ่นสินค้ารวม
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (activeModal === "processing" && globalTimeLeft > 0 && !agentJobState) {
-      interval = setInterval(() => setGlobalTimeLeft((prev) => prev - 1), 1000);
+    if (activeModal === "processing" && !agentJobState) {
+      const interval = setInterval(() => {
+        setGlobalTimeLeft((prev) => Math.max(0, prev - 1));
+      }, 1000);
+      return () => clearInterval(interval);
     }
-    return () => clearInterval(interval);
-  }, [activeModal, globalTimeLeft, agentJobState]);
+  }, [activeModal, agentJobState]);
 
 
   // ==========================================
@@ -602,9 +608,11 @@ export default function VendingPage() {
 
   const startHeatingProcess = () => {
     // คำนวณเวลาและเริ่มหน้าจอ Processing
-    const totalProcessTime =
-      3 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 3;
-    setGlobalTimeLeft(totalProcessTime);
+    if (!agentJobState) {
+      const totalProcessTime =
+        5 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 5;
+      setGlobalTimeLeft(totalProcessTime);
+    }
     setIsAfterPayment(false);
     setActiveModal("processing");
   };
