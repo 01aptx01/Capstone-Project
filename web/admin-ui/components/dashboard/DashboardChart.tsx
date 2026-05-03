@@ -2,17 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import type { LiveChartBuckets } from "@/lib/admin-mappers";
 
 const fallbackDay = [20, 40, 120, 240, 310, 210, 140, 80];
 const fallbackWeek = [800, 920, 760, 1100, 1300, 1250, 1480];
 const fallbackMonth = [3200, 4100, 3800, 4500];
 
 function formatCurrency(n: number) {
-  if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
-  return `$${Math.round(n)}`;
+  if (n >= 1000) return `฿${(n / 1000).toFixed(1)}k`;
+  return `฿${Math.round(n)}`;
 }
 
-export default function DashboardChart() {
+export default function DashboardChart({
+  liveBuckets,
+}: {
+  liveBuckets?: LiveChartBuckets | null;
+}) {
   const [viewMode, setViewMode] = useState<"realtime" | "historical">("realtime");
   const [realtimePeriod, setRealtimePeriod] = useState("Day");
   const [historicalPeriod, setHistoricalPeriod] = useState("Day");
@@ -72,6 +77,7 @@ export default function DashboardChart() {
   }, [viewMode, historicalPeriod, dateRange, monthRange, yearRange]);
 
   useEffect(() => {
+    if (liveBuckets) return;
     let mounted = true;
     fetch("/api/dashboard")
       .then((r) => r.json())
@@ -89,7 +95,7 @@ export default function DashboardChart() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [liveBuckets]);
 
   // Listen to header selector events
   useEffect(() => {
@@ -103,9 +109,25 @@ export default function DashboardChart() {
     return () => window.removeEventListener("dashboard-period-change", onPeriodChange as EventListener);
   }, [viewMode]);
 
-  const active = viewMode === "historical" 
-    ? histData 
-    : (realtimePeriod === "Day" ? data.day : realtimePeriod === "Week" ? data.week : data.month);
+  const liveRealtimeSeries =
+    liveBuckets && viewMode === "realtime"
+      ? realtimePeriod === "Day"
+        ? liveBuckets.day
+        : realtimePeriod === "Week"
+          ? liveBuckets.week
+          : liveBuckets.month
+      : null;
+
+  const active =
+    viewMode === "historical"
+      ? histData
+      : liveRealtimeSeries && liveRealtimeSeries.length > 0
+        ? liveRealtimeSeries
+        : realtimePeriod === "Day"
+          ? data.day
+          : realtimePeriod === "Week"
+            ? data.week
+            : data.month;
 
   const chartRef = useRef<HTMLDivElement | null>(null);
   const [chartWidth, setChartWidth] = useState(0);
@@ -209,6 +231,17 @@ export default function DashboardChart() {
   const labels = (() => {
     if (viewMode === "historical") {
       return histLabels;
+    }
+    if (liveBuckets && viewMode === "realtime") {
+      if (realtimePeriod === "Day" && liveBuckets.labelsDay.length === active.length) {
+        return liveBuckets.labelsDay;
+      }
+      if (realtimePeriod === "Week" && liveBuckets.labelsWeek.length === active.length) {
+        return liveBuckets.labelsWeek;
+      }
+      if (realtimePeriod === "Month" && liveBuckets.labelsMonth.length === active.length) {
+        return liveBuckets.labelsMonth;
+      }
     }
     if (realtimePeriod === "Day") {
       const dayLabels = ["6am", "8am", "10am", "12pm", "2pm", "4pm", "6pm", "8pm"];

@@ -4,6 +4,8 @@ import type {
   ApiMachineSummary,
   ApiOrderListItem,
   ApiProduct,
+  DashboardSummaryResponse,
+  SalesReportResponse,
 } from "./admin-api";
 import { getMachine, listMachines } from "./admin-api";
 
@@ -235,4 +237,142 @@ export function summarizeOrdersFromItems(
     else if (s === "completed") completed++;
   }
   return { total, pending, processing, completed };
+}
+
+/** Local calendar date YYYY-MM-DD (for matching Flask `date` buckets). */
+export function localDateISO(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function formatBaht(amount: number): string {
+  return `฿${amount.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+/** Stat card values derived from dashboard summary + sales series + auxiliary counts. */
+export type UiDashboardStatCards = {
+  salesTodayLabel: string;
+  ordersToday: number;
+  machinesOnline: number;
+  machinesTotal: number;
+  lowStockCount: number;
+};
+
+export function mapDashboardStats(params: {
+  summary: DashboardSummaryResponse;
+  salesReport: SalesReportResponse;
+  machinesTotal: number;
+  lowStockCount: number;
+}): UiDashboardStatCards {
+  const iso = localDateISO();
+  const todayRow = params.salesReport.series.find((r) => r.date === iso);
+  const ordersToday = todayRow?.count ?? 0;
+
+  return {
+    salesTodayLabel: formatBaht(params.summary.total_sales_today ?? 0),
+    ordersToday,
+    machinesOnline: params.summary.active_machines ?? 0,
+    machinesTotal: params.machinesTotal,
+    lowStockCount: params.lowStockCount,
+  };
+}
+
+/** One row per day for Recharts (date + revenue + short label). */
+export type RechartsSalesDatum = {
+  date: string;
+  revenue: number;
+  count: number;
+  label: string;
+};
+
+function shortChartDate(isoDate: string): string {
+  if (isoDate.length >= 10) {
+    const mm = isoDate.slice(5, 7);
+    const dd = isoDate.slice(8, 10);
+    return `${parseInt(dd, 10)}/${parseInt(mm, 10)}`;
+  }
+  return isoDate;
+}
+
+export function mapSalesReportToRechartsSeries(
+  report: SalesReportResponse
+): RechartsSalesDatum[] {
+  const sorted = [...report.series].sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+  return sorted.map((row) => ({
+    date: row.date,
+    revenue: row.revenue,
+    count: row.count,
+    label: shortChartDate(row.date),
+  }));
+}
+
+/** Buckets for existing SVG DashboardChart (Day / Week / Month toggles). */
+export type LiveChartBuckets = {
+  day: number[];
+  week: number[];
+  month: number[];
+  labelsDay: string[];
+  labelsWeek: string[];
+  labelsMonth: string[];
+};
+
+export function mapSalesSeriesToChartBuckets(
+  report: SalesReportResponse
+): LiveChartBuckets {
+  const sorted = [...report.series].sort((a, b) =>
+    a.date.localeCompare(b.date)
+  );
+  if (sorted.length === 0) {
+    return {
+      day: [0, 0, 0, 0],
+      week: [0, 0, 0, 0, 0, 0, 0],
+      month: [0, 0, 0, 0],
+      labelsDay: ["—", "—", "—", "—"],
+      labelsWeek: ["M", "T", "W", "T", "F", "S", "S"],
+      labelsMonth: ["W1", "W2", "W3", "W4"],
+    };
+  }
+
+  const revs = sorted.map((s) => s.revenue);
+  const labs = sorted.map((s) => shortChartDate(s.date));
+
+  const day = revs.slice(-8);
+  const labelsDay = labs.slice(-8);
+
+  const week = revs.slice(-7);
+  const labelsWeek = labs.slice(-7);
+
+  const tail = sorted.slice(-28);
+  const n = tail.length;
+  const monthVals: number[] = [];
+  const monthLabs: string[] = [];
+  const seg = Math.max(1, Math.ceil(n / 4));
+  for (let w = 0; w < 4; w++) {
+    const chunk = tail.slice(w * seg, (w + 1) * seg);
+    const sum = chunk.reduce((s, x) => s + x.revenue, 0);
+    monthVals.push(sum);
+    if (chunk.length === 0) {
+      monthLabs.push(`W${w + 1}`);
+    } else {
+      monthLabs.push(
+        `${shortChartDate(chunk[0].date)}–${shortChartDate(chunk[chunk.length - 1].date)}`
+      );
+    }
+  }
+
+  return {
+    day: day.length ? day : [0],
+    week: week.length ? week : [0],
+    month: monthVals.length ? monthVals : [0, 0, 0, 0],
+    labelsDay: labelsDay.length ? labelsDay : labs,
+    labelsWeek: labelsWeek.length ? labelsWeek : labs,
+    labelsMonth: monthLabs,
+  };
 }

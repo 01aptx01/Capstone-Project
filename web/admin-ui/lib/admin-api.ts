@@ -2,6 +2,8 @@
  * Browser-side client for Flask /api/admin (same pattern as machine-ui NEXT_PUBLIC_API_URL).
  */
 
+import { api } from "./axios";
+
 export function adminBaseUrl(): string {
   return (
     (typeof process !== "undefined" &&
@@ -283,4 +285,71 @@ export async function updateCoupon(
     method: "PUT",
     body: JSON.stringify(body),
   });
+}
+
+/** Flask GET /api/admin/dashboard/summary */
+export type DashboardSummaryResponse = {
+  total_sales_today: number;
+  active_machines: number;
+  top_products: {
+    product_id: number;
+    name: string;
+    total_sold: number;
+  }[];
+};
+
+/** Flask GET /api/admin/reports/sales */
+export type SalesReportSeriesRow = {
+  date: string;
+  revenue: number;
+  count: number;
+};
+
+export type SalesReportResponse = {
+  days: number;
+  series: SalesReportSeriesRow[];
+};
+
+/** Flask GET /api/admin/alerts */
+export type AdminAlertsResponse = {
+  stock_threshold: number;
+  low_stock: {
+    machine_code: string;
+    slot: number;
+    product_id: number;
+    product_name: string;
+    quantity: number;
+  }[];
+  machine_errors: {
+    id: number;
+    machine_code: string;
+    job_id: string | null;
+    event_type: string;
+    state: string;
+    created_at: string | null;
+  }[];
+};
+
+export async function getDashboardSummary(): Promise<DashboardSummaryResponse> {
+  const { data } = await api.get<DashboardSummaryResponse>(
+    "/api/admin/dashboard/summary"
+  );
+  return data;
+}
+
+export async function getSalesReport(days: number): Promise<SalesReportResponse> {
+  const { data } = await api.get<SalesReportResponse>("/api/admin/reports/sales", {
+    params: { days },
+  });
+  return data;
+}
+
+export async function getAdminAlerts(
+  stock_threshold?: number
+): Promise<AdminAlertsResponse> {
+  const { data } = await api.get<AdminAlertsResponse>("/api/admin/alerts", {
+    params:
+      stock_threshold != null ? { stock_threshold: String(stock_threshold) } : {},
+  });
+  return data;
 }
