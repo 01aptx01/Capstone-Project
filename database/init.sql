@@ -147,6 +147,8 @@ INSERT INTO products (name, description, price, heating_time, image_url) VALUES
 ('เปามดแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png'),
 ('เปาหมูสับ', 'หมูสับไข่เค็ม รสกลมกล่อม', 32.00, 20, '/product/img/pao-moosub.png'),
 ('เปากุ้ง', 'เนื้อกุ้งเด้งเต็มคำ', 32.00, 15, '/product/img/pao-shrimp.png'),
+('เปาเต้าหู้', 'ไส้เต้าหู้รสกลมกล่อม', 22.00, 12, '/product/img/pao-tofu.png'),
+('เปาเห็ดหอม', 'ไส้เห็ดหอม รสกลมกล่อม', 25.00, 15, '/product/img/pao-mushroom.png'),
 ('เปาครีม', 'ครีมคัสตาร์ด หอมหวานละมุน', 25.00, 12, '/product/img/pao-cream.png');
 
 -- Stock (20 each for machine 1)
@@ -154,4 +156,6 @@ INSERT INTO machine_slots (machine_code, slot_number, product_id, quantity) VALU
 ('MP1-001', 1, 1, 20),
 ('MP1-001', 2, 2, 20),
 ('MP1-001', 3, 3, 20),
-('MP1-001', 4, 4, 20);
+('MP1-001', 4, 4, 20),
+('MP1-001', 5, 5, 20),
+('MP1-001', 6, 6, 20);
