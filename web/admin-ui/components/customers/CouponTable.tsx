@@ -67,7 +67,7 @@ export default function CouponTable() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search campaigns, IDs, or keywords..."
-            className="w-full pl-14 pr-8 py-5 rounded-[24px] border border-white/60 bg-white/40 focus:bg-white focus:border-[#f47b2a] focus:ring-8 focus:ring-orange-500/5 outline-none transition-all duration-300 font-bold text-slate-700 placeholder:text-slate-400"
+            className="w-full pl-14 pr-8 py-5 rounded-[24px] border-2 border-slate-200 bg-white shadow-sm focus:bg-white focus:border-[#f47b2a] focus:ring-8 focus:ring-orange-500/5 outline-none transition-all duration-300 font-bold text-slate-700 placeholder:text-slate-400"
           />
         </div>
         <button className="px-8 py-5 bg-white border border-white rounded-[24px] shadow-sm flex items-center gap-3 text-[14px] font-black text-slate-600 hover:text-[#f47b2a] hover:border-[#f47b2a] hover:shadow-lg transition-all duration-300">
@@ -110,7 +110,7 @@ export default function CouponTable() {
                   </div>
                 </td>
                 <td className="px-6 py-8">
-                  <span className="text-[12px] font-black text-slate-500 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm uppercase tracking-wider">{coupon.type}</span>
+                  <span className="inline-block text-[12px] font-black text-slate-500 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm uppercase tracking-wider break-words max-w-[120px] sm:max-w-none text-center leading-snug">{coupon.type}</span>
                 </td>
                 <td className="px-6 py-8">
                   {coupon.points > 0 ? (
