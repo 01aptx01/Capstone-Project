@@ -2,7 +2,7 @@ import os
 import requests
 import omise
 from flask import Blueprint, jsonify
-from app.config.db import get_db
+from app.db_config.db import get_db
 
 class HealthController:
     def __init__(self, db_provider=None):

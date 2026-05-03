@@ -9,7 +9,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import socketio
 
-from app.config.db import get_db
+from app.db_config.db import get_db
 
 logger = logging.getLogger(__name__)
 

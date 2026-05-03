@@ -1,6 +1,6 @@
 import logging
 from flask import Blueprint, request, jsonify
-from app.config.db import get_db
+from app.db_config.db import get_db
 
 # Configure logger
 logger = logging.getLogger(__name__)

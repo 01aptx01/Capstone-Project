@@ -13,7 +13,7 @@ import time
 from collections import defaultdict
 from threading import Lock
 from flask import Blueprint, jsonify, request
-from app.config.db import get_db_cursor
+from app.db_config.db import get_db_cursor
 
 logger = logging.getLogger(__name__)
 members_api = Blueprint("members_api", __name__)
