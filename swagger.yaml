@@ -1,161 +1,578 @@
 swagger: "2.0"
 info:
-  title: "Smart Vending System API"
-  description: "Advanced API for managing a smart vending machine, including payments, inventory, and health monitoring."
-  version: "1.2.0"
+  title: Smart Vending System API
+  description: |
+    Flask backend for smart vending: catalog, Omise checkout, machine events, members, and admin CRUD under `/api/admin`.
+    Interactive docs (Flasgger) are also served by the server at `/apidocs` when the app is running.
+  version: "2.0.0"
 
-host: "localhost:8000"
-basePath: "/"
+host: localhost:8000
+basePath: /
 schemes:
-  - "http"
+  - http
+
+tags:
+  - name: System
+    description: Process health and diagnostics
+  - name: Inventory
+    description: Public product catalog by machine
+  - name: Payments
+    description: Checkout, drafts, webhooks, and status
+  - name: Members
+    description: Member lookup and points (machine UI)
+  - name: Machines
+    description: Agent → server event ingestion
+  - name: Admin
+    description: Admin dashboard API (`/api/admin/*`). Auth is a placeholder (`@admin_required` passes through).
 
 definitions:
   Product:
-    type: "object"
+    type: object
     properties:
-      product_id:
-        type: "integer"
-      name:
-        type: "string"
-      description:
-        type: "string"
-      price:
-        type: "number"
-      stock:
-        type: "integer"
-      image_url:
-        type: "string"
-      heating_time:
-        type: "integer"
-  
+      product_id: { type: integer }
+      name: { type: string }
+      description: { type: string }
+      price: { type: number }
+      heating_time: { type: integer, x-nullable: true }
+      image_url: { type: string, x-nullable: true }
+      category: { type: string }
+      stock: { type: integer }
+
   CartItem:
-    type: "object"
+    type: object
+    required: [product_id, quantity]
     properties:
-      product_id:
-        type: "integer"
-      quantity:
-        type: "integer"
+      product_id: { type: integer }
+      quantity: { type: integer }
+
+  PaginatedList:
+    type: object
+    properties:
+      items: { type: array, items: { type: object } }
+      page: { type: integer }
+      per_page: { type: integer }
+      total: { type: integer }
+      pages: { type: integer }
+
+  AdminProduct:
+    type: object
+    properties:
+      product_id: { type: integer }
+      name: { type: string }
+      description: { type: string, x-nullable: true }
+      price: { type: number }
+      image_url: { type: string, x-nullable: true }
+      heating_time: { type: integer, x-nullable: true }
+      category: { type: string, description: "e.g. meat, vegetarian, sweet" }
+
+  AdminMachineSummary:
+    type: object
+    properties:
+      machine_code: { type: string }
+      location: { type: string, x-nullable: true }
+      status: { type: string }
+      last_active: { type: string, x-nullable: true }
+
+  AdminCustomer:
+    type: object
+    properties:
+      user_id: { type: integer }
+      phone_number: { type: string }
+      points: { type: integer }
+      status: { type: string }
+      registered_at: { type: string, x-nullable: true }
+      last_use: { type: string, x-nullable: true }
+
+  AdminCoupon:
+    type: object
+    properties:
+      promotion_id: { type: integer }
+      code: { type: string }
+      type: { type: string, enum: [fixed_amount, percent] }
+      discount_amount: { type: number }
+      is_active: { type: boolean }
+      expire_date: { type: string, x-nullable: true }
 
 paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Lightweight liveness probe
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+            properties:
+              status: { type: string, example: server-ok }
+
   /api/health:
     get:
-      tags:
-        - "System"
-      summary: "Comprehensive system health check"
-      description: "Checks connectivity to MySQL, Omise API, and Hardware Agent."
+      tags: [System]
+      summary: Deep health (MySQL, Omise, hardware agent)
       responses:
-        200:
-          description: "All systems operational"
-        207:
-          description: "One or more systems degraded"
-        500:
-          description: "Internal server error"
+        "200":
+          description: All components OK
+        "207":
+          description: One or more components degraded
+        "500":
+          description: Internal error
 
   /api/products:
     get:
-      tags:
-        - "Inventory"
-      summary: "List available products"
+      tags: [Inventory]
+      summary: List products with stock for a machine
       parameters:
-        - name: "machine_code"
-          in: "query"
-          description: "Specific machine identifier"
-          required: false
-          type: "string"
-          default: "MP1-001"
+        - name: machine_code
+          in: query
+          type: string
+          description: Machine identifier (default MP1-001)
+        - name: machine_id
+          in: query
+          type: string
+          description: Legacy alias for machine_code
       responses:
-        200:
-          description: "List of products"
+        "200":
+          description: Product rows
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Product"
 
   /api/buy/checkout:
     post:
-      tags:
-        - "Payments"
-      summary: "Initiate purchase flow"
-      description: "Validates stock and creates an Omise charge (Token or Source)."
+      tags: [Payments]
+      summary: Create Omise charge and pending order
       parameters:
-        - in: "body"
-          name: "body"
+        - in: body
+          name: body
           required: true
           schema:
-            type: "object"
-            required:
-              - "payment_id"
-              - "payment_type"
-              - "amount"
-              - "cart"
+            type: object
+            required: [payment_id, payment_type, amount, cart]
             properties:
-              payment_id:
-                type: "string"
-                example: "tok_test_..."
-              payment_type:
-                type: "string"
-                enum: ["token", "source"]
-              amount:
-                type: "number"
-                example: 1000
+              payment_id: { type: string }
+              payment_type: { type: string, enum: [token, source] }
+              amount: { type: number, description: "Amount in satang" }
               cart:
-                type: "array"
-                items:
-                  $ref: "#/definitions/CartItem"
-              machine_code:
-                type: "string"
-                example: "MP1-001"
+                type: array
+                items: { $ref: "#/definitions/CartItem" }
+              machine_code: { type: string }
+              machine_id: { type: string, description: "Legacy alias" }
+              draft_id: { type: string, description: "Optional draft from create-draft" }
       responses:
-        200:
-          description: "Charge created successfully (OK or PENDING)"
-        400:
-          description: "Out of stock or payment failure"
+        "200":
+          description: Paid, pending_payment, or payment_failed payload
+        "400":
+          description: Validation / stock / Omise error
+
+  /api/buy/create-draft:
+    post:
+      tags: [Payments]
+      summary: Create draft pending order (card flow)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              machine_code: { type: string }
+              cart:
+                type: array
+                items: { $ref: "#/definitions/CartItem" }
+              amount: { type: number }
+              payment_method: { type: string }
+      responses:
+        "200":
+          description: Draft created
+        "400":
+          description: Stock or validation error
+
+  /api/buy/cancel:
+    post:
+      tags: [Payments]
+      summary: Cancel pending order (and Omise charge when applicable)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [charge_id]
+            properties:
+              charge_id: { type: string }
+      responses:
+        "200":
+          description: Cancelled
+        "409":
+          description: Cannot cancel
 
   /api/buy/status/{charge_id}:
     get:
-      tags:
-        - "Payments"
-      summary: "Poll payment status"
+      tags: [Payments]
+      summary: Poll order status (DB-backed)
       parameters:
-        - name: "charge_id"
-          in: "path"
+        - name: charge_id
+          in: path
           required: true
-          type: "string"
+          type: string
       responses:
-        200:
-          description: "Current status of the charge"
-          schema:
-            type: "object"
-            properties:
-              status:
-                type: "string"
-                example: "PAID"
+        "200":
+          description: Status object
 
   /api/buy/mock-pay:
     post:
-      tags:
-        - "Development"
-      summary: "Bypass payment (Dev only)"
-      description: "Forcefully marks a charge as PAID to trigger dispense."
+      tags: [Payments]
+      summary: Force paid + dispense (development)
       parameters:
-        - in: "body"
-          name: "body"
+        - in: body
+          name: body
           required: true
           schema:
-            type: "object"
+            type: object
+            required: [charge_id]
             properties:
-              charge_id:
-                type: "string"
+              charge_id: { type: string }
       responses:
-        200:
-          description: "Payment bypassed successfully"
+        "200":
+          description: Mock payment applied
 
   /api/buy/omise-webhook:
     post:
-      tags:
-        - "Payments"
-      summary: "Omise Webhook Listener"
-      description: "Handles asynchronous payment confirmations from Omise."
+      tags: [Payments]
+      summary: Omise webhook (HMAC when OMISE_WEBHOOK_SECRET set)
       responses:
-        200:
-          description: "Webhook processed"
+        "200":
+          description: Processed or ignored
+        "401":
+          description: Invalid signature
+
+  /api/buy:
+    post:
+      tags: [Payments]
+      summary: Alias of checkout
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+      responses:
+        "200":
+          description: Same as checkout
+
+  /api/members/{phone}:
+    get:
+      tags: [Members]
+      summary: Lookup member by 10-digit phone (rate limited)
+      parameters:
+        - name: phone
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Member found
+        "400":
+          description: Invalid phone
+        "404":
+          description: Not found
+        "429":
+          description: Rate limited
+
+  /api/members/earn:
+    post:
+      tags: [Members]
+      summary: Earn points after purchase (rate limited)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              phone_number: { type: string }
+              total_price: { type: number }
+              charge_id: { type: string, description: "Optional link to order" }
+      responses:
+        "200":
+          description: Points updated
+        "400":
+          description: Invalid body
+        "429":
+          description: Rate limited
+
+  /api/machines/events:
+    post:
+      tags: [Machines]
+      summary: Ingest machine job event (agent)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [machine_code, job_id, event_type, seq]
+            properties:
+              machine_code: { type: string }
+              job_id: { type: string }
+              event_type: { type: string }
+              state: { type: string }
+              seq: { type: integer }
+              order_charge_id: { type: string }
+              payload: { type: object }
+      responses:
+        "200":
+          description: Stored
+        "400":
+          description: Validation error
+
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: List admin users (placeholder)
+      responses:
+        "200":
+          description: Empty list placeholder
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                items: { type: object }
+
+  /api/admin/products:
+    get:
+      tags: [Admin]
+      summary: List products (paginated, optional q)
+      parameters:
+        - { name: page, in: query, type: integer, default: 1 }
+        - { name: per_page, in: query, type: integer, default: 20, maximum: 100 }
+        - { name: q, in: query, type: string }
+      responses:
+        "200":
+          description: Paginated products
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminProduct" }
+    post:
+      tags: [Admin]
+      summary: Create product
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [name, price]
+            properties:
+              name: { type: string }
+              price: { type: number }
+              description: { type: string }
+              image_url: { type: string }
+              heating_time: { type: integer }
+              category: { type: string }
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation error
+
+  /api/admin/products/{product_id}:
+    put:
+      tags: [Admin]
+      summary: Update product
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          type: integer
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              price: { type: number }
+              description: { type: string }
+              image_url: { type: string }
+              heating_time: { type: integer }
+              category: { type: string }
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Not found
+    delete:
+      tags: [Admin]
+      summary: Delete product
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          type: integer
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Referenced by slots or orders
+
+  /api/admin/machines:
+    get:
+      tags: [Admin]
+      summary: List machines
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+        - { name: status, in: query, type: string }
+      responses:
+        "200":
+          description: Paginated machines
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminMachineSummary" }
+
+  /api/admin/machines/{machine_code}:
+    get:
+      tags: [Admin]
+      summary: Machine detail with slots
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Machine + slots
+        "404":
+          description: Not found
+
+  /api/admin/customers:
+    get:
+      tags: [Admin]
+      summary: List customers (users)
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+        - { name: q, in: query, type: string, description: "Phone substring" }
+      responses:
+        "200":
+          description: Paginated customers
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminCustomer" }
+
+  /api/admin/customers/{user_id}:
+    get:
+      tags: [Admin]
+      summary: Customer detail with recent orders
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          type: integer
+      responses:
+        "200":
+          description: Customer + orders
+        "404":
+          description: Not found
+
+  /api/admin/orders:
+    get:
+      tags: [Admin]
+      summary: List orders with transactions
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+        - { name: status, in: query, type: string }
+        - { name: machine_code, in: query, type: string }
+      responses:
+        "200":
+          description: Paginated orders
+
+  /api/admin/coupons:
+    get:
+      tags: [Admin]
+      summary: List coupons / promotions
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+      responses:
+        "200":
+          description: Paginated coupons
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminCoupon" }
+    post:
+      tags: [Admin]
+      summary: Create coupon
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [code, type, discount_amount]
+            properties:
+              code: { type: string }
+              type: { type: string, enum: [fixed_amount, percent] }
+              discount_amount: { type: number }
+              expire_date: { type: string, x-nullable: true }
+              is_active: { type: boolean }
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation error
+        "409":
+          description: Duplicate code
+
+  /api/admin/coupons/{promotion_id}:
+    put:
+      tags: [Admin]
+      summary: Update coupon
+      parameters:
+        - name: promotion_id
+          in: path
+          required: true
+          type: integer
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              code: { type: string }
+              type: { type: string, enum: [fixed_amount, percent] }
+              discount_amount: { type: number }
+              expire_date: { type: string, x-nullable: true }
+              is_active: { type: boolean }
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Not found
+        "409":
+          description: Code conflict

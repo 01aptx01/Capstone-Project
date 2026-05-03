@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   db:
     image: mysql:8
@@ -37,7 +35,7 @@ services:
       - DISPATCH_MODE=socket
       - TZ=Asia/Bangkok
       # Set comma-separated allowed origins for CORS (add machine-ui domain in production)
-      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://machine-ui:3000,http://admin-ui:3000
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:8080,http://machine-ui:3000,http://admin-ui:3000
       # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
       # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
     ports:
@@ -73,13 +71,38 @@ services:
       context: ./web/machine-ui
       args:
         - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-        - NEXT_PUBLIC_AGENT_BASE_URL=${NEXT_PUBLIC_AGENT_BASE_URL}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        - NEXT_PUBLIC_AGENT_BASE_URL=${NEXT_PUBLIC_AGENT_BASE_URL:-}
     environment:
       - TZ=Asia/Bangkok
     container_name: vending-machine-ui
     ports:
       - "3000:3000"
+    depends_on:
+      - server
+
+  admin-ui:
+    build:
+      context: ./web/admin-ui
+      args:
+        - NEXT_PUBLIC_ADMIN_API_URL=${NEXT_PUBLIC_ADMIN_API_URL:-http://localhost:8000}
+    environment:
+      - TZ=Asia/Bangkok
+    container_name: vending-admin-ui
+    ports:
+      - "3001:3000"
+    depends_on:
+      - server
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:v5.17.14
+    container_name: vending-swagger-ui
+    ports:
+      - "8080:8080"
+    environment:
+      URL: /openapi.yaml
+    volumes:
+      - ./swagger.yaml:/usr/share/nginx/html/openapi.yaml:ro
     depends_on:
       - server
 
