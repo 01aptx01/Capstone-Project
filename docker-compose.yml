@@ -31,13 +31,13 @@ services:
     env_file:
       - .env
     environment:
-      - AGENT_URL=http://client:5000/dispense
-      - AGENT_BASE_URL=http://client:5000
+      - AGENT_URL=http://192.168.1.172:5000/dispense
+      - AGENT_BASE_URL=http://192.168.1.172:5000
       - SOCKETIO_ENABLED=1
-      - DISPATCH_MODE=socket
+      - DISPATCH_MODE=http
       - TZ=Asia/Bangkok
       # Set comma-separated allowed origins for CORS (add machine-ui domain in production)
-      - CORS_ORIGINS=http://localhost:3000,http://machine-ui:3000
+      - CORS_ORIGINS=http://192.168.1.44:3000,http://192.168.1.172:3000,http://machine-ui:3000,http://localhost:3000
       # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
       # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
     ports:
@@ -61,11 +61,11 @@ services:
       - agent_data:/data
     environment:
       - EVENT_SINK_MODE=socket
-      - SERVER_SOCKET_URL=http://server:8000
+      - SERVER_SOCKET_URL=http://192.168.1.44:8000
       - MACHINE_ID=${MACHINE_ID:-MP1-001}
       - MACHINE_SECRET_KEY=${MACHINE_SECRET_KEY:-}
       - AGENT_DB_PATH=/data/agent.db
-      - EVENT_SINK_URL=http://server:8000/api/machines/events
+      - EVENT_SINK_URL=http://192.168.1.44:8000/api/machines/events
       - TZ=Asia/Bangkok
 
   machine-ui:

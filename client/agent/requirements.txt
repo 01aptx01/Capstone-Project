@@ -11,3 +11,4 @@ pygame
 websocket-client
 gpiozero
 rpi-lgpio
+python-dotenv

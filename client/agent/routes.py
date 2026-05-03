@@ -12,6 +12,7 @@ import requests
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from ws_outbox import enqueue_event
+from machine import machine
 
 routes = Blueprint("routes", __name__)
 logger = logging.getLogger(__name__)
@@ -223,7 +224,17 @@ def _run_mock_job(job: Job) -> None:
                 )
                 time.sleep(1)
 
+        # 1. Turn on GREEN slot lights FIRST for all items
+        active_slots = []
+        for i, it, target_time in items_with_time:
+            slot_index = machine.resolve_slot_index(it.get("product_id", 1))
+            machine.set_slot_active(slot_index, True)
+            if slot_index not in active_slots:
+                active_slots.append(slot_index)
+                
+        # 2. Then proceed with the RGB steps
         job.state = "TRANSFER_TO_OVEN"
+        machine.mark_step_complete("TRANSFER_TO_OVEN")
         job_manager.publish(
             job,
             _mk_event(
@@ -238,6 +249,9 @@ def _run_mock_job(job: Job) -> None:
         elapsed_heating = 0
         for i, it, target_time in items_with_time:
             if job.done:
+                # Ensure lights turn off if cancelled
+                for slot in active_slots:
+                    machine.set_slot_active(slot, False)
                 return
             
             job.current_item_index = i
@@ -245,6 +259,7 @@ def _run_mock_job(job: Job) -> None:
             time_to_heat = target_time - elapsed_heating
             if time_to_heat > 0:
                 job.state = "HEATING"
+                machine.mark_step_complete("HEATING")
                 job_manager.publish(
                     job,
                     _mk_event(
@@ -274,6 +289,7 @@ def _run_mock_job(job: Job) -> None:
 
             # Step 2: Dispense this item
             job.state = "DISPENSING"
+            machine.mark_step_complete("DISPENSING")
             job_manager.publish(
                 job,
                 _mk_event(
@@ -283,9 +299,19 @@ def _run_mock_job(job: Job) -> None:
                     payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
                 ),
             )
+            slot_index = machine.resolve_slot_index(it.get("product_id", 1))
+            # Just simulate time, light is already ON from the beginning
             tick(3)
 
         job.state = "DONE"
+        machine.mark_step_complete("DONE")
+        machine.step_leds.set_all(success=True)
+        # Turn off all green slot lights
+        for slot in active_slots:
+            machine.set_slot_active(slot, False)
+        time.sleep(1.0)
+        machine.step_leds.clear()
+
         job.remaining_seconds = 0
         job.done = True
         job_manager.publish(

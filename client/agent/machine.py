@@ -11,6 +11,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
 JOB_STATES = ["TRANSFER_TO_OVEN", "HEATING", "DISPENSING", "DONE", "ERROR"]
@@ -79,7 +85,7 @@ def _default_ui_url() -> str:
 		os.environ.get("MACHINE_UI_URL")
 		or os.environ.get("SERVER_MACHINE_UI_URL")
 		or os.environ.get("NEXT_PUBLIC_MACHINE_UI_URL")
-		or "http://localhost:3000"
+		or "http://192.168.1.44:3000"
 	)
 
 
@@ -341,6 +347,7 @@ class AudioPlayer:
 		self._lock = threading.Lock()
 		explicit = os.environ.get("VLC_COMMAND")
 		if explicit:
+			explicit = explicit.strip()
 			resolved = shutil.which(explicit)
 			self._player_cmd = resolved or explicit
 		else:
@@ -528,7 +535,9 @@ machine = MachineController.from_env()
 
 
 def bootstrap_machine() -> MachineController:
+	logger.info(f"[Machine] booting with config: {json.dumps(load_machine_config(), ensure_ascii=False)}")
 	machine.boot()
+	logger.info("[Machine] Hardware initialization complete. Waiting for jobs...")
 	return machine
 
 
