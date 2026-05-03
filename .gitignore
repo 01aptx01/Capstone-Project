@@ -6,3 +6,5 @@ dist/
 build/
 .cursorrules
 .agents/
+remember.md
+.cursor/

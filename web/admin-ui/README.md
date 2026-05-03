@@ -6,6 +6,18 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 - If **machine-ui** uses port **3000**, run admin-ui on **3001**: `npx next dev -p 3001` (CORS in `docker-compose` includes `http://localhost:3001`).
 - **Still mock** (Next route handlers under `app/api/`): `/api/dashboard`, `/api/notifications`, `/api/alerts`, `/api/sales`. Products, machines, orders, coupons, and customers read from Flask `/api/admin/*`.
 
+## Docker Compose (repo root)
+
+From the project root:
+
+```bash
+docker compose up --build
+```
+
+- **admin-ui** → [http://localhost:3001](http://localhost:3001) (maps host `3001` → container `3000`). Build arg `NEXT_PUBLIC_ADMIN_API_URL` defaults to `http://localhost:8000` so the **browser** on your machine can call Flask on the host.
+- **swagger-ui** → [http://localhost:8080](http://localhost:8080) — loads `swagger.yaml` from the repo via a read-only volume. Use **Try it out** against `http://localhost:8000` (CORS includes `http://localhost:8080`).
+- The Flask app also serves Flasgger at **`/apidocs`** on port 8000 using the same `swagger.yaml` file mounted into the server container.
+
 ## Getting Started
 
 First, run the development server:
