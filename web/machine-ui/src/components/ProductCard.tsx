@@ -47,7 +47,7 @@ export default function ProductCard({ name, desc, price, heatingTime, image, cat
                 <Timer size={14} /> อุ่น {heatingTime} วินาที
             </div>
             {stock > 0 ? (
-                <div className="product-price">{price} ฿</div>
+                <div className="product-price">{price} <span>฿</span></div>
             ) : (
                 <div className="product-price" style={{ color: '#94a3b8', fontSize: 18 }}>สินค้าหมด</div>
             )}

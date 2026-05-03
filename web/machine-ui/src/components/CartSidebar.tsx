@@ -38,17 +38,22 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
                 {/* บรรทัดบน: ชื่อ และ ราคารวมของสินค้านั้น */}
                 <div className="cart-item-main">
                   <div style={{ fontWeight: 600, fontSize: '16px' }}>{item.name}</div>
-                  <div style={{ fontWeight: 700, fontSize: '16px', color: '#f47b2a' }}>
-                    {item.price * item.qty} ฿
+                  <div style={{ fontWeight: 700, fontSize: '16px', color: '#333' }}>
+                    {item.price * item.qty} <span>฿</span>
                   </div>
                 </div>
 
                 {/* บรรทัดล่าง: ปุ่มจัดการจำนวน และ ปุ่มลบ */}
                 <div className="cart-item-actions">
-                  <div className="qty-controls">
-                    <button className="btn-qty" onClick={() => onDecrease(item.id)}>-</button>
-                    <span className="qty-val">{item.qty}</span>
-                    <button className="btn-qty" onClick={() => onIncrease(item.id)}>+</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="qty-controls">
+                      <button className="btn-qty" onClick={() => onDecrease(item.id)}>-</button>
+                      <span className="qty-val">{item.qty}</span>
+                      <button className="btn-qty" onClick={() => onIncrease(item.id)}>+</button>
+                    </div>
+                    {item.stock <= 3 && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: 600 }}>สินค้าคงเหลือ {item.stock} ชิ้น</span>
+                    )}
                   </div>
                   <button className="btn-remove" onClick={() => onRemove(item.id)}>
                     <Trash2 size={20} />
@@ -73,7 +78,7 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
 
         <div className="total-row">
           <div className="total-label">รวมทั้งหมด:</div>
-          <div className="total-amount">{totalPrice} ฿</div>
+          <div className="total-amount">{totalPrice} <span>฿</span></div>
         </div>
 
         <button
