@@ -2,6 +2,7 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import MachineCard from "@/components/machines/MachineCard";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { listMachines } from "@/lib/admin-api";
@@ -11,17 +12,14 @@ export default function MachinesPage() {
   const { openAddMachine, openExportModal } = useUI();
   const [machines, setMachines] = useState<UiMachineCard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const { items } = await listMachines({ page: 1, per_page: 200 });
       setMachines(items.map(apiMachineToCard));
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "โหลดตู้ไม่สำเร็จ");
       setMachines([]);
     } finally {
       setLoading(false);
@@ -93,12 +91,6 @@ export default function MachinesPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-6 px-4 py-3 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold">
-          {error}
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in opacity-0 delay-600">
         {[
           {
@@ -164,12 +156,16 @@ export default function MachinesPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pb-16">
-          {loading
-            ? Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-[200px] rounded-[40px] bg-slate-100 animate-pulse" />
-              ))
-            : machines.map((machine, index: number) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 pb-16 min-h-[420px]">
+          {loading ? (
+            <div className="col-span-full flex min-h-[380px] items-stretch justify-center">
+              <div className="w-full max-w-md">
+                <LoadingSpinner />
+              </div>
+            </div>
+          ) : (
+            <>
+              {machines.map((machine, index: number) => (
                 <div
                   key={machine.id}
                   className="animate-scale-in opacity-0"
@@ -178,6 +174,15 @@ export default function MachinesPage() {
                   <MachineCard {...machine} />
                 </div>
               ))}
+
+              {!loading && machines.length === 0 && (
+                <div className="col-span-full flex min-h-[200px] flex-col items-center justify-center rounded-[40px] border border-dashed border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
+                  <p className="text-lg font-black text-slate-600">ยังไม่มีตู้ในระบบ</p>
+                  <p className="mt-2 text-sm font-medium text-slate-500">
+                    เพิ่มตู้ใหม่จากปุ่มด้านบน หรือตรวจสอบการเชื่อมต่อ API
+                  </p>
+                </div>
+              )}
 
           <div
             onClick={openAddMachine}
@@ -201,6 +206,8 @@ export default function MachinesPage() {
             <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-slate-100 rounded-tl-xl group-hover:border-[#f47b2a]/20 transition-colors"></div>
             <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-slate-100 rounded-br-xl group-hover:border-[#f47b2a]/20 transition-colors"></div>
           </div>
+            </>
+          )}
         </div>
       </div>
     </PageWrapper>

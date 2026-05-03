@@ -153,8 +153,8 @@ export default function ProductsPage() {
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="animate-in opacity-0 delay-200">
+      {/* Table Section — LoadingSpinner shown inside ProductTable while fetching */}
+      <div className="animate-in opacity-0 delay-200 min-h-[480px]">
         <ProductTable category={category} machine={machine} status={status} />
       </div>
     </PageWrapper>

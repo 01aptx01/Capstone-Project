@@ -1,6 +1,7 @@
 "use client";
 
 import PageWrapper from "@/components/layout/PageWrapper";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import ReportCard from "@/components/dashboard/ReportCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -14,11 +15,9 @@ export default function OrdersPage() {
   const [rawItems, setRawItems] = useState<ApiOrderListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await listOrders({ page: 1, per_page: 500 });
       setTotal(res.total);
@@ -26,7 +25,6 @@ export default function OrdersPage() {
       setRows(res.items.map(apiOrderToUiRow));
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "โหลดออเดอร์ไม่สำเร็จ");
       setRows([]);
       setRawItems([]);
       setTotal(0);
@@ -164,10 +162,6 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      {error && (
-        <div className="px-4 py-3 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold">{error}</div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="animate-in opacity-0 delay-100">
           <ReportCard
@@ -207,7 +201,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <div className="vibrant-card !rounded-[32px] overflow-hidden animate-in opacity-0 delay-500">
+      <div className="vibrant-card !rounded-[32px] overflow-hidden animate-in opacity-0 delay-500 min-h-[320px]">
         <div className="p-8 border-b border-slate-50 flex items-center justify-between">
           <h2 className="text-[20px] font-black text-[#334155]">รายการออเดอร์ล่าสุด</h2>
         </div>
@@ -238,14 +232,19 @@ export default function OrdersPage() {
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-12 text-center text-slate-400 font-bold">
-                    กำลังโหลด…
+                  <td colSpan={6} className="p-0">
+                    <div className="min-h-[320px]">
+                      <LoadingSpinner />
+                    </div>
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-12 text-center text-slate-400 font-bold">
-                    ไม่มีออเดอร์
+                  <td colSpan={6} className="px-8 py-16 text-center">
+                    <p className="text-lg font-black text-slate-500">ไม่มีออเดอร์ในชุดที่โหลด</p>
+                    <p className="mt-2 text-sm font-medium text-slate-400">
+                      ลองรีเฟรชหรือตรวจสอบการเชื่อมต่อกับเซิร์ฟเวอร์
+                    </p>
                   </td>
                 </tr>
               ) : (

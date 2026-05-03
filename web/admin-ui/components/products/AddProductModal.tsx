@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import toast from "react-hot-toast";
+import { isAxiosError } from "axios";
 import Modal from "@/components/ui/Modal";
 import { createProduct } from "@/lib/admin-api";
 import { uiLabelToApiCategory } from "@/lib/admin-mappers";
@@ -39,6 +41,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
         description: formData.description.trim() || null,
         image_url: formData.image_url.trim() || null,
       });
+      toast.success("เพิ่มสินค้าสำเร็จ");
       window.dispatchEvent(new Event(ADMIN_PRODUCTS_REFRESH_EVENT));
       setFormData({
         name: "",
@@ -49,7 +52,17 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
       });
       onClose();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
+      const msg = isAxiosError(err)
+        ? String(
+            (err.response?.data as { error?: string; message?: string })?.error ||
+              (err.response?.data as { message?: string })?.message ||
+              err.message
+          )
+        : err instanceof Error
+          ? err.message
+          : "บันทึกไม่สำเร็จ";
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }

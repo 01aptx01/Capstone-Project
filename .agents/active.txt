@@ -1,2 +1,2 @@
-Phase 2 alerts: machine_job_events is_resolved/resolved_at + Alembic b8e4f1a2c3d4; GET /api/admin/alerts filters unresolved ERROR by default (include_resolved=1 optional); POST /api/admin/alerts/resolve/<id>; socket dashboard_update includes event_id on ERROR; admin-ui alerts page live + resolveAlert; AdminSocketListener ERROR toast (deduped).
-Next: run Alembic upgrade on deployed DBs; optional alert_resolved socket for multi-tab refresh.
+Phase 3 UI feedback: LoadingSpinner (components/ui); axios response interceptor (401/403 clear admin_token + redirect /login; other errors toast.error from server message); adminFetch -> adminRequest on shared api; mutations skipGlobalErrorToast + modal toast success/error; products/orders LoadingSpinner + empty states; machines spinner + empty; alerts resolve uses isAxiosError in catch.
+Next: wire coupon CRUD UI to createCoupon/updateCoupon with same toast pattern when UI exists.
