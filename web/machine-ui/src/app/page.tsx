@@ -58,6 +58,7 @@ export default function VendingPage() {
   const [realQrCode, setRealQrCode] = useState<string | null>(null); // เก็บ QR Code จริงจาก Backend
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเก็บรอบการดึงสถานะจ่ายเงิน
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const currentChargeIdRef = useRef<string | null>(null); // เก็บค่าล่าสุดไว้ใช้ใน setInterval/setTimeout
   const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
 
@@ -316,6 +317,8 @@ export default function VendingPage() {
   };
 
   const processPayment = async (paymentData: { type: "token" | "source"; id: string; amount: number; }) => {
+    if (isProcessingPayment) return;
+    setIsProcessingPayment(true);
     const controller = new AbortController();
     const timeoutMs = 60000;
     const startedAt = Date.now();
@@ -385,6 +388,7 @@ export default function VendingPage() {
       }, 3000);
     } finally {
       clearTimeout(timeoutId);
+      setIsProcessingPayment(false);
     }
   };
 
@@ -1289,8 +1293,12 @@ export default function VendingPage() {
                             กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง
                           </p>
                           {/* กดเพื่อจำลองการแตะบัตร NFC */}
-                          <button style={testBtnStyle} onClick={simulateNfcTap}>
-                            [Test] Simulate Visa Tap
+                          <button 
+                            style={{...testBtnStyle, opacity: isProcessingPayment ? 0.5 : 1}} 
+                            onClick={simulateNfcTap}
+                            disabled={isProcessingPayment}
+                          >
+                            {isProcessingPayment ? "กำลังประมวลผล..." : "[Test] Simulate Visa Tap"}
                           </button>
                         </>
                       )}

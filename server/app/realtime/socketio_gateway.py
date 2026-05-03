@@ -41,6 +41,8 @@ def _verify_machine_auth(auth: Optional[Dict[str, Any]]) -> Tuple[bool, Optional
         machine_code = None
         if isinstance(auth, dict):
             machine_code = auth.get("machine_code") or auth.get("machine_id") or auth.get("machine")
+            if machine_code:
+                machine_code = str(machine_code).strip()
         return True, machine_code, "auth-disabled"
 
     if not isinstance(auth, dict):
@@ -75,8 +77,8 @@ def _verify_machine_auth(auth: Optional[Dict[str, Any]]) -> Tuple[bool, Optional
 sio = socketio.Server(
     async_mode="eventlet",
     cors_allowed_origins="*",
-    logger=False,
-    engineio_logger=False,
+    logger=True,
+    engineio_logger=True,
 )
 
 _online_machines: Dict[str, str] = {}
