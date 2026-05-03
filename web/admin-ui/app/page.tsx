@@ -1,65 +1,146 @@
-import Image from "next/image";
+"use client";
+
+import PageWrapper from "@/components/layout/PageWrapper";
+import DashboardChart from "@/components/dashboard/DashboardChart";
+import DashboardCard from "@/components/dashboard/DashboardCard";
+import { useUI, ExportSection } from "@/lib/context/UIContext";
+
+const dashboardSections: ExportSection[] = [
+  {
+    id: "overview",
+    label: "ข้อมูลภาพรวม (Overview Stats)",
+    description: "ยอดขายรวม, จำนวนคำสั่งซื้อ, และตู้ที่พร้อมใช้งาน",
+    columns: [
+      { key: "metric", label: "หัวข้อ" },
+      { key: "value", label: "ค่าที่ได้" },
+      { key: "trend", label: "แนวโน้ม" },
+    ],
+    fetchData: async () => [
+      { metric: "ยอดขายวันนี้", value: "฿1,458.50", trend: "+12.5%" },
+      { metric: "จำนวนคำสั่งซื้อ", value: "342", trend: "+8.2%" },
+      { metric: "ตู้ที่พร้อมใช้งาน", value: "3/3", trend: "-" },
+      { metric: "แจ้งเตือนสต็อกต่ำ", value: "12", trend: "+2" },
+    ],
+  },
+  {
+    id: "sales",
+    label: "ธุรกรรมล่าสุด (Recent Transactions)",
+    description: "รายการขายล่าสุดจากทุกตู้",
+    columns: [
+      { key: "orderId", label: "เลขออเดอร์" },
+      { key: "time", label: "เวลา" },
+      { key: "machine", label: "ตู้" },
+      { key: "amount", label: "จำนวนเงิน (฿)" },
+      { key: "status", label: "สถานะ" },
+    ],
+    fetchData: async () => [
+      { orderId: "O1001", time: "06:12", machine: "M01", amount: 120.5, status: "completed" },
+      { orderId: "O1002", time: "07:03", machine: "M02", amount: 50.0, status: "completed" },
+      { orderId: "O1003", time: "08:45", machine: "M01", amount: 5.0, status: "refunded" },
+      { orderId: "O1004", time: "10:15", machine: "M03", amount: 180.0, status: "completed" },
+    ],
+  },
+  {
+    id: "machines",
+    label: "สถานะตู้สินค้า (Machine Status)",
+    description: "รายชื่อตู้และสถานะการทำงาน",
+    columns: [
+      { key: "id", label: "รหัสตู้" },
+      { key: "name", label: "ชื่อตู้" },
+      { key: "location", label: "สถานที่" },
+      { key: "status", label: "สถานะ" },
+    ],
+    fetchData: async () => [
+      { id: "MP-001", name: "MOD PAO Building LX", location: "อาคาร LX", status: "online" },
+      { id: "MP-002", name: "MOD PAO Building N7", location: "อาคาร N7", status: "online" },
+      { id: "MP-003", name: "MOD PAO Canteen KFC", location: "อาคาร 190 ปี", status: "online" },
+    ],
+  },
+];
 
 export default function Home() {
+  const { openExportModal } = useUI();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <PageWrapper>
+      {/* Header Section */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-[28px] font-bold text-[#334155] mb-1">
+            แดชบอร์ดภาพรวม
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+          <p className="text-[#64748B] text-[15px]">ภาพรวมข้อมูลการทำงานของตู้ทั้งหมด รายงานและสถิติวิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก</p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => openExportModal(dashboardSections, "ภาพรวม Dashboard")}
+            className="flex items-center gap-2 bg-[#f47b2a] hover:bg-[#d35e11] text-white px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(244,123,42,0.15)] transition-all"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            Export
+          </button>
         </div>
-      </main>
-    </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 items-stretch">
+        <div className="animate-scale-in opacity-0">
+          <DashboardCard 
+            title="ยอดขายวันนี้" 
+            value="฿1,458.50" 
+            icon={<i className="fi fi-rr-stats"></i>} 
+            trend="12.5%" 
+            trendDirection="up" 
+            accentColor="#3b82f6"
+            href="/sales"
+          />
+        </div>
+        <div className="animate-scale-in opacity-0 delay-100">
+          <DashboardCard 
+            title="จำนวนคำสั่งซื้อ" 
+            value="342" 
+            icon={<i className="fi fi-rr-shopping-cart"></i>} 
+            trend="8.2%" 
+            trendDirection="up" 
+            accentColor="#10b981"
+            href="/orders"
+          />
+        </div>
+        <div className="animate-scale-in opacity-0 delay-200">
+          <DashboardCard 
+            title="ตู้ที่พร้อมใช้งาน" 
+            value="3" 
+            subValue="/ 3"
+            icon={<i className="fi fi-rr-vending-machine"></i>} 
+            accentColor="#f59e0b"
+            href="/machines"
+          />
+        </div>
+        <div className="animate-scale-in opacity-0 delay-300">
+          <DashboardCard 
+            title="แจ้งเตือนสต็อกต่ำ" 
+            value="12" 
+            icon={<i className="fi fi-rr-warning"></i>} 
+            trend="+2" 
+            trendDirection="neutral" 
+            accentColor="#ef4444" 
+            href="/alerts"
+          />
+        </div>
+      </div>
+
+      {/* Chart Section */}
+      <div className="mb-8">
+        <DashboardChart />
+      </div>
+    </PageWrapper>
   );
 }
+
+
+
