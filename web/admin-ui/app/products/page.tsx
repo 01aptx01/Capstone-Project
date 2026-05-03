@@ -1,39 +1,46 @@
 "use client";
 
 import PageWrapper from "@/components/layout/PageWrapper";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import ProductTable from "@/components/products/ProductTable";
-import productsData from "@/lib/mock/products.json";
+import { listProducts } from "@/lib/admin-api";
+import { enrichProductsWithStock } from "@/lib/admin-mappers";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
-
-const productSections: ExportSection[] = [
-  {
-    id: "products_inventory",
-    label: "คลังสินค้า (Inventory)",
-    description: "รายการสินค้า, หมวดหมู่, สต็อก และราคา",
-    columns: [
-      { key: "code", label: "รหัสสินค้า" },
-      { key: "name", label: "ชื่อสินค้า" },
-      { key: "category", label: "หมวดหมู่" },
-      { key: "machines", label: "จำนวนตู้" },
-      { key: "quantity", label: "จำนวนสต็อก" },
-      { key: "unit_price", label: "ราคา/ชิ้น (฿)" },
-      { key: "status", label: "สถานะ" },
-    ],
-    fetchData: async () => productsData.map(p => ({
-      code: p.code,
-      name: p.name,
-      category: p.category,
-      machines: p.machines,
-      quantity: p.quantity,
-      unit_price: p.unit_price,
-      status: p.status,
-    })),
-  },
-];
 
 export default function ProductsPage() {
   const { openExportModal, openAddProduct } = useUI();
+  const productSections: ExportSection[] = useMemo(
+    () => [
+      {
+        id: "products_inventory",
+        label: "คลังสินค้า (Inventory)",
+        description: "รายการสินค้า, หมวดหมู่, สต็อก และราคา",
+        columns: [
+          { key: "code", label: "รหัสสินค้า" },
+          { key: "name", label: "ชื่อสินค้า" },
+          { key: "category", label: "หมวดหมู่" },
+          { key: "machines", label: "จำนวนตู้" },
+          { key: "quantity", label: "จำนวนสต็อก" },
+          { key: "unit_price", label: "ราคา/ชิ้น (฿)" },
+          { key: "status", label: "สถานะ" },
+        ],
+        fetchData: async () => {
+          const { items } = await listProducts({ page: 1, per_page: 500 });
+          const rows = await enrichProductsWithStock(items);
+          return rows.map((p) => ({
+            code: p.code,
+            name: p.name,
+            category: p.category,
+            machines: p.machines,
+            quantity: p.quantity,
+            unit_price: p.unit_price,
+            status: p.status,
+          })) as Record<string, unknown>[];
+        },
+      },
+    ],
+    []
+  );
   const [category, setCategory] = useState("All Categories");
   const [machine, setMachine] = useState("All Machines");
   const [status, setStatus] = useState("All Statuses");
@@ -95,7 +102,7 @@ export default function ProductsPage() {
                 <option>All Categories</option>
                 <option>หมูสับ/หมูแดง</option>
                 <option>ไส้หวาน</option>
-                <option>มังสวิรัติ</option>
+                <option>เจ / มังสวิรัติ</option>
               </select>
               <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
             </div>

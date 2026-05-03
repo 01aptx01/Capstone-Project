@@ -19,7 +19,9 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
   // Auto-select all sections when modal opens with new sections
   useEffect(() => {
     if (isOpen && sections.length > 0) {
-      setSelectedSections(sections.map(s => s.id));
+      queueMicrotask(() => {
+        setSelectedSections(sections.map((s) => s.id));
+      });
     }
   }, [isOpen, sections]);
 
