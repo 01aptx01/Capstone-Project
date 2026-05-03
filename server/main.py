@@ -15,6 +15,7 @@ from app.api.buy import buy_api
 from app.api.products import products_api
 from app.api.health import health_api
 from app.api.machine_events import machine_events_api
+from app.api.members import members_api
 from app.config.db import init_db, get_db
 from app.realtime.socketio_gateway import make_socketio_app
 
@@ -56,6 +57,7 @@ class ServerApp:
         self.app.register_blueprint(products_api)
         self.app.register_blueprint(health_api)
         self.app.register_blueprint(machine_events_api)
+        self.app.register_blueprint(members_api)
 
     def _register_routes(self):
         @self.app.route("/")
