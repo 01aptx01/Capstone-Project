@@ -111,11 +111,18 @@ class JobManager:
         return expanded
 
     def _estimate_total_seconds(self, job: Job) -> int:
-        transfer = 5
-        dispense = 5
         expanded = self._expand_queue(job)
-        heating = sum(int(x.get("heating_time", 15)) for x in expanded)
-        return int(transfer + heating + dispense)
+        if not expanded:
+            return 0
+        times = sorted([int(x.get("heating_time", 15)) for x in expanded])
+        total = 5  # Transfer
+        elapsed = 0
+        for t in times:
+            if t > elapsed:
+                total += (t - elapsed)
+                elapsed = t
+            total += 3  # Dispense takes 3 seconds per item
+        return total
 
     def subscribe(self, job: Job) -> queue.Queue:
         q: queue.Queue = queue.Queue()
@@ -193,6 +200,9 @@ def _run_mock_job(job: Job) -> None:
     """Mock hardware flow. Replace sleeps with sensor/actuator logic in production."""
     try:
         expanded = job_manager._expand_queue(job)
+        # Sort items by heating time ascending, keeping track of original indices
+        items_with_time = [(i, it, int(it.get("heating_time", 15))) for i, it in enumerate(expanded)]
+        items_with_time.sort(key=lambda x: x[2])
 
         def tick(seconds: int):
             for _ in range(seconds):
@@ -225,49 +235,55 @@ def _run_mock_job(job: Job) -> None:
         )
         tick(5)
 
-        job.state = "HEATING"
-        job_manager.publish(
-            job,
-            _mk_event(
-                job,
-                event_type="job.state",
-                state=job.state,
-                payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
-            ),
-        )
-
-        for i, it in enumerate(expanded):
+        elapsed_heating = 0
+        for i, it, target_time in items_with_time:
             if job.done:
                 return
+            
             job.current_item_index = i
+            # Step 1: Heat if needed (wait for this item to finish)
+            time_to_heat = target_time - elapsed_heating
+            if time_to_heat > 0:
+                job.state = "HEATING"
+                job_manager.publish(
+                    job,
+                    _mk_event(
+                        job,
+                        event_type="job.state",
+                        state=job.state,
+                        payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
+                    ),
+                )
+                job_manager.publish(
+                    job,
+                    _mk_event(
+                        job,
+                        event_type="item.state",
+                        state="HEATING",
+                        payload={
+                            "current_item_index": i,
+                            "product_id": it.get("product_id"),
+                            "name": it.get("name"),
+                            "heating_time": target_time,
+                            "remaining_seconds": job.remaining_seconds,
+                        },
+                    ),
+                )
+                tick(time_to_heat)
+                elapsed_heating = target_time
+
+            # Step 2: Dispense this item
+            job.state = "DISPENSING"
             job_manager.publish(
                 job,
                 _mk_event(
                     job,
-                    event_type="item.state",
-                    state="HEATING",
-                    payload={
-                        "current_item_index": i,
-                        "product_id": it.get("product_id"),
-                        "name": it.get("name"),
-                        "heating_time": it.get("heating_time"),
-                        "remaining_seconds": job.remaining_seconds,
-                    },
+                    event_type="job.state",
+                    state=job.state,
+                    payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
                 ),
             )
-            tick(int(it.get("heating_time", 15)))
-
-        job.state = "DISPENSING"
-        job_manager.publish(
-            job,
-            _mk_event(
-                job,
-                event_type="job.state",
-                state=job.state,
-                payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
-            ),
-        )
-        tick(5)
+            tick(3)
 
         job.state = "DONE"
         job.remaining_seconds = 0
