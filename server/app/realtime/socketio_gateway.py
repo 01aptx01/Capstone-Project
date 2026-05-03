@@ -271,6 +271,7 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
     seq_int = int(seq)
     payload_json = _json_dumps_safe(payload)
 
+    event_id_for_socket: Optional[int] = None
     db = get_db()
     cur = db.cursor(dictionary=True)
     try:
@@ -292,6 +293,17 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
                 payload_json,
             ),
         )
+        cur.execute(
+            """
+            SELECT id FROM machine_job_events
+            WHERE job_id = %s AND seq = %s
+            LIMIT 1
+            """,
+            (job_id, seq_int),
+        )
+        _id_row = cur.fetchone()
+        if _id_row and _id_row.get("id") is not None:
+            event_id_for_socket = int(_id_row["id"])
 
         # Update status on terminal machine states
         if order_charge_id and event_type == "job.state" and state in ("DONE", "ERROR", "DISPENSING"):
@@ -348,16 +360,17 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
         except Exception as _be:
             logger.warning(f"⚠️ [SocketIO] broadcast job_event_broadcast failed: {_be}")
 
-    emit_dashboard_update(
-        {
-            "type": "machine_event",
-            "machine_code": machine_code,
-            "event_type": event_type,
-            "state": state,
-            "job_id": job_id,
-            "ts": _now_ts(),
-        }
-    )
+    dash_payload: Dict[str, Any] = {
+        "type": "machine_event",
+        "machine_code": machine_code,
+        "event_type": event_type,
+        "state": state,
+        "job_id": job_id,
+        "ts": _now_ts(),
+    }
+    if state == "ERROR" and event_id_for_socket is not None:
+        dash_payload["event_id"] = event_id_for_socket
+    emit_dashboard_update(dash_payload)
 
 
 @sio.event

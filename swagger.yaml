@@ -650,6 +650,11 @@ paths:
           type: integer
           default: 5
           description: Flag slots where quantity is strictly below this value
+        - name: include_resolved
+          in: query
+          type: boolean
+          default: false
+          description: When true, machine_errors includes resolved ERROR rows (audit/history)
       responses:
         "200":
           description: Alerts payload
@@ -657,6 +662,7 @@ paths:
             type: object
             properties:
               stock_threshold: { type: integer }
+              include_resolved: { type: boolean }
               low_stock:
                 type: array
                 items:
@@ -665,3 +671,38 @@ paths:
                 type: array
                 items:
                   type: object
+                  properties:
+                    id: { type: integer }
+                    machine_code: { type: string }
+                    job_id: { type: string }
+                    event_type: { type: string }
+                    state: { type: string }
+                    created_at: { type: string }
+                    is_resolved: { type: boolean }
+                    resolved_at: { type: string, x-nullable: true }
+
+  /api/admin/alerts/resolve/{event_id}:
+    post:
+      tags: [Admin]
+      summary: Mark a machine ERROR event as resolved
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          type: integer
+      responses:
+        "200":
+          description: Event marked resolved
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean }
+              id: { type: integer }
+              is_resolved: { type: boolean }
+              resolved_at: { type: string }
+        "400":
+          description: Not an ERROR event
+        "404":
+          description: Event not found
+        "409":
+          description: Already resolved
