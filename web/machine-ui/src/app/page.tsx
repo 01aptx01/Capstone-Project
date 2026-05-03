@@ -156,17 +156,8 @@ export default function VendingPage() {
   // ==========================================
   const calculateTotalProcessTime = (q: Product[]) => {
     if (q.length === 0) return 0;
-    const times = q.map((it) => it.heatingTime).sort((a, b) => a - b);
-    let total = 5; // Transfer in
-    let elapsed = 0;
-    for (const t of times) {
-      if (t > elapsed) {
-        total += t - elapsed;
-        elapsed = t;
-      }
-      total += 3; // Dispense out
-    }
-    return total;
+    const maxTime = Math.max(...q.map((it) => it.heatingTime));
+    return maxTime + 3 * (q.length - 1);
   };
 
   const totalHeatingTime = calculateTotalProcessTime(
@@ -706,8 +697,7 @@ export default function VendingPage() {
   const startHeatingProcess = () => {
     // คำนวณเวลาและเริ่มหน้าจอ Processing
     if (!agentJobState) {
-      const totalProcessTime =
-        5 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 5;
+      const totalProcessTime = calculateTotalProcessTime(queue);
       setGlobalTimeLeft(totalProcessTime);
     }
     setIsAfterPayment(false);
