@@ -1359,7 +1359,7 @@ export default function VendingPage() {
               >
                 <div className="processing-title">
                   {isProcessSuccess
-                    ? "อร่อยให้อร่อยนะครับ!"
+                    ? "ทานให้อร่อยนะครับ!"
                     : "กรุณารอสักครู่..."}
                 </div>
                 <div className="processing-subtitle">
