@@ -26,6 +26,7 @@ class ProductService:
                     p.price,
                     p.heating_time,
                     p.image_url,
+                    p.category,
                     COALESCE(SUM(ms.quantity), 0) AS stock
                 FROM products p
                 LEFT JOIN machine_slots ms
@@ -37,7 +38,8 @@ class ProductService:
                     p.description,
                     p.price,
                     p.heating_time,
-                    p.image_url
+                    p.image_url,
+                    p.category
                 ORDER BY p.product_id
                 """,
                 (machine_code,),

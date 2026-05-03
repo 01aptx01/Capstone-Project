@@ -1,6 +1,6 @@
 "use client";
 import { Product } from './ProductCard';
-import { ShoppingCart, Trash2, ScanQrCode, Timer } from 'lucide-react';
+import { ShoppingCart, Trash2, TicketPercent, Timer } from 'lucide-react';
 
 export interface CartItem extends Product {
   qty: number;
@@ -15,9 +15,10 @@ interface Props {
   onDecrease: (id: number) => void;
   onRemove: (id: number) => void;
   onOpenInfo: () => void;
+  onOpenContact: () => void;
 }
 
-export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo }: Props) {
+export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact }: Props) {
   return (
     <div className="sidebar">
       <button className="info-btn" onClick={onOpenInfo}>i</button>
@@ -83,10 +84,10 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
           ชำระเงิน
         </button>
         <button className="preorder-btn">
-          <ScanQrCode size={20} /> สั่งอาหารล่วงหน้า
+          <TicketPercent size={20} /> ใช้คูปอง
         </button>
 
-        <a href="#" className="contact-link">ติดต่อสอบถามเพิ่มเติม</a>
+        <a onClick={onOpenContact} style={{ cursor: 'pointer' }} className="contact-link">ติดต่อสอบถามเพิ่มเติม</a>
       </div>
     </div>
   );

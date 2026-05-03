@@ -48,7 +48,8 @@ CREATE TABLE products (
   description VARCHAR(100),
   price DECIMAL(10,2) NOT NULL,
   image_url VARCHAR(200),
-  heating_time INT
+  heating_time INT,
+  category ENUM('meat', 'vegetarian', 'sweet') NOT NULL DEFAULT 'meat'
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE machine_slots (
@@ -143,13 +144,13 @@ CREATE TABLE machine_job_events (
 INSERT INTO machines (machine_code, location, status) VALUES ('MP1-001', 'KMUTT', 'online');
 
 -- Products
-INSERT INTO products (name, description, price, heating_time, image_url) VALUES
-('เปามดแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png'),
-('เปาหมูสับ', 'หมูสับไข่เค็ม รสกลมกล่อม', 32.00, 20, '/product/img/pao-moosub.png'),
-('เปากุ้ง', 'เนื้อกุ้งเด้งเต็มคำ', 32.00, 15, '/product/img/pao-shrimp.png'),
-('เปาเต้าหู้', 'ไส้เต้าหู้รสกลมกล่อม', 22.00, 12, '/product/img/pao-tofu.png'),
-('เปาเห็ดหอม', 'ไส้เห็ดหอม รสกลมกล่อม', 25.00, 15, '/product/img/pao-mushroom.png'),
-('เปาครีม', 'ครีมคัสตาร์ด หอมหวานละมุน', 25.00, 12, '/product/img/pao-cream.png');
+INSERT INTO products (name, description, price, heating_time, image_url, category) VALUES
+('เปามดแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png', 'meat'),
+('เปาหมูสับ', 'หมูสับไข่เค็ม รสกลมกล่อม', 32.00, 20, '/product/img/pao-moosub.png', 'meat'),
+('เปากุ้ง', 'เนื้อกุ้งเด้งเต็มคำ', 32.00, 15, '/product/img/pao-shrimp.png', 'meat'),
+('เปาเต้าหู้', 'ไส้เต้าหู้รสกลมกล่อม', 22.00, 12, '/product/img/pao-tofu.png', 'vegetarian'),
+('เปาเห็ดหอม', 'ไส้เห็ดหอม รสกลมกล่อม', 25.00, 15, '/product/img/pao-mushroom.png', 'vegetarian'),
+('เปาครีม', 'ครีมคัสตาร์ด หอมหวานละมุน', 25.00, 12, '/product/img/pao-cream.png', 'sweet');
 
 -- Stock (20 each for machine 1)
 INSERT INTO machine_slots (machine_code, slot_number, product_id, quantity) VALUES
