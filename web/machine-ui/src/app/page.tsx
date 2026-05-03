@@ -16,7 +16,8 @@ type ModalType =
   | "contact"
   | "payment"
   | "processing"
-  | "points_result";
+  | "points_result"
+  | "limit_warning";
 type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
 const PROCESS_STEPS = [
   "กำลังนำเข้าเตาอุ่น",
@@ -153,27 +154,34 @@ export default function VendingPage() {
   // ==========================================
   // DERIVED DATA (คำนวณค่าจาก State อัตโนมัติ)
   // ==========================================
-  const totalHeatingTime = cart.reduce((sum, item) => sum + item.heatingTime * item.qty, 0,);
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const totalProcessTime = 5 + queue.reduce((sum, item) => sum + item.heatingTime, 0) + 5;
+  const calculateTotalProcessTime = (q: Product[]) => {
+    if (q.length === 0) return 0;
+    const times = q.map((it) => it.heatingTime).sort((a, b) => a - b);
+    let total = 5; // Transfer in
+    let elapsed = 0;
+    for (const t of times) {
+      if (t > elapsed) {
+        total += t - elapsed;
+        elapsed = t;
+      }
+      total += 3; // Dispense out
+    }
+    return total;
+  };
 
-  // ฟังก์ชันหาว่าตอนนี้อยู่สเต็ปไหนของการอุ่น
+  const totalHeatingTime = calculateTotalProcessTime(
+    cart.flatMap((item) => Array.from({ length: item.qty }, () => item))
+  );
+  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const totalProcessTime = calculateTotalProcessTime(queue);
+
+  // ฟังก์ชันหาว่าตอนนี้อยู่สเต็ปไหนของการอุ่น (Fallback UI)
   const getProcessStatus = () => {
     if (queue.length === 0) return { step: 0, itemIndex: 0 };
     if (globalTimeLeft === 0) return { step: 3, itemIndex: 0 };
-    if (globalTimeLeft <= 5) return { step: 2, itemIndex: queue.length - 1 };
+    if (globalTimeLeft <= queue.length * 3) return { step: 2, itemIndex: queue.length - 1 };
     if (globalTimeLeft > totalProcessTime - 5) return { step: 0, itemIndex: 0 };
-
-    const elapsedHeating = totalProcessTime - 5 - globalTimeLeft;
-    let accumulatedTime = 0;
-
-    for (let i = 0; i < queue.length; i++) {
-      accumulatedTime += queue[i].heatingTime;
-      if (elapsedHeating < accumulatedTime) {
-        return { step: 1, itemIndex: i };
-      }
-    }
-    return { step: 0, itemIndex: 0 };
+    return { step: 1, itemIndex: 0 };
   };
 
   const mapAgentStateToStep = (state: AgentJobState): number => {
@@ -490,8 +498,15 @@ export default function VendingPage() {
   // EVENT HANDLERS
   // ==========================================
   // Cart Actions
+  const MAX_CART_ITEMS = 4;
+
   const handleAddToCart = (product: Product) => {
     setCart((prevCart) => {
+      const totalItems = prevCart.reduce((sum, item) => sum + item.qty, 0);
+      if (totalItems >= MAX_CART_ITEMS) {
+        setActiveModal("limit_warning");
+        return prevCart;
+      }
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
         return prevCart.map((item) =>
@@ -501,12 +516,18 @@ export default function VendingPage() {
       return [...prevCart, { ...product, qty: 1 }];
     });
   };
+
   const handleIncrease = (productId: number) => {
-    setCart((prevCart) =>
-      prevCart.map((item) =>
+    setCart((prevCart) => {
+      const totalItems = prevCart.reduce((sum, item) => sum + item.qty, 0);
+      if (totalItems >= MAX_CART_ITEMS) {
+        setActiveModal("limit_warning");
+        return prevCart;
+      }
+      return prevCart.map((item) =>
         item.id === productId ? { ...item, qty: item.qty + 1 } : item,
-      ),
-    );
+      );
+    });
   };
   const handleDecrease = (productId: number) => {
     setCart((prevCart) =>
@@ -1012,6 +1033,73 @@ export default function VendingPage() {
           )}
 
           {/* Modal 6 : Payment (ชำระเงิน) */}
+          {/* --- Modal: แจ้งเตือนจำนวนสินค้าสูงสุด --- */}
+          {activeModal === "limit_warning" && (
+            <div className="modal-overlay" onClick={() => setActiveModal("none")}>
+              <div
+                className="points-modal-box"
+                style={{
+                  maxWidth: "400px",
+                  padding: "40px 20px",
+                  textAlign: "center",
+                  background: "white",
+                  borderRadius: "32px",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div style={{
+                  width: "80px",
+                  height: "80px",
+                  background: "#fee2e2",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  margin: "0 auto 24px"
+                }}>
+                  <PackageOpen size={40} color="#ef4444" />
+                </div>
+                
+                <h2 style={{
+                  fontSize: "24px",
+                  fontWeight: "800",
+                  color: "#1f2937",
+                  marginBottom: "12px"
+                }}>
+                  ตะกร้าเต็มแล้ว!
+                </h2>
+                
+                <p style={{
+                  fontSize: "18px",
+                  color: "#6b7280",
+                  lineHeight: "1.6",
+                  marginBottom: "32px"
+                }}>
+                  ขออภัยครับ 1 คำสั่งซื้อสามารถซื้อสินค้าได้สูงสุด {MAX_CART_ITEMS} ชิ้นเท่านั้น
+                </p>
+
+                <button
+                  onClick={() => setActiveModal("none")}
+                  style={{
+                    width: "100%",
+                    padding: "16px",
+                    background: "linear-gradient(135deg, #f89025, #f59e0b)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "16px",
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    boxShadow: "0 10px 15px -3px rgba(245, 158, 11, 0.3)"
+                  }}
+                >
+                  ตกลง
+                </button>
+              </div>
+            </div>
+          )}
+
           {activeModal === "payment" && (
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
               <button
