@@ -115,15 +115,10 @@ class JobManager:
         expanded = self._expand_queue(job)
         if not expanded:
             return 0
-        times = sorted([int(x.get("heating_time", 15)) for x in expanded])
-        total = 5  # Transfer
-        elapsed = 0
-        for t in times:
-            if t > elapsed:
-                total += (t - elapsed)
-                elapsed = t
-            total += 3  # Dispense takes 3 seconds per item
-        return total
+        # Match UI logic: Max heating time + 3s for each additional item
+        times = [int(x.get("heating_time", 15)) for x in expanded]
+        max_heating = max(times)
+        return max_heating + 3 * (len(expanded) - 1)
 
     def subscribe(self, job: Job) -> queue.Queue:
         q: queue.Queue = queue.Queue()
@@ -244,7 +239,7 @@ def _run_mock_job(job: Job) -> None:
                 payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
             ),
         )
-        tick(5)
+        # tick(5) # Removed 5s delay to match UI logic
 
         elapsed_heating = 0
         for i, it, target_time in items_with_time:
