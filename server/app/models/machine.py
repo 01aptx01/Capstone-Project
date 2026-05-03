@@ -75,6 +75,8 @@ class MachineEvent(db.Model):
     seq = db.Column(db.Integer, nullable=False)
     payload_json = db.Column(db.JSON, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
+    is_resolved = db.Column(db.Boolean, nullable=False, default=False)
+    resolved_at = db.Column(db.DateTime, nullable=True)
 
     machine = db.relationship("Machine", back_populates="events")
 

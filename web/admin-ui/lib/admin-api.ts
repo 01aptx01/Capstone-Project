@@ -313,6 +313,7 @@ export type SalesReportResponse = {
 /** Flask GET /api/admin/alerts */
 export type AdminAlertsResponse = {
   stock_threshold: number;
+  include_resolved?: boolean;
   low_stock: {
     machine_code: string;
     slot: number;
@@ -327,6 +328,8 @@ export type AdminAlertsResponse = {
     event_type: string;
     state: string;
     created_at: string | null;
+    is_resolved?: boolean;
+    resolved_at?: string | null;
   }[];
 };
 
@@ -344,12 +347,34 @@ export async function getSalesReport(days: number): Promise<SalesReportResponse>
   return data;
 }
 
-export async function getAdminAlerts(
-  stock_threshold?: number
-): Promise<AdminAlertsResponse> {
+export async function getAdminAlerts(params?: {
+  stock_threshold?: number;
+  /** When true, include resolved ERROR events in machine_errors. */
+  include_resolved?: boolean;
+}): Promise<AdminAlertsResponse> {
+  const sp: Record<string, string> = {};
+  if (params?.stock_threshold != null) {
+    sp.stock_threshold = String(params.stock_threshold);
+  }
+  if (params?.include_resolved) {
+    sp.include_resolved = "1";
+  }
   const { data } = await api.get<AdminAlertsResponse>("/api/admin/alerts", {
-    params:
-      stock_threshold != null ? { stock_threshold: String(stock_threshold) } : {},
+    params: sp,
   });
+  return data;
+}
+
+export type ResolveAlertResponse = {
+  ok: boolean;
+  id: number;
+  is_resolved: boolean;
+  resolved_at: string;
+};
+
+export async function resolveAlert(eventId: number): Promise<ResolveAlertResponse> {
+  const { data } = await api.post<ResolveAlertResponse>(
+    `/api/admin/alerts/resolve/${eventId}`
+  );
   return data;
 }
