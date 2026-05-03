@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { isAxiosError } from "axios";
 import Modal from "@/components/ui/Modal";
 import { updateProduct } from "@/lib/admin-api";
 import { uiLabelToApiCategory } from "@/lib/admin-mappers";
@@ -69,10 +71,21 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
         description: formData.description.trim() || null,
         image_url: formData.image_url.trim() || null,
       });
+      toast.success("บันทึกการแก้ไขสินค้าสำเร็จ");
       window.dispatchEvent(new Event(ADMIN_PRODUCTS_REFRESH_EVENT));
       onClose();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "บันทึกไม่สำเร็จ");
+      const msg = isAxiosError(err)
+        ? String(
+            (err.response?.data as { error?: string; message?: string })?.error ||
+              (err.response?.data as { message?: string })?.message ||
+              err.message
+          )
+        : err instanceof Error
+          ? err.message
+          : "บันทึกไม่สำเร็จ";
+      setFormError(msg);
+      toast.error(msg);
     } finally {
       setSubmitting(false);
     }

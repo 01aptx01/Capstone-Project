@@ -5,6 +5,7 @@ import { useUI } from "@/lib/context/UIContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { listProducts } from "@/lib/admin-api";
 import { enrichProductsWithStock, type UiProductRow } from "@/lib/admin-mappers";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 const REFRESH = "admin-products-refresh";
 
@@ -18,18 +19,15 @@ export default function ProductTable({ category, machine, status }: ProductTable
   const { openEditProduct } = useUI();
   const [products, setProducts] = useState<UiProductRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const { items } = await listProducts({ page: 1, per_page: 200 });
       const rows = await enrichProductsWithStock(items);
       setProducts(rows);
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "โหลดสินค้าไม่สำเร็จ");
       setProducts([]);
     } finally {
       setLoading(false);
@@ -95,11 +93,6 @@ export default function ProductTable({ category, machine, status }: ProductTable
 
   return (
     <div className="vibrant-card !rounded-[32px] overflow-hidden shadow-xl shadow-orange-900/[0.02]">
-      {error && (
-        <div className="px-8 py-3 bg-amber-50 text-amber-800 text-sm font-bold border-b border-amber-100">
-          {error} — ตรวจสอบ NEXT_PUBLIC_ADMIN_API_URL และ CORS บน Flask
-        </div>
-      )}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -115,19 +108,13 @@ export default function ProductTable({ category, machine, status }: ProductTable
           </thead>
           <tbody className="divide-y divide-slate-50">
             {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  <td colSpan={7} className="px-8 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-slate-50 animate-pulse" />
-                      <div className="space-y-2 flex-1">
-                        <div className="w-1/3 h-5 rounded-lg bg-slate-50 animate-pulse" />
-                        <div className="w-1/4 h-4 rounded-lg bg-slate-50 animate-pulse opacity-50" />
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              <tr>
+                <td colSpan={7} className="p-0">
+                  <div className="min-h-[400px]">
+                    <LoadingSpinner />
+                  </div>
+                </td>
+              </tr>
             ) : filteredProducts.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-8 py-20 text-center">
