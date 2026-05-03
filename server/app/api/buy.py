@@ -387,7 +387,7 @@ class BuyController:
     def _get_db_status(self, charge_id: str) -> str | None:
         """ดึง status จาก DB โดยตรง"""
         try:
-            from app.config.db import get_db
+            from app.db_config.db import get_db
             db = get_db()
             cur = db.cursor(dictionary=True)
             try:

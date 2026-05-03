@@ -5,6 +5,10 @@ CREATE DATABASE IF NOT EXISTS vending;
 USE vending;
 
 -- Drop order
+DROP TABLE IF EXISTS admin_user_role;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS admin_users;
+DROP TABLE IF EXISTS roles;
 DROP TABLE IF EXISTS machine_job_events;
 DROP TABLE IF EXISTS order_items;
 DROP TABLE IF EXISTS orders;
@@ -140,7 +144,57 @@ CREATE TABLE machine_job_events (
   KEY idx_mje_machine (machine_code),
   KEY idx_mje_job (job_id),
   KEY idx_mje_charge (order_charge_id),
-  KEY idx_mje_created (created_at)
+  KEY idx_mje_created (created_at),
+  CONSTRAINT fk_machine_job_events_machine_code
+    FOREIGN KEY (machine_code) REFERENCES machines(machine_code)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE admin_users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_admin_users_email (email)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  description VARCHAR(255) NULL,
+  UNIQUE KEY uq_roles_name (name)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE admin_user_role (
+  admin_user_id INT NOT NULL,
+  role_id INT NOT NULL,
+  PRIMARY KEY (admin_user_id, role_id),
+  CONSTRAINT fk_aur_admin_user
+    FOREIGN KEY (admin_user_id) REFERENCES admin_users(id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_aur_role
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE transactions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  provider VARCHAR(32) NOT NULL,
+  provider_ref VARCHAR(128) NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(3) NOT NULL DEFAULT 'THB',
+  fee_amount DECIMAL(10,2) NULL,
+  status VARCHAR(32) NOT NULL,
+  raw_payload_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_transactions_order (order_id),
+  KEY idx_transactions_provider_ref (provider_ref),
+  CONSTRAINT fk_transactions_order
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- =====================

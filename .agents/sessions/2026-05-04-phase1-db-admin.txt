@@ -1,0 +1,6 @@
+Checkpoint 2026-05-04
+- Renamed app.config package to app.db_config to avoid shadowing Flask app.config (flask-cors).
+- factory.py uses flask_app variable; import app.models no longer shadows Flask instance.
+- Swagger path resolves Docker (/app/swagger.yaml) vs local repo root.
+- DEFER_DB_POOL=1 skips mysql.connector pool for flask db * CLI when MySQL unavailable.
+- database/init.sql aligned with new tables + fk_machine_job_events_machine_code.

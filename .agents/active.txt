@@ -1,0 +1,5 @@
+Phase 1 (DB + Admin API shell): completed.
+- SQLAlchemy models under server/app/models; mysql.connector pool unchanged in server/app/db_config/db.py.
+- Flask-Migrate: server/migrations, first revision 572c8706b321 (admin RBAC, transactions, MJE FK).
+- Admin blueprint: /api/admin (boilerplate GET /api/admin/users).
+Next: wire Admin auth, CRUD, and optional Transaction writes from Omise webhooks; migrate services off raw SQL if desired.

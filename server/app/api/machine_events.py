@@ -2,7 +2,7 @@ import json
 import logging
 from flask import Blueprint, request, jsonify
 
-from app.config.db import get_db
+from app.db_config.db import get_db
 
 logger = logging.getLogger(__name__)
 
