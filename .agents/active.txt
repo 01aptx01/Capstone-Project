@@ -1,2 +1,2 @@
-Phase 3 admin-ui bootstrap: done — axios (lib/axios.ts), admin-socket + AdminSocketListener, Toaster (react-hot-toast), Sidebar lucide nav (/ products machines orders customers coupons), /coupons page + CouponTable, env docs (.env.local.example + .env.example).
-Next: wire DashboardChart/reports via api (axios) if desired; tune Socket.IO dev toasts.
+Phase 1 dashboard wiring: admin-ui home uses Axios getDashboardSummary, getSalesReport, getAdminAlerts + listMachines; mappers for stat cards, Recharts series, and DashboardChart live buckets. RevenueChart uses Recharts with live data.
+Next: optional — wire /reports RevenueChart to same APIs or remove placeholder; dashboard Socket.IO refresh trigger.
