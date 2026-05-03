@@ -6,7 +6,7 @@ import Modal from "@/components/ui/Modal";
 interface EditMachineModalProps {
   open: boolean;
   onClose: () => void;
-  machine: any;
+  machine: Record<string, unknown> | null;
 }
 
 export default function EditMachineModal({ open, onClose, machine }: EditMachineModalProps) {
@@ -19,12 +19,15 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
 
   useEffect(() => {
     if (machine) {
-      setFormData({
-        name: machine.name || "",
-        location: machine.location || "",
-        status: machine.status || "ปกติ",
+      queueMicrotask(() => {
+        setFormData({
+          name: String(machine.name ?? ""),
+          location: String(machine.location ?? ""),
+          status: String(machine.status ?? "ปกติ"),
+        });
+        const img = machine.image;
+        setImagePreview(img != null && img !== "" ? String(img) : null);
       });
-      setImagePreview(machine.image || null);
     }
   }, [machine]);
 

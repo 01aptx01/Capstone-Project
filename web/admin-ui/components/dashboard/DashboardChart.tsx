@@ -65,8 +65,10 @@ export default function DashboardChart() {
     }
 
     const newData = Array.from({length: count}, () => Math.floor(Math.random() * 4000) + 500);
-    setHistData(newData);
-    setHistLabels(newLabels);
+    queueMicrotask(() => {
+      setHistData(newData);
+      setHistLabels(newLabels);
+    });
   }, [viewMode, historicalPeriod, dateRange, monthRange, yearRange]);
 
   useEffect(() => {
@@ -259,7 +261,9 @@ export default function DashboardChart() {
                     setRealtimePeriod(p);
                     try {
                       window.dispatchEvent(new CustomEvent("dashboard-period-change", { detail: { period: p } }));
-                    } catch (e) {}
+                    } catch {
+                      /* ignore */
+                    }
                   } else {
                     setHistoricalPeriod(p);
                   }

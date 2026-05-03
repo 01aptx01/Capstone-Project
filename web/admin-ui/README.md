@@ -1,5 +1,11 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Flask admin API
+
+- Set **`NEXT_PUBLIC_ADMIN_API_URL`** in `.env.local` (see `.env.local.example`) to a URL the **browser** can reach, e.g. `http://localhost:8000` — not a Docker-only hostname unless the browser resolves it.
+- If **machine-ui** uses port **3000**, run admin-ui on **3001**: `npx next dev -p 3001` (CORS in `docker-compose` includes `http://localhost:3001`).
+- **Still mock** (Next route handlers under `app/api/`): `/api/dashboard`, `/api/notifications`, `/api/alerts`, `/api/sales`. Products, machines, orders, coupons, and customers read from Flask `/api/admin/*`.
+
 ## Getting Started
 
 First, run the development server:

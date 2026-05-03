@@ -37,7 +37,7 @@ services:
       - DISPATCH_MODE=socket
       - TZ=Asia/Bangkok
       # Set comma-separated allowed origins for CORS (add machine-ui domain in production)
-      - CORS_ORIGINS=http://localhost:3000,http://machine-ui:3000
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://machine-ui:3000,http://admin-ui:3000
       # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
       # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
     ports:
