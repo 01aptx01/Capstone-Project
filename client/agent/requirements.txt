@@ -2,4 +2,12 @@ flask
 flask-cors
 requests
 python-socketio
+
+adafruit-blinka
+adafruit-circuitpython-pca9685
+mfrc522
+pygame
+
 websocket-client
+gpiozero
+rpi-lgpio
