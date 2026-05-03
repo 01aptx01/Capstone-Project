@@ -72,7 +72,7 @@ def init_db():
     global db_manager
     
     pool_name = os.getenv("DB_POOL_NAME", "app_pool")
-    pool_size = int(os.getenv("DB_POOL_SIZE", "5"))
+    pool_size = int(os.getenv("DB_POOL_SIZE", "10"))  # raised from 5: sweepers + socket + APIs
     max_retries = int(os.getenv("DB_MAX_RETRIES", "30"))
     retry_delay = int(os.getenv("DB_RETRY_DELAY", "1"))
     
@@ -88,3 +88,24 @@ def get_db():
     if db_manager is None:
         raise RuntimeError("Database not initialized. Call init_db() first")
     return db_manager.get_connection()
+
+
+from contextlib import contextmanager
+
+@contextmanager
+def get_db_cursor(dictionary: bool = True):
+    """Context manager ที่ yield (db, cursor) และ guarantee cleanup เสมอ.
+
+    Usage:
+        with get_db_cursor() as (db, cur):
+            cur.execute("SELECT 1")
+            row = cur.fetchone()
+            db.commit()
+    """
+    db = get_db()
+    cur = db.cursor(dictionary=dictionary)
+    try:
+        yield db, cur
+    finally:
+        cur.close()
+        db.close()

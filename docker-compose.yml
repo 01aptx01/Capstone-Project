@@ -36,8 +36,18 @@ services:
       - SOCKETIO_ENABLED=1
       - DISPATCH_MODE=socket
       - TZ=Asia/Bangkok
+      # Set comma-separated allowed origins for CORS (add machine-ui domain in production)
+      - CORS_ORIGINS=http://localhost:3000,http://machine-ui:3000
+      # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
+      # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     depends_on:
       db:
         condition: service_healthy

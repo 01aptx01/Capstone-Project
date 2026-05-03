@@ -395,12 +395,25 @@ export default function VendingPage() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     console.log(`[Frontend] Starting poll for charge: ${chargeId}`);
 
+    // Max 60 attempts × 2s = 2 minutes, then auto-cancel
+    let attempts = 0;
+    const MAX_ATTEMPTS = 60;
+
     pollingIntervalRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > MAX_ATTEMPTS) {
+        console.warn(`[Frontend] Poll timeout after ${MAX_ATTEMPTS} attempts — auto-cancelling`);
+        clearInterval(pollingIntervalRef.current!);
+        pollingIntervalRef.current = null;
+        await cancelAndClosePaymentModal();
+        return;
+      }
+
       try {
         const res = await fetch(`${apiUrl}/api/buy/status/${chargeId}`);
         if (res.ok) {
           const data = await res.json();
-          console.log(`[Frontend] Poll result for ${chargeId}:`, data.status);
+          console.log(`[Frontend] Poll result for ${chargeId} [${attempts}/${MAX_ATTEMPTS}]:`, data.status);
           if (data.status === "PAID" || data.status === "paid") {
             console.log("[Frontend] Payment confirmed via polling!");
             handlePaymentSuccess();
