@@ -1,6 +1,8 @@
 import json
 import logging
 import os
+import hmac
+import hashlib
 from flask import Blueprint, request, jsonify
 from app.services.omise_service import OmisePaymentService
 from app.services.buy_service import InventoryService, AlreadyClaimedError, InsufficientStockError
@@ -32,6 +34,33 @@ class BuyController:
         self.blueprint.add_url_rule("/api/buy/cancel",         view_func=self.cancel_order,   methods=["POST"])
         self.blueprint.add_url_rule("/api/buy/status/<charge_id>", view_func=self.check_status, methods=["GET"])
         self.blueprint.add_url_rule("/api/buy",                view_func=self.buy,            methods=["POST"])
+
+    def _verify_webhook_signature(self, body: bytes) -> bool:
+        """Verify Omise webhook HMAC-SHA256 signature.
+        Returns True if signature is valid or if OMISE_WEBHOOK_SECRET is not configured.
+        https://docs.opn.ooo/webhooks#signature
+        """
+        webhook_secret = os.environ.get("OMISE_WEBHOOK_SECRET")
+        if not webhook_secret:
+            logger.warning("[Webhook] OMISE_WEBHOOK_SECRET not set — skipping signature check (set for production)")
+            return True
+
+        signature = request.headers.get("X-Omise-Signature", "")
+        if not signature:
+            logger.warning("[Webhook] Missing X-Omise-Signature header")
+            return False
+
+        expected = hmac.new(
+            webhook_secret.encode("utf-8"),
+            body,
+            hashlib.sha256,
+        ).hexdigest()
+
+        if not hmac.compare_digest(expected, signature):
+            logger.error("[Webhook] Invalid webhook signature — request rejected")
+            return False
+
+        return True
 
     # =============================================
     # INTERNAL: Dispense orchestration
@@ -211,7 +240,11 @@ class BuyController:
             }), 400
 
     def omise_webhook(self):
-        """Omise Webhook Listener"""
+        """Omise Webhook Listener — with HMAC signature verification"""
+        raw_body = request.get_data()  # must read before get_json()
+        if not self._verify_webhook_signature(raw_body):
+            return jsonify({"message": "Invalid signature"}), 401
+
         event = request.get_json(silent=True)
         if not isinstance(event, dict):
             return jsonify({"message": "Invalid JSON body"}), 400

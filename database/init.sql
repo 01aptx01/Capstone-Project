@@ -21,7 +21,9 @@ CREATE TABLE users (
   registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_use DATETIME NULL,
   status ENUM('active','suspended','banned') NOT NULL DEFAULT 'active',
-  UNIQUE KEY uq_users_phone (phone_number)
+  UNIQUE KEY uq_users_phone (phone_number),
+  -- Composite index: covers WHERE status='active' AND last_use < X (user maintenance sweeper)
+  KEY idx_users_status_lastuse (status, last_use)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE promotions (
@@ -88,10 +90,15 @@ CREATE TABLE orders (
     'refunded'
   ) NOT NULL DEFAULT 'pending_payment',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_orders_charge_id (charge_id),
   KEY idx_orders_machine (machine_code),
   KEY idx_orders_user (user_id),
   KEY idx_orders_promo (promotion_id),
+  -- Composite: covers background sweeper (WHERE status='pending_payment' AND created_at < X)
+  KEY idx_orders_status_created (status, created_at),
+  -- Composite: covers dispatch_pending_jobs (WHERE machine_code=X AND status='paid')
+  KEY idx_orders_machine_status (machine_code, status),
   CONSTRAINT fk_orders_machine
     FOREIGN KEY (machine_code) REFERENCES machines(machine_code)
     ON UPDATE CASCADE ON DELETE RESTRICT,
