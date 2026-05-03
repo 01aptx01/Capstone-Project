@@ -1,2 +1,2 @@
-Phase 2.3/2.4: admin Socket.IO room `admin` + `dashboard_update` emits; REST GET /api/admin/dashboard/summary, /reports/sales, /alerts. Env ADMIN_SOCKET_SECRET optional.
-Next: wire admin-ui DashboardChart/alerts to these endpoints + Socket.IO client with auth.
+Phase 3 admin-ui bootstrap: done — axios (lib/axios.ts), admin-socket + AdminSocketListener, Toaster (react-hot-toast), Sidebar lucide nav (/ products machines orders customers coupons), /coupons page + CouponTable, env docs (.env.local.example + .env.example).
+Next: wire DashboardChart/reports via api (axios) if desired; tune Socket.IO dev toasts.

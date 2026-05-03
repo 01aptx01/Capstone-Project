@@ -3,23 +3,27 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUI } from "@/lib/context/UIContext";
+import type { LucideIcon } from "lucide-react";
+import {
+  LayoutDashboard,
+  Package,
+  Cpu,
+  ShoppingCart,
+  Users,
+  TicketPercent,
+} from "lucide-react";
 
 export default function Sidebar() {
   const pathname = usePathname() || "/";
-  const { openAddMachine } = useUI();
 
-  const nav = [
-    { name: "แดชบอร์ด", href: "/", icon: "fi-rr-apps" },
-    { name: "จัดการตู้", href: "/machines", icon: "fi-rr-computer" },
-    { name: "คลังสินค้า", href: "/products", icon: "fi-rr-box-open" },
-    { name: "รายงาน", href: "/reports", icon: "fi-rr-chart-histogram" },
-    { name: "ลูกค้า & คูปอง", href: "/customers", icon: "fi-rr-users" },
+  const nav: { name: string; href: string; Icon: LucideIcon }[] = [
+    { name: "แดชบอร์ด", href: "/", Icon: LayoutDashboard },
+    { name: "คลังสินค้า", href: "/products", Icon: Package },
+    { name: "จัดการตู้", href: "/machines", Icon: Cpu },
+    { name: "คำสั่งซื้อ", href: "/orders", Icon: ShoppingCart },
+    { name: "ลูกค้า", href: "/customers", Icon: Users },
+    { name: "คูปอง", href: "/coupons", Icon: TicketPercent },
   ];
-
-  const activeIndex = nav.findIndex(item => 
-    pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href))
-  );
 
   return (
     <aside className="sidebar">
@@ -46,20 +50,34 @@ export default function Sidebar() {
           const active =
             pathname === item.href ||
             (item.href !== "/" && pathname.startsWith(item.href));
+          const Icon = item.Icon;
           return (
             <Link
               key={item.name}
               href={item.href}
               className={`sidebar-link ${active ? "active group" : "hover-trigger group"} animate-slide-left opacity-0`}
-              style={{ 
+              style={{
                 animationDelay: `${index * 80}ms`,
-                zIndex: active ? 2 : 1
+                zIndex: active ? 2 : 1,
               }}
             >
-              <span className="icon-container relative">
-                <i className={`fi ${active ? item.icon.replace('fi-rr-', 'fi-sr-') : item.icon} transition-all duration-100 ${active ? 'scale-110 text-[#f47b2a]' : 'text-slate-400 group-hover:text-slate-600'}`}></i>
+              <span className="icon-container relative flex items-center justify-center">
+                <Icon
+                  className={`h-5 w-5 shrink-0 transition-all duration-100 ${
+                    active
+                      ? "scale-110 text-[#f47b2a]"
+                      : "text-slate-400 group-hover:text-slate-600"
+                  }`}
+                  aria-hidden
+                />
               </span>
-              <span className={`label transition-all duration-100 ${active ? 'text-[#f47b2a]' : 'text-slate-500 group-hover:text-slate-700'}`}>{item.name}</span>
+              <span
+                className={`label transition-all duration-100 ${
+                  active ? "text-[#f47b2a]" : "text-slate-500 group-hover:text-slate-700"
+                }`}
+              >
+                {item.name}
+              </span>
             </Link>
           );
         })}
@@ -166,7 +184,6 @@ export default function Sidebar() {
         }
 
         .sidebar-link .icon-container {
-          font-size: 1.3rem;
           margin-right: 14px;
         }
 
