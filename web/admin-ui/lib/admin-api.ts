@@ -2,7 +2,7 @@
  * Browser-side client for Flask /api/admin (same pattern as machine-ui NEXT_PUBLIC_API_URL).
  */
 
-import { api } from "./axios";
+import { api, adminRequest, type AdminFetchInit } from "./axios";
 
 export function adminBaseUrl(): string {
   return (
@@ -12,39 +12,8 @@ export function adminBaseUrl(): string {
   );
 }
 
-function adminUrl(path: string): string {
-  const base = adminBaseUrl();
-  const p = path.startsWith("/") ? path : `/${path}`;
-  return `${base}/api/admin${p}`;
-}
-
-async function adminFetch<T>(
-  path: string,
-  init?: RequestInit
-): Promise<T> {
-  const headers: HeadersInit = {
-    Accept: "application/json",
-    ...(init?.body ? { "Content-Type": "application/json" } : {}),
-    ...((init?.headers as Record<string, string>) || {}),
-  };
-  const res = await fetch(adminUrl(path), { ...init, headers });
-  const text = await res.text();
-  let data: unknown = null;
-  if (text) {
-    try {
-      data = JSON.parse(text) as unknown;
-    } catch {
-      throw new Error(`Invalid JSON from admin API (${res.status})`);
-    }
-  }
-  if (!res.ok) {
-    const msg =
-      data && typeof data === "object" && "error" in data
-        ? String((data as { error: string }).error)
-        : res.statusText;
-    throw new Error(msg || `HTTP ${res.status}`);
-  }
-  return data as T;
+async function adminFetch<T>(path: string, init?: AdminFetchInit): Promise<T> {
+  return adminRequest<T>(path, init);
 }
 
 export type Paginated<T> = {
@@ -161,6 +130,7 @@ export async function createProduct(body: {
   return adminFetch<ApiProduct>("/products", {
     method: "POST",
     body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
   });
 }
 
@@ -178,12 +148,14 @@ export async function updateProduct(
   return adminFetch<ApiProduct>(`/products/${productId}`, {
     method: "PUT",
     body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
   });
 }
 
 export async function deleteProduct(productId: number): Promise<void> {
   await adminFetch<{ status: string }>(`/products/${productId}`, {
     method: "DELETE",
+    skipGlobalErrorToast: true,
   });
 }
 
@@ -268,6 +240,7 @@ export async function createCoupon(body: {
   return adminFetch<ApiCoupon>("/coupons", {
     method: "POST",
     body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
   });
 }
 
@@ -284,6 +257,7 @@ export async function updateCoupon(
   return adminFetch<ApiCoupon>(`/coupons/${promotionId}`, {
     method: "PUT",
     body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
   });
 }
 
@@ -374,7 +348,9 @@ export type ResolveAlertResponse = {
 
 export async function resolveAlert(eventId: number): Promise<ResolveAlertResponse> {
   const { data } = await api.post<ResolveAlertResponse>(
-    `/api/admin/alerts/resolve/${eventId}`
+    `/api/admin/alerts/resolve/${eventId}`,
+    undefined,
+    { skipGlobalErrorToast: true }
   );
   return data;
 }

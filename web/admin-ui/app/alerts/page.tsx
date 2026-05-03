@@ -5,24 +5,22 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import { getAdminAlerts, resolveAlert, type AdminAlertsResponse } from "@/lib/admin-api";
 import toast from "react-hot-toast";
+import { isAxiosError } from "axios";
 
 export default function AlertsPage() {
   const { openExportModal } = useUI();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<AdminAlertsResponse | null>(null);
   const [includeResolved, setIncludeResolved] = useState(false);
   const [resolvingId, setResolvingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const res = await getAdminAlerts({ include_resolved: includeResolved });
       setData(res);
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "โหลดแจ้งเตือนไม่สำเร็จ");
       setData(null);
     } finally {
       setLoading(false);
@@ -43,7 +41,16 @@ export default function AlertsPage() {
       await load();
     } catch (e) {
       console.error(e);
-      toast.error(e instanceof Error ? e.message : "Resolve ไม่สำเร็จ");
+      const msg = isAxiosError(e)
+        ? String(
+            (e.response?.data as { error?: string; message?: string })?.error ||
+              (e.response?.data as { message?: string })?.message ||
+              e.message
+          )
+        : e instanceof Error
+          ? e.message
+          : "Resolve ไม่สำเร็จ";
+      toast.error(msg);
     } finally {
       setResolvingId(null);
     }
@@ -133,12 +140,6 @@ export default function AlertsPage() {
           </button>
         </div>
       </div>
-
-      {error && (
-        <div className="mb-6 px-4 py-3 rounded-xl bg-amber-50 text-amber-900 text-sm font-bold">
-          {error}
-        </div>
-      )}
 
       <div className="glass !rounded-[32px] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border-white animate-in opacity-0 delay-100 mb-8">
         <div className="flex items-center gap-3 mb-6">
