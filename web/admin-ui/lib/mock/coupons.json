@@ -1,0 +1,42 @@
+[
+  {
+    "id": "CPN-001",
+    "name": "ซื้อ 2 แถม 1 (ไส้หมูสับ)",
+    "type": "แถมฟรี",
+    "points": 50,
+    "usage": 142,
+    "maxUsage": 500,
+    "expiry": "2026-05-31",
+    "status": "active"
+  },
+  {
+    "id": "CPN-002",
+    "name": "ส่วนลด 10 บาท",
+    "type": "ส่วนลด",
+    "points": 40,
+    "usage": 856,
+    "maxUsage": 1000,
+    "expiry": "2026-04-30",
+    "status": "active"
+  },
+  {
+    "id": "CPN-003",
+    "name": "ฟรี ชาเย็น 1 แก้ว",
+    "type": "แจกฟรี",
+    "points": 80,
+    "usage": 500,
+    "maxUsage": 500,
+    "expiry": "2026-04-15",
+    "status": "fully_claimed"
+  },
+  {
+    "id": "CPN-004",
+    "name": "แจกพอยท์ x2 สาขา LX",
+    "type": "คูณพอยท์",
+    "points": 0,
+    "usage": 120,
+    "maxUsage": null,
+    "expiry": "2026-04-30",
+    "status": "active"
+  }
+]

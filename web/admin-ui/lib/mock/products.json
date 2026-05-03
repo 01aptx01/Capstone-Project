@@ -1,0 +1,62 @@
+[
+  {
+    "id": "P001",
+    "code": "P001",
+    "name": "เปามดแดง",
+    "category": "หมูสับ/หมูแดง",
+    "machines": 3,
+    "quantity": 234,
+    "unit_price": 25.0,
+    "status": "in_stock",
+    "image": "/product/img/pao-moddaeng.png",
+    "description": "ขนมเปาไส้หมูแดง แสนอร่อย"
+  },
+  {
+    "id": "P002",
+    "code": "P002",
+    "name": "เปาหมูสับ",
+    "category": "หมูสับ/หมูแดง",
+    "machines": 3,
+    "quantity": 156,
+    "unit_price": 25.0,
+    "status": "in_stock",
+    "image": "/product/img/pao-moosub.png",
+    "description": "เปาไส้หมูสับ สดใหม่ทุกวัน"
+  },
+  {
+    "id": "P003",
+    "code": "P003",
+    "name": "เปาบัวแดง",
+    "category": "ไส้หวาน",
+    "machines": 2,
+    "quantity": 45,
+    "unit_price": 22.0,
+    "status": "low_stock",
+    "image": "/product/img/pao-cream.png",
+    "description": "เปาไส้ครีม หอมหวาน"
+  },
+  {
+    "id": "P004",
+    "code": "P004",
+    "name": "เปาเต้าหู้",
+    "category": "มังสวิรัติ",
+    "machines": 1,
+    "quantity": 0,
+    "unit_price": 22.0,
+    "status": "out_of_stock",
+    "image": "/product/img/pao-shrimp.png",
+    "description": "เปากุ้ง ทะเลสดๆ"
+  },
+  {
+    "id": "P005",
+    "code": "P005",
+    "name": "เปาครีมคัสตาร์ด",
+    "category": "ไส้หวาน",
+    "machines": 3,
+    "quantity": 300,
+    "unit_price": 20.0,
+    "status": "in_stock",
+    "image": "/product/img/pao-cream.png",
+    "description": "เปาที่ขายดีสุด"
+  }
+]
