@@ -1,2 +1,2 @@
-Phase 1 dashboard wiring: admin-ui home uses Axios getDashboardSummary, getSalesReport, getAdminAlerts + listMachines; mappers for stat cards, Recharts series, and DashboardChart live buckets. RevenueChart uses Recharts with live data.
-Next: optional — wire /reports RevenueChart to same APIs or remove placeholder; dashboard Socket.IO refresh trigger.
+Phase 2 alerts: machine_job_events is_resolved/resolved_at + Alembic b8e4f1a2c3d4; GET /api/admin/alerts filters unresolved ERROR by default (include_resolved=1 optional); POST /api/admin/alerts/resolve/<id>; socket dashboard_update includes event_id on ERROR; admin-ui alerts page live + resolveAlert; AdminSocketListener ERROR toast (deduped).
+Next: run Alembic upgrade on deployed DBs; optional alert_resolved socket for multi-tab refresh.

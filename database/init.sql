@@ -140,6 +140,8 @@ CREATE TABLE machine_job_events (
   seq INT NOT NULL,
   payload_json JSON NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+  resolved_at DATETIME NULL,
   UNIQUE KEY uq_mje_job_seq (job_id, seq),
   KEY idx_mje_machine (machine_code),
   KEY idx_mje_job (job_id),
