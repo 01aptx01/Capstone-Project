@@ -5,6 +5,7 @@ import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import { UIProvider } from "@/lib/context/UIContext";
 import GlobalModals from "@/components/layout/GlobalModals";
+import AppToasterAndSocket from "@/components/AppToasterAndSocket";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -30,6 +31,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         <UIProvider>
+          <AppToasterAndSocket />
           <div className="flex h-screen">
             <Sidebar />
             <div className="flex-1 flex flex-col overflow-hidden">
