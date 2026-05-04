@@ -73,7 +73,7 @@ export default function VendingPage() {
   const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
   const [isOmiseLoaded, setIsOmiseLoaded] = useState(false); // เช็คว่า Omise โหลดเสร็จหรือยัง
   const [realQrCode, setRealQrCode] = useState<string | null>(null); // เก็บ QR Code จริงจาก Backend
-  const [detectedCardVendor, setDetectedCardVendor] = useState<string | null>(null);
+  // Card network detection is intentionally omitted — Omise token/charge handles brand internally.
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเก็บรอบการดึงสถานะจ่ายเงิน
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
   const currentChargeIdRef = useRef<string | null>(null); // เก็บค่าล่าสุดไว้ใช้ใน setInterval/setTimeout
@@ -216,46 +216,46 @@ export default function VendingPage() {
       if (!silent) setIsLoadingProducts(true);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        // const response = await fetch(
-        //   `${apiUrl}/api/products?machine_code=${encodeURIComponent(machineCode)}`,
-        // );
-        // if (!response.ok) throw new Error("Failed to fetch products");
+        const response = await fetch(
+          `${apiUrl}/api/products?machine_code=${encodeURIComponent(machineCode)}`,
+        );
+        if (!response.ok) throw new Error("Failed to fetch products");
 
-        // const data = await response.json();
-        // const mappedProducts: Product[] = data.map((p: any) => ({
-        //   id: p.product_id,
-        //   name: p.name,
-        //   desc: p.description,
-        //   price: p.price,
-        //   heatingTime: p.heating_time,
-        //   image: p.image_url,
-        //   category: p.category,
-        //   stock: Number(p.stock) || 0,
-        // }));
+        const data = await response.json();
+        const mappedProducts: Product[] = data.map((p: any) => ({
+          id: p.product_id,
+          name: p.name,
+          desc: p.description,
+          price: p.price,
+          heatingTime: p.heating_time,
+          image: p.image_url,
+          category: p.category,
+          stock: Number(p.stock) || 0,
+        }));
 
-        // Mock Data (ถอด API ออกชั่วคราว)
-        const mappedProducts: Product[] = [
-          {
-            id: 1,
-            name: "Product 1",
-            desc: "Description for Product 1",
-            price: 100,
-            heatingTime: 10,
-            image: "/payment/Visa-logo.png",
-            category: "meat",
-            stock: 10,
-          },
-          {
-            id: 2,
-            name: "Product 2",
-            desc: "Description for Product 2",
-            price: 200,
-            heatingTime: 15,
-            image: "/payment/UnionPay-logo.png",
-            category: "sweet",
-            stock: 5,
-          },
-        ];
+        // // Mock Data (ถอด API ออกชั่วคราว)
+        // const mappedProducts: Product[] = [
+        //   {
+        //     id: 1,
+        //     name: "Product 1",
+        //     desc: "Description for Product 1",
+        //     price: 100,
+        //     heatingTime: 10,
+        //     image: "/payment/Visa-logo.png",
+        //     category: "meat",
+        //     stock: 10,
+        //   },
+        //   {
+        //     id: 2,
+        //     name: "Product 2",
+        //     desc: "Description for Product 2",
+        //     price: 200,
+        //     heatingTime: 15,
+        //     image: "/payment/UnionPay-logo.png",
+        //     category: "sweet",
+        //     stock: 5,
+        //   },
+        // ];
 
         setProducts(mappedProducts);
         setCart((prev) => clampCartToCatalog(prev, mappedProducts));
@@ -373,7 +373,7 @@ export default function VendingPage() {
     setActiveModal("numpad");
   };
 
-  const processPayment = async (paymentData: { type: "token" | "source"; id: string; amount: number; }) => {
+  const processPayment = async (paymentData: { type: "token" | "source" | "truemoney"; id: string; amount: number; }) => {
     const controller = new AbortController();
     const timeoutMs = 60000;
     const startedAt = Date.now();
@@ -415,7 +415,7 @@ export default function VendingPage() {
         setCurrentChargeId(result.charge_id);
       }
 
-      if (paymentData.type === "source" && result.qr_code) {
+      if ((paymentData.type === "source" || paymentData.type === "truemoney") && result.qr_code) {
         setRealQrCode(result.qr_code);
         setPaymentStep(2);
         pollPaymentStatus(result.charge_id);
@@ -515,6 +515,12 @@ export default function VendingPage() {
         processPayment({ type: "source", id: sourceId, amount: totalPrice * 100 });
       },
     );
+  };
+
+  const handleDirectTrueMoney = async () => {
+    setPaymentStep(2);
+    setRealQrCode(null);
+    processPayment({ type: "truemoney", id: "", amount: totalPrice * 100 });
   };
 
   const handleProceedToTap = async () => {
@@ -734,8 +740,16 @@ export default function VendingPage() {
       handlePaymentSuccess();
     }
   };
+  type TestCardBrand = "visa" | "mastercard" | "unionpay";
+
+  const TEST_CARDS: Record<TestCardBrand, { name: string; number: string }> = {
+    visa: { name: "Test Visa Machine", number: "4242424242424242" },
+    mastercard: { name: "Test Mastercard Machine", number: "5555555555554444" },
+    unionpay: { name: "Test UnionPay Machine", number: "6200000000000005" },
+  };
+
   // --- 💡 ฟังก์ชันจำลองการแตะบัตรที่เครื่องอ่าน NFC ---
-  const simulateNfcTap = async () => {
+  const simulateNfcTap = async (brand: TestCardBrand) => {
     if (!(window as any).Omise) {
       alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
       return;
@@ -744,11 +758,11 @@ export default function VendingPage() {
     const Omise = (window as any).Omise;
     Omise.setPublicKey(process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY);
 
-    console.log("[Frontend] Simulating Card Tap: Generating Omise Token...");
+    console.log(`[Frontend] Simulating Card Tap (${brand}): Generating Omise Token...`);
 
     const cardData = {
-      name: "Test Visa Machine",
-      number: "4242424242424242",
+      name: TEST_CARDS[brand].name,
+      number: TEST_CARDS[brand].number,
       expiration_month: 12,
       expiration_year: 2029,
       security_code: "123",
@@ -757,23 +771,6 @@ export default function VendingPage() {
     Omise.createToken("card", cardData, async (statusCode: number, response: any) => {
       if (statusCode === 200) {
         console.log("[Frontend] Test Token Generated:", response.id);
-        // Detect vendor from Omise response when possible
-        try {
-          let vendor: string | null = null;
-          if (response && response.card && response.card.brand) {
-            vendor = String(response.card.brand).toLowerCase();
-          } else if (cardData.number) {
-            // Basic BIN heuristics as fallback
-            const n = cardData.number;
-            if (n.startsWith("4")) vendor = "visa";
-            else if (/^5[1-5]/.test(n) || /^22|^23|^24|^25|^26|^27/.test(n)) vendor = "mastercard";
-            else if (n.startsWith("62")) vendor = "unionpay";
-          }
-          if (vendor) setDetectedCardVendor(vendor);
-        } catch (e) {
-          console.warn("Vendor detection failed:", e);
-        }
-
         // Step 2: Send token to Backend for real charge execution
         processPayment({ type: "token", id: response.id, amount: totalPrice * 100 });
       } else {
@@ -1286,7 +1283,7 @@ export default function VendingPage() {
                         >
                           <Image
                             className="payment-logo"
-                            src="/PromptPay-logo.png"
+                            src="/payment/PromptPay-logo.png"
                             alt="PromptPay"
                             width={150}
                             height={85}
@@ -1311,19 +1308,24 @@ export default function VendingPage() {
                       </div>
                       <div>
                         <button
-                          className="modal-action-payment-btn modal-action-payment-card-btn"
+                          className="modal-action-payment-btn modal-action-payment-card-btn relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.35)] hover:shadow-[0_26px_70px_rgba(0,0,0,0.45)] transition-all duration-300 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/10 before:via-white/5 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity after:content-[''] after:absolute after:-inset-x-20 after:top-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-white/40 after:to-transparent"
                           onClick={() => {
                             setSelectedPaymentMethod("card");
-                            setDetectedCardVendor(null);
                           }}
                           disabled={!isOmiseLoaded}
                         >
-                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                            <div style={{ fontSize: 22, fontWeight: 700 }}>บัตร / NFC</div>
-                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                              <Image src="/payment/Visa-logo.png" alt="Visa" width={60} height={36} priority />
-                              <Image src="/payment/Mastercard-logo.png" alt="Mastercard" width={60} height={36} priority />
-                              <Image src="/payment/UnionPay-logo.png" alt="UnionPay" width={60} height={36} priority />
+                          <div className="relative z-10 flex items-center justify-between w-full gap-4">
+                            <div className="flex flex-col items-start">
+                              <div className="text-[18px] md:text-[20px] font-black text-white tracking-tight">
+                                Tap to Pay
+                              </div>
+                              <div className="text-[12px] md:text-[13px] font-bold text-white/70">
+                                NFC / Credit Card
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 text-white/90">
+                              <Nfc size={28} strokeWidth={1.6} />
+                              <CreditCard size={28} strokeWidth={1.6} />
                             </div>
                           </div>
                         </button>
@@ -1401,13 +1403,11 @@ export default function VendingPage() {
                     )}
                   </>
                 )}
-                {/* --- Flow B: บัตรเครดิต (Visa, UnionPay, Mastercard) --- */}
-                {selectedPaymentMethod !== null && selectedPaymentMethod !== "promptpay" && (
+                {/* --- Flow B: Tap to Pay (NFC / Credit Card) --- */}
+                {selectedPaymentMethod === "card" && (
                   <>
                     <div className="payment-title">
-                      {selectedPaymentMethod === "card"
-                        ? `ชำระเงินด้วย ${detectedCardVendor ? detectedCardVendor.toUpperCase() : "บัตร / NFC"}`
-                        : `ชำระเงินด้วย ${selectedPaymentMethod.toUpperCase()}`}
+                      ชำระเงินด้วย Tap to Pay (NFC / Credit Card)
                     </div>
                       {/* Step 1: แนะนำ */}
                       {paymentStep === 1 && (
@@ -1441,19 +1441,86 @@ export default function VendingPage() {
                             </div>
                           </div>
                           <h3 style={{ color: "#f89025", marginBottom: "5px" }}>
-                            {detectedCardVendor ? `ตรวจจับ: ${detectedCardVendor.toUpperCase()}` : "กำลังรอการแตะบัตร..."}
+                            กำลังรอการแตะบัตร...
                           </h3>
                           <p style={{ color: "#64748b", fontSize: "14px" }}>
                             กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง
                           </p>
                           {/* กดเพื่อจำลองการแตะบัตร NFC */}
-                          <button style={testBtnStyle} onClick={simulateNfcTap}>
-                            [Test] Simulate Card Tap
-                          </button>
+                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
+                            <button style={testBtnStyle} onClick={() => simulateNfcTap("visa")}>
+                              [Test] Visa Tap
+                            </button>
+                            <button style={testBtnStyle} onClick={() => simulateNfcTap("mastercard")}>
+                              [Test] Mastercard Tap
+                            </button>
+                            <button style={testBtnStyle} onClick={() => simulateNfcTap("unionpay")}>
+                              [Test] UnionPay Tap
+                            </button>
+                          </div>
                         </>
                       )}
                     </>
                   )}
+
+                {/* --- Flow C: TrueMoney (QR) --- */}
+                {selectedPaymentMethod === "truemoney" && (
+                  <>
+                    <div className="payment-title">ชำระเงินด้วย TrueMoney</div>
+                    {paymentStep === 1 && (
+                      <>
+                        <div className="payment-instruction-list">
+                          <p>
+                            <Smartphone size={20} color="#f89025" /> 1. เปิดแอป TrueMoney Wallet
+                          </p>
+                          <p>
+                            <ScanLine size={20} color="#f89025" /> 2. เลือกเมนูสแกนจ่าย
+                          </p>
+                          <p>
+                            <BanknoteArrowUp size={20} color="#f89025" /> 3. สแกน QR ในหน้าถัดไป
+                          </p>
+                        </div>
+                        <button
+                          className="modal-confirm-btn"
+                          onClick={() => {
+                            setPaymentCountdown(180);
+                            handleDirectTrueMoney();
+                          }}
+                        >
+                          รับทราบ และแสดง QR Code
+                        </button>
+                      </>
+                    )}
+                    {paymentStep === 2 && (
+                      <>
+                        {realQrCode ? (
+                          <img
+                            src={realQrCode}
+                            alt="TrueMoney QR"
+                            width={200}
+                            height={200}
+                            style={{ borderRadius: "12px" }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: 200,
+                              height: 200,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "#f1f5f9",
+                              borderRadius: "12px",
+                              color: "#64748b",
+                            }}
+                          >
+                            กำลังสร้าง QR Code...
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
 
                 {/* ปุ่มย้อนกลับ */}
                 {selectedPaymentMethod !== null && paymentStep === 1 && (

@@ -10,7 +10,6 @@ import {
   Cpu,
   ShoppingCart,
   Users,
-  TicketPercent,
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -21,8 +20,7 @@ export default function Sidebar() {
     { name: "คลังสินค้า", href: "/products", Icon: Package },
     { name: "จัดการตู้", href: "/machines", Icon: Cpu },
     { name: "คำสั่งซื้อ", href: "/orders", Icon: ShoppingCart },
-    { name: "ลูกค้า", href: "/customers", Icon: Users },
-    { name: "คูปอง", href: "/coupons", Icon: TicketPercent },
+    { name: "ลูกค้า & คูปอง", href: "/customers", Icon: Users },
   ];
 
   return (

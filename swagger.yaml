@@ -107,6 +107,7 @@ definitions:
       discount_amount: { type: number }
       is_active: { type: boolean }
       expire_date: { type: string, x-nullable: true }
+      points_cost: { type: integer }
 
 paths:
   /health:
@@ -557,6 +558,7 @@ paths:
               discount_amount: { type: number }
               expire_date: { type: string, x-nullable: true }
               is_active: { type: boolean }
+              points_cost: { type: integer }
       responses:
         "201":
           description: Created
@@ -584,6 +586,7 @@ paths:
               discount_amount: { type: number }
               expire_date: { type: string, x-nullable: true }
               is_active: { type: boolean }
+              points_cost: { type: integer }
       responses:
         "200":
           description: Updated

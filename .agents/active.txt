@@ -1,2 +1,2 @@
-Phase 3 UI feedback: LoadingSpinner (components/ui); axios response interceptor (401/403 clear admin_token + redirect /login; other errors toast.error from server message); adminFetch -> adminRequest on shared api; mutations skipGlobalErrorToast + modal toast success/error; products/orders LoadingSpinner + empty states; machines spinner + empty; alerts resolve uses isAxiosError in catch.
-Next: wire coupon CRUD UI to createCoupon/updateCoupon with same toast pattern when UI exists.
+Admin loyalty single-page: เสร็จแล้ว — sidebar รวม `/customers`, `/coupons` redirect, หน้า customers + CustomerTable + CouponTable (สร้าง/แก้ไข + points_cost), DB `promotions.points_cost`, Alembic `c2a3b4c5d6e7`, admin API + swagger + admin-ui types/mappers.
+Next (ถ้าต้องการ): รัน migration บน DB จริง; endpoint ฝั่งลูกค้าแลกแต้มเป็นคูปอง (นอก scope รอบนี้).

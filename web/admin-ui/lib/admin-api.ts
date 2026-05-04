@@ -102,6 +102,8 @@ export type ApiCoupon = {
   discount_amount: number;
   is_active: boolean;
   expire_date: string | null;
+  /** แต้มที่ต้องใช้แลก (0 = ไม่บังคับแลกแต้มใน flow นี้) */
+  points_cost?: number;
 };
 
 export async function listProducts(params?: {
@@ -236,6 +238,7 @@ export async function createCoupon(body: {
   discount_amount: number;
   expire_date?: string | null;
   is_active?: boolean;
+  points_cost?: number;
 }): Promise<ApiCoupon> {
   return adminFetch<ApiCoupon>("/coupons", {
     method: "POST",
@@ -252,6 +255,7 @@ export async function updateCoupon(
     discount_amount: number;
     type: string;
     code: string;
+    points_cost: number;
   }>
 ): Promise<ApiCoupon> {
   return adminFetch<ApiCoupon>(`/coupons/${promotionId}`, {
