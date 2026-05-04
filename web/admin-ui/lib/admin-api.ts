@@ -84,6 +84,14 @@ export type ApiOrderListItem = {
   status: string;
   created_at: string | null;
   updated_at: string | null;
+  order_items?: {
+    product_id: number;
+    quantity: number;
+    product_name: string | null;
+    price_at_purchase: number;
+  }[];
+  item_line_count?: number;
+  item_quantity_sum?: number;
   transactions: {
     id: number;
     provider: string;

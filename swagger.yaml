@@ -109,6 +109,37 @@ definitions:
       expire_date: { type: string, x-nullable: true }
       points_cost: { type: integer }
 
+  AdminOrderLineItem:
+    type: object
+    properties:
+      product_id: { type: integer }
+      quantity: { type: integer }
+      product_name: { type: string, x-nullable: true }
+      price_at_purchase: { type: number }
+
+  AdminOrderListItem:
+    type: object
+    properties:
+      order_id: { type: integer }
+      machine_code: { type: string }
+      user_id: { type: integer, x-nullable: true }
+      customer_phone: { type: string, x-nullable: true }
+      promotion_id: { type: integer, x-nullable: true }
+      charge_id: { type: string, x-nullable: true }
+      total_price: { type: number }
+      payment_method: { type: string }
+      status: { type: string }
+      created_at: { type: string, x-nullable: true }
+      updated_at: { type: string, x-nullable: true }
+      item_line_count: { type: integer }
+      item_quantity_sum: { type: integer }
+      order_items:
+        type: array
+        items: { $ref: "#/definitions/AdminOrderLineItem" }
+      transactions:
+        type: array
+        items: { type: object }
+
 paths:
   /health:
     get:
@@ -523,6 +554,14 @@ paths:
       responses:
         "200":
           description: Paginated orders
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminOrderListItem" }
 
   /api/admin/coupons:
     get:
