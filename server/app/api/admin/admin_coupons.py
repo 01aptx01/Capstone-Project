@@ -26,6 +26,9 @@ def _dec(value):
 
 
 def _coupon_to_dict(c: Coupon) -> dict:
+    pc = getattr(c, "points_cost", None)
+    if pc is None:
+        pc = 0
     return {
         "promotion_id": c.promotion_id,
         "code": c.code,
@@ -33,6 +36,7 @@ def _coupon_to_dict(c: Coupon) -> dict:
         "discount_amount": _dec(c.discount_amount),
         "is_active": c.is_active,
         "expire_date": c.expire_date.isoformat() if c.expire_date else None,
+        "points_cost": int(pc),
     }
 
 
@@ -48,6 +52,19 @@ def _parse_expire_date(raw):
         except ValueError:
             raise ValueError("invalid expire_date")
     raise ValueError("expire_date must be a string or null")
+
+
+def _parse_points_cost(raw):
+    """Non-negative int; missing -> 0."""
+    if raw is None:
+        return 0
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError("invalid points_cost")
+    if n < 0:
+        raise ValueError("points_cost must be >= 0")
+    return n
 
 
 @admin_bp.route("/coupons", methods=["GET"])
@@ -97,12 +114,18 @@ def admin_create_coupon():
     if is_active is None:
         is_active = True
 
+    try:
+        points_cost = _parse_points_cost(data.get("points_cost", 0))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
     c = Coupon(
         code=str(code).strip(),
         type=ctype,
         discount_amount=amount_dec,
         is_active=bool(is_active),
         expire_date=expire_date,
+        points_cost=points_cost,
     )
     try:
         db.session.add(c)
@@ -138,6 +161,11 @@ def admin_update_coupon(promotion_id: int):
         new_expire = None
 
     try:
+        if "points_cost" in data:
+            try:
+                c.points_cost = _parse_points_cost(data.get("points_cost"))
+            except ValueError as e:
+                return jsonify({"error": str(e)}), 400
         if "is_active" in data:
             c.is_active = bool(data["is_active"])
         if "expire_date" in data:

@@ -37,6 +37,7 @@ CREATE TABLE promotions (
   discount_amount DECIMAL(10,2) NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   expire_date DATETIME NULL,
+  points_cost INT NOT NULL DEFAULT 0,
   UNIQUE KEY uq_promotions_code (code)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

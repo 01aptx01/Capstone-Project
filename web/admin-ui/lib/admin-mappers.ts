@@ -171,6 +171,7 @@ export type UiCouponRow = {
   name: string;
   type: string;
   points: number;
+  points_cost: number;
   usage: number;
   maxUsage: number;
   expiry: string | null;
@@ -187,12 +188,18 @@ export function apiCouponToUiRow(c: ApiCoupon): UiCouponRow {
   if (c.is_active && (!exp || exp >= now)) status = "active";
   else if (exp && exp < now) status = "expired";
 
+  const pointsCost =
+    typeof c.points_cost === "number" && Number.isFinite(c.points_cost)
+      ? Math.max(0, Math.floor(c.points_cost))
+      : 0;
+
   return {
     promotion_id: c.promotion_id,
     id: c.code,
     name: c.code,
     type: c.type === "percent" ? "PERCENT" : "FIXED",
-    points: 0,
+    points: pointsCost,
+    points_cost: pointsCost,
     usage: 0,
     maxUsage: 0,
     expiry: c.expire_date,

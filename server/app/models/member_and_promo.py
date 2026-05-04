@@ -29,5 +29,6 @@ class Coupon(db.Model):
     discount_amount = db.Column(db.Numeric(10, 2), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     expire_date = db.Column(db.DateTime, nullable=True)
+    points_cost = db.Column(db.Integer, nullable=False, server_default="0")
 
     orders = db.relationship("Order", back_populates="coupon")
