@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 import logging
 import os
 import threading
@@ -7,14 +5,11 @@ import time
 from typing import Any, Dict, Optional
 
 import socketio
+from socketio.exceptions import ConnectionRefusedError
 
 from ws_outbox import get_pending, mark_sent
 
 logger = logging.getLogger(__name__)
-
-
-def _machine_code() -> str:
-    return os.environ.get("MACHINE_CODE") or os.environ.get("MACHINE_ID") or "MP1-001"
 
 
 def _server_url() -> Optional[str]:
@@ -24,28 +19,21 @@ def _server_url() -> Optional[str]:
     return None
 
 
-def _machine_key_bytes() -> Optional[bytes]:
-    secret_hex = os.environ.get("MACHINE_SECRET_KEY")
-    if not secret_hex or not secret_hex.strip():
-        return None
-    try:
-        return bytes.fromhex(secret_hex.strip())
-    except Exception:
-        return None
+def _machine_id_from_env() -> str:
+    return (os.environ.get("MACHINE_ID") or os.environ.get("MACHINE_CODE") or "").strip()
 
 
-def _make_auth() -> Dict[str, Any]:
-    mc = _machine_code()
-    ts = int(time.time())
-    key = _machine_key_bytes()
-    sig = ""
-    if key:
-        sig = hmac.new(key, f"{mc}:{ts}".encode("utf-8"), hashlib.sha256).hexdigest()
-    return {"machine_code": mc, "ts": ts, "sig": sig}
+def _machine_token_from_env() -> str:
+    return (os.environ.get("MACHINE_TOKEN") or "").strip()
+
+
+def _socketio_auth(machine_id: str, token: str) -> Dict[str, Any]:
+    return {"machine_id": machine_id, "token": token}
 
 
 class AgentSocketClient:
-    def __init__(self):
+    def __init__(self) -> None:
+        self._machine_id = ""
         self._sio = socketio.Client(
             reconnection=True,
             reconnection_attempts=0,
@@ -64,9 +52,13 @@ class AgentSocketClient:
         def connect():
             with self._lock:
                 self._connected = True
-            logger.info(f"✅ [WS] connected to server as {_machine_code()}")
+            logger.info(f"✅ [WS] connected to server as {self._machine_id}")
             try:
-                self._sio.call("machine_ready", {"machine_code": _machine_code()}, timeout=5)
+                self._sio.call(
+                    "machine_ready",
+                    {"machine_code": self._machine_id},
+                    timeout=5,
+                )
             except Exception:
                 pass
             self.flush_outbox()
@@ -85,7 +77,7 @@ class AgentSocketClient:
             try:
                 from routes import job_manager, _run_mock_job  # local import to avoid import cycle at startup
 
-                machine_code = data.get("machine_code") or data.get("machine_id") or _machine_code()
+                machine_code = data.get("machine_code") or data.get("machine_id") or self._machine_id
                 items = data.get("items") or []
                 job_id = data.get("job_id")
                 order_charge_id = data.get("order_charge_id")
@@ -111,14 +103,33 @@ class AgentSocketClient:
             logger.warning("⚠️ [WS] SERVER_SOCKET_URL not set; websocket disabled")
             return
 
+        machine_id = _machine_id_from_env()
+        token = _machine_token_from_env()
+        if not machine_id or not token:
+            logger.warning(
+                "⚠️ [WS] MACHINE_ID (or MACHINE_CODE) and MACHINE_TOKEN are required; websocket disabled"
+            )
+            return
+
+        self._machine_id = machine_id
+
         while True:
             try:
                 if not self._sio.connected:
-                    self._sio.connect(url, auth=_make_auth(), transports=["websocket"], wait=True, wait_timeout=10)
+                    self._sio.connect(
+                        url,
+                        auth=_socketio_auth(machine_id, token),
+                        transports=["websocket"],
+                        wait=True,
+                        wait_timeout=10,
+                    )
                 # Connected: keep a small loop and flush periodically
                 for _ in range(5):
                     self.flush_outbox()
                     time.sleep(1)
+            except ConnectionRefusedError:
+                logger.error("Authentication failed: Invalid Machine ID or Token")
+                return
             except Exception:
                 time.sleep(2)
 
