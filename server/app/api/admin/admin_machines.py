@@ -1,9 +1,12 @@
-"""Admin read-only machine and inventory endpoints."""
+"""Admin machine and inventory endpoints."""
 
+import secrets
 from decimal import Decimal
 
+import bcrypt
 from flask import jsonify, request
 from sqlalchemy import func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.api.admin import admin_bp
@@ -25,12 +28,15 @@ def _machine_summary(m: Machine) -> dict:
         "location": m.location,
         "status": m.status,
         "last_active": m.last_active.isoformat() if m.last_active else None,
+        "is_online": bool(m.is_online),
     }
 
 
-@admin_bp.route("/machines", methods=["GET"])
+@admin_bp.route("/machines", methods=["GET", "POST"])
 @admin_required
-def admin_list_machines():
+def admin_machines_collection():
+    if request.method == "POST":
+        return _admin_create_machine()
     page, per_page = get_pagination_params()
     status = (request.args.get("status") or "").strip() or None
     q = (request.args.get("q") or "").strip()
@@ -64,6 +70,44 @@ def admin_list_machines():
     items = [_machine_summary(m) for m in rows]
 
     return jsonify(list_envelope(items, total, page, per_page)), 200
+
+
+def _admin_create_machine():
+    """Create a machine; returns a one-time plaintext secret token for the admin to copy."""
+    data = request.get_json(silent=True) or {}
+    machine_code = (data.get("machine_code") or "").strip()
+    if not machine_code:
+        return jsonify({"error": "machine_code is required"}), 400
+    if len(machine_code) > 20:
+        return jsonify({"error": "machine_code must be at most 20 characters"}), 400
+
+    if db.session.get(Machine, machine_code):
+        return jsonify({"error": "machine_code already exists"}), 409
+
+    raw_token = secrets.token_hex(16)
+    token_hash = bcrypt.hashpw(raw_token.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+    location = (data.get("location") or "").strip() or None
+    status = (data.get("status") or "online").strip() or "online"
+    if status not in ("online", "maintenance", "offline"):
+        return jsonify({"error": "invalid status"}), 400
+
+    machine = Machine(
+        machine_code=machine_code,
+        location=location,
+        status=status,
+        secret_token_hash=token_hash,
+        is_online=False,
+    )
+    db.session.add(machine)
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "machine_code already exists"}), 409
+
+    payload = {**_machine_summary(machine), "secret_token": raw_token}
+    return jsonify(payload), 201
 
 
 def _slot_to_dict(slot: MachineSlot) -> dict:
