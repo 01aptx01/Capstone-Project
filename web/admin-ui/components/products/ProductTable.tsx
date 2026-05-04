@@ -13,9 +13,16 @@ interface ProductTableProps {
   category: string;
   machine: string;
   status: string;
+  /** Server-side name/description filter from URL search (`?q=`). */
+  listQuery?: string;
 }
 
-export default function ProductTable({ category, machine, status }: ProductTableProps) {
+export default function ProductTable({
+  category,
+  machine,
+  status,
+  listQuery = "",
+}: ProductTableProps) {
   const { openEditProduct } = useUI();
   const [products, setProducts] = useState<UiProductRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,7 +30,12 @@ export default function ProductTable({ category, machine, status }: ProductTable
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { items } = await listProducts({ page: 1, per_page: 200 });
+      const q = listQuery.trim();
+      const { items } = await listProducts({
+        page: 1,
+        per_page: 200,
+        ...(q ? { q } : {}),
+      });
       const rows = await enrichProductsWithStock(items);
       setProducts(rows);
     } catch (e) {
@@ -32,7 +44,7 @@ export default function ProductTable({ category, machine, status }: ProductTable
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [listQuery]);
 
   useEffect(() => {
     queueMicrotask(() => {

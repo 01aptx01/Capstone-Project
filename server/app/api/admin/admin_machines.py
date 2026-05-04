@@ -3,7 +3,7 @@
 from decimal import Decimal
 
 from flask import jsonify, request
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.api.admin import admin_bp
@@ -33,10 +33,19 @@ def _machine_summary(m: Machine) -> dict:
 def admin_list_machines():
     page, per_page = get_pagination_params()
     status = (request.args.get("status") or "").strip() or None
+    q = (request.args.get("q") or "").strip()
 
     filters = []
     if status:
         filters.append(Machine.status == status)
+    if q:
+        pattern = f"%{q.lower()}%"
+        filters.append(
+            or_(
+                func.lower(Machine.machine_code).like(pattern),
+                func.lower(func.coalesce(Machine.location, "")).like(pattern),
+            )
+        )
 
     count_stmt = select(func.count(Machine.machine_code))
     if filters:

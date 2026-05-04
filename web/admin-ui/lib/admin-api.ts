@@ -129,6 +129,12 @@ export async function listProducts(params?: {
   );
 }
 
+/** Distinct product.category values from DB (`GET /api/admin/products/categories`). */
+export async function listProductCategories(): Promise<string[]> {
+  const res = await adminFetch<{ categories: string[] }>("/products/categories");
+  return Array.isArray(res.categories) ? res.categories : [];
+}
+
 export async function createProduct(body: {
   name: string;
   price: number;
@@ -173,14 +179,16 @@ export async function listMachines(params?: {
   page?: number;
   per_page?: number;
   status?: string;
+  q?: string;
 }): Promise<Paginated<ApiMachineSummary>> {
   const sp = new URLSearchParams();
   if (params?.page) sp.set("page", String(params.page));
   if (params?.per_page) sp.set("per_page", String(params.per_page));
   if (params?.status) sp.set("status", params.status);
-  const q = sp.toString();
+  if (params?.q) sp.set("q", params.q);
+  const qs = sp.toString();
   return adminFetch<Paginated<ApiMachineSummary>>(
-    `/machines${q ? `?${q}` : ""}`
+    `/machines${qs ? `?${qs}` : ""}`
   );
 }
 
@@ -217,15 +225,17 @@ export async function listOrders(params?: {
   per_page?: number;
   status?: string;
   machine_code?: string;
+  q?: string;
 }): Promise<Paginated<ApiOrderListItem>> {
   const sp = new URLSearchParams();
   if (params?.page) sp.set("page", String(params.page));
   if (params?.per_page) sp.set("per_page", String(params.per_page));
   if (params?.status) sp.set("status", params.status);
   if (params?.machine_code) sp.set("machine_code", params.machine_code);
-  const q = sp.toString();
+  if (params?.q) sp.set("q", params.q);
+  const qs = sp.toString();
   return adminFetch<Paginated<ApiOrderListItem>>(
-    `/orders${q ? `?${q}` : ""}`
+    `/orders${qs ? `?${qs}` : ""}`
   );
 }
 

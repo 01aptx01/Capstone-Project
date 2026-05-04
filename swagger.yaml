@@ -431,6 +431,20 @@ paths:
         "400":
           description: Validation error
 
+  /api/admin/products/categories:
+    get:
+      tags: [Admin]
+      summary: Distinct product categories in DB
+      responses:
+        "200":
+          description: Category codes used by at least one product
+          schema:
+            type: object
+            properties:
+              categories:
+                type: array
+                items: { type: string }
+
   /api/admin/products/{product_id}:
     put:
       tags: [Admin]
@@ -480,6 +494,12 @@ paths:
         - { name: page, in: query, type: integer }
         - { name: per_page, in: query, type: integer }
         - { name: status, in: query, type: string }
+        - {
+            name: q,
+            in: query,
+            type: string,
+            description: "Substring match on machine_code or location (case-insensitive)",
+          }
       responses:
         "200":
           description: Paginated machines
@@ -551,6 +571,12 @@ paths:
         - { name: per_page, in: query, type: integer }
         - { name: status, in: query, type: string }
         - { name: machine_code, in: query, type: string }
+        - {
+            name: q,
+            in: query,
+            type: string,
+            description: "Substring on machine_code, charge_id, customer phone; if numeric, also matches order_id",
+          }
       responses:
         "200":
           description: Paginated orders

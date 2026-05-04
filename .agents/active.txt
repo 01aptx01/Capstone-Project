@@ -1,4 +1,2 @@
-Admin loyalty single-page: เสร็จแล้ว — sidebar รวม `/customers`, `/coupons` redirect, หน้า customers + CustomerTable + CouponTable (สร้าง/แก้ไข + points_cost), DB `promotions.points_cost`, Alembic `c2a3b4c5d6e7`, admin API + swagger + admin-ui types/mappers.
-Next (ถ้าต้องการ): รัน migration บน DB จริง; endpoint ฝั่งลูกค้าแลกแต้มเป็นคูปอง (นอก scope รอบนี้).
-
-Admin orders list: `GET /api/admin/orders` โหลด `order_items` + product, ส่ง `order_items` / `item_line_count` / `item_quantity_sum`; หน้า `/orders` แสดงตู้, ช่องทางจ่าย, สรุปสินค้าจากบรรทัดออเดอร์; swagger อัปเดต AdminOrderListItem.
+Admin header global search: เสร็จแล้ว — backend `q` บน `GET /api/admin/machines` + `GET /api/admin/orders` (SQL filter), swagger, `admin-api.ts` listMachines/listOrders, Header command palette (debounce 250ms, parallel API, ⌘K/Ctrl+K, Escape, คลิกนอกปิด), หน้า products/customers/orders/machines รองรับ `?q=` ผ่าน Suspense + client inner component.
+Next (ถ้าต้องการ): ลูกศรเลือกรายการในแผงค้นหา; ลิงก์ `/machines?q=` จากเมนูแทนรายการตู้เดี่ยว.

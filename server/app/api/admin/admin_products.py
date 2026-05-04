@@ -69,6 +69,16 @@ def admin_list_products():
     return jsonify(list_envelope(items, total, page, per_page)), 200
 
 
+@admin_bp.route("/products/categories", methods=["GET"])
+@admin_required
+def admin_list_product_categories():
+    """Distinct `products.category` values present in the database (for admin filters)."""
+    stmt = select(Product.category).distinct().order_by(Product.category)
+    codes = db.session.scalars(stmt).all()
+    categories = [c for c in codes if c]
+    return jsonify({"categories": categories}), 200
+
+
 @admin_bp.route("/products", methods=["POST"])
 @admin_required
 def admin_create_product():
