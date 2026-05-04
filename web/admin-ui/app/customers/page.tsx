@@ -5,11 +5,14 @@ import ReportCard from "@/components/dashboard/ReportCard";
 import CouponTable, { ADMIN_COUPON_CREATE_OPEN_EVENT } from "@/components/customers/CouponTable";
 import CustomerTable from "@/components/customers/CustomerTable";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { Suspense, useEffect, useMemo, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { listCoupons, listCustomers, type ApiCustomer } from "@/lib/admin-api";
 import { apiCouponToUiRow, summarizeCustomers } from "@/lib/admin-mappers";
 
-export default function CustomersPage() {
+function CustomersPageClient() {
+  const searchParams = useSearchParams();
+  const listQuery = searchParams.get("q")?.trim() ?? "";
   const { openExportModal } = useUI();
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [totalPoints, setTotalPoints] = useState<number | null>(null);
@@ -22,8 +25,13 @@ export default function CustomersPage() {
     setLoading(true);
     setError(null);
     try {
+      const q = listQuery.trim();
       const [custRes, coupRes] = await Promise.all([
-        listCustomers({ page: 1, per_page: 2000 }),
+        listCustomers({
+          page: 1,
+          per_page: 2000,
+          ...(q ? { q } : {}),
+        }),
         listCoupons({ page: 1, per_page: 500 }),
       ]);
       const { totalPoints: tp } = summarizeCustomers(custRes.items);
@@ -47,7 +55,7 @@ export default function CustomersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [listQuery]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -212,5 +220,19 @@ export default function CustomersPage() {
         </div>
       </div>
     </PageWrapper>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense
+      fallback={
+        <PageWrapper>
+          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+        </PageWrapper>
+      }
+    >
+      <CustomersPageClient />
+    </Suspense>
   );
 }
