@@ -4,11 +4,14 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import MachineCard from "@/components/machines/MachineCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { listMachines } from "@/lib/admin-api";
 import { apiMachineToCard, type UiMachineCard } from "@/lib/admin-mappers";
 
-export default function MachinesPage() {
+function MachinesPageClient() {
+  const searchParams = useSearchParams();
+  const listQuery = searchParams.get("q")?.trim() ?? "";
   const { openAddMachine, openExportModal } = useUI();
   const [machines, setMachines] = useState<UiMachineCard[]>([]);
   const [loading, setLoading] = useState(true);
@@ -16,7 +19,12 @@ export default function MachinesPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { items } = await listMachines({ page: 1, per_page: 200 });
+      const q = listQuery.trim();
+      const { items } = await listMachines({
+        page: 1,
+        per_page: 200,
+        ...(q ? { q } : {}),
+      });
       setMachines(items.map(apiMachineToCard));
     } catch (e) {
       console.error(e);
@@ -24,7 +32,7 @@ export default function MachinesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [listQuery]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -211,5 +219,19 @@ export default function MachinesPage() {
         </div>
       </div>
     </PageWrapper>
+  );
+}
+
+export default function MachinesPage() {
+  return (
+    <Suspense
+      fallback={
+        <PageWrapper>
+          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+        </PageWrapper>
+      }
+    >
+      <MachinesPageClient />
+    </Suspense>
   );
 }

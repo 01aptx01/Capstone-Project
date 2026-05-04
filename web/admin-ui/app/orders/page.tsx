@@ -4,12 +4,15 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import ReportCard from "@/components/dashboard/ReportCard";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { listOrders } from "@/lib/admin-api";
 import type { ApiOrderListItem } from "@/lib/admin-api";
 import { apiOrderToUiRow } from "@/lib/admin-mappers";
 
-export default function OrdersPage() {
+function OrdersPageClient() {
+  const searchParams = useSearchParams();
+  const listQuery = searchParams.get("q")?.trim() ?? "";
   const { openExportModal } = useUI();
   const [rows, setRows] = useState<ReturnType<typeof apiOrderToUiRow>[]>([]);
   const [rawItems, setRawItems] = useState<ApiOrderListItem[]>([]);
@@ -19,7 +22,12 @@ export default function OrdersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await listOrders({ page: 1, per_page: 500 });
+      const q = listQuery.trim();
+      const res = await listOrders({
+        page: 1,
+        per_page: 500,
+        ...(q ? { q } : {}),
+      });
       setTotal(res.total);
       setRawItems(res.items);
       setRows(res.items.map(apiOrderToUiRow));
@@ -31,7 +39,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [listQuery]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -299,5 +307,19 @@ export default function OrdersPage() {
         </div>
       </div>
     </PageWrapper>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense
+      fallback={
+        <PageWrapper>
+          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+        </PageWrapper>
+      }
+    >
+      <OrdersPageClient />
+    </Suspense>
   );
 }
