@@ -1,2 +1,2 @@
-Admin header global search: เสร็จแล้ว — backend `q` บน `GET /api/admin/machines` + `GET /api/admin/orders` (SQL filter), swagger, `admin-api.ts` listMachines/listOrders, Header command palette (debounce 250ms, parallel API, ⌘K/Ctrl+K, Escape, คลิกนอกปิด), หน้า products/customers/orders/machines รองรับ `?q=` ผ่าน Suspense + client inner component.
-Next (ถ้าต้องการ): ลูกศรเลือกรายการในแผงค้นหา; ลิงก์ `/machines?q=` จากเมนูแทนรายการตู้เดี่ยว.
+Admin export formatting: เสร็จแล้ว — PDF ใช้ jsPDF + jspdf-autotable แบบหลาย section + ฟอนต์ Sarabun (`public/fonts/Sarabun-Regular.ttf`), CSV มีแถว metadata ชื่อรายงาน/วันที่; ถอด html2canvas; ExportModal ดึงข้อมูลครั้งเดียวเมื่อเลือกหลายรูปแบบ
+Next (ถ้าต้องการ): XLSX ด้วย exceljs; PDF ฝั่งเซิร์ฟเวอร์ด้วย Puppeteer เมื่อ deploy รองรับ Chromium
