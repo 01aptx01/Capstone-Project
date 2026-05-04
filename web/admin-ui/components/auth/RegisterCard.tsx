@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import AuthCardWrapper from "./AuthCardWrapper";
+import { Suspense } from "react";
 
-export default function RegisterCard() {
+function RegisterCardContent() {
   const [formData, setFormData] = useState({
-    email: "",
     firstName: "",
     lastName: "",
     position: "",
@@ -17,6 +18,9 @@ export default function RegisterCard() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Read pre-authorized email from URL (passed by the invitation flow)
+  const authorizedEmail = searchParams?.get("email") || "newhire@example.com";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(s => ({ ...s, [e.target.name]: e.target.value }));
@@ -32,20 +36,15 @@ export default function RegisterCard() {
     }
 
     setLoading(true);
-    // Simulate auth check for pre-authorized email
+    // Simulate registration — email is locked to the invited address
     setTimeout(() => {
       setLoading(false);
-      // Mock logic: Only allow if email contains 'invite' or 'newhire'
-      if (!formData.email.includes("invite") && !formData.email.includes("newhire") && !formData.email.includes("register")) {
-        setError("This email address has not been authorized by the First Admin.");
-      } else {
-        router.push("/");
-      }
+      router.push(`/verify-otp?phone=${encodeURIComponent(formData.phone)}`);
     }, 1000);
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl rounded-3xl p-10 w-[500px] max-w-[95vw] animate-in zoom-in-95 duration-500 mx-auto">
+    <AuthCardWrapper>
       <div className="flex flex-col items-center mb-8">
         <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4">
           <Image src="/Logo_modpao.png" alt="logo" width={48} height={48} priority />
@@ -64,15 +63,16 @@ export default function RegisterCard() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-[13px] font-bold text-slate-500 mb-2">Authorized Email</label>
-          <input 
-            type="email"
-            name="email"
-            required
-            value={formData.email} 
-            onChange={handleChange} 
-            placeholder="e.g. newhire@example.com"
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-[#f47b2a] outline-none transition-all text-[14px] font-medium" 
-          />
+          <div className="relative">
+            <input 
+              type="email"
+              readOnly
+              value={authorizedEmail}
+              className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-xl text-[14px] font-medium text-slate-500 cursor-not-allowed select-none"
+            />
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-black uppercase tracking-wider text-slate-400 bg-slate-200 px-2 py-0.5 rounded-md">Locked</span>
+          </div>
+          <p className="text-[12px] text-slate-400 font-medium mt-1.5">This email was authorized by the First Admin and cannot be changed.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -157,6 +157,14 @@ export default function RegisterCard() {
           {loading ? "Creating Account..." : "Register & Continue"}
         </button>
       </form>
-    </div>
+    </AuthCardWrapper>
+  );
+}
+
+export default function RegisterCard() {
+  return (
+    <Suspense fallback={<div style={{ width: "100%", minHeight: "700px" }} className="rounded-3xl bg-white/80 animate-pulse" />}>
+      <RegisterCardContent />
+    </Suspense>
   );
 }

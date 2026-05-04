@@ -5,6 +5,7 @@ import EditMachineModal from "@/components/machines/EditMachineModal";
 import AddProductModal from "@/components/products/AddProductModal";
 import EditProductModal from "@/components/products/EditProductModal";
 import ExportModal from "@/components/dashboard/ExportModal";
+import CreateCouponModal from "@/components/customers/CreateCouponModal";
 import { useUI } from "@/lib/context/UIContext";
 
 export default function GlobalModals() {
@@ -15,6 +16,7 @@ export default function GlobalModals() {
     isEditProductOpen, closeEditProduct, editingProduct,
     isExportModalOpen, closeExportModal,
     exportSections, exportPageTitle,
+    isCreateCouponOpen, closeCreateCoupon,
   } = useUI();
 
   return (
@@ -42,6 +44,10 @@ export default function GlobalModals() {
         onClose={closeExportModal}
         sections={exportSections}
         pageTitle={exportPageTitle}
+      />
+      <CreateCouponModal
+        open={isCreateCouponOpen}
+        onClose={closeCreateCoupon}
       />
     </>
   );

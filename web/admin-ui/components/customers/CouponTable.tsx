@@ -1,18 +1,39 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import couponsData from "@/lib/mock/coupons.json";
+import { useUI } from "@/lib/context/UIContext";
+
+// ── Portal Wrapper ────────────────────────────────────────────────────────────
+function Portal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  if (!mounted) return null;
+  return createPortal(children, document.body);
+}
 
 export default function CouponTable() {
+  const { openCreateCoupon } = useUI();
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [search, setSearch] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  // Filter States
+  const [filters, setFilters] = useState({
+    status: "all",
+    type: "all",
+    expiryDate: ""
+  });
 
   const tabs = ["ทั้งหมด", "กำลังใช้งาน (Active)", "หมดอายุ"];
 
   const filteredCoupons = useMemo(() => {
     const now = new Date();
     const q = search.trim().toLowerCase();
+    
     return couponsData.filter((coupon) => {
+      // Tab Filtering
       let tabMatch = true;
       const expiry = coupon.expiry ? new Date(coupon.expiry) : null;
       if (activeTab === "กำลังใช้งาน (Active)") {
@@ -21,18 +42,34 @@ export default function CouponTable() {
         tabMatch = !!expiry && expiry < now;
       }
 
+      // Search Filtering
       const searchMatch =
         q === "" ||
         (coupon.name && coupon.name.toLowerCase().includes(q)) ||
         (coupon.id && coupon.id.toLowerCase().includes(q));
 
-      return tabMatch && searchMatch;
+      // Advanced Filters
+      const statusMatch = filters.status === "all" || coupon.status === filters.status;
+      const typeMatch = filters.type === "all" || coupon.type === filters.type;
+      const dateMatch = !filters.expiryDate || (coupon.expiry && coupon.expiry === filters.expiryDate);
+
+      return tabMatch && searchMatch && statusMatch && typeMatch && dateMatch;
     });
-  }, [activeTab, search]);
+  }, [activeTab, search, filters]);
+
+  const applyFilters = (newFilters: typeof filters) => {
+    setFilters(newFilters);
+    setIsFilterOpen(false);
+  };
+
+  const clearFilters = () => {
+    setFilters({ status: "all", type: "all", expiryDate: "" });
+    setIsFilterOpen(false);
+  };
 
   return (
     <div className="bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.04)] animate-in fade-in duration-700">
-      {/* Table Header Section - High Impact */}
+      {/* Table Header Section */}
       <div className="px-12 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 bg-gradient-to-b from-white/60 to-transparent">
         <div>
           <h3 className="text-[28px] font-black text-[#334155] tracking-tight mb-2">Promotions & Coupons</h3>
@@ -59,8 +96,8 @@ export default function CouponTable() {
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="px-12 py-6 border-y border-white/40 bg-white/10 flex items-center gap-6">
+      {/* Filter & Search Bar - Refined */}
+      <div className="px-12 py-6 border-y border-white/40 bg-white/10 flex items-center gap-4">
         <div className="relative flex-1 group">
           <i className="fi fi-rr-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors text-lg"></i>
           <input
@@ -70,10 +107,27 @@ export default function CouponTable() {
             className="w-full pl-14 pr-8 py-5 rounded-[24px] border-2 border-slate-200 bg-white shadow-sm focus:bg-white focus:border-[#f47b2a] focus:ring-8 focus:ring-orange-500/5 outline-none transition-all duration-300 font-bold text-slate-700 placeholder:text-slate-400"
           />
         </div>
-        <button className="px-8 py-5 bg-white border border-white rounded-[24px] shadow-sm flex items-center gap-3 text-[14px] font-black text-slate-600 hover:text-[#f47b2a] hover:border-[#f47b2a] hover:shadow-lg transition-all duration-300">
-          <i className="fi fi-rr-filter"></i>
-          Advanced
-        </button>
+        
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsFilterOpen(true)}
+            className={`w-14 h-14 rounded-[22px] border-2 flex items-center justify-center text-xl transition-all duration-300 ${
+              filters.status !== "all" || filters.type !== "all" || filters.expiryDate 
+                ? "bg-[#f47b2a] border-[#f47b2a] text-white shadow-lg shadow-orange-500/20" 
+                : "bg-white border-slate-200 text-slate-400 hover:border-[#f47b2a] hover:text-[#f47b2a] shadow-sm"
+            }`}
+          >
+            <i className="fi fi-rr-filter"></i>
+          </button>
+          
+          <button 
+            onClick={openCreateCoupon}
+            className="h-14 px-8 bg-gradient-to-r from-[#f47b2a] to-[#FB923C] text-white rounded-[22px] text-[15px] font-black shadow-[0_12px_24px_rgba(244,123,42,0.2)] hover:shadow-[0_15px_30px_rgba(244,123,42,0.3)] hover:-translate-y-1 transition-all flex items-center gap-3 active:translate-y-0 active:scale-95 whitespace-nowrap"
+          >
+            <i className="fi fi-rr-plus flex items-center"></i>
+            สร้างคูปองใหม่
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -110,7 +164,7 @@ export default function CouponTable() {
                   </div>
                 </td>
                 <td className="px-6 py-8">
-                  <span className="inline-block text-[12px] font-black text-slate-500 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm uppercase tracking-wider break-words max-w-[120px] sm:max-w-none text-center leading-snug">{coupon.type}</span>
+                  <span className="inline-block text-[12px] font-black text-slate-500 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm uppercase tracking-wider text-center leading-snug">{coupon.type}</span>
                 </td>
                 <td className="px-6 py-8">
                   {coupon.points > 0 ? (
@@ -171,6 +225,82 @@ export default function CouponTable() {
           <button className="px-8 py-3 rounded-xl bg-[#334155] text-white font-black text-[12px] uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">Next Page</button>
         </div>
       </div>
+
+      {/* Advanced Filter Modal */}
+      {isFilterOpen && (
+        <Portal>
+          <div 
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => setIsFilterOpen(false)}
+          >
+            <div 
+              className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95 duration-300"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-800">Advanced Filter</h3>
+                <button onClick={() => setIsFilterOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <i className="fi fi-rr-cross-small text-xl"></i>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">Status</label>
+                  <select 
+                    value={filters.status}
+                    onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="fully_claimed">Fully Claimed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">Coupon Type</label>
+                  <select 
+                    value={filters.type}
+                    onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="Percentage">Percentage (%)</option>
+                    <option value="Fixed Amount">Fixed Amount (฿)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">Expiry Date</label>
+                  <input 
+                    type="date"
+                    value={filters.expiryDate}
+                    onChange={(e) => setFilters(prev => ({ ...prev, expiryDate: e.target.value }))}
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-10">
+                <button 
+                  onClick={clearFilters}
+                  className="flex-1 py-4 bg-slate-100 text-slate-500 font-black text-[14px] rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                >
+                  Reset
+                </button>
+                <button 
+                  onClick={() => setIsFilterOpen(false)}
+                  className="flex-[2] py-4 bg-[#f47b2a] text-white font-black text-[14px] rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all active:scale-95"
+                >
+                  Apply Filter
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
     </div>
   );
 }

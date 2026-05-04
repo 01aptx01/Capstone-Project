@@ -1,8 +1,8 @@
 [
   {
     "id": "CPN-001",
-    "name": "ซื้อ 2 แถม 1 (ไส้หมูสับ)",
-    "type": "แถมฟรี",
+    "name": "ส่วนลด 20% สำหรับสมาชิกใหม่",
+    "type": "Percentage",
     "points": 50,
     "usage": 142,
     "maxUsage": 500,
@@ -11,8 +11,8 @@
   },
   {
     "id": "CPN-002",
-    "name": "ส่วนลด 10 บาท",
-    "type": "ส่วนลด",
+    "name": "ส่วนลด 10 บาท ทุกเมนู",
+    "type": "Fixed Amount",
     "points": 40,
     "usage": 856,
     "maxUsage": 1000,
@@ -21,8 +21,8 @@
   },
   {
     "id": "CPN-003",
-    "name": "ฟรี ชาเย็น 1 แก้ว",
-    "type": "แจกฟรี",
+    "name": "ส่วนลด 50 บาท เมื่อซื้อครบ 200",
+    "type": "Fixed Amount",
     "points": 80,
     "usage": 500,
     "maxUsage": 500,
@@ -31,8 +31,8 @@
   },
   {
     "id": "CPN-004",
-    "name": "แจกพอยท์ x2 สาขา LX",
-    "type": "คูณพอยท์",
+    "name": "ส่วนลด 5% ประจำเดือนเมษายน",
+    "type": "Percentage",
     "points": 0,
     "usage": 120,
     "maxUsage": null,
