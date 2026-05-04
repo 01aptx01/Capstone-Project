@@ -1,5 +1,3 @@
-import hmac
-import hashlib
 import json
 import logging
 import os
@@ -7,6 +5,7 @@ import threading
 import time
 from typing import Any, Dict, Optional, Tuple
 
+import bcrypt
 import socketio
 
 from app.db_config.db import get_db
@@ -27,49 +26,42 @@ def _json_dumps_safe(payload: Any) -> Optional[str]:
         return json.dumps({"unserializable": True})
 
 
-def _derive_machine_key(*, fleet_secret: str, machine_code: str) -> bytes:
-    return hmac.new(
-        fleet_secret.encode("utf-8"),
-        machine_code.encode("utf-8"),
-        hashlib.sha256,
-    ).digest()
+def _verify_machine_token_auth(machine_id: str, raw_token: str) -> Tuple[bool, str]:
+    """Validate raw token against ``machines.secret_token_hash`` (bcrypt)."""
+    if not machine_id or not raw_token:
+        return False, "machine_id and token required"
 
-
-def _verify_machine_auth(auth: Optional[Dict[str, Any]]) -> Tuple[bool, Optional[str], str]:
-    fleet_secret = os.environ.get("FLEET_SECRET")
-    if not fleet_secret:
-        machine_code = None
-        if isinstance(auth, dict):
-            machine_code = auth.get("machine_code") or auth.get("machine_id") or auth.get("machine")
-        return True, machine_code, "auth-disabled"
-
-    if not isinstance(auth, dict):
-        return False, None, "missing auth"
-
-    machine_code = auth.get("machine_code") or auth.get("machine_id")
-    ts = auth.get("ts")
-    sig = auth.get("sig")
-
-    if not machine_code or ts is None or not sig:
-        return False, None, "machine_code, ts, sig required"
-
+    db = get_db()
+    cur = db.cursor(dictionary=True)
     try:
-        ts_int = int(ts)
-    except Exception:
-        return False, None, "ts must be int"
-
-    # Short replay window
-    if abs(_now_ts() - ts_int) > 60:
-        return False, None, "ts out of window"
-
-    derived_key = _derive_machine_key(fleet_secret=fleet_secret, machine_code=machine_code)
-    msg = f"{machine_code}:{ts_int}".encode("utf-8")
-    expected = hmac.new(derived_key, msg, hashlib.sha256).hexdigest()
-
-    if not hmac.compare_digest(str(expected), str(sig)):
-        return False, None, "bad sig"
-
-    return True, str(machine_code), "ok"
+        cur.execute(
+            """
+            SELECT secret_token_hash
+            FROM machines
+            WHERE machine_code = %s
+            LIMIT 1
+            """,
+            (machine_id,),
+        )
+        row = cur.fetchone()
+        if not row:
+            return False, "unknown machine_id"
+        stored = row.get("secret_token_hash")
+        if not stored:
+            return False, "machine has no enrolled token"
+        if isinstance(stored, bytes):
+            stored_b = stored
+        else:
+            stored_b = str(stored).encode("utf-8")
+        try:
+            if not bcrypt.checkpw(raw_token.encode("utf-8"), stored_b):
+                return False, "invalid token"
+        except ValueError:
+            return False, "invalid token"
+        return True, "ok"
+    finally:
+        cur.close()
+        db.close()
 
 
 sio = socketio.Server(
@@ -101,22 +93,23 @@ def emit_dashboard_update(payload: Dict[str, Any]) -> None:
 _online_machines: Dict[str, str] = {}
 
 
-def _update_machine_presence(machine_code: str, *, online: bool) -> None:
+def _update_machine_is_online(machine_code: str, *, online: bool) -> None:
+    """Persist Socket.IO presence on ``machines.is_online`` (and touch ``last_active``)."""
     db = get_db()
-    cur = db.cursor(dictionary=True)
+    cur = db.cursor()
     try:
-        status = "online" if online else "offline"
         cur.execute(
             """
             UPDATE machines
-            SET status = %s, last_active = NOW()
+            SET is_online = %s, last_active = NOW()
             WHERE machine_code = %s
             """,
-            (status, machine_code),
+            (1 if online else 0, machine_code),
         )
         db.commit()
     except Exception:
         db.rollback()
+        logger.exception("[SocketIO] failed to update is_online for %s", machine_code)
     finally:
         cur.close()
         db.close()
@@ -385,16 +378,26 @@ def connect(sid, environ, auth):
         logger.info(f"[SocketIO] admin dashboard connected (sid={sid})")
         return
 
-    ok, machine_code, reason = _verify_machine_auth(auth)
+    if not isinstance(auth, dict):
+        raise ConnectionRefusedError("missing auth")
+
+    machine_id = auth.get("machine_id") or auth.get("machine_code")
+    raw_token = auth.get("token")
+    if machine_id is None or raw_token is None:
+        raise ConnectionRefusedError("machine_id and token required in auth")
+
+    machine_code = str(machine_id).strip()
+    token_str = str(raw_token)
+    if not machine_code or not token_str:
+        raise ConnectionRefusedError("machine_id and token required in auth")
+
+    ok, reason = _verify_machine_token_auth(machine_code, token_str)
     if not ok:
         raise ConnectionRefusedError(reason)
 
-    if not machine_code:
-        machine_code = "UNKNOWN"
-
     sio.enter_room(sid, machine_code)
     _online_machines[machine_code] = sid
-    _update_machine_presence(machine_code, online=True)
+    _update_machine_is_online(machine_code, online=True)
 
     sent = dispatch_pending_jobs(machine_code)
     logger.info(f"✅ [SocketIO] machine connected: {machine_code} (sid={sid}) pending_sent={sent}")
@@ -410,7 +413,7 @@ def disconnect(sid):
             break
 
     if machine_code:
-        _update_machine_presence(machine_code, online=False)
+        _update_machine_is_online(machine_code, online=False)
         logger.info(f"🔌 [SocketIO] machine disconnected: {machine_code} (sid={sid})")
 
 
