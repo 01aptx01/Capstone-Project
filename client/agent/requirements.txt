@@ -5,6 +5,7 @@ python-socketio
 
 adafruit-blinka
 adafruit-circuitpython-pca9685
+adafruit-circuitpython-mfrc522
 mfrc522
 pygame
 
