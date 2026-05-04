@@ -54,7 +54,7 @@ export default function DashboardCard({
       onMouseMove={handleMouseMove}
       whileHover={{ y: -6, scale: 1.01 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
-      className="vibrant-card p-6 h-full flex flex-col justify-between relative overflow-hidden group"
+      className="vibrant-card p-4 xl:p-6 h-full flex flex-col justify-between relative overflow-hidden group"
     >
       <motion.div
         className="pointer-events-none absolute -inset-px rounded-xl opacity-0 transition duration-300 group-hover:opacity-100"
@@ -69,8 +69,8 @@ export default function DashboardCard({
             {icon}
           </div>
           <div>
-            <div className="text-[14px] font-bold text-[#64748B] mb-1 group-hover:text-[#f47b2a] transition-colors">{title}</div>
-            <div className="text-[26px] font-extrabold leading-none flex items-baseline gap-2" style={{ color: valueColor }}>
+            <div className="text-[13px] xl:text-[14px] font-bold text-[#64748B] mb-1 group-hover:text-[#f47b2a] transition-colors">{title}</div>
+            <div className="text-[22px] xl:text-[26px] font-extrabold leading-none flex items-baseline gap-2" style={{ color: valueColor }}>
               <motion.span 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

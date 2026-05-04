@@ -72,7 +72,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Top Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-5">
         <div className="animate-in opacity-0 delay-100 h-full">
           <ReportCard
             isFeatured={true}
@@ -124,7 +124,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in opacity-0 delay-700 pb-16">
+      <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-8 animate-in opacity-0 delay-700 pb-16">
         <SalesByLocation />
         <SalesByFlavor />
       </div>

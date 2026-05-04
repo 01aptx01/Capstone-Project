@@ -80,12 +80,12 @@ export default function CouponTable() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-slate-50/30 border-b border-white/40">
-              <th className="px-12 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Campaign Asset</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Type</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Requirement</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Utilization</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Timeline</th>
-              <th className="px-12 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
+              <th className="px-12 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Campaign Asset</th>
+              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Type</th>
+              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Requirement</th>
+              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Utilization</th>
+              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap">Timeline</th>
+              <th className="px-12 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/20">

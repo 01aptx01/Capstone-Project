@@ -73,7 +73,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <div className="animate-in opacity-0 delay-100">
           <ReportCard 
             title="ออเดอร์ทั้งหมด" 
@@ -130,12 +130,12 @@ export default function OrdersPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Order ID</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Timestamp</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Items</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Total Amount</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Status</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Order ID</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Timestamp</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Items</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Total Amount</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Status</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

@@ -100,13 +100,13 @@ export default function ProductTable({ category, machine, status }: ProductTable
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-slate-50/50">
-              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em]">ข้อมูลสินค้า</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em]">หมวดหมู่</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em]">จำนวนตู้ที่จำหน่าย</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em]">คงเหลือ</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em]">ราคา</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em]">สถานะ</th>
-              <th className="px-8 py-6 text-center text-[12px] font-black text-slate-400 uppercase tracking-[0.15em]">จัดการ</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">ข้อมูลสินค้า</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">หมวดหมู่</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">จำนวนตู้ที่จำหน่าย</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">คงเหลือ</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">ราคา</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">สถานะ</th>
+              <th className="px-8 py-6 text-center text-[12px] font-black text-slate-400 uppercase tracking-[0.15em] whitespace-nowrap">จัดการ</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">

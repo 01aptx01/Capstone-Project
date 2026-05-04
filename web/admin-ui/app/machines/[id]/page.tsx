@@ -91,7 +91,7 @@ export default function MachineDetailPage({ params }: PageProps) {
       ) : (
         <>
           {/* Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
             {metrics.map((m, i) => (
               <div key={i} className="bg-white border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                 <div className="text-[13px] font-bold text-[#64748B] mb-2">{m.title}</div>

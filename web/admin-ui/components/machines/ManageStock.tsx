@@ -85,10 +85,10 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0]">
-              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider w-[80px]">Edit</th>
-              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider">Product Name</th>
-              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider w-[200px]">Quantity</th>
-              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider w-[150px]">Status</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider w-[80px] whitespace-nowrap">Edit</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider whitespace-nowrap">Product Name</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider w-[200px] whitespace-nowrap">Quantity</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[#64748B] uppercase tracking-wider w-[150px] whitespace-nowrap">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E2E8F0]">
