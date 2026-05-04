@@ -233,7 +233,7 @@ export default function VendingPage() {
           stock: Number(p.stock) || 0,
         }));
 
-        // // Mock Data (ถอด API ออกชั่วคราว)
+        // Mock Data (ถอด API ออกชั่วคราว)
         // const mappedProducts: Product[] = [
         //   {
         //     id: 1,
@@ -1308,24 +1308,20 @@ export default function VendingPage() {
                       </div>
                       <div>
                         <button
-                          className="modal-action-payment-btn modal-action-payment-card-btn relative overflow-hidden rounded-2xl border border-white/20 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-[0_20px_50px_rgba(0,0,0,0.35)] hover:shadow-[0_26px_70px_rgba(0,0,0,0.45)] transition-all duration-300 before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-r before:from-white/10 before:via-white/5 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity after:content-[''] after:absolute after:-inset-x-20 after:top-0 after:h-px after:bg-gradient-to-r after:from-transparent after:via-white/40 after:to-transparent"
+                          className="modal-action-payment-btn modal-action-payment-card-btn"
                           onClick={() => {
                             setSelectedPaymentMethod("card");
                           }}
                           disabled={!isOmiseLoaded}
                         >
-                          <div className="relative z-10 flex items-center justify-between w-full gap-4">
-                            <div className="flex flex-col items-start">
-                              <div className="text-[18px] md:text-[20px] font-black text-white tracking-tight">
-                                Tap to Pay
-                              </div>
-                              <div className="text-[12px] md:text-[13px] font-bold text-white/70">
-                                NFC / Credit Card
-                              </div>
+                          <div className="card-btn-content">
+                            <div className="card-btn-info">
+                              <div className="card-btn-title">Tap to Pay</div>
+                              <div className="card-btn-subtitle">NFC / Credit Card</div>
                             </div>
-                            <div className="flex items-center gap-3 text-white/90">
-                              <Nfc size={28} strokeWidth={1.6} />
-                              <CreditCard size={28} strokeWidth={1.6} />
+                            <div className="card-btn-icons">
+                              <Nfc size={32} strokeWidth={1.5} />
+                              <CreditCard size={32} strokeWidth={1.5} />
                             </div>
                           </div>
                         </button>
@@ -1407,7 +1403,7 @@ export default function VendingPage() {
                 {selectedPaymentMethod === "card" && (
                   <>
                     <div className="payment-title">
-                      ชำระเงินด้วย Tap to Pay (NFC / Credit Card)
+                      ชำระเงินด้วย Credit / Debit Card
                     </div>
                       {/* Step 1: แนะนำ */}
                       {paymentStep === 1 && (
@@ -1425,6 +1421,11 @@ export default function VendingPage() {
                               <BanknoteArrowUp size={20} color="#f89025" /> 3.
                               รอสัญญาณเสียงเพื่อเสร็จสิ้นรายการ
                             </p>
+                          </div>
+                          <div className="supported-cards-row">
+                            <Image src="/payment/Visa-logo.png" alt="Visa" width={40} height={24} />
+                            <Image src="/payment/Mastercard-logo.png" alt="Mastercard" width={40} height={24} />
+                            <Image src="/payment/UnionPay-logo.png" alt="UnionPay" width={40} height={24} />
                           </div>
                           <button className="modal-confirm-btn" onClick={handleProceedToTap}>
                             ดำเนินการแตะบัตร / จ่ายด้วย NFC
@@ -1447,15 +1448,15 @@ export default function VendingPage() {
                             กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง
                           </p>
                           {/* กดเพื่อจำลองการแตะบัตร NFC */}
-                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" }}>
-                            <button style={testBtnStyle} onClick={() => simulateNfcTap("visa")}>
-                              [Test] Visa Tap
+                          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                            <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("visa")}>
+                              Visa
                             </button>
-                            <button style={testBtnStyle} onClick={() => simulateNfcTap("mastercard")}>
-                              [Test] Mastercard Tap
+                            <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("mastercard")}>
+                              Mastercard
                             </button>
-                            <button style={testBtnStyle} onClick={() => simulateNfcTap("unionpay")}>
-                              [Test] UnionPay Tap
+                            <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("unionpay")}>
+                              UnionPay
                             </button>
                           </div>
                         </>
