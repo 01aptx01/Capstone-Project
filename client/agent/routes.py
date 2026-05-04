@@ -446,6 +446,14 @@ def job_events(job_id: str):
         },
     )
 
+@routes.route("/nfc/status", methods=["GET"])
+def nfc_status():
+    """Endpoint for UI to poll for NFC tap status."""
+    if machine.nfc._event.is_set():
+        machine.nfc.reset()
+        return jsonify({"status": "tapped"}), 200
+    return jsonify({"status": "waiting"}), 200
+
 @routes.route("/")
 def index():
     return {"status": "agent-online", "version": "1.0.0"}

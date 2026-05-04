@@ -44,6 +44,17 @@ except Exception:  # pragma: no cover - hardware dependency
 	LED = None
 	RGBLED = None
 
+try:
+	import board
+	import busio
+	import digitalio
+	from mfrc522 import SimpleMFRC522 # type: ignore
+except ImportError:
+	board = None
+	busio = None
+	digitalio = None
+	SimpleMFRC522 = None
+
 
 def _env_flag(name: str, default: bool = False) -> bool:
 	value = os.environ.get(name)
@@ -85,7 +96,7 @@ def _default_ui_url() -> str:
 		os.environ.get("MACHINE_UI_URL")
 		or os.environ.get("SERVER_MACHINE_UI_URL")
 		or os.environ.get("NEXT_PUBLIC_MACHINE_UI_URL")
-		or "http://192.168.1.44:3000"
+		or "http://localhost:3000"
 	)
 
 
@@ -118,6 +129,11 @@ class MachineConfig:
 	rgb_led_pins: list[int] = field(default_factory=lambda: _split_ints(os.environ.get("RGB_LED_PINS")) or DEFAULT_RGB_LED_PINS.copy())
 	sound_dir: Path = field(default_factory=_sound_directory)
 	nfc_auto_approve: bool = field(default_factory=lambda: _env_flag("NFC_AUTO_APPROVE", default=True))
+	nfc_mosi_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MOSI_PIN") or 5))
+	nfc_miso_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MISO_PIN") or 6))
+	nfc_sck_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_SCK_PIN") or 13))
+	nfc_nss_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_NSS_PIN") or 19))
+	nfc_rst_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_RST_PIN") or 26))
 	browser_args: list[str] = field(
 		default_factory=lambda: [
 			"--kiosk",
@@ -408,6 +424,75 @@ class NfcPaymentGate:
 		self._config = config
 		self._event = threading.Event()
 		self._lock = threading.Lock()
+		self._last_tap_at = 0.0
+		self._debounce_interval = 5.0 # Seconds to block after successful tap
+		
+		self._reader = None
+		self._adafruit_reader = None
+
+		if board:
+			try:
+				import bitbangio
+				# Get board pins dynamically based on config
+				sck_pin = getattr(board, f"D{self._config.nfc_sck_pin}")
+				mosi_pin = getattr(board, f"D{self._config.nfc_mosi_pin}")
+				miso_pin = getattr(board, f"D{self._config.nfc_miso_pin}")
+				nss_pin = getattr(board, f"D{self._config.nfc_nss_pin}")
+				rst_pin = getattr(board, f"D{self._config.nfc_rst_pin}")
+
+				spi = bitbangio.SPI(sck_pin, mosi_pin, miso_pin)
+				cs = digitalio.DigitalInOut(nss_pin)
+				rst = digitalio.DigitalInOut(rst_pin)
+
+				try:
+					from adafruit_mfrc522 import MFRC522 # type: ignore
+					self._adafruit_reader = MFRC522(spi, cs, rst)
+					threading.Thread(target=self._poll_loop_adafruit, daemon=True).start()
+					logger.info(f"[Machine] Adafruit MFRC522 polling started (SCK:{self._config.nfc_sck_pin}, MOSI:{self._config.nfc_mosi_pin}, MISO:{self._config.nfc_miso_pin})")
+				except ImportError:
+					if SimpleMFRC522:
+						self._reader = SimpleMFRC522()
+						threading.Thread(target=self._poll_loop, daemon=True).start()
+						logger.info("[Machine] SimpleMFRC522 hardware polling started")
+			except Exception as e:
+				logger.error(f"[Machine] NFC Hardware init failed: {e}")
+
+	def _poll_loop_adafruit(self) -> None:
+		if not self._adafruit_reader:
+			return
+		while True:
+			try:
+				# Adafruit library style
+				uid = self._adafruit_reader.read_uid()
+				if uid:
+					tag_id = "".join([hex(i) for i in uid])
+					self.handle_hardware_tap(tag_id)
+			except Exception as e:
+				logger.error(f"[Machine] Adafruit NFC Poll Error: {e}")
+			time.sleep(0.5)
+
+	def _poll_loop(self) -> None:
+		if not self._reader:
+			return
+		while True:
+			try:
+				tag_id = getattr(self._reader, "read_id_no_block", lambda: None)()
+				if tag_id:
+					self.handle_hardware_tap(str(tag_id))
+			except Exception as e:
+				logger.error(f"[Machine] Simple NFC Poll Error: {e}")
+			time.sleep(0.5)
+
+	def handle_hardware_tap(self, tag_id: str) -> None:
+		now = time.time()
+		with self._lock:
+			if now - self._last_tap_at < self._debounce_interval:
+				logger.debug(f"[Machine] NFC tag {tag_id} ignored (debouncing)")
+				return
+			
+			self._last_tap_at = now
+			logger.info(f"[Machine] NFC tag {tag_id} tapped")
+			self.tap()
 
 	def tap(self) -> None:
 		with self._lock:
@@ -597,6 +682,11 @@ def load_machine_config() -> Dict[str, Any]:
 		"rgb_led_pins": machine.config.rgb_led_pins,
 		"sound_dir": str(machine.config.sound_dir),
 		"nfc_auto_approve": machine.config.nfc_auto_approve,
+		"nfc_mosi_pin": machine.config.nfc_mosi_pin,
+		"nfc_miso_pin": machine.config.nfc_miso_pin,
+		"nfc_sck_pin": machine.config.nfc_sck_pin,
+		"nfc_nss_pin": machine.config.nfc_nss_pin,
+		"nfc_rst_pin": machine.config.nfc_rst_pin,
 	}
 
 
