@@ -10,7 +10,6 @@ interface Props {
   cart: CartItem[];
   /** Current catalog stock by product_id (from GET /api/products) */
   stockById: Record<number, number>;
-  maxCartItems: number;
   totalPrice: number;
   totalHeatingTime: number;
   onCheckout: () => void;
@@ -21,8 +20,7 @@ interface Props {
   onOpenContact: () => void;
 }
 
-export default function CartSidebar({ cart, stockById, maxCartItems, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact }: Props) {
-  const cartTotalQty = cart.reduce((s, i) => s + i.qty, 0);
+export default function CartSidebar({ cart, stockById, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact }: Props) {
   return (
     <div className="sidebar">
       <button className="info-btn" onClick={onOpenInfo}>i</button>
@@ -40,8 +38,7 @@ export default function CartSidebar({ cart, stockById, maxCartItems, totalPrice,
             {cart.map((item) => {
               const liveStock = stockById[item.id] ?? item.stock ?? 0;
               const atSkuCap = item.qty >= liveStock;
-              const atCartCap = cartTotalQty >= maxCartItems;
-              const disablePlus = atSkuCap || atCartCap;
+              const disablePlus = atSkuCap;
               return (
               <div className="cart-item-row" key={item.id}>
                 {/* บรรทัดบน: ชื่อ และ ราคารวมของสินค้านั้น */}
