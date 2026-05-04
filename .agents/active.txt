@@ -1,2 +1,2 @@
-Admin export formatting: เสร็จแล้ว — PDF ใช้ jsPDF + jspdf-autotable แบบหลาย section + ฟอนต์ Sarabun (`public/fonts/Sarabun-Regular.ttf`), CSV มีแถว metadata ชื่อรายงาน/วันที่; ถอด html2canvas; ExportModal ดึงข้อมูลครั้งเดียวเมื่อเลือกหลายรูปแบบ
-Next (ถ้าต้องการ): XLSX ด้วย exceljs; PDF ฝั่งเซิร์ฟเวอร์ด้วย Puppeteer เมื่อ deploy รองรับ Chromium
+Socket.IO gateway: machine connect ใช้ auth { machine_id, token } ตรวจ bcrypt กับ DB แล้วตั้ง is_online=1; disconnect ตั้ง is_online=0 (ลบ HMAC/FLEET_SECRET path ออกจาก gateway แล้ว)
+Next (ถ้าต้องการ): อัปเดต swagger/.env.example ให้สอดคล้อง auth ใหม่; พิจารณา harden `machine_ready` ให้ตรงกับ session ที่ auth แล้ว
