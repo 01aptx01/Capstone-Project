@@ -10,6 +10,8 @@ class Machine(db.Model):
     location = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), nullable=False, default="online")
     last_active = db.Column(db.DateTime, nullable=True)
+    secret_token_hash = db.Column(db.String(255), nullable=True)
+    is_online = db.Column(db.Boolean, nullable=False, default=False)
 
     slots = db.relationship("MachineSlot", back_populates="machine", cascade="all, delete-orphan")
     orders = db.relationship("Order", back_populates="machine")
