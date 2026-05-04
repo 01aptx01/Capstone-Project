@@ -287,7 +287,8 @@ class StepRGBController:
 		devices: list[Any] = []
 		for index in range(len(STEP_ORDER)):
 			start = index * 3
-			devices.append(RGBLED(red=pins[start], green=pins[start + 1], blue=pins[start + 2]))
+			# Hardware pins are ordered B, G, R
+			devices.append(RGBLED(red=pins[start + 2], green=pins[start + 1], blue=pins[start]))
 		return devices
 
 	def set_step(self, step_name: str, *, success: bool = True) -> None:
@@ -318,6 +319,22 @@ class StepRGBController:
 				self._states[step_name] = state
 			for device in self._devices:
 				self._apply_color(device, color)
+
+	def set_standby(self) -> None:
+		with self._lock:
+			for step_name in STEP_ORDER:
+				self._states[step_name] = "white"
+			for device in self._devices:
+				self._apply_color(device, (1.0, 1.0, 1.0))
+
+	def set_step_active(self, step_name: str) -> None:
+		if step_name not in STEP_ORDER:
+			return
+		index = STEP_ORDER.index(step_name)
+		with self._lock:
+			self._states[step_name] = "blue"
+			device = self._devices[index]
+			self._apply_color(device, (0.0, 0.0, 1.0))
 
 	def clear(self) -> None:
 		with self._lock:
@@ -452,12 +469,20 @@ class MachineController:
 
 		self.nfc.reset()
 		self.slot_leds.all_off()
-		self.step_leds.clear()
+		self.step_leds.set_standby()
 
 	def _step_index(self, step_name: str) -> Optional[int]:
 		if step_name not in STEP_ORDER:
 			return None
 		return STEP_ORDER.index(step_name)
+
+	def mark_step_active(self, step_name: str) -> None:
+		with self._lock:
+			self.state.active_step = step_name
+			self.state.last_error = None
+
+		self.step_leds.set_step_active(step_name)
+		self.audio.play_step(step_name)
 
 	def mark_step_complete(self, step_name: str) -> None:
 		with self._lock:
@@ -465,7 +490,6 @@ class MachineController:
 			self.state.last_error = None
 
 		self.step_leds.set_step(step_name, success=True)
-		self.audio.play_step(step_name)
 
 	def mark_error(self, message: str) -> None:
 		with self._lock:
@@ -510,9 +534,10 @@ class MachineController:
 				self.mark_error("NFC payment timeout")
 				return False
 
+			self.mark_step_active("TRANSFER_TO_OVEN")
 			self.mark_step_complete("TRANSFER_TO_OVEN")
 
-			self.mark_step_complete("HEATING")
+			self.mark_step_active("HEATING")
 			for item in items:
 				product_id = int(item.get("product_id") or item.get("id") or 1)
 				quantity = max(1, int(item.get("quantity") or item.get("qty") or 1))
@@ -520,11 +545,17 @@ class MachineController:
 				for _ in range(quantity):
 					self.dispense_slot(slot_index)
 
+			self.mark_step_complete("HEATING")
+
+			self.mark_step_active("DISPENSING")
 			self.mark_step_complete("DISPENSING")
+			
+			self.mark_step_active("DONE")
 			self.mark_step_complete("DONE")
+			
 			self.step_leds.set_all(success=True)
 			time.sleep(1.0)
-			self.step_leds.clear()
+			self.step_leds.set_standby()
 			return True
 		except Exception as exc:
 			self.mark_error(str(exc))

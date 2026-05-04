@@ -116,11 +116,11 @@ class AgentSocketClient:
                 if not self._sio.connected:
                     self._sio.connect(url, auth=_make_auth(), transports=["websocket"], wait=True, wait_timeout=10)
                 # Connected: keep a small loop and flush periodically
-                for _ in range(5):
+                for _ in range(50):
                     self.flush_outbox()
-                    time.sleep(1)
+                    time.sleep(0.1)
             except Exception:
-                time.sleep(2)
+                time.sleep(1)
 
     def flush_outbox(self) -> None:
         with self._lock:
