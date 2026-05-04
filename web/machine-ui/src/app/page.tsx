@@ -791,11 +791,7 @@ export default function VendingPage() {
           ) : products.length > 0 ? (
             products.map((product) => {
               const inCartQty = cart.find((c) => c.id === product.id)?.qty ?? 0;
-              const cartTotalQty = cart.reduce((s, i) => s + i.qty, 0);
-              const canAdd =
-                product.stock > 0 &&
-                inCartQty < product.stock &&
-                cartTotalQty < MAX_CART_ITEMS;
+              const canAdd = product.stock > 0 && inCartQty < product.stock;
               return (
                 <ProductCard
                   key={product.id}
@@ -819,7 +815,6 @@ export default function VendingPage() {
       <CartSidebar
         cart={cart}
         stockById={stockById}
-        maxCartItems={MAX_CART_ITEMS}
         totalHeatingTime={totalHeatingTime}
         totalPrice={totalPrice}
         onCheckout={handleCheckout}
