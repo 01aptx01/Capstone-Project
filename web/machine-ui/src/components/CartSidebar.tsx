@@ -8,6 +8,9 @@ export interface CartItem extends Product {
 
 interface Props {
   cart: CartItem[];
+  /** Current catalog stock by product_id (from GET /api/products) */
+  stockById: Record<number, number>;
+  maxCartItems: number;
   totalPrice: number;
   totalHeatingTime: number;
   onCheckout: () => void;
@@ -18,7 +21,8 @@ interface Props {
   onOpenContact: () => void;
 }
 
-export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact }: Props) {
+export default function CartSidebar({ cart, stockById, maxCartItems, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact }: Props) {
+  const cartTotalQty = cart.reduce((s, i) => s + i.qty, 0);
   return (
     <div className="sidebar">
       <button className="info-btn" onClick={onOpenInfo}>i</button>
@@ -33,7 +37,12 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
           </div>
         ) : (
           <div className="cart-item-list">
-            {cart.map((item) => (
+            {cart.map((item) => {
+              const liveStock = stockById[item.id] ?? item.stock ?? 0;
+              const atSkuCap = item.qty >= liveStock;
+              const atCartCap = cartTotalQty >= maxCartItems;
+              const disablePlus = atSkuCap || atCartCap;
+              return (
               <div className="cart-item-row" key={item.id}>
                 {/* บรรทัดบน: ชื่อ และ ราคารวมของสินค้านั้น */}
                 <div className="cart-item-main">
@@ -49,10 +58,15 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
                     <div className="qty-controls">
                       <button className="btn-qty" onClick={() => onDecrease(item.id)}>-</button>
                       <span className="qty-val">{item.qty}</span>
-                      <button className="btn-qty" onClick={() => onIncrease(item.id)}>+</button>
+                      <button
+                        className="btn-qty"
+                        onClick={() => onIncrease(item.id)}
+                        disabled={disablePlus}
+                        style={{ opacity: disablePlus ? 0.45 : 1 }}
+                      >+</button>
                     </div>
-                    {item.stock <= 3 && (
-                      <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: 600 }}>สินค้าคงเหลือ {item.stock} ชิ้น</span>
+                    {liveStock > 0 && liveStock <= 3 && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: 600 }}>สินค้าคงเหลือ {liveStock} ชิ้น</span>
                     )}
                   </div>
                   <button className="btn-remove" onClick={() => onRemove(item.id)}>
@@ -60,7 +74,8 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
                   </button>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

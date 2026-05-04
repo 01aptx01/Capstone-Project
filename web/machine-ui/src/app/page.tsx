@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ProductCard, { Product } from "../components/ProductCard";
 import CartSidebar, { CartItem } from "../components/CartSidebar";
 import Image from "next/image";
@@ -17,7 +17,8 @@ type ModalType =
   | "payment"
   | "processing"
   | "points_result"
-  | "limit_warning";
+  | "limit_warning"
+  | "stock_limit_warning";
 type PaymentMethod = "promptpay" | "visa" | "unionpay" | "mastercard";
 const PROCESS_STEPS = [
   "กำลังนำเข้าเตาอุ่น",
@@ -41,7 +42,25 @@ const testBtnStyle: React.CSSProperties = {
   cursor: "pointer",
 };
 
+const DEFAULT_MACHINE_CODE =
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) || "MP1-001";
+
+function clampCartToCatalog(prev: CartItem[], catalog: Product[]): CartItem[] {
+  const byId = new Map(catalog.map((p) => [p.id, p]));
+  const next: CartItem[] = [];
+  for (const item of prev) {
+    const fresh = byId.get(item.id);
+    if (!fresh || fresh.stock <= 0) continue;
+    const qty = Math.min(item.qty, fresh.stock);
+    if (qty > 0) {
+      next.push({ ...item, ...fresh, qty });
+    }
+  }
+  return next;
+}
+
 export default function VendingPage() {
+  const machineCode = DEFAULT_MACHINE_CODE;
   // ==========================================
   // APPLICATION STATES
   // ==========================================
@@ -81,6 +100,7 @@ export default function VendingPage() {
   const [isNewMember, setIsNewMember] = useState<boolean>(false);
   const [isMemberLoading, setIsMemberLoading] = useState<boolean>(false);
   const [memberError, setMemberError] = useState<string | null>(null);
+  const [stockLimitMessage, setStockLimitMessage] = useState("");
   const totalPriceRef = useRef<number>(0);
 
   const attemptClosePaymentModal = () => {
@@ -191,17 +211,18 @@ export default function VendingPage() {
   const isProcessSuccess = agentJobState ? agentJobState === "DONE" : currentStep === 3;
   const progressLineWidth = `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
 
-  // Fetch Products from Server
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoadingProducts(true);
+  const fetchProducts = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      if (!silent) setIsLoadingProducts(true);
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(`${apiUrl}/api/products?machine_code=MP1-001`,);
+        const response = await fetch(
+          `${apiUrl}/api/products?machine_code=${encodeURIComponent(machineCode)}`,
+        );
         if (!response.ok) throw new Error("Failed to fetch products");
 
         const data = await response.json();
-        // Map DB fields to Frontend interface
         const mappedProducts: Product[] = data.map((p: any) => ({
           id: p.product_id,
           name: p.name,
@@ -210,19 +231,33 @@ export default function VendingPage() {
           heatingTime: p.heating_time,
           image: p.image_url,
           category: p.category,
-          stock: p.stock,
+          stock: Number(p.stock) || 0,
         }));
 
         setProducts(mappedProducts);
+        setCart((prev) => clampCartToCatalog(prev, mappedProducts));
       } catch (err) {
         console.error("Error fetching products:", err);
       } finally {
-        setIsLoadingProducts(false);
+        if (!silent) setIsLoadingProducts(false);
       }
-    };
+    },
+    [machineCode],
+  );
 
-    fetchProducts();
-  }, []);
+  useEffect(() => {
+    void fetchProducts({ silent: false });
+  }, [fetchProducts]);
+
+  const stockById = useMemo(
+    () => Object.fromEntries(products.map((p) => [p.id, p.stock])) as Record<number, number>,
+    [products],
+  );
+
+  const handleProcessingCompleteClose = () => {
+    setActiveModal("none");
+    void fetchProducts({ silent: true });
+  };
 
   // ==========================================
   // TIMERS (useEffect)
@@ -329,7 +364,7 @@ export default function VendingPage() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          machine_code: "MP1-001",
+          machine_code: machineCode,
           cart: cart.map((item) => ({ product_id: item.id, quantity: item.qty })),
           amount: paymentData.amount,
           payment_type: paymentData.type,
@@ -470,7 +505,7 @@ export default function VendingPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          machine_code: "MP1-001",
+          machine_code: machineCode,
           cart: cart.map((item) => ({ product_id: item.id, quantity: item.qty })),
           amount: totalPrice * 100,
           payment_method: "credit_card",
@@ -491,35 +526,58 @@ export default function VendingPage() {
   // Cart Actions
   const MAX_CART_ITEMS = 4;
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = useCallback((product: Product) => {
+    if (product.stock <= 0) return;
     setCart((prevCart) => {
       const totalItems = prevCart.reduce((sum, item) => sum + item.qty, 0);
-      if (totalItems >= MAX_CART_ITEMS) {
-        setActiveModal("limit_warning");
-        return prevCart;
-      }
       const existingItem = prevCart.find((item) => item.id === product.id);
       if (existingItem) {
+        if (existingItem.qty >= product.stock) {
+          queueMicrotask(() => {
+            setStockLimitMessage(`สินค้านี้เหลือสูงสุด ${product.stock} ชิ้น`);
+            setActiveModal("stock_limit_warning");
+          });
+          return prevCart;
+        }
+        if (totalItems >= MAX_CART_ITEMS) {
+          queueMicrotask(() => setActiveModal("limit_warning"));
+          return prevCart;
+        }
         return prevCart.map((item) =>
           item.id === product.id ? { ...item, qty: item.qty + 1 } : item,
         );
       }
+      if (totalItems >= MAX_CART_ITEMS) {
+        queueMicrotask(() => setActiveModal("limit_warning"));
+        return prevCart;
+      }
       return [...prevCart, { ...product, qty: 1 }];
     });
-  };
+  }, []);
 
-  const handleIncrease = (productId: number) => {
+  const handleIncrease = useCallback((productId: number) => {
     setCart((prevCart) => {
+      const sku = products.find((p) => p.id === productId);
+      const cap = sku?.stock ?? 0;
+      const line = prevCart.find((item) => item.id === productId);
+      if (!line) return prevCart;
+      if (line.qty >= cap) {
+        queueMicrotask(() => {
+          setStockLimitMessage(`สินค้านี้เหลือสูงสุด ${cap} ชิ้น`);
+          setActiveModal("stock_limit_warning");
+        });
+        return prevCart;
+      }
       const totalItems = prevCart.reduce((sum, item) => sum + item.qty, 0);
       if (totalItems >= MAX_CART_ITEMS) {
-        setActiveModal("limit_warning");
+        queueMicrotask(() => setActiveModal("limit_warning"));
         return prevCart;
       }
       return prevCart.map((item) =>
         item.id === productId ? { ...item, qty: item.qty + 1 } : item,
       );
     });
-  };
+  }, [products]);
   const handleDecrease = (productId: number) => {
     setCart((prevCart) =>
       prevCart.map((item) =>
@@ -731,26 +789,37 @@ export default function VendingPage() {
           {isLoadingProducts ? (
             <div className="loading-state">กำลังโหลดสินค้า...</div>
           ) : products.length > 0 ? (
-            products.map((product) => (
-              <ProductCard
-                key={product.id}
-                {...product}
-                onAdd={() => handleAddToCart(product)}
-              />
-            ))
+            products.map((product) => {
+              const inCartQty = cart.find((c) => c.id === product.id)?.qty ?? 0;
+              const cartTotalQty = cart.reduce((s, i) => s + i.qty, 0);
+              const canAdd =
+                product.stock > 0 &&
+                inCartQty < product.stock &&
+                cartTotalQty < MAX_CART_ITEMS;
+              return (
+                <ProductCard
+                  key={product.id}
+                  {...product}
+                  canAdd={canAdd}
+                  onAdd={() => handleAddToCart(product)}
+                />
+              );
+            })
           ) : (
             <div className="error-state">ไม่พบสินค้าที่พร้อมจำหน่าย</div>
           )}
         </div>
 
         <div className="device-id">
-          <div className="status-dot"></div>ID:MP1-001
+          <div className="status-dot"></div>ID:{machineCode}
         </div>
       </div>
 
       {/* --- ฝั่งขวา: ตะกร้าสินค้า --- */}
       <CartSidebar
         cart={cart}
+        stockById={stockById}
+        maxCartItems={MAX_CART_ITEMS}
         totalHeatingTime={totalHeatingTime}
         totalPrice={totalPrice}
         onCheckout={handleCheckout}
@@ -1082,6 +1151,75 @@ export default function VendingPage() {
                     fontWeight: "bold",
                     cursor: "pointer",
                     boxShadow: "0 10px 15px -3px rgba(245, 158, 11, 0.3)"
+                  }}
+                >
+                  ตกลง
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeModal === "stock_limit_warning" && (
+            <div className="modal-overlay" onClick={() => setActiveModal("none")}>
+              <div
+                className="points-modal-box"
+                style={{
+                  maxWidth: "400px",
+                  padding: "40px 20px",
+                  textAlign: "center",
+                  background: "white",
+                  borderRadius: "32px",
+                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div
+                  style={{
+                    width: "80px",
+                    height: "80px",
+                    background: "#fef3c7",
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    margin: "0 auto 24px",
+                  }}
+                >
+                  <PackageOpen size={40} color="#d97706" />
+                </div>
+                <h2
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: "800",
+                    color: "#1f2937",
+                    marginBottom: "12px",
+                  }}
+                >
+                  จำนวนสินค้าไม่พอ
+                </h2>
+                <p
+                  style={{
+                    fontSize: "18px",
+                    color: "#6b7280",
+                    lineHeight: "1.6",
+                    marginBottom: "32px",
+                  }}
+                >
+                  {stockLimitMessage || "ไม่สามารถเพิ่มเกินจำนวนที่มีในตู้ได้"}
+                </p>
+                <button
+                  onClick={() => setActiveModal("none")}
+                  style={{
+                    width: "100%",
+                    padding: "16px",
+                    background: "linear-gradient(135deg, #f89025, #f59e0b)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "16px",
+                    fontSize: "18px",
+                    fontWeight: "bold",
+                    cursor: "pointer",
+                    boxShadow: "0 10px 15px -3px rgba(245, 158, 11, 0.3)",
                   }}
                 >
                   ตกลง
@@ -1462,7 +1600,7 @@ export default function VendingPage() {
                   <button
                     className="modal-confirm-btn"
                     style={{ fontSize: "24px", padding: "15px 50px" }}
-                    onClick={() => setActiveModal("none")}
+                    onClick={handleProcessingCompleteClose}
                   >
                     หยิบสินค้าเรียบร้อยแล้ว
                   </button>
