@@ -115,10 +115,10 @@ class JobManager:
         expanded = self._expand_queue(job)
         if not expanded:
             return 0
-        # Match UI logic: Max heating time + 3s for each additional item
+        # Match actual tick logic: max heating time + 3s for each item
         times = [int(x.get("heating_time", 15)) for x in expanded]
         max_heating = max(times)
-        return max_heating + 3 * (len(expanded) - 1)
+        return max_heating + 3 * len(expanded)
 
     def subscribe(self, job: Job) -> queue.Queue:
         q: queue.Queue = queue.Queue()
@@ -229,6 +229,7 @@ def _run_mock_job(job: Job) -> None:
                 
         # 2. Then proceed with the RGB steps
         job.state = "TRANSFER_TO_OVEN"
+        machine.mark_step_active("TRANSFER_TO_OVEN")
         machine.mark_step_complete("TRANSFER_TO_OVEN")
         job_manager.publish(
             job,
@@ -254,7 +255,7 @@ def _run_mock_job(job: Job) -> None:
             time_to_heat = target_time - elapsed_heating
             if time_to_heat > 0:
                 job.state = "HEATING"
-                machine.mark_step_complete("HEATING")
+                machine.mark_step_active("HEATING")
                 job_manager.publish(
                     job,
                     _mk_event(
@@ -280,11 +281,12 @@ def _run_mock_job(job: Job) -> None:
                     ),
                 )
                 tick(time_to_heat)
+                machine.mark_step_complete("HEATING")
                 elapsed_heating = target_time
 
             # Step 2: Dispense this item
             job.state = "DISPENSING"
-            machine.mark_step_complete("DISPENSING")
+            machine.mark_step_active("DISPENSING")
             job_manager.publish(
                 job,
                 _mk_event(
@@ -297,18 +299,12 @@ def _run_mock_job(job: Job) -> None:
             slot_index = machine.resolve_slot_index(it.get("product_id", 1))
             # Just simulate time, light is already ON from the beginning
             tick(3)
+            machine.mark_step_complete("DISPENSING")
 
         job.state = "DONE"
-        machine.mark_step_complete("DONE")
-        machine.step_leds.set_all(success=True)
-        # Turn off all green slot lights
-        for slot in active_slots:
-            machine.set_slot_active(slot, False)
-        time.sleep(1.0)
-        machine.step_leds.clear()
-
         job.remaining_seconds = 0
         job.done = True
+        
         job_manager.publish(
             job,
             _mk_event(
@@ -319,10 +315,21 @@ def _run_mock_job(job: Job) -> None:
             ),
         )
 
+        machine.mark_step_active("DONE")
+        machine.mark_step_complete("DONE")
+        machine.step_leds.set_all(success=True)
+        # Turn off all green slot lights
+        for slot in active_slots:
+            machine.set_slot_active(slot, False)
+            
+        time.sleep(2.0)
+        machine.step_leds.set_standby()
+
     except Exception as e:
         job.state = "ERROR"
         job.error_message = str(e)
         job.done = True
+        machine.mark_error(str(e))
         job_manager.publish(
             job,
             _mk_event(
