@@ -904,10 +904,17 @@ body {
     width: 400px;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     animation: popIn 0.2s ease-out;
+}
+
+.modal-payment-column {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 15px;
 }
 
 /* --- โซนชำระเงิน (Payment) --- */
@@ -992,6 +999,30 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.modal-action-payment-credit-btn {
+    background-color: #f89025;
+    color: white;
+    box-shadow: 0 4px 8px rgba(248, 144, 37, 0.3);
+}
+
+.modal-action-payment-card-btn {
+    background: linear-gradient(135deg, #111827, #1f2937);
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(17, 24, 39, 0.35);
+    border-radius: 20px;
+    padding: 14px 18px;
+    height: 105px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.modal-action-payment-card-btn img,
+.modal-action-payment-card-btn .payment-logo {
+    filter: brightness(1.05) contrast(1.1);
 }
 
 .modal-action-payment-btn:active {
