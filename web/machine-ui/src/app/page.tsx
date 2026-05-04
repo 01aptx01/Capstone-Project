@@ -87,6 +87,7 @@ export default function VendingPage() {
   const [isAfterPayment, setIsAfterPayment] = useState(false);
   const [queue, setQueue] = useState<Product[]>([]);
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
+  const [isInitialStep1Delay, setIsInitialStep1Delay] = useState(false); // ช่วง 2-3 วินาทีแรก (Step 1 hold)
 
   // -- Timers States --
   const [paymentCountdown, setPaymentCountdown] = useState<number>(180);
@@ -173,10 +174,42 @@ export default function VendingPage() {
   // ==========================================
   // DERIVED DATA (คำนวณค่าจาก State อัตโนมัติ)
   // ==========================================
+  // ==========================================
+  // DISPENSE TIMELINE — pre-calculate non-overlapping 2s windows per item
+  // ==========================================
+  const STEP1_DELAY = 2; // seconds for initial Step 1 hold
+  const DISPENSE_WINDOW = 2; // seconds each item gets for its "serving" label
+  const STEP4_HOLD = 3; // seconds to hold the Step 3 (กำลังเสิร์ฟ) state
+  const FINAL_STEP_HOLD = 3; // seconds to hold Step 4 (พร้อมทาน) state before completing
+
+  /**
+   * Build a schedule array: for each item in the sorted queue,
+   * assign a non-overlapping 2s dispense window.
+   * Items are sorted by heatingTime ascending.
+   * If two items finish at the same time, their windows are queued sequentially.
+   */
+  const buildDispenseSchedule = (q: Product[]) => {
+    const schedule: { itemIndex: number; startTime: number; endTime: number }[] = [];
+    let nextAvailable = 0; // earliest time a new window can start
+    for (let i = 0; i < q.length; i++) {
+      const finishTime = q[i].heatingTime;
+      const windowStart = Math.max(finishTime, nextAvailable);
+      const windowEnd = windowStart + DISPENSE_WINDOW;
+      schedule.push({ itemIndex: i, startTime: windowStart, endTime: windowEnd });
+      nextAvailable = windowEnd;
+    }
+    return schedule;
+  };
+
+  const dispenseSchedule = useMemo(() => buildDispenseSchedule(queue), [queue]);
+
   const calculateTotalProcessTime = (q: Product[]) => {
     if (q.length === 0) return 0;
-    const maxTime = Math.max(...q.map((it) => it.heatingTime));
-    return maxTime + 3 * (q.length - 1);
+    const schedule = buildDispenseSchedule(q);
+    // The last dispense window end marks when all items have been shown
+    const lastWindowEnd = schedule.length > 0 ? schedule[schedule.length - 1].endTime : 0;
+    // Total = Step1 delay + all dispense windows done + Step4 hold + Final Step hold
+    return STEP1_DELAY + lastWindowEnd + STEP4_HOLD + FINAL_STEP_HOLD;
   };
 
   const totalHeatingTime = calculateTotalProcessTime(
@@ -185,13 +218,55 @@ export default function VendingPage() {
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const totalProcessTime = calculateTotalProcessTime(queue);
 
+  // Check if this is a multi-flavor order (more than 1 unique heatingTime across items)
+  const isMultiFlavor = useMemo(() => {
+    if (queue.length <= 1) return false;
+    const uniqueTimes = new Set(queue.map((it) => it.heatingTime));
+    return uniqueTimes.size > 1;
+  }, [queue]);
+
   // ฟังก์ชันหาว่าตอนนี้อยู่สเต็ปไหนของการอุ่น (Fallback UI)
-  const getProcessStatus = () => {
-    if (queue.length === 0) return { step: 0, itemIndex: 0 };
-    if (globalTimeLeft === 0) return { step: 3, itemIndex: 0 };
-    if (globalTimeLeft <= queue.length * 3) return { step: 2, itemIndex: queue.length - 1 };
-    if (globalTimeLeft > totalProcessTime - 5) return { step: 0, itemIndex: 0 };
-    return { step: 1, itemIndex: 0 };
+  const getProcessStatus = (): { step: number; itemIndex: number; isDispensingItem: boolean } => {
+    if (queue.length === 0) return { step: 0, itemIndex: 0, isDispensingItem: false };
+    if (globalTimeLeft <= 0) return { step: 4, itemIndex: queue.length - 1, isDispensingItem: false };
+    if (globalTimeLeft > totalProcessTime) return { step: 0, itemIndex: 0, isDispensingItem: false };
+
+    const elapsedTime = totalProcessTime - globalTimeLeft;
+    const N = queue.length;
+
+    // Phase 1: Initial 2-second hold on Step 1 (กำลังนำเข้าเตาอุ่น)
+    if (elapsedTime < STEP1_DELAY) {
+      return { step: 0, itemIndex: 0, isDispensingItem: false };
+    }
+
+    const heatingElapsed = elapsedTime - STEP1_DELAY;
+    const lastWindow = dispenseSchedule[N - 1];
+
+    // Phase 4: Hold at Step 4 (พร้อมทาน) for FINAL_STEP_HOLD seconds
+    if (heatingElapsed >= lastWindow.endTime + STEP4_HOLD) {
+      return { step: 3, itemIndex: N - 1, isDispensingItem: false };
+    }
+
+    // Phase 3: All dispense windows done → hold Step 3 for STEP4_HOLD seconds
+    if (heatingElapsed >= lastWindow.endTime) {
+      return { step: 2, itemIndex: N - 1, isDispensingItem: true };
+    }
+
+    // Phase 2.b: Check the final item’s window — transition to step 2 (Step 3)
+    if (heatingElapsed >= lastWindow.startTime && heatingElapsed < lastWindow.endTime) {
+      return { step: 2, itemIndex: N - 1, isDispensingItem: true };
+    }
+
+    // Phase 2.a: Heating — find if any non-final item is in its scheduled window
+    for (let i = 0; i < N - 1; i++) {
+      const win = dispenseSchedule[i];
+      if (heatingElapsed >= win.startTime && heatingElapsed < win.endTime) {
+        return { step: 1, itemIndex: i, isDispensingItem: true };
+      }
+    }
+
+    // Between windows or before first window: heating, no label
+    return { step: 1, itemIndex: 0, isDispensingItem: false };
   };
 
   const mapAgentStateToStep = (state: AgentJobState): number => {
@@ -204,11 +279,20 @@ export default function VendingPage() {
   const fallbackStatus = getProcessStatus();
   const currentStep = agentJobState ? mapAgentStateToStep(agentJobState) : fallbackStatus.step;
   const currentItemIndex = agentJobState ? agentCurrentItemIndex : fallbackStatus.itemIndex;
+  const isDispensingItem = agentJobState ? (agentJobState === "DISPENSING") : fallbackStatus.isDispensingItem;
+
   const isProcessCompleted = agentJobState
     ? agentJobState === "DONE" || agentJobState === "ERROR"
-    : currentStep === 3;
-  const isProcessSuccess = agentJobState ? agentJobState === "DONE" : currentStep === 3;
-  const progressLineWidth = `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
+    : currentStep === 4;
+  const isProcessSuccess = agentJobState ? agentJobState === "DONE" : currentStep >= 3;
+
+  // เช็คว่าลูกแรกอุ่นเสร็จและเริ่มเสิร์ฟหรือยัง
+  const hasStartedServing = queue.length > 0 && ((totalProcessTime - globalTimeLeft) - STEP1_DELAY >= queue[0].heatingTime);
+
+  // Progress line width: extend to Step3 zone when multi-flavor serving has started
+  const progressLineWidth = isMultiFlavor && currentStep === 1 && hasStartedServing
+    ? "50%"
+    : `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
 
   const fetchProducts = useCallback(
     async (options?: { silent?: boolean }) => {
@@ -361,6 +445,8 @@ export default function VendingPage() {
 
     // ตั้งค่าคิวและตะกร้า
     const flatQueue = cart.flatMap((item) => Array(item.qty).fill(item));
+    flatQueue.sort((a, b) => a.heatingTime - b.heatingTime);
+
     totalPriceRef.current = totalPrice; // Save total price for points
     setQueue(flatQueue);
     setCart([]);
@@ -789,9 +875,11 @@ export default function VendingPage() {
     // คำนวณเวลาและเริ่มหน้าจอ Processing
     if (!agentJobState) {
       const totalProcessTime = calculateTotalProcessTime(queue);
+      // Start timer from full process time (includes 2s Step1 delay + max heat + 3s Step3 hold)
       setGlobalTimeLeft(totalProcessTime);
     }
     setIsAfterPayment(false);
+    setIsInitialStep1Delay(true);
     setActiveModal("processing");
   };
 
@@ -1405,64 +1493,64 @@ export default function VendingPage() {
                     <div className="payment-title">
                       ชำระเงินด้วย Credit / Debit Card
                     </div>
-                      {/* Step 1: แนะนำ */}
-                      {paymentStep === 1 && (
-                        <>
-                          <div className="payment-instruction-list">
-                            <p>
-                              <CreditCard size={20} color="#f89025" /> 1.
-                              เตรียมบัตรของคุณให้พร้อม
-                            </p>
-                            <p>
-                              <Nfc size={20} color="#f89025" /> 2.
-                              แตะบัตรที่เครื่องรับชำระเงินด้านล่างหน้าจอ
-                            </p>
-                            <p>
-                              <BanknoteArrowUp size={20} color="#f89025" /> 3.
-                              รอสัญญาณเสียงเพื่อเสร็จสิ้นรายการ
-                            </p>
-                          </div>
-                          <div className="supported-cards-row">
-                            <Image src="/payment/Visa-logo.png" alt="Visa" width={40} height={24} />
-                            <Image src="/payment/Mastercard-logo.png" alt="Mastercard" width={40} height={24} />
-                            <Image src="/payment/UnionPay-logo.png" alt="UnionPay" width={40} height={24} />
-                          </div>
-                          <button className="modal-confirm-btn" onClick={handleProceedToTap}>
-                            ดำเนินการแตะบัตร / จ่ายด้วย NFC
-                          </button>
-                        </>
-                      )}
-
-                      {/* Step 2: แอนิเมชันรอแตะบัตร */}
-                      {paymentStep === 2 && (
-                        <>
-                          <div className="nfc-pulse-container">
-                            <div className="nfc-icon-wrapper">
-                              <Nfc size={64} strokeWidth={1.5} />
-                            </div>
-                          </div>
-                          <h3 style={{ color: "#f89025", marginBottom: "5px" }}>
-                            กำลังรอการแตะบัตร...
-                          </h3>
-                          <p style={{ color: "#64748b", fontSize: "14px" }}>
-                            กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง
+                    {/* Step 1: แนะนำ */}
+                    {paymentStep === 1 && (
+                      <>
+                        <div className="payment-instruction-list">
+                          <p>
+                            <CreditCard size={20} color="#f89025" /> 1.
+                            เตรียมบัตรของคุณให้พร้อม
                           </p>
-                          {/* กดเพื่อจำลองการแตะบัตร NFC */}
-                          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                            <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("visa")}>
-                              Visa
-                            </button>
-                            <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("mastercard")}>
-                              Mastercard
-                            </button>
-                            <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("unionpay")}>
-                              UnionPay
-                            </button>
+                          <p>
+                            <Nfc size={20} color="#f89025" /> 2.
+                            แตะบัตรที่เครื่องรับชำระเงินด้านล่างหน้าจอ
+                          </p>
+                          <p>
+                            <BanknoteArrowUp size={20} color="#f89025" /> 3.
+                            รอสัญญาณเสียงเพื่อเสร็จสิ้นรายการ
+                          </p>
+                        </div>
+                        <div className="supported-cards-row">
+                          <Image src="/payment/Visa-logo.png" alt="Visa" width={40} height={24} />
+                          <Image src="/payment/Mastercard-logo.png" alt="Mastercard" width={40} height={24} />
+                          <Image src="/payment/UnionPay-logo.png" alt="UnionPay" width={40} height={24} />
+                        </div>
+                        <button className="modal-confirm-btn" onClick={handleProceedToTap}>
+                          ดำเนินการแตะบัตร / จ่ายด้วย NFC
+                        </button>
+                      </>
+                    )}
+
+                    {/* Step 2: แอนิเมชันรอแตะบัตร */}
+                    {paymentStep === 2 && (
+                      <>
+                        <div className="nfc-pulse-container">
+                          <div className="nfc-icon-wrapper">
+                            <Nfc size={64} strokeWidth={1.5} />
                           </div>
-                        </>
-                      )}
-                    </>
-                  )}
+                        </div>
+                        <h3 style={{ color: "#f89025", marginBottom: "5px" }}>
+                          กำลังรอการแตะบัตร...
+                        </h3>
+                        <p style={{ color: "#64748b", fontSize: "14px" }}>
+                          กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง
+                        </p>
+                        {/* กดเพื่อจำลองการแตะบัตร NFC */}
+                        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                          <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("visa")}>
+                            Visa
+                          </button>
+                          <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("mastercard")}>
+                            Mastercard
+                          </button>
+                          <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("unionpay")}>
+                            UnionPay
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
 
                 {/* --- Flow C: TrueMoney (QR) --- */}
                 {selectedPaymentMethod === "truemoney" && (
@@ -1613,14 +1701,13 @@ export default function VendingPage() {
                     )}
 
                     {/* แสดงบอกสถานะคิว */}
-                    {currentStep === 1 && queue.length > 0 && (
-                      <div className="current-queue-status">
-                        ♨️ กำลังอุ่น: {queue[currentItemIndex]?.name}
-                        {queue.length > 1 && (
-                          <div className="queue-counter">
-                            ลูกที่ {currentItemIndex + 1} จาก {queue.length}
-                          </div>
-                        )}
+                    {(currentStep === 1 || currentStep === 2) && queue.length > 0 && isDispensingItem && (
+                      <div
+                        key={`status-${currentItemIndex}`}
+                        className="current-queue-status"
+                        style={{ animation: "fadeSwitch 0.4s ease-out forwards" }}
+                      >
+                        ♨️ กำลังเสิร์ฟ: {queue[currentItemIndex]?.name}
                       </div>
                     )}
                   </div>
@@ -1664,20 +1751,51 @@ export default function VendingPage() {
               >
                 {!isProcessCompleted ? (
                   <div className="stepper-container">
+                    {/* ส่วนของเส้นความคืบหน้า */}
                     <div
                       className="stepper-progress-line"
-                      style={{ width: progressLineWidth }}
+                      style={{
+                        width: progressLineWidth,
+                        transition: "width 0.5s ease-in-out" // เพิ่ม Animation ให้ลื่นไหล
+                      }}
                     ></div>
+
                     {PROCESS_STEPS.map((stepName, index) => {
-                      const isActive = index === currentStep;
-                      const isCompleted = index < currentStep;
+                      let isActive = index === currentStep;
+                      let isCompleted = index < currentStep;
+
+                      // 1. Multi-flavor + heating + serving started → Step2 & Step3 both active/white
+                      if (currentStep === 1 && isMultiFlavor && hasStartedServing) {
+                        if (index === 1 || index === 2) {
+                          isActive = true;
+                          isCompleted = false;
+                        }
+                      }
+
+                      // 2. Final bun serving (currentStep === 2) → Step2 gets checkmark
+                      if (currentStep === 2 && index === 1) {
+                        isActive = false;
+                        isCompleted = true;
+                      }
+
+                      // 3. Step 4 ready (currentStep === 3) → Steps 1-3 all get checkmarks
+                      if (currentStep === 3) {
+                        if (index < 3) {
+                          isActive = false;
+                          isCompleted = true;
+                        } else {
+                          isActive = true;
+                          isCompleted = false;
+                        }
+                      }
+
                       return (
                         <div
                           key={index}
                           className={`step-item ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""}`}
                         >
                           <div className="step-circle">
-                            {isCompleted ? <Check size={24} /> : index + 1}
+                            {isCompleted ? <Check size={24} strokeWidth={3} /> : index + 1}
                           </div>
                           <div className="step-label">{stepName}</div>
                         </div>
