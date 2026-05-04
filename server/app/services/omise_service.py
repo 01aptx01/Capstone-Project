@@ -24,6 +24,10 @@ class OmisePaymentService:
             logger.error(f"[Omise] FATAL: Invalid amount format: {amount} ({e})")
             return None
 
+        # TrueMoney QR (server-side Source creation)
+        if payment_type == "truemoney":
+            return self._create_truemoney_qr_charge(amount_int, metadata=metadata or {})
+
         charge_data = {
             "amount": amount_int,
             "currency": "thb",
@@ -48,6 +52,43 @@ class OmisePaymentService:
             
         # ส่งหน้าที่การยิง API ให้กับ Private Method
         return self._execute_charge(charge_data)
+
+    def _create_truemoney_qr_charge(self, amount_int: int, metadata: dict):
+        """
+        TrueMoney QR flow:
+        - create Source(type=truemoney_qr)
+        - create Charge(source=source.id)
+        """
+        try:
+            logger.info(f"[Omise] Creating TrueMoney QR source for amount={amount_int} thb(satangs)")
+            source = omise.Source.create(
+                type="truemoney_qr",
+                amount=amount_int,
+                currency="thb",
+            )
+            logger.info(f"[Omise] TrueMoney source created: {getattr(source, 'id', None)}")
+
+            # Align QR expiry with PromptPay: 5 minutes
+            from datetime import datetime, timedelta
+            import pytz
+            expires_at = datetime.now(pytz.utc) + timedelta(minutes=5)
+
+            charge_data = {
+                "amount": amount_int,
+                "currency": "thb",
+                "capture": True,
+                "source": source.id,
+                "metadata": metadata or {},
+                "expires_at": expires_at.isoformat(),
+            }
+            return self._execute_charge(charge_data)
+        except BaseError as oe:
+            logger.error(f"❌ [Omise] TrueMoney QR API error: {oe}")
+            return None
+        except Exception as e:
+            logger.error(f"❌ [Omise] TrueMoney QR unexpected error: {type(e).__name__}: {e}")
+            logger.exception("Full traceback:")
+            return None
 
     def _execute_charge(self, charge_data: dict):
         try:

@@ -165,7 +165,7 @@ class BuyController:
             quantity   = item.get("quantity")   or item.get("qty")
             cart.append({"product_id": int(product_id), "quantity": int(quantity)})
 
-        payment_method = "qr_code" if payment_type == "source" else "credit_card"
+        payment_method = "qr_code" if payment_type in ("source", "truemoney") else "credit_card"
         total_price    = (float(amount) / 100.0) if amount is not None else 0.0
 
         # Step 1: Stock validation
