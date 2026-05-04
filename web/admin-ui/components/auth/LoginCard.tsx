@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import AuthCardWrapper from "./AuthCardWrapper";
 
 export default function LoginCard() {
   const [email, setEmail] = useState("");
@@ -18,7 +19,7 @@ export default function LoginCard() {
       setLoading(false);
       // Mock logic: if email is an 'invited' email, redirect to register
       if (email.includes("invite") || email.includes("newhire") || email.includes("register")) {
-        router.push("/register");
+        router.push(`/register?email=${encodeURIComponent(email)}`);
       } else {
         router.push("/");
       }
@@ -34,7 +35,7 @@ export default function LoginCard() {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl border border-white/50 shadow-2xl rounded-3xl p-10 w-[420px] max-w-[90vw] animate-in zoom-in-95 duration-500 mx-auto">
+    <AuthCardWrapper>
       <div className="flex flex-col items-center mb-8">
         <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-4">
           <Image src="/Logo_modpao.png" alt="logo" width={48} height={48} priority />
@@ -98,6 +99,6 @@ export default function LoginCard() {
         </svg>
         Continue with Google
       </button>
-    </div>
+    </AuthCardWrapper>
   );
 }

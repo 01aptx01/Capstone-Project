@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import productsData from "@/lib/mock/products.json";
 
 export default function ManageStock({ onCancel, onSave }: { onCancel: () => void, onSave: () => void }) {
   const [confirmAction, setConfirmAction] = useState<"save" | "cancel" | null>(null);
+  const [portalMounted, setPortalMounted] = useState(false);
   const [stock, setStock] = useState(() => 
     productsData.slice(0, 5).map(p => ({
       id: p.code,
@@ -13,11 +15,17 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
       isEditing: false
     }))
   );
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [initialQuantity, setInitialQuantity] = useState(10);
+
+  useEffect(() => { setPortalMounted(true); }, []);
+  useEffect(() => {
+    document.body.style.overflow = (isAddModalOpen || confirmAction) ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [isAddModalOpen, confirmAction]);
+
 
   const availableProducts = productsData
     .filter(p => !stock.some(s => s.id === p.code))
@@ -165,8 +173,19 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
         </button>
       </div>
 
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+      {isAddModalOpen && portalMounted && createPortal(
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 99999,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "16px",
+            background: "rgba(15,23,42,0.55)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+          }}
+          className="animate-in fade-in duration-200"
+          onClick={() => setIsAddModalOpen(false)}
+        >
           <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
             <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
@@ -256,11 +275,22 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {confirmAction && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+      {confirmAction && portalMounted && createPortal(
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 99999,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: "16px",
+            background: "rgba(15,23,42,0.55)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+          }}
+          className="animate-in fade-in duration-200"
+        >
           <div className="bg-white w-full max-w-sm rounded-[24px] shadow-2xl p-6 animate-in zoom-in-95 duration-300">
             <div className="flex items-center gap-4 mb-4">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${confirmAction === 'save' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
@@ -294,7 +324,8 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

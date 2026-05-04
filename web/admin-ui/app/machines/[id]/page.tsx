@@ -7,6 +7,8 @@ import machinesData from "@/lib/mock/machines.json";
 import MachineChart from "@/components/machines/MachineChart";
 import ManageStock from "@/components/machines/ManageStock";
 
+import { useUI, ExportSection } from "@/lib/context/UIContext";
+
 interface PageProps {
   params: Promise<{ id: string }>;
 }
@@ -14,10 +16,29 @@ interface PageProps {
 export default function MachineDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { openExportModal } = useUI();
   const [isManageStock, setIsManageStock] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const machine = machinesData.find(m => m.id === id) || { name: "MOD PAO Building LX", id: id };
+
+  const machineExportSections: ExportSection[] = [
+    {
+      id: "machine_stats",
+      label: "สถิติการใช้งานรายตู้",
+      description: "ข้อมูลยอดขายและคำสั่งซื้อของตู้สินค้า",
+      columns: [
+        { key: "metric", label: "หัวข้อ" },
+        { key: "value", label: "ค่า" },
+      ],
+      fetchData: async () => [
+        { metric: "ยอดขายรวม", value: "฿1,458.5" },
+        { metric: "คำสั่งซื้อรวม", value: "342" },
+        { metric: "อุณหภูมิล่าสุด", value: "65°C" },
+        { metric: "สถานะตู้", value: "ทำงานปกติ" },
+      ]
+    }
+  ];
 
   const handleSaveStock = () => {
     setIsManageStock(false);
@@ -72,7 +93,10 @@ export default function MachineDetailPage({ params }: PageProps) {
             </svg>
             จัดการสต็อค
           </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[14px] font-bold text-[#64748B] shadow-sm hover:border-[#FF6A00] hover:text-[#FF6A00] transition-all">
+          <button 
+            onClick={() => openExportModal(machineExportSections, `รายละเอียดตู้_${machine.name}`)}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[14px] font-bold text-[#64748B] shadow-sm hover:border-[#FF6A00] hover:text-[#FF6A00] transition-all"
+          >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
               <polyline points="7 10 12 15 17 10"></polyline>

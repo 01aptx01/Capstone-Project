@@ -34,6 +34,9 @@ type UIContextType = {
   exportPageTitle: string;
   openExportModal: (sections: ExportSection[], pageTitle?: string) => void;
   closeExportModal: () => void;
+  isCreateCouponOpen: boolean;
+  openCreateCoupon: () => void;
+  closeCreateCoupon: () => void;
 };
 
 const UIContext = createContext<UIContextType | undefined>(undefined);
@@ -50,6 +53,7 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportSections, setExportSections] = useState<ExportSection[]>([]);
   const [exportPageTitle, setExportPageTitle] = useState("รายงาน");
+  const [isCreateCouponOpen, setIsCreateCouponOpen] = useState(false);
 
   const openAddMachine = () => setIsAddMachineOpen(true);
   const closeAddMachine = () => setIsAddMachineOpen(false);
@@ -83,6 +87,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
 
   const closeExportModal = () => setIsExportModalOpen(false);
 
+  const openCreateCoupon = () => setIsCreateCouponOpen(true);
+  const closeCreateCoupon = () => setIsCreateCouponOpen(false);
+
   return (
     <UIContext.Provider value={{
       isAddMachineOpen,
@@ -104,6 +111,9 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
       exportPageTitle,
       openExportModal,
       closeExportModal,
+      isCreateCouponOpen,
+      openCreateCoupon,
+      closeCreateCoupon,
     }}>
       {children}
     </UIContext.Provider>

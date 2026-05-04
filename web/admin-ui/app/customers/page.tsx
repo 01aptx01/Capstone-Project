@@ -41,7 +41,7 @@ const customerSections: ExportSection[] = [
 ];
 
 export default function CustomersPage() {
-  const { openExportModal } = useUI();
+  const { openExportModal, openCreateCoupon } = useUI();
 
   return (
     <PageWrapper>
@@ -60,10 +60,6 @@ export default function CustomersPage() {
           >
             <i className="fi fi-rr-download text-sm"></i>
             <span>Export ข้อมูล</span>
-          </button>
-          <button className="btn-primary">
-            <i className="fi fi-rr-plus flex items-center"></i>
-            สร้างคูปองใหม่
           </button>
         </div>
       </div>

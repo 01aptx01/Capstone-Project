@@ -329,6 +329,25 @@ body,
   justify-content: center;
   background: var(--login-bg);
   z-index: 9999;
+  padding: 24px;
+}
+
+/* Auth card shell — dimensions defined in pure CSS, applied before JS hydrates.
+   This prevents the 'squeezed line' flash caused by flex-shrink collapsing
+   the card to its content width before Tailwind classes are applied. */
+.auth-card-shell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 460px;
+  min-height: 560px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.auth-card-shell--lg {
+  max-width: 520px;
+  min-height: 700px;
 }
 
 .login-page::before {
