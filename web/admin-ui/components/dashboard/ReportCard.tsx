@@ -23,7 +23,7 @@ export default function ReportCard({
 }: ReportCardProps) {
   if (isFeatured) {
     return (
-      <div className="relative overflow-hidden bg-gradient-to-br from-[#f47b2a] to-[#e0610e] rounded-[32px] p-6 text-white shadow-[0_20px_50px_rgba(244,123,42,0.25)] h-full flex flex-col justify-between group animate-scale-in border border-white/10" role="region" aria-label={title}>
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#f47b2a] to-[#e0610e] rounded-[32px] p-4 xl:p-6 text-white shadow-[0_20px_50px_rgba(244,123,42,0.25)] h-full flex flex-col justify-between group animate-scale-in border border-white/10" role="region" aria-label={title}>
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-4">
             <div className="text-[12px] font-black uppercase tracking-[0.1em] opacity-80">{title}</div>
@@ -37,7 +37,7 @@ export default function ReportCard({
         </div>
 
         <div className="flex-1 flex items-center justify-center flex-col relative z-10 py-4">
-          <div className="text-[40px] font-black leading-none mb-3 drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] tracking-tighter">{value}</div>
+          <div className="text-[32px] xl:text-[40px] font-black leading-none mb-3 drop-shadow-[0_8px_16px_rgba(0,0,0,0.15)] group-hover:scale-105 transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] tracking-tighter">{value}</div>
           {subValue && (
             <div className="text-[11px] font-bold opacity-100 text-center tracking-wide bg-black/20 px-4 py-2 rounded-[16px] backdrop-blur-md border border-white/5 shadow-inner">
               {subValue}
@@ -57,7 +57,7 @@ export default function ReportCard({
   const trendColor = trendDirection === "up" ? "#10B981" : trendDirection === "down" ? "#EF4444" : "#64748B";
 
   return (
-    <div className="vibrant-card !rounded-[32px] p-6 group animate-scale-in h-full flex flex-col justify-between hover:translate-y-[-4px] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-50" role="region" aria-label={title}>
+    <div className="vibrant-card !rounded-[32px] p-4 xl:p-6 group animate-scale-in h-full flex flex-col justify-between hover:translate-y-[-4px] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.02)] border border-slate-50" role="region" aria-label={title}>
       <div className="flex justify-between items-start mb-6">
         <div 
           className="w-14 h-14 rounded-full flex items-center justify-center text-xl shadow-lg border border-white transition-all duration-500 group-hover:rotate-[10deg] group-hover:scale-110"
@@ -80,8 +80,8 @@ export default function ReportCard({
         )}
       </div>
       <div>
-        <div className="text-[15px] font-black text-[#475569] mb-1.5">{title}</div>
-        <div className="text-[28px] font-black text-[#334155] leading-none flex items-baseline gap-1.5">
+        <div className="text-[13px] xl:text-[15px] font-black text-[#475569] mb-1.5">{title}</div>
+        <div className="text-[22px] xl:text-[28px] font-black text-[#334155] leading-none flex items-baseline gap-1.5">
           {value}
           {subValue && <span className="text-[13px] font-bold text-[#CBD5E1] tracking-wide">{subValue}</span>}
         </div>
