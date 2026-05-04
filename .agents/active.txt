@@ -1,2 +1,2 @@
-Socket.IO gateway: machine connect ใช้ auth { machine_id, token } ตรวจ bcrypt กับ DB แล้วตั้ง is_online=1; disconnect ตั้ง is_online=0 (ลบ HMAC/FLEET_SECRET path ออกจาก gateway แล้ว)
-Next (ถ้าต้องการ): อัปเดต swagger/.env.example ให้สอดคล้อง auth ใหม่; พิจารณา harden `machine_ready` ให้ตรงกับ session ที่ auth แล้ว
+Agent: ws_client.py ใช้ MACHINE_ID/MACHINE_CODE + MACHINE_TOKEN ใน Socket.IO auth; ConnectionRefusedError → log คงที่แล้วหยุด retry; .env.example มี MACHINE_TOKEN แล้ว
+Next (ถ้าต้องการ): อัปเดตเอกสาร agent/README ถ้ามีอ้าง MACHINE_SECRET_KEY
