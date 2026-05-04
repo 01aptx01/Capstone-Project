@@ -15,9 +15,11 @@ export interface Product {
 
 interface Props extends Product {
     onAdd: () => void;
+    /** false when at per-SKU stock cap or cart full (4 items total) */
+    canAdd?: boolean;
 }
 
-export default function ProductCard({ name, desc, price, heatingTime, image, category, stock, onAdd }: Props) {
+export default function ProductCard({ name, desc, price, heatingTime, image, category, stock, onAdd, canAdd = true }: Props) {
     // Map category to a readable Thai label
     const categoryLabel =
         category === 'sweet' ? 'ของหวาน' :
@@ -54,7 +56,12 @@ export default function ProductCard({ name, desc, price, heatingTime, image, cat
             {/* {stock > 0 && stock <= 5 && (
                 <div className="low-stock-text">เหลือ {stock} ชิ้น</div>
             )}*/}
-            <button className="add-btn" onClick={stock > 0 ? onAdd : () => { }} style={{ backgroundColor: stock > 0 ? '#f89025' : '#ccc' }}>+ เพิ่มลงตะกร้า</button>
+            <button
+                className="add-btn"
+                onClick={stock > 0 && canAdd ? onAdd : () => { }}
+                style={{ backgroundColor: stock > 0 && canAdd ? '#f89025' : '#ccc' }}
+                disabled={stock <= 0 || !canAdd}
+            >+ เพิ่มลงตะกร้า</button>
         </div >
     );
 }
