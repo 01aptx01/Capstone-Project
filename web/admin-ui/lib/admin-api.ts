@@ -39,6 +39,13 @@ export type ApiMachineSummary = {
   location: string | null;
   status: string;
   last_active: string | null;
+  is_online?: boolean;
+};
+
+/** Response from `POST /api/admin/machines` (includes one-time plaintext token). */
+export type ApiMachineCreateResponse = ApiMachineSummary & {
+  is_online: boolean;
+  secret_token: string;
 };
 
 export type ApiMachineSlot = {
@@ -196,6 +203,18 @@ export async function getMachine(
   machineCode: string
 ): Promise<ApiMachineDetail> {
   return adminFetch<ApiMachineDetail>(`/machines/${encodeURIComponent(machineCode)}`);
+}
+
+export async function createMachine(body: {
+  machine_code: string;
+  location?: string | null;
+  status?: string;
+}): Promise<ApiMachineCreateResponse> {
+  return adminFetch<ApiMachineCreateResponse>("/machines", {
+    method: "POST",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
 }
 
 export async function listCustomers(params?: {

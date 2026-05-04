@@ -2,6 +2,7 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import MachineCard from "@/components/machines/MachineCard";
+import { ADMIN_MACHINES_REFRESH_EVENT } from "@/components/machines/AddMachineModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
@@ -38,6 +39,14 @@ function MachinesPageClient() {
     queueMicrotask(() => {
       void load();
     });
+  }, [load]);
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void load();
+    };
+    window.addEventListener(ADMIN_MACHINES_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(ADMIN_MACHINES_REFRESH_EVENT, onRefresh);
   }, [load]);
 
   const machineSections: ExportSection[] = useMemo(
