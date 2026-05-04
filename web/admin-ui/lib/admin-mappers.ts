@@ -150,18 +150,32 @@ export type UiOrderRow = {
   status: string;
   machine_code?: string;
   customer_phone?: string | null;
+  payment_method?: string;
 };
 
 export function apiOrderToUiRow(o: ApiOrderListItem): UiOrderRow {
-  const txCount = Array.isArray(o.transactions) ? o.transactions.length : 0;
+  const lines = Array.isArray(o.order_items) ? o.order_items : [];
+  const lineCount =
+    typeof o.item_line_count === "number"
+      ? o.item_line_count
+      : lines.length;
+  const qtySum =
+    typeof o.item_quantity_sum === "number"
+      ? o.item_quantity_sum
+      : lines.reduce((s, li) => s + (li.quantity || 0), 0);
+  let itemsLabel = "—";
+  if (lineCount > 0) {
+    itemsLabel = `${lineCount} รายการ (${qtySum} ชิ้น)`;
+  }
   return {
     id: String(o.order_id),
     time: o.created_at || "—",
-    items: txCount > 0 ? String(txCount) : "—",
+    items: itemsLabel,
     amount: o.total_price,
     status: o.status,
     machine_code: o.machine_code,
     customer_phone: o.customer_phone,
+    payment_method: o.payment_method,
   };
 }
 

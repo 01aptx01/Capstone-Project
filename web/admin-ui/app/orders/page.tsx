@@ -84,7 +84,10 @@ export default function OrdersPage() {
         columns: [
           { key: "id", label: "เลขออเดอร์" },
           { key: "time", label: "เวลา" },
-          { key: "items", label: "จำนวนสินค้า" },
+          { key: "machine_code", label: "ตู้" },
+          { key: "customer_phone", label: "ลูกค้า" },
+          { key: "payment_method", label: "ช่องทางจ่าย" },
+          { key: "items", label: "สินค้า" },
           { key: "amount", label: "ยอดเงิน (฿)" },
           { key: "status", label: "สถานะ" },
         ],
@@ -95,6 +98,9 @@ export default function OrdersPage() {
             return {
               id: r.id,
               time: r.time,
+              machine_code: r.machine_code ?? "",
+              customer_phone: r.customer_phone ?? "",
+              payment_method: r.payment_method ?? "",
               items: r.items,
               amount: r.amount,
               status: r.status,
@@ -216,10 +222,16 @@ export default function OrdersPage() {
                   เวลา
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                  ตู้
+                </th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
                   ลูกค้า
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
-                  Items
+                  ช่องทางจ่าย
+                </th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                  สินค้า
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
                   Total
@@ -232,7 +244,7 @@ export default function OrdersPage() {
             <tbody className="divide-y divide-slate-50">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-0">
+                  <td colSpan={8} className="p-0">
                     <div className="min-h-[320px]">
                       <LoadingSpinner />
                     </div>
@@ -240,7 +252,7 @@ export default function OrdersPage() {
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-16 text-center">
+                  <td colSpan={8} className="px-8 py-16 text-center">
                     <p className="text-lg font-black text-slate-500">ไม่มีออเดอร์ในชุดที่โหลด</p>
                     <p className="mt-2 text-sm font-medium text-slate-400">
                       ลองรีเฟรชหรือตรวจสอบการเชื่อมต่อกับเซิร์ฟเวอร์
@@ -256,8 +268,14 @@ export default function OrdersPage() {
                     <td className="px-8 py-5 text-[14px] font-semibold text-[#64748B] max-w-[200px] truncate">
                       {o.time}
                     </td>
+                    <td className="px-8 py-5 text-[13px] font-bold font-mono text-slate-600">
+                      {o.machine_code || "—"}
+                    </td>
                     <td className="px-8 py-5 text-[13px] font-bold text-slate-600">
                       {o.customer_phone || "—"}
+                    </td>
+                    <td className="px-8 py-5 text-[12px] font-bold text-slate-600 uppercase">
+                      {o.payment_method || "—"}
                     </td>
                     <td className="px-8 py-5">
                       <span className="text-[14px] font-bold text-slate-600">{o.items}</span>

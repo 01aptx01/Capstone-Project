@@ -10,7 +10,7 @@ from app.api.admin import admin_bp
 from app.api.admin.decorators import admin_required
 from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
-from app.models import Order, Transaction
+from app.models import Order, OrderItem, Transaction
 
 
 def _dec(value):
@@ -31,9 +31,23 @@ def _tx_to_dict(t: Transaction) -> dict:
     }
 
 
+def _order_item_line(it: OrderItem) -> dict:
+    name = it.product.name if getattr(it, "product", None) else None
+    return {
+        "product_id": it.product_id,
+        "quantity": it.quantity,
+        "product_name": name,
+        "price_at_purchase": _dec(it.price_at_purchase),
+    }
+
+
 def _order_list_item(o: Order) -> dict:
     phone = o.member.phone_number if o.member else None
     txs = sorted(o.transactions, key=lambda x: x.id) if o.transactions else []
+    lines = sorted(o.items, key=lambda x: x.id) if getattr(o, "items", None) else []
+    item_line_count = len(lines)
+    item_quantity_sum = sum((li.quantity or 0) for li in lines)
+    order_items = [_order_item_line(li) for li in lines]
     return {
         "order_id": o.order_id,
         "machine_code": o.machine_code,
@@ -47,6 +61,9 @@ def _order_list_item(o: Order) -> dict:
         "created_at": o.created_at.isoformat() if o.created_at else None,
         "updated_at": o.updated_at.isoformat() if o.updated_at else None,
         "transactions": [_tx_to_dict(t) for t in txs],
+        "order_items": order_items,
+        "item_line_count": item_line_count,
+        "item_quantity_sum": item_quantity_sum,
     }
 
 
@@ -71,6 +88,7 @@ def admin_list_orders():
     list_stmt = select(Order).options(
         selectinload(Order.member),
         selectinload(Order.transactions),
+        selectinload(Order.items).selectinload(OrderItem.product),
     )
     if filters:
         list_stmt = list_stmt.where(*filters)
