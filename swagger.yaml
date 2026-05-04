@@ -87,6 +87,17 @@ definitions:
       location: { type: string, x-nullable: true }
       status: { type: string }
       last_active: { type: string, x-nullable: true }
+      is_online: { type: boolean }
+
+  AdminMachineCreateResponse:
+    allOf:
+      - $ref: "#/definitions/AdminMachineSummary"
+      - type: object
+        required: [secret_token]
+        properties:
+          secret_token:
+            type: string
+            description: "One-time 32-char hex token; copy now — only returned on create"
 
   AdminCustomer:
     type: object
@@ -511,6 +522,32 @@ paths:
                   items:
                     type: array
                     items: { $ref: "#/definitions/AdminMachineSummary" }
+    post:
+      tags: [Admin]
+      summary: Create machine (returns one-time secret token)
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required: [machine_code]
+            properties:
+              machine_code: { type: string, maxLength: 20 }
+              location: { type: string, x-nullable: true }
+              status:
+                type: string
+                enum: [online, maintenance, offline]
+                default: online
+      responses:
+        "201":
+          description: Created; includes plaintext secret_token to copy once
+          schema:
+            $ref: "#/definitions/AdminMachineCreateResponse"
+        "400":
+          description: Bad request
+        "409":
+          description: machine_code already exists
 
   /api/admin/machines/{machine_code}:
     get:
