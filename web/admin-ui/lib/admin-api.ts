@@ -62,6 +62,13 @@ export type ApiMachineSlot = {
 
 export type ApiMachineDetail = ApiMachineSummary & { slots: ApiMachineSlot[] };
 
+/** Payload row for `PUT /api/admin/machines/:code/slots` (ids are assigned server-side). */
+export type ApiMachineSlotInput = {
+  slot_number: number;
+  product_id: number;
+  quantity: number;
+};
+
 export type ApiCustomer = {
   user_id: number;
   phone_number: string;
@@ -203,6 +210,31 @@ export async function getMachine(
   machineCode: string
 ): Promise<ApiMachineDetail> {
   return adminFetch<ApiMachineDetail>(`/machines/${encodeURIComponent(machineCode)}`);
+}
+
+export async function updateMachine(
+  machineCode: string,
+  body: { location?: string | null; status?: string }
+): Promise<ApiMachineDetail> {
+  return adminFetch<ApiMachineDetail>(`/machines/${encodeURIComponent(machineCode)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
+}
+
+export async function updateMachineSlots(
+  machineCode: string,
+  slots: ApiMachineSlotInput[]
+): Promise<ApiMachineDetail> {
+  return adminFetch<ApiMachineDetail>(
+    `/machines/${encodeURIComponent(machineCode)}/slots`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ slots }),
+      skipGlobalErrorToast: true,
+    }
+  );
 }
 
 export async function createMachine(body: {
