@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Sidebar from "@/components/layout/Sidebar";
 import { UIProvider } from "@/lib/context/UIContext";
 import GlobalModals from "@/components/layout/GlobalModals";
 import AppToasterAndSocket from "@/components/AppToasterAndSocket";
+import AppLayout from "@/components/layout/AppLayout";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -32,17 +31,10 @@ export default function RootLayout({
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
         <UIProvider>
           <AppToasterAndSocket />
-          <div className="flex h-screen">
-            <Sidebar />
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <Header />
-              <main className="flex-1 overflow-auto bg-[var(--background)] p-6 relative">{children}</main>
-            </div>
-          </div>
+          <AppLayout>{children}</AppLayout>
           <GlobalModals />
         </UIProvider>
       </body>
     </html>
   );
 }
-

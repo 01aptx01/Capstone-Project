@@ -72,7 +72,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Top Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-5">
         <div className="animate-in opacity-0 delay-100 h-full">
           <ReportCard
             isFeatured={true}
@@ -89,8 +89,8 @@ export default function ReportsPage() {
             subValue="/เดือน"
             trend="5.2%"
             icon={<i className="fi fi-rr-box-open"></i>}
-            iconBg="#FFFFFF"
-            iconColor="#f47b2a"
+            iconBg="#c0e5ffff"
+            iconColor="#3b82f6"
           />
         </div>
         <div className="animate-in opacity-0 delay-300 h-full">
@@ -100,8 +100,8 @@ export default function ReportsPage() {
             subValue="ออเดอร์"
             trend="12.0%"
             icon={<i className="fi fi-rr-shopping-cart"></i>}
-            iconBg="#FFFFFF"
-            iconColor="#f47b2a"
+            iconBg="#c0fbe7ff"
+            iconColor="#10b981"
           />
         </div>
         <div className="animate-in opacity-0 delay-400 h-full">
@@ -112,8 +112,8 @@ export default function ReportsPage() {
             trend="2"
             trendDirection="down"
             icon={<i className="fi fi-rr-bolt"></i>}
-            iconBg="#FFFFFF"
-            iconColor="#f47b2a"
+            iconBg="#ffd7e2ff"
+            iconColor="#e8205a"
           />
         </div>
       </div>
@@ -124,7 +124,7 @@ export default function ReportsPage() {
       </div>
 
       {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in opacity-0 delay-700 pb-16">
+      <div className="grid grid-cols-1 lg:grid-cols-1 xl:grid-cols-2 gap-8 animate-in opacity-0 delay-700 pb-16">
         <SalesByLocation />
         <SalesByFlavor />
       </div>

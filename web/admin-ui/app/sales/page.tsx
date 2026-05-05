@@ -126,12 +126,12 @@ export default function SalesPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Transaction ID</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Time</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Machine</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Amount</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">Status</th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-right">Details</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Transaction ID</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Time</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Machine</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Amount</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">Status</th>
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-right whitespace-nowrap">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">

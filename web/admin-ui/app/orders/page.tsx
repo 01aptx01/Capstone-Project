@@ -176,7 +176,7 @@ function OrdersPageClient() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <div className="animate-in opacity-0 delay-100">
           <ReportCard
             title="ออเดอร์ทั้งหมด"
@@ -223,28 +223,28 @@ function OrdersPageClient() {
           <table className="w-full">
             <thead>
               <tr className="bg-slate-50/50">
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   Order ID
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   เวลา
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   ตู้
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   ลูกค้า
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   ช่องทางจ่าย
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   สินค้า
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   Total
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left">
+                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
                   Status
                 </th>
               </tr>

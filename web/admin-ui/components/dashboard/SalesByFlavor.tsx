@@ -2,10 +2,12 @@
 
 export default function SalesByFlavor() {
   const flavors = [
-    { name: "สตรอว์เบอร์รี (Strawberry)", value: 45020, percentage: 38 },
-    { name: "ช็อกโกแลต (Chocolate)", value: 35140, percentage: 30 },
-    { name: "วานิลลา (Vanilla)", value: 20500, percentage: 17 },
-    { name: "ชาเขียวมัทฉะ (Matcha)", value: 17800, percentage: 15 },
+    { name: "เปาหมูสับ (Minced Pork)", value: 75240, percentage: 30 },
+    { name: "เปาครีม (Cream Bun)", value: 62700, percentage: 25 },
+    { name: "เปามดแดง (Red Ant Bun)", value: 37620, percentage: 15 },
+    { name: "เปากุ้ง (Shrimp Bun)", value: 30100, percentage: 12 },
+    { name: "เปาเห็ดหอม (Shiitake Bun)", value: 25080, percentage: 10 },
+    { name: "เปาเต้าหู้ (Tofu Bun)", value: 20060, percentage: 8 },
   ];
 
   return (
