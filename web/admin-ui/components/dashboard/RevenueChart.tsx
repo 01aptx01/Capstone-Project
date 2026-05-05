@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import type { RechartsSalesDatum } from "@/lib/admin-mappers";
+import { useLang } from "@/lib/i18n/lang";
 
 export type RevenueChartProps = {
   /** When omitted (e.g. reports page placeholder), chart shows empty state. */
@@ -22,10 +23,11 @@ function formatTooltipValue(v: number) {
 }
 
 export default function RevenueChart({ data = [], loading }: RevenueChartProps) {
+  const { t } = useLang();
   if (loading) {
     return (
       <div className="vibrant-card !rounded-[40px] p-10 h-full min-h-[320px] flex items-center justify-center font-bold" style={{ color: "var(--text-muted)" }}>
-        กำลังโหลดกราฟยอดขาย…
+        {t("chart.loading")}
       </div>
     );
   }
@@ -33,7 +35,7 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
   if (!data.length) {
     return (
       <div className="vibrant-card !rounded-[40px] p-10 h-full min-h-[320px] flex items-center justify-center font-bold" style={{ color: "var(--text-muted)" }}>
-        ยังไม่มีข้อมูลยอดขายในช่วงที่เลือก
+        {t("chart.empty")}
       </div>
     );
   }
@@ -44,11 +46,11 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
         <div>
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-[24px] font-black tracking-tight" style={{ color: "var(--text)" }}>
-              กราฟยอดการขาย
+              {t("chart.title")}
             </h3>
           </div>
           <p className="text-[14px] font-semibold" style={{ color: "var(--text-muted)" }}>
-            รายได้รายวัน (ออเดอร์สำเร็จ) จาก API — ช่วง {data.length} วันล่าสุด
+            {t("chart.subtitle").replace("{n}", String(data.length))}
           </p>
         </div>
       </div>
@@ -81,11 +83,11 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
               }}
               formatter={(value) => [
                 formatTooltipValue(typeof value === "number" ? value : Number(value)),
-                "รายได้",
+                t("chart.revenue"),
               ]}
               labelFormatter={(_, payload) => {
                 const row = payload?.[0]?.payload as RechartsSalesDatum | undefined;
-                return row ? `${row.date} · ${row.count} ออเดอร์` : "";
+                return row ? `${row.date} · ${row.count} ${t("chart.ordersUnit")}` : "";
               }}
             />
             <Line

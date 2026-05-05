@@ -29,7 +29,14 @@ function extractErrorMessage(
     if (typeof d.message === "string" && d.message) return d.message;
     if (typeof d.error === "string" && d.error) return d.error;
   }
-  return err.message || "คำขอล้มเหลว กรุณาลองใหม่";
+  if (err.message) return err.message;
+  const lang =
+    typeof document !== "undefined" && document.documentElement.lang === "en"
+      ? "en"
+      : "th";
+  return lang === "en"
+    ? "Request failed. Please try again."
+    : "คำขอล้มเหลว กรุณาลองใหม่";
 }
 
 api.interceptors.request.use((config) => {

@@ -5,6 +5,9 @@ import { createPortal } from "react-dom";
 import { listCoupons, updateCoupon } from "@/lib/admin-api";
 import { apiCouponToUiRow, type UiCouponRow } from "@/lib/admin-mappers";
 import { useUI } from "@/lib/context/UIContext";
+import { useLang } from "@/lib/i18n/lang";
+
+type CouponTabId = "all" | "active" | "expired";
 
 export const ADMIN_COUPONS_REFRESH_EVENT = "admin-coupons-refresh";
 
@@ -75,7 +78,8 @@ const initialFilters: FilterState = {
 
 export default function CouponTable() {
   const { openCreateCoupon } = useUI();
-  const [activeTab, setActiveTab] = useState("ทั้งหมด");
+  const { t } = useLang();
+  const [activeTab, setActiveTab] = useState<CouponTabId>("all");
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<UiCouponRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,12 +108,12 @@ export default function CouponTable() {
       setRows(res.items.map(apiCouponToUiRow));
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "โหลดคูปองไม่สำเร็จ");
+      setError(e instanceof Error ? e.message : t("coupon.error.loadFailed"));
       setRows([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -140,17 +144,17 @@ export default function CouponTable() {
     setFormError(null);
     const code = form.code.trim();
     if (!code) {
-      setFormError("กรุณากรอกรหัสคูปอง");
+      setFormError(t("coupon.error.codeRequired"));
       return;
     }
     const da = Number(form.discount_amount);
     if (!Number.isFinite(da) || da <= 0) {
-      setFormError("ส่วนลดไม่ถูกต้อง");
+      setFormError(t("coupon.error.discountInvalid"));
       return;
     }
     const pc = parsePointsCost(form.points_cost);
     if (pc === null) {
-      setFormError("แต้มที่ใช้แลกต้องเป็นจำนวนเต็ม ≥ 0");
+      setFormError(t("coupon.error.pointsInvalid"));
       return;
     }
     const expireIso = fromDatetimeLocalValue(form.expire_local);
@@ -167,13 +171,29 @@ export default function CouponTable() {
       window.dispatchEvent(new Event(ADMIN_COUPONS_REFRESH_EVENT));
       closeEditModal();
     } catch (e) {
-      setFormError(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
+      setFormError(e instanceof Error ? e.message : t("coupon.error.saveFailed"));
     } finally {
       setSaving(false);
     }
   };
 
-  const tabs = ["ทั้งหมด", "กำลังใช้งาน (Active)", "หมดอายุ"];
+  const tabItems = useMemo(
+    () =>
+      (["all", "active", "expired"] as const).map((id) => ({
+        id,
+        label:
+          id === "all" ? t("coupon.tab.all") : id === "active" ? t("coupon.tab.active") : t("coupon.tab.expired"),
+      })),
+    [t]
+  );
+
+  const labelForCouponStatus = (status: string) => {
+    const s = status.toLowerCase();
+    if (s === "active") return t("coupon.status.active");
+    if (s === "inactive") return t("coupon.status.inactive");
+    if (s === "expired") return t("coupon.status.expired");
+    return status;
+  };
 
   const filteredCoupons = useMemo(() => {
     const now = new Date();
@@ -181,9 +201,9 @@ export default function CouponTable() {
     return rows.filter((coupon) => {
       let tabMatch = true;
       const expiry = coupon.expiry ? new Date(coupon.expiry) : null;
-      if (activeTab === "กำลังใช้งาน (Active)") {
+      if (activeTab === "active") {
         tabMatch = coupon.status === "active" && (!expiry || expiry >= now);
-      } else if (activeTab === "หมดอายุ") {
+      } else if (activeTab === "expired") {
         tabMatch = !!expiry && expiry < now;
       }
 
@@ -210,6 +230,9 @@ export default function CouponTable() {
     });
   }, [activeTab, search, rows, filters]);
 
+  const capLabel = (maxUsage: number) =>
+    t("coupon.capLabel").replace("{cap}", maxUsage > 0 ? String(maxUsage) : "∞");
+
   const clearFilters = () => {
     setFilters(initialFilters);
     setIsFilterOpen(false);
@@ -222,10 +245,11 @@ export default function CouponTable() {
     <div className="rounded-[48px] overflow-hidden animate-in fade-in duration-700 surface-card" style={{ boxShadow: "var(--shadow-card)" }}>
       <div className="px-12 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8" style={{ background: "var(--surface-1)" }}>
         <div>
-          <h3 className="text-[28px] font-black text-[var(--text)] tracking-tight mb-2">คูปองส่วนลด</h3>
+          <h3 className="text-[28px] font-black text-[var(--text)] tracking-tight mb-2">{t("coupon.title")}</h3>
           <p className="text-[var(--text-muted)] font-bold text-[15px] flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse"></span>
-            ข้อมูลจาก API <code className="text-xs font-mono bg-[var(--surface-2)] px-1 rounded">/api/admin/coupons</code>
+            {t("coupon.apiNote")}{" "}
+            <code className="text-xs font-mono bg-[var(--surface-2)] px-1 rounded">/api/admin/coupons</code>
           </p>
         </div>
 
@@ -235,21 +259,21 @@ export default function CouponTable() {
             onClick={openCreateCoupon}
             className="px-6 py-3 rounded-2xl bg-[var(--primary)] text-[var(--primary-contrast)] text-sm font-black shadow-md hover:opacity-95 transition-opacity"
           >
-            สร้างคูปองใหม่
+            {t("coupon.createNew")}
           </button>
           <div className="flex bg-[var(--surface-2)]/60 p-1.5 rounded-[22px] border border-[var(--border)] shadow-inner backdrop-blur-sm">
-            {tabs.map((tab) => (
+            {tabItems.map(({ id, label }) => (
               <button
-                key={tab}
+                key={id}
                 type="button"
-                onClick={() => setActiveTab(tab)}
+                onClick={() => setActiveTab(id)}
                 className={`px-6 sm:px-8 py-3 rounded-2xl text-[12px] sm:text-[13px] font-black tracking-[0.05em] uppercase transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
-                  activeTab === tab
+                  activeTab === id
                     ? "bg-[var(--surface-1)] text-[var(--primary)] shadow-[0_8px_16px_rgba(0,0,0,0.08)] scale-100 translate-y-[-1px]"
                     : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-1)]/40"
                 }`}
               >
-                {tab}
+                {label}
               </button>
             ))}
           </div>
@@ -271,7 +295,7 @@ export default function CouponTable() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ค้นหารหัสคูปอง..."
+            placeholder={t("coupon.searchPlaceholder")}
             className="w-full pl-14 pr-8 py-5 rounded-[24px] border outline-none transition-all duration-300 font-bold placeholder:text-[var(--text-muted)]"
             style={{
               borderColor: "var(--input-border)",
@@ -291,7 +315,7 @@ export default function CouponTable() {
                 ? "bg-[var(--primary)] border-[var(--primary)] text-[var(--primary-contrast)] shadow-lg "
                 : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] shadow-sm"
             }`}
-            aria-label="Advanced filter"
+            aria-label={t("coupon.filter.aria")}
           >
             <i className="fi fi-rr-filter"></i>
           </button>
@@ -302,7 +326,7 @@ export default function CouponTable() {
             className="px-8 py-5 bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] shadow-sm flex items-center gap-3 text-[14px] font-black text-[var(--text)] hover:text-[var(--primary)] hover:border-[var(--primary)] hover:shadow-lg transition-all duration-300"
           >
             <i className="fi fi-rr-refresh"></i>
-            รีเฟรช
+            {t("coupon.refresh")}
           </button>
         </div>
       </div>
@@ -311,16 +335,30 @@ export default function CouponTable() {
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[var(--surface-2)]/30 border-b border-[var(--border)]/40">
-              <th className="px-12 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">คูปอง</th>
-              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">Type</th>
-              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">ส่วนลด</th>
-              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">แลกแต้ม</th>
-              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">Utilization</th>
-              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">หมดอายุ</th>
-              <th className="px-12 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] text-right">Actions</th>
+              <th className="px-12 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
+                {t("coupon.col.coupon")}
+              </th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
+                {t("coupon.col.type")}
+              </th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
+                {t("coupon.col.discount")}
+              </th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
+                {t("coupon.col.points")}
+              </th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
+                {t("coupon.col.utilization")}
+              </th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">
+                {t("coupon.col.expiry")}
+              </th>
+              <th className="px-12 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] text-right">
+                {t("coupon.col.actions")}
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
+          <tbody className="divide-y divide-[var(--border)]">
             {loading ? (
               <tr>
                 <td
@@ -328,7 +366,7 @@ export default function CouponTable() {
                   className="px-12 py-16 text-center font-bold"
                   style={{ color: "var(--text-muted)", background: "var(--surface-1)" }}
                 >
-                  กำลังโหลด…
+                  {t("coupon.loading")}
                 </td>
               </tr>
             ) : filteredCoupons.length === 0 ? (
@@ -338,7 +376,7 @@ export default function CouponTable() {
                   className="px-12 py-16 text-center font-bold"
                   style={{ color: "var(--text-muted)", background: "var(--surface-1)" }}
                 >
-                  ไม่มีคูปองในชุดนี้
+                  {t("coupon.empty")}
                 </td>
               </tr>
             ) : (
@@ -377,17 +415,21 @@ export default function CouponTable() {
                   </td>
                   <td className="px-6 py-8">
                     <span className="text-[15px] font-black text-[var(--text)]">
-                      {coupon.points_cost > 0 ? `${coupon.points_cost.toLocaleString()} แต้ม` : "—"}
+                      {coupon.points_cost > 0
+                        ? `${coupon.points_cost.toLocaleString()} ${t("coupon.pointsSuffix")}`
+                        : "—"}
                     </span>
                   </td>
                   <td className="px-6 py-8 min-w-[200px]">
                     <div className="flex justify-between items-end mb-3">
                       <div className="flex items-baseline gap-1.5">
                         <span className="text-[18px] font-black text-[var(--text)]">{coupon.usage}</span>
-                        <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Redeemed</span>
+                        <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">
+                          {t("coupon.redeemed")}
+                        </span>
                       </div>
                       <span className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest px-2 py-0.5 rounded" style={{ background: "var(--warn-bg)" }}>
-                        Cap: {coupon.maxUsage || "∞"}
+                        {capLabel(coupon.maxUsage)}
                       </span>
                     </div>
                     <div className="h-2.5 bg-[var(--surface-2)]/60 rounded-full overflow-hidden p-[2px] border border-[var(--border)] shadow-inner">
@@ -403,7 +445,7 @@ export default function CouponTable() {
                         }}
                       ></div>
                     </div>
-                    <p className="text-[10px] text-[var(--text-muted)] mt-2 font-bold">ยอดใช้งานยังไม่มีใน API</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-2 font-bold">{t("coupon.usageNotInApi")}</p>
                   </td>
                   <td className="px-6 py-8">
                     <div className="flex flex-col gap-1">
@@ -432,14 +474,14 @@ export default function CouponTable() {
                                 : "var(--warn)",
                         }}
                       >
-                        {coupon.status}
+                        {labelForCouponStatus(coupon.status)}
                       </span>
                       <button
                         type="button"
                         onClick={() => openEdit(coupon)}
                         className="text-xs font-black px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
                       >
-                        แก้ไข
+                        {t("coupon.edit")}
                       </button>
                     </div>
                   </td>
@@ -452,7 +494,7 @@ export default function CouponTable() {
 
       <div className="px-12 py-10 border-t flex justify-between items-center" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
         <p className="text-[13px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
-          แสดง {filteredCoupons.length} รายการ
+          {t("coupon.footer").replace("{n}", String(filteredCoupons.length))}
         </p>
       </div>
 
@@ -463,12 +505,12 @@ export default function CouponTable() {
             aria-modal="true"
             className="bg-[var(--surface-1)] rounded-3xl shadow-2xl max-w-md w-full p-8 border border-[var(--border)] max-h-[90vh] overflow-y-auto"
           >
-            <h4 className="text-xl font-black text-[var(--text)] mb-1">แก้ไขคูปอง</h4>
-            <p className="text-sm text-[var(--text)] font-bold mb-6">รหัส ประเภทส่วนลด แต้มที่ใช้แลก (0 = ไม่บังคับแลกแต้ม)</p>
+            <h4 className="text-xl font-black text-[var(--text)] mb-1">{t("coupon.editTitle")}</h4>
+            <p className="text-sm text-[var(--text)] font-bold mb-6">{t("coupon.editSubtitle")}</p>
             {formError && <div className="mb-4 text-sm font-bold text-rose-600">{formError}</div>}
             <div className="space-y-4">
               <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">รหัสคูปอง</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.code")}</span>
                 <input
                   className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
                   value={form.code}
@@ -477,7 +519,7 @@ export default function CouponTable() {
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">ประเภท</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.type")}</span>
                 <select
                   className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
                   value={form.type}
@@ -485,13 +527,13 @@ export default function CouponTable() {
                     setForm((f) => ({ ...f, type: e.target.value as "fixed_amount" | "percent" }))
                   }
                 >
-                  <option value="fixed_amount">จำนวนเงิน (fixed_amount)</option>
-                  <option value="percent">เปอร์เซ็นต์ (percent)</option>
+                  <option value="fixed_amount">{t("coupon.option.fixed")}</option>
+                  <option value="percent">{t("coupon.option.percent")}</option>
                 </select>
               </label>
               <label className="block">
                 <span className="text-xs font-black text-[var(--text)] uppercase">
-                  {form.type === "percent" ? "เปอร์เซ็นต์ส่วนลด" : "จำนวนเงินส่วนลด (บาท)"}
+                  {form.type === "percent" ? t("coupon.label.discountPercent") : t("coupon.label.discountAmount")}
                 </span>
                 <input
                   type="number"
@@ -503,7 +545,7 @@ export default function CouponTable() {
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">แต้มที่ใช้แลก (points_cost)</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.points")}</span>
                 <input
                   type="number"
                   min="0"
@@ -514,7 +556,7 @@ export default function CouponTable() {
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">หมดอายุ (เว้นว่าง = ไม่หมดอายุ)</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.expiry")}</span>
                 <input
                   type="datetime-local"
                   className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
@@ -528,7 +570,7 @@ export default function CouponTable() {
                   checked={form.is_active}
                   onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
                 />
-                <span className="text-sm font-black text-[var(--text)]">เปิดใช้งาน (active)</span>
+                <span className="text-sm font-black text-[var(--text)]">{t("coupon.label.active")}</span>
               </label>
             </div>
             <div className="mt-8 flex justify-end gap-3">
@@ -538,7 +580,7 @@ export default function CouponTable() {
                 onClick={closeEditModal}
                 disabled={saving}
               >
-                ยกเลิก
+                {t("coupon.cancel")}
               </button>
               <button
                 type="button"
@@ -546,7 +588,7 @@ export default function CouponTable() {
                 disabled={saving}
                 onClick={submitEdit}
               >
-                {saving ? "กำลังบันทึก…" : "บันทึก"}
+                {saving ? t("coupon.saving") : t("coupon.save")}
               </button>
             </div>
           </div>
@@ -564,7 +606,7 @@ export default function CouponTable() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-black text-[var(--text)]">Advanced Filter</h3>
+                <h3 className="text-xl font-black text-[var(--text)]">{t("coupon.filter.title")}</h3>
                 <button
                   type="button"
                   onClick={() => setIsFilterOpen(false)}
@@ -577,7 +619,7 @@ export default function CouponTable() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Status
+                    {t("coupon.filter.status")}
                   </label>
                   <select
                     value={filters.status}
@@ -586,16 +628,16 @@ export default function CouponTable() {
                     }
                     className="w-full px-4 py-3.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl outline-none focus:border-[var(--primary)] font-bold text-[var(--text)] transition-all"
                   >
-                    <option value="all">All Status</option>
-                    <option value="active">Active</option>
-                    <option value="inactive">Inactive</option>
-                    <option value="expired">Expired</option>
+                    <option value="all">{t("coupon.filter.opt.allStatus")}</option>
+                    <option value="active">{t("coupon.filter.opt.active")}</option>
+                    <option value="inactive">{t("coupon.filter.opt.inactive")}</option>
+                    <option value="expired">{t("coupon.filter.opt.expired")}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Coupon Type
+                    {t("coupon.filter.couponType")}
                   </label>
                   <select
                     value={filters.type}
@@ -604,15 +646,15 @@ export default function CouponTable() {
                     }
                     className="w-full px-4 py-3.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl outline-none focus:border-[var(--primary)] font-bold text-[var(--text)] transition-all"
                   >
-                    <option value="all">All Types</option>
-                    <option value="PERCENT">Percentage (%)</option>
-                    <option value="FIXED">Fixed Amount (฿)</option>
+                    <option value="all">{t("coupon.filter.opt.allTypes")}</option>
+                    <option value="PERCENT">{t("coupon.filter.opt.percent")}</option>
+                    <option value="FIXED">{t("coupon.filter.opt.fixed")}</option>
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
-                    Expiry Date
+                    {t("coupon.filter.expiryDate")}
                   </label>
                   <input
                     type="date"
@@ -629,7 +671,7 @@ export default function CouponTable() {
                   onClick={clearFilters}
                   className="flex-1 py-4 bg-[var(--surface-2)] text-[var(--text)] font-black text-[14px] rounded-2xl transition-all active:scale-95 hover:opacity-90"
                 >
-                  Reset
+                  {t("coupon.filter.reset")}
                 </button>
                 <button
                   type="button"
@@ -637,7 +679,7 @@ export default function CouponTable() {
                   className="flex-[2] py-4 bg-[var(--primary)] text-[var(--primary-contrast)] font-black text-[14px] rounded-2xl shadow-lg transition-all active:scale-95 hover:opacity-95"
                   style={{ boxShadow: "var(--shadow-primary)" }}
                 >
-                  Apply Filter
+                  {t("coupon.filter.apply")}
                 </button>
               </div>
             </div>

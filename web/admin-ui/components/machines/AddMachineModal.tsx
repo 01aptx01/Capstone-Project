@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import Modal from "@/components/ui/Modal";
 import { createMachine } from "@/lib/admin-api";
+import { useLang } from "@/lib/i18n/lang";
 
 export const ADMIN_MACHINES_REFRESH_EVENT = "admin-machines-refresh";
 
@@ -42,19 +43,20 @@ const initialForm = {
   status: "online" as "online" | "maintenance" | "offline",
 };
 
-function messageFromAxios(err: unknown): string {
+function messageFromAxios(err: unknown, fallback: string): string {
   if (axios.isAxiosError(err)) {
     const d = err.response?.data as { error?: string; message?: string } | undefined;
     if (d && typeof d === "object") {
       if (typeof d.error === "string" && d.error) return d.error;
       if (typeof d.message === "string" && d.message) return d.message;
     }
-    return err.message || "สร้างตู้ไม่สำเร็จ";
+    return err.message || fallback;
   }
-  return "สร้างตู้ไม่สำเร็จ";
+  return fallback;
 }
 
 export default function AddMachineModal({ open, onClose }: AddMachineModalProps) {
+  const { t } = useLang();
   const [phase, setPhase] = useState<Phase>("form");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState(initialForm);
@@ -98,7 +100,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
     e.preventDefault();
     const code = formData.machine_code.trim();
     if (!code) {
-      setSubmitError("กรุณากรอกรหัสตู้ (Machine ID)");
+      setSubmitError(t("addMachine.errorRequired"));
       return;
     }
     setSubmitError(null);
@@ -117,7 +119,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
         window.dispatchEvent(new Event(ADMIN_MACHINES_REFRESH_EVENT));
       }
     } catch (err) {
-      setSubmitError(messageFromAxios(err));
+      setSubmitError(messageFromAxios(err, t("addMachine.errorFailed")));
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +139,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
     onClose();
   };
 
-  const modalTitle = phase === "success" ? "สร้างตู้สำเร็จ" : "เพิ่มตู้สินค้าใหม่";
+  const modalTitle = phase === "success" ? t("addMachine.modalTitleSuccess") : t("addMachine.modalTitleNew");
 
   return (
     <Modal open={open} onClose={phase === "success" ? handleDone : onClose} title={modalTitle}>
@@ -157,8 +159,8 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                   <i className="fi fi-rr-check text-2xl" />
                 </div>
                 <div>
-                  <p className="text-[11px] font-black uppercase tracking-widest text-emerald-700">บันทึกแล้ว</p>
-                  <p className="text-lg font-black text-[var(--text)]">เก็บข้อมูลด้านล่างให้ปลอดภัย</p>
+                  <p className="text-[11px] font-black uppercase tracking-widest text-emerald-700">{t("addMachine.success.savedTag")}</p>
+                  <p className="text-lg font-black text-[var(--text)]">{t("addMachine.success.headline")}</p>
                 </div>
               </div>
 
@@ -188,7 +190,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
             </div>
 
             <p className="text-[13px] font-bold text-amber-900 leading-snug px-1">
-              This token is shown only once. Copy it to your hardware agent&apos;s .env file immediately.
+              {t("addMachine.success.tokenWarning")}
             </p>
 
             <button
@@ -196,7 +198,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
               onClick={handleDone}
               className="w-full px-8 py-5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-[28px] text-[16px] font-black shadow-[0_20px_40px_rgba(244,123,42,0.25)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.35)] transition-all"
             >
-              เสร็จสิ้น
+              {t("addMachine.success.done")}
             </button>
           </div>
         ) : (
@@ -218,7 +220,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                         <i className="fi fi-rr-camera text-[24px] text-[var(--text-muted)] group-hover:text-[var(--primary)]"></i>
                       </div>
                       <span className="text-[11px] font-black text-[var(--text-muted)] uppercase tracking-widest group-hover:text-[var(--primary)]">
-                        อัปโหลดรูปภาพ (ไม่บันทึกในระบบ)
+                        {t("addMachine.upload.placeholder")}
                       </span>
                     </div>
                   )}
@@ -235,7 +237,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                 )}
               </div>
               <p className="text-[var(--text-muted)] text-[12px] font-bold text-center max-w-[260px]">
-                รูปและประเภทตู้ด้านล่างใช้เพื่ออ้างอิงในหน้าจอเท่านั้น ข้อมูลที่ส่งไป API คือรหัสตู้ สถานที่ และสถานะ
+                {t("addMachine.uiNote")}
               </p>
             </div>
 
@@ -243,7 +245,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="group space-y-2 md:col-span-2">
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
-                    รหัสตู้ (Machine ID) <span className="text-rose-500">*</span>
+                    {t("addMachine.label.machineId")} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors">
@@ -252,7 +254,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                     <input
                       type="text"
                       required
-                      placeholder="เช่น MP1-002"
+                      placeholder={t("addMachine.placeholder.machineId")}
                       className="w-full pl-14 pr-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[24px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[var(--text)] font-mono"
                       value={formData.machine_code}
                       onChange={(e) => setFormData({ ...formData, machine_code: e.target.value })}
@@ -262,7 +264,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
 
                 <div className="group space-y-2 md:col-span-2">
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
-                    สถานที่ตั้ง (Location)
+                    {t("addMachine.label.location")}
                   </label>
                   <div className="relative">
                     <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors">
@@ -270,7 +272,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                     </span>
                     <input
                       type="text"
-                      placeholder="ไม่บังคับ — เช่น หอใน มจธ."
+                      placeholder={t("addMachine.placeholder.location")}
                       className="w-full pl-14 pr-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[24px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[var(--text)]"
                       value={formData.location}
                       onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -282,7 +284,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="group space-y-2">
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
-                    สถานะตู้ (ส่งไป API)
+                    {t("addMachine.label.status")}
                   </label>
                   <div className="relative">
                     <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors pointer-events-none">
@@ -310,7 +312,7 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
 
                 <div className="group space-y-2">
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
-                    ประเภทตู้ (อ้างอิงในหน้าจอ)
+                    {t("addMachine.label.machineType")}
                   </label>
                   <div className="relative">
                     <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors pointer-events-none">
@@ -321,9 +323,9 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                       value={uiMachineType}
                       onChange={(e) => setUiMachineType(e.target.value)}
                     >
-                      <option value="vending-cool">ตู้แช่เย็น (Cooling)</option>
-                      <option value="vending-hot">ตู้เครื่องดื่มร้อน (Hot)</option>
-                      <option value="vending-snack">ตู้ขนม (Snacks)</option>
+                      <option value="vending-cool">{t("addMachine.option.cool")}</option>
+                      <option value="vending-hot">{t("addMachine.option.hot")}</option>
+                      <option value="vending-snack">{t("addMachine.option.snack")}</option>
                     </select>
                     <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none">
                       <i className="fi fi-rr-angle-small-down text-xl"></i>
@@ -344,9 +346,9 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                 type="button"
                 onClick={onClose}
                 disabled={submitting}
-                className="flex-1 px-8 py-5 bg-[var(--surface-2)] text-[var(--text)]0 rounded-[28px] text-[15px] font-black hover:bg-[var(--border)] transition-all active:scale-95 disabled:opacity-50"
+                className="flex-1 px-8 py-5 bg-[var(--surface-2)] text-[var(--text-muted)] rounded-[28px] text-[15px] font-black hover:bg-[var(--border)] transition-all active:scale-95 disabled:opacity-50"
               >
-                ยกเลิก
+                {t("common.cancel")}
               </button>
               <button
                 type="submit"
@@ -354,10 +356,10 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                 className="flex-[2] px-8 py-5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-[28px] text-[16px] font-black shadow-[0_20px_40px_rgba(244,123,42,0.25)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.35)] hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group disabled:opacity-60 disabled:pointer-events-none"
               >
                 {submitting ? (
-                  <span>กำลังสร้าง…</span>
+                  <span>{t("addMachine.creating")}</span>
                 ) : (
                   <>
-                    <span>ยืนยันการเพิ่มตู้สินค้า</span>
+                    <span>{t("addMachine.confirm")}</span>
                     <div className="w-8 h-8 bg-[var(--surface-1)]/20 rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform">
                       <i className="fi fi-rr-arrow-small-right text-xl"></i>
                     </div>

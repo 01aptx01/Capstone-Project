@@ -2,82 +2,98 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import salesData from "@/lib/mock/sales.json";
-import { useUI, ExportSection } from "@/lib/context/UIContext";
+import { useUI } from "@/lib/context/UIContext";
 import ReportCard from "@/components/dashboard/ReportCard";
-
-const salesSections: ExportSection[] = [
-  {
-    id: "sales_summary",
-    label: "สรุปยอดขาย (Sales Summary)",
-    description: "ยอดรวมวันนี้, เมื่อวาน, และอัตราเปลี่ยนแปลง",
-    columns: [
-      { key: "metric", label: "หัวข้อ" },
-      { key: "value", label: "ค่า" },
-    ],
-    fetchData: async () => [
-      { metric: "ยอดขายวันนี้ (฿)", value: salesData.summary.today },
-      { metric: "ยอดขายเมื่อวาน (฿)", value: salesData.summary.yesterday },
-      { metric: "อัตราเปลี่ยนแปลง (%)", value: salesData.summary.change_percent },
-    ],
-  },
-  {
-    id: "transactions",
-    label: "รายการธุรกรรม (Transactions)",
-    description: "รายละเอียดการซื้อขายที่เกิดขึ้นทั้งหมด",
-    columns: [
-      { key: "orderId", label: "เลขออเดอร์" },
-      { key: "time", label: "เวลา" },
-      { key: "machine", label: "ตู้" },
-      { key: "items", label: "จำนวนรายการ" },
-      { key: "amount", label: "ยอดเงิน (฿)" },
-      { key: "status", label: "สถานะ" },
-    ],
-    fetchData: async () => salesData.transactions as Record<string, unknown>[],
-  },
-];
+import { useMemo } from "react";
+import { useLang } from "@/lib/i18n/lang";
 
 export default function SalesPage() {
   const { openExportModal } = useUI();
+  const { t } = useLang();
   const data = salesData;
+
+  const salesSections = useMemo(
+    () => [
+      {
+        id: "sales_summary",
+        label: t("page.sales.exportTitle"),
+        description: t("page.sales.subtitle"),
+        columns: [
+          { key: "metric", label: t("page.orders.export.col.metric") },
+          { key: "value", label: t("page.orders.export.col.value") },
+        ],
+        fetchData: async () => [
+          { metric: t("page.sales.card.today"), value: String(salesData.summary.today) },
+          { metric: t("page.sales.card.yesterday"), value: String(salesData.summary.yesterday) },
+          { metric: "%", value: String(salesData.summary.change_percent) },
+        ],
+      },
+      {
+        id: "transactions",
+        label: t("page.sales.tableTitle"),
+        description: t("page.sales.subtitle"),
+        columns: [
+          { key: "orderId", label: t("page.sales.col.transactionId") },
+          { key: "time", label: t("page.sales.col.time") },
+          { key: "machine", label: t("page.sales.col.machine") },
+          { key: "amount", label: t("page.sales.col.amount") },
+          { key: "status", label: t("page.sales.col.status") },
+        ],
+        fetchData: async () => salesData.transactions as Record<string, unknown>[],
+      },
+    ],
+    [t]
+  );
 
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'completed':
-        return <span className="px-3 py-1 bg-[var(--success-bg)] text-emerald-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-emerald-100">Paid</span>;
-      case 'processing':
-        return <span className="px-3 py-1 bg-amber-50 text-amber-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-amber-100">Processing</span>;
-      case 'failed':
-        return <span className="px-3 py-1 bg-rose-50 text-rose-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-rose-100">Failed</span>;
+      case "completed":
+        return (
+          <span className="px-3 py-1 bg-[var(--success-bg)] text-emerald-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-emerald-100">
+            {t("page.sales.badge.paid")}
+          </span>
+        );
+      case "processing":
+        return (
+          <span className="px-3 py-1 bg-amber-50 text-amber-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-amber-100">
+            {t("page.sales.badge.processing")}
+          </span>
+        );
+      case "failed":
+        return (
+          <span className="px-3 py-1 bg-rose-50 text-rose-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-rose-100">
+            {t("page.sales.badge.failed")}
+          </span>
+        );
       default:
-        return <span className="px-3 py-1 bg-[var(--surface-2)] text-[var(--text)] text-[11px] font-black uppercase tracking-wider rounded-lg border border-[var(--border)]">{status}</span>;
+        return (
+          <span className="px-3 py-1 bg-[var(--surface-2)] text-[var(--text)] text-[11px] font-black uppercase tracking-wider rounded-lg border border-[var(--border)]">
+            {status}
+          </span>
+        );
     }
   };
 
   return (
     <PageWrapper>
-      {/* Header Section */}
       <div className="flex items-center justify-between animate-in opacity-0">
         <div>
           <h1 className="text-[36px] font-black text-[var(--text)] mb-2 tracking-tight">
-            ประวัติธุรกรรม
+            {t("page.sales.title")}
           </h1>
-          <p className="text-[var(--text-muted)] text-[16px] font-medium">ติดตามยอดขายและการชำระเงินแบบ Real-time</p>
+          <p className="text-[var(--text-muted)] text-[16px] font-medium">{t("page.sales.subtitle")}</p>
         </div>
-        <button 
-          onClick={() => openExportModal(salesSections, "ยอดขาย (Sales)")}
-          className="btn-primary"
-        >
+        <button onClick={() => openExportModal(salesSections, t("page.sales.exportTitle"))} className="btn-primary">
           <i className="fi fi-rr-download flex items-center"></i>
-          Export ข้อมูลการขาย
+          {t("page.sales.export")}
         </button>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="animate-in opacity-0 delay-100">
-          <ReportCard 
-            title="ยอดขายวันนี้" 
-            value={`฿${data.summary.today.toLocaleString()}`} 
+          <ReportCard
+            title={t("page.sales.card.today")}
+            value={`฿${data.summary.today.toLocaleString()}`}
             icon={<i className="fi fi-rr-stats"></i>}
             iconBg="var(--surface-2)"
             iconColor="var(--chart-series-1)"
@@ -86,18 +102,18 @@ export default function SalesPage() {
           />
         </div>
         <div className="animate-in opacity-0 delay-200">
-          <ReportCard 
-            title="ยอดขายเมื่อวาน" 
-            value={`฿${data.summary.yesterday.toLocaleString()}`} 
+          <ReportCard
+            title={t("page.sales.card.yesterday")}
+            value={`฿${data.summary.yesterday.toLocaleString()}`}
             icon={<i className="fi fi-rr-time-past"></i>}
             iconBg="var(--surface-2)"
             iconColor="var(--chart-series-1)"
           />
         </div>
         <div className="animate-in opacity-0 delay-300">
-          <ReportCard 
-            title="เฉลี่ยต่อออเดอร์" 
-            value="฿42.50" 
+          <ReportCard
+            title={t("page.sales.card.avgOrder")}
+            value="฿42.50"
             icon={<i className="fi fi-rr-receipt"></i>}
             iconBg="var(--surface-2)"
             iconColor="var(--chart-series-1)"
@@ -106,15 +122,14 @@ export default function SalesPage() {
         </div>
       </div>
 
-      {/* Table Section */}
       <div className="vibrant-card !rounded-[32px] overflow-hidden animate-in opacity-0 delay-400">
         <div className="p-8 border-b border-[var(--border)] flex items-center justify-between">
-          <h2 className="text-[20px] font-black text-[var(--text)]">รายการธุรกรรมล่าสุด</h2>
+          <h2 className="text-[20px] font-black text-[var(--text)]">{t("page.sales.tableTitle")}</h2>
           <div className="flex gap-4">
-             <div className="relative">
+            <div className="relative">
               <i className="fi fi-rr-marker absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]"></i>
               <select className="pl-11 pr-10 py-2.5 bg-[var(--surface-2)] border-none rounded-2xl text-[14px] font-bold focus:ring-2 focus:ring-orange-100 appearance-none cursor-pointer min-w-[200px]">
-                <option>ทุกจุดติดตั้ง</option>
+                <option>{t("page.sales.allLocations")}</option>
                 <option>MOD PAO Building LX</option>
                 <option>MOD PAO Building N7</option>
               </select>
@@ -126,54 +141,71 @@ export default function SalesPage() {
           <table className="w-full">
             <thead>
               <tr className="bg-[var(--surface-2)]/50">
-                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">Transaction ID</th>
-                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">Time</th>
-                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">Machine</th>
-                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">Amount</th>
-                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">Status</th>
-                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-right whitespace-nowrap">Details</th>
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
+                  {t("page.sales.col.transactionId")}
+                </th>
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
+                  {t("page.sales.col.time")}
+                </th>
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
+                  {t("page.sales.col.machine")}
+                </th>
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
+                  {t("page.sales.col.amount")}
+                </th>
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
+                  {t("page.sales.col.status")}
+                </th>
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-right whitespace-nowrap">
+                  {t("page.sales.col.details")}
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {data.transactions.map((t: { orderId: string; time: string; machine: string; amount: number; status: string }) => (
-                <tr key={t.orderId} className="group hover:bg-[var(--surface-2)]/50 transition-colors">
-                  <td className="px-8 py-5">
-                    <span className="text-[15px] font-black text-[var(--text)]">{t.orderId}</span>
-                  </td>
-                  <td className="px-8 py-5 text-[14px] font-semibold text-[var(--text-muted)]">
-                    {t.time}
-                  </td>
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-2">
-                      <i className="fi fi-rr-vending-machine text-[var(--text-muted)]"></i>
-                      <span className="text-[14px] font-bold text-[var(--text)]">{t.machine}</span>
-                    </div>
-                  </td>
-                  <td className="px-8 py-5">
-                    <span className="text-[16px] font-black text-[var(--text)]">฿{t.amount.toLocaleString()}</span>
-                  </td>
-                  <td className="px-8 py-5">
-                    {getStatusBadge(t.status)}
-                  </td>
-                  <td className="px-8 py-5 text-right">
-                    <button className="w-10 h-10 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-orange-200 transition-all shadow-sm">
-                      <i className="fi fi-rr-arrow-right text-lg"></i>
-                    </button>
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-[var(--border)]">
+              {data.transactions.map(
+                (tx: { orderId: string; time: string; machine: string; amount: number; status: string }) => (
+                  <tr key={tx.orderId} className="group hover:bg-[var(--surface-2)]/50 transition-colors">
+                    <td className="px-8 py-5">
+                      <span className="text-[15px] font-black text-[var(--text)]">{tx.orderId}</span>
+                    </td>
+                    <td className="px-8 py-5 text-[14px] font-semibold text-[var(--text-muted)]">{tx.time}</td>
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-2">
+                        <i className="fi fi-rr-vending-machine text-[var(--text-muted)]"></i>
+                        <span className="text-[14px] font-bold text-[var(--text)]">{tx.machine}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-5">
+                      <span className="text-[16px] font-black text-[var(--text)]">
+                        ฿{tx.amount.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5">{getStatusBadge(tx.status)}</td>
+                    <td className="px-8 py-5 text-right">
+                      <button className="w-10 h-10 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-orange-200 transition-all shadow-sm">
+                        <i className="fi fi-rr-arrow-right text-lg"></i>
+                      </button>
+                    </td>
+                  </tr>
+                )
+              )}
             </tbody>
           </table>
         </div>
         <div className="p-8 bg-[var(--surface-2)]/30 border-t border-[var(--border)] flex items-center justify-between">
-          <p className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-wider">Transaction History Page 1 of 42</p>
+          <p className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-wider">
+            {t("page.sales.pagination").replace("{current}", "1").replace("{total}", "42")}
+          </p>
           <div className="flex gap-2">
-            <button className="px-5 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl text-[13px] font-black text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-all">Previous</button>
-            <button className="px-5 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl text-[13px] font-black text-[var(--text)] hover:bg-[var(--surface-2)] transition-all">Next Page</button>
+            <button className="px-5 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl text-[13px] font-black text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-all">
+              {t("page.sales.previous")}
+            </button>
+            <button className="px-5 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl text-[13px] font-black text-[var(--text)] hover:bg-[var(--surface-2)] transition-all">
+              {t("page.sales.next")}
+            </button>
           </div>
         </div>
       </div>
     </PageWrapper>
   );
 }
-

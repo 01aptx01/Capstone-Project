@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import { useLang } from "@/lib/i18n/lang";
 
 export default function ProfileView() {
+  const { t } = useLang();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: "Mod Pao Admin",
@@ -49,7 +51,7 @@ export default function ProfileView() {
               <div className="meta-row">
                 <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-briefcase !text-[var(--text-muted)]"></i> {formData.role}</span>
                 <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-marker !text-[var(--text-muted)]"></i> {formData.location}</span>
-                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-calendar !text-[var(--text-muted)]"></i> เข้าร่วมเมื่อ {formData.joined}</span>
+                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-calendar !text-[var(--text-muted)]"></i> {t("profile.joinedPrefix")} {formData.joined}</span>
               </div>
             </div>
           </div>
@@ -58,12 +60,12 @@ export default function ProfileView() {
             {!isEditing ? (
               <button className="btn-edit !bg-[var(--surface-1)] !text-[var(--text)] hover:!bg-[var(--primary)] hover:!text-[var(--primary-contrast)] transition-all duration-300 shadow-xl" onClick={() => setIsEditing(true)}>
                 <i className="fi fi-rr-settings-sliders"></i>
-                จัดการโปรไฟล์
+                {t("profile.editProfile")}
               </button>
             ) : (
               <div className="edit-buttons">
-                <button className="btn-cancel glass !bg-[var(--surface-2)] !text-[var(--text)] !border-[var(--border)] hover:!bg-[var(--border)]" onClick={() => setIsEditing(false)}>ยกเลิก</button>
-                <button className="btn-save !bg-[var(--primary)] !text-[var(--primary-contrast)] hover:!bg-[var(--primary)]" onClick={handleSave}>บันทึกข้อมูล</button>
+                <button className="btn-cancel glass !bg-[var(--surface-2)] !text-[var(--text)] !border-[var(--border)] hover:!bg-[var(--border)]" onClick={() => setIsEditing(false)}>{t("profile.cancel")}</button>
+                <button className="btn-save !bg-[var(--primary)] !text-[var(--primary-contrast)] hover:!bg-[var(--primary)]" onClick={handleSave}>{t("profile.save")}</button>
               </div>
             )}
           </div>
@@ -76,13 +78,13 @@ export default function ProfileView() {
           <div className="glass info-card !rounded-[40px] p-10 mb-8 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
             <div className="card-header border-b border-[var(--border)]/50 pb-6 mb-8">
               <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
-                <i className="fi fi-rr-info text-[var(--primary)] text-[28px]"></i> ข้อมูลบัญชี
+                <i className="fi fi-rr-info text-[var(--primary)] text-[28px]"></i> {t("profile.accountTitle")}
               </h3>
             </div>
             <div className="info-form">
               <div className="form-row">
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">ชื่อ-นามสกุล</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.name")}</label>
                   {isEditing ? (
                     <input type="text" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                   ) : (
@@ -90,14 +92,14 @@ export default function ProfileView() {
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">ตำแหน่ง</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.role")}</label>
                   <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.role}</div>
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">อีเมล</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.email")}</label>
                   {isEditing ? (
                     <input type="email" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                   ) : (
@@ -105,7 +107,7 @@ export default function ProfileView() {
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">เบอร์โทรศัพท์</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.phone")}</label>
                   {isEditing ? (
                     <input type="text" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                   ) : (
@@ -115,7 +117,7 @@ export default function ProfileView() {
               </div>
 
               <div className="form-group full mt-4">
-                <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">เกี่ยวกับฉัน</label>
+                <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.bio")}</label>
                 {isEditing ? (
                   <textarea rows={4} className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !p-4 w-full" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
                 ) : (
@@ -128,15 +130,15 @@ export default function ProfileView() {
           <div className="glass activity-card !rounded-[40px] p-10 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
             <div className="card-header border-b border-[var(--border)]/50 pb-6 mb-8 flex justify-between items-center">
               <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
-                <i className="fi fi-rr-time-past text-[var(--primary)] text-[28px]"></i> กิจกรรมล่าสุด
+                <i className="fi fi-rr-time-past text-[var(--primary)] text-[28px]"></i> {t("profile.recentActivity")}
               </h3>
-              <button className="text-[14px] font-bold text-[var(--primary)] hover:underline px-4 py-2 rounded-full hover:bg-[var(--primary)]/5 transition-all">ดูทั้งหมด</button>
+              <button className="text-[14px] font-bold text-[var(--primary)] hover:underline px-4 py-2 rounded-full hover:bg-[var(--primary)]/5 transition-all">{t("profile.viewAll")}</button>
             </div>
             <div className="timeline space-y-8">
               {[
-                { icon: "fi fi-rr-box", color: "from-[var(--primary)] to-[var(--primary)]", bg: "bg-orange-50", title: "เติมสินค้าในตู้", machine: "Vending Central Ladprao", time: "10 นาทีที่แล้ว" },
-                { icon: "fi fi-rr-refresh", color: "from-[var(--chart-series-1)] to-[var(--chart-series-1)]", bg: "bg-[var(--surface-2)]", title: "อัปเดตเฟิร์มแวร์ตู้", machine: "#M-045", time: "3 ชั่วโมงที่แล้ว" },
-                { icon: "fi fi-rr-coins", color: "from-[var(--success)] to-[var(--success)]", bg: "bg-[var(--success-bg)]", title: "ตรวจสอบยอดเงินสดประจำวัน", machine: "", time: "เมื่อวานนี้, 18:30" }
+                { icon: "fi fi-rr-box", color: "from-[var(--primary)] to-[var(--primary)]", bg: "bg-orange-50", title: t("profile.activity.refill"), machine: "Vending Central Ladprao", time: t("profile.activity.minutesAgo").replace("{n}", "10") },
+                { icon: "fi fi-rr-refresh", color: "from-[var(--chart-series-1)] to-[var(--chart-series-1)]", bg: "bg-[var(--surface-2)]", title: t("profile.activity.firmware"), machine: "#M-045", time: t("profile.activity.hoursAgo").replace("{n}", "3") },
+                { icon: "fi fi-rr-coins", color: "from-[var(--success)] to-[var(--success)]", bg: "bg-[var(--success-bg)]", title: t("profile.activity.cashCheck"), machine: "", time: t("profile.activity.yesterdayAt").replace("{time}", "18:30") }
               ].map((item, idx) => (
                 <div key={idx} className="timeline-item flex gap-6 group">
                   <div className={`w-14 h-14 rounded-[20px] bg-gradient-to-br ${item.color} flex items-center justify-center text-[var(--primary-contrast)] text-xl shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}>
@@ -171,16 +173,16 @@ export default function ProfileView() {
               <div className="progress-bar h-3 bg-[var(--surface-2)] rounded-full mb-6 overflow-hidden">
                 <div className="progress-fill h-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] shadow-[0_0_20px_rgba(244,123,42,0.3)] rounded-full" style={{ width: '85%' }}></div>
               </div>
-              <p className="text-[14px] font-medium text-[var(--text)]0 leading-relaxed">เพิ่มรูปหน้าปกเพื่อเพิ่มความสมบูรณ์เป็น 100% และรับเหรียญตรา &quot;Admin Elite&quot;</p>
+              <p className="text-[14px] font-medium text-[var(--text-muted)] leading-relaxed">{t("profile.completionHint")}</p>
             </div>
           </div>
 
           <div className="glass stats-card !rounded-[40px] p-2 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
             <div className="grid grid-cols-2 gap-2">
               {[
-                { val: "12", lbl: "ตู้ที่ดูแล", icon: "fi fi-rr-box", color: "text-blue-500", bg: "bg-[var(--surface-2)]" },
-                { val: "4.8", lbl: "เรตติ้ง", icon: "fi fi-rr-star", color: "text-amber-500", bg: "bg-amber-50" },
-                { val: "1.2k", lbl: "ยอดขายรวม", icon: "fi fi-rr-bank", color: "text-[var(--primary)]", bg: "bg-orange-50" },
+                { val: "12", lbl: t("profile.stat.machines"), icon: "fi fi-rr-box", color: "text-blue-500", bg: "bg-[var(--surface-2)]" },
+                { val: "4.8", lbl: t("profile.stat.rating"), icon: "fi fi-rr-star", color: "text-amber-500", bg: "bg-amber-50" },
+                { val: "1.2k", lbl: t("profile.stat.totalSales"), icon: "fi fi-rr-bank", color: "text-[var(--primary)]", bg: "bg-orange-50" },
                 { val: "100%", lbl: "Uptime", icon: "fi fi-rr-bolt", color: "text-emerald-500", bg: "bg-[var(--success-bg)]" }
               ].map((stat, idx) => (
                 <div key={idx} className="vibrant-card !rounded-[32px] !border-none !bg-[var(--surface-1)] p-8 flex flex-col items-center justify-center group hover:!bg-[var(--surface-2)] transition-all duration-500">
