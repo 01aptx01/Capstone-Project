@@ -124,14 +124,14 @@ class AgentSocketClient:
                         wait_timeout=10,
                     )
                 # Connected: keep a small loop and flush periodically
-                for _ in range(5):
+                for _ in range(50):
                     self.flush_outbox()
-                    time.sleep(1)
+                    time.sleep(0.3)
             except ConnectionRefusedError:
                 logger.error("Authentication failed: Invalid Machine ID or Token")
                 return
             except Exception:
-                time.sleep(2)
+                time.sleep(1)
 
     def flush_outbox(self) -> None:
         with self._lock:
