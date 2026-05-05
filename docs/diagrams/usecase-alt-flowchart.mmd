@@ -1,0 +1,47 @@
+%% Fallback: GitHub / Mermaid versions ที่ไม่รองรับ useCaseDiagram ให้ใช้ไฟล์นี้แทน usecase.mmd
+
+flowchart TB
+    subgraph actors["Actors"]
+        C[ลูกค้า]
+        A[ผู้ดูแลระบบ]
+        O[Omise]
+        AG[Hardware Agent]
+    end
+
+    subgraph cust["Customer use cases"]
+        UC1[ดูสินค้า GET /api/products]
+        UC2[ตรวจคูปอง POST validate-coupon]
+        UC3[Draft POST create-draft]
+        UC4[Checkout POST checkout]
+        UC5[Poll GET status]
+        UC6[Cancel POST cancel]
+        UC7[Mock pay dev]
+        UC8[สมาชิก GET members phone]
+        UC9[สะสมแต้ม POST members earn]
+    end
+
+    subgraph adm["Admin use cases /api/admin"]
+        UC10[Dashboard]
+        UC11[Products CRUD]
+        UC12[Machines + slots]
+        UC13[Customers]
+        UC14[Orders]
+        UC15[Coupons + redemptions]
+        UC16[Alerts]
+        UC17[Reports sales]
+        UC18[Admin users placeholder]
+    end
+
+    subgraph tel["Telemetry"]
+        UC19[Agent HTTP jobs]
+        UC20[Socket.IO jobs]
+        UC21[POST /api/machines/events]
+        UC22[GET /api/health]
+        UC23[Webhook omise]
+    end
+
+    C --> UC1 & UC2 & UC3 & UC4 & UC5 & UC6 & UC7 & UC8 & UC9
+    A --> UC10 & UC11 & UC12 & UC13 & UC14 & UC15 & UC16 & UC17 & UC18
+    AG --> UC19 & UC20 & UC21
+    UC4 -.-> O
+    UC23 -.-> O

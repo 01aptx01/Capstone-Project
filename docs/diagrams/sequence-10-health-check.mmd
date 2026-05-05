@@ -1,0 +1,20 @@
+sequenceDiagram
+    autonumber
+    participant Client as Client / Monitor
+    participant HC as GET /api/health
+    participant DB as MySQL ping
+    participant Om as Omise Account.retrieve
+    participant Ag as Agent base URL GET
+
+    Client->>HC: GET /api/health
+    par MySQL
+        HC->>DB: ping(reconnect)
+        DB-->>HC: CONNECTED | ERROR
+    and Omise
+        HC->>Om: retrieve account
+        Om-->>HC: CONNECTED + mode
+    and Hardware agent
+        HC->>Ag: GET AGENT_BASE_URL
+        Ag-->>HC: CONNECTED | ERROR
+    end
+    HC-->>Client: 200 OK หรือ 207 DEGRADED + components

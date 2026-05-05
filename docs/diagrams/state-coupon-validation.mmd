@@ -1,0 +1,17 @@
+%% Coupon lookup outcome — coupon_service.lookup_coupon_by_code
+%% Terminal states for validate-coupon / pricing (HTTP 200 with valid:false)
+
+stateDiagram-v2
+    [*] --> validating : code + cart received
+
+    validating --> ok : active, not expired,\nwithin max_uses quota
+    validating --> not_found : empty code or no row
+    validating --> inactive : is_active = false
+    validating --> expired : expire_date < now
+    validating --> exhausted : max_uses > 0\nand redemptions >= max_uses
+
+    ok --> [*]
+    not_found --> [*]
+    inactive --> [*]
+    expired --> [*]
+    exhausted --> [*]

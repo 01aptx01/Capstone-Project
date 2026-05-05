@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    actor User as ลูกค้า
+    participant UI as machine-ui
+    participant API as POST /api/buy/validate-coupon
+    participant Inv as InventoryService
+    participant CS as coupon_service
+
+    User->>UI: กรอกโค้ด + ตะกร้า
+    UI->>API: JSON code, cart, machine_code
+    API->>Inv: check_stock(), compute_cart_subtotal()
+    Inv-->>API: ok / fail
+    API->>CS: lookup_coupon_by_code(), discount_and_final()
+    CS-->>API: reason + Coupon | None
+    API-->>UI: 200 {valid, discount_thb, final_thb, ...}
+    UI-->>User: แสดงส่วนลดหรือข้อความไทย
