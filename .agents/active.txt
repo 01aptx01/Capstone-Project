@@ -1,5 +1,6 @@
-Active: (idle / last: admin-ui coupon edit modal)
+Active: server schema repair for promotions.max_uses (HTTP 500 on coupon APIs when DB behind migrations)
 Done:
-- web/admin-ui: CouponFormModal shared create/edit UI (same layout as create); CouponTable edit opens it; CreateCouponModal wraps create-only; coupon-constants for refresh event
+- app/db_config/schema_repair.py: ensure_promotions_max_uses() via SQLAlchemy inspect + ALTER TABLE (mysql/sqlite)
+- app/factory.py: run repair inside app_context after models import
 Next:
-- (optional) verify coupon create/edit against live API
+- Restart API (docker compose) and retest GET /api/admin/coupons; run `alembic upgrade head` in prod if preferred over auto-repair

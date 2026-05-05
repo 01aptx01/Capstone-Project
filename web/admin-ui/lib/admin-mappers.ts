@@ -220,6 +220,15 @@ export function apiCouponToUiRow(c: ApiCoupon): UiCouponRow {
       ? Math.max(0, Math.floor(c.points_cost))
       : 0;
 
+  const used =
+    typeof c.used_count === "number" && Number.isFinite(c.used_count)
+      ? Math.max(0, Math.floor(c.used_count))
+      : 0;
+  const maxU =
+    typeof c.max_uses === "number" && Number.isFinite(c.max_uses)
+      ? Math.max(0, Math.floor(c.max_uses))
+      : 0;
+
   return {
     promotion_id: c.promotion_id,
     id: c.code,
@@ -227,8 +236,8 @@ export function apiCouponToUiRow(c: ApiCoupon): UiCouponRow {
     type: c.type === "percent" ? "PERCENT" : "FIXED",
     points: pointsCost,
     points_cost: pointsCost,
-    usage: 0,
-    maxUsage: 0,
+    usage: used,
+    maxUsage: maxU,
     expiry: c.expire_date,
     status,
     discount_amount: c.discount_amount,

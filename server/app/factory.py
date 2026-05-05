@@ -14,6 +14,7 @@ from app.api.machine_events import machine_events_api
 from app.api.members import members_api
 from app.api.products import products_api
 from app.db_config.db import init_db
+from app.db_config.schema_repair import ensure_promotions_max_uses
 from app.db_config.sqlalchemy_uri import build_sqlalchemy_database_uri
 from app.extensions import db, migrate
 
@@ -54,6 +55,9 @@ def create_app() -> Flask:
     migrate.init_app(flask_app, db)
 
     import app.models  # noqa: F401
+
+    with flask_app.app_context():
+        ensure_promotions_max_uses(db.engine)
 
     allowed_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
     CORS(flask_app, origins=allowed_origins)
