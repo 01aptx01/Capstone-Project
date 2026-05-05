@@ -3,14 +3,14 @@
 from decimal import Decimal
 
 from flask import jsonify, request
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.api.admin import admin_bp
 from app.api.admin.decorators import admin_required
 from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
-from app.models import Order, OrderItem, Transaction
+from app.models import Order, OrderItem, Transaction, User
 
 
 def _dec(value):
@@ -73,12 +73,30 @@ def admin_list_orders():
     page, per_page = get_pagination_params()
     status_filter = (request.args.get("status") or "").strip() or None
     machine_code = (request.args.get("machine_code") or "").strip() or None
+    q = (request.args.get("q") or "").strip()
 
     filters = []
     if status_filter:
         filters.append(Order.status == status_filter)
     if machine_code:
         filters.append(Order.machine_code == machine_code)
+    if q:
+        pattern = f"%{q.lower()}%"
+        q_parts = [
+            func.lower(Order.machine_code).like(pattern),
+            func.lower(func.coalesce(Order.charge_id, "")).like(pattern),
+        ]
+        if q.isdigit():
+            try:
+                oid = int(q)
+                q_parts.append(Order.order_id == oid)
+            except ValueError:
+                pass
+        phone_match = select(User.user_id).where(
+            func.lower(User.phone_number).like(pattern)
+        )
+        q_parts.append(Order.user_id.in_(phone_match))
+        filters.append(or_(*q_parts))
 
     count_stmt = select(func.count(Order.order_id))
     if filters:

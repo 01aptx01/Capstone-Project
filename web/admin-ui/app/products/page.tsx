@@ -1,13 +1,16 @@
 "use client";
 
 import PageWrapper from "@/components/layout/PageWrapper";
-import { useMemo, useState } from "react";
-import ProductTable from "@/components/products/ProductTable";
-import { listProducts } from "@/lib/admin-api";
-import { enrichProductsWithStock } from "@/lib/admin-mappers";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import ProductTable, { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
+import { listProductCategories, listProducts } from "@/lib/admin-api";
+import { apiCategoryToLabel, enrichProductsWithStock } from "@/lib/admin-mappers";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 
-export default function ProductsPage() {
+function ProductsPageClient() {
+  const searchParams = useSearchParams();
+  const listQuery = searchParams.get("q")?.trim() ?? "";
   const { openExportModal, openAddProduct } = useUI();
   const productSections: ExportSection[] = useMemo(
     () => [
@@ -42,8 +45,41 @@ export default function ProductsPage() {
     []
   );
   const [category, setCategory] = useState("All Categories");
+  const [categoryOptions, setCategoryOptions] = useState<string[]>(["All Categories"]);
   const [machine, setMachine] = useState("All Machines");
   const [status, setStatus] = useState("All Statuses");
+
+  const loadCategoryOptions = useCallback(async () => {
+    try {
+      const codes = await listProductCategories();
+      const labels = codes
+        .map((c) => apiCategoryToLabel(c))
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .sort((a, b) => a.localeCompare(b, "th"));
+      setCategoryOptions(["All Categories", ...labels]);
+    } catch (e) {
+      console.error(e);
+      setCategoryOptions(["All Categories"]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadCategoryOptions();
+  }, [loadCategoryOptions]);
+
+  useEffect(() => {
+    const onProductsChange = () => {
+      void loadCategoryOptions();
+    };
+    window.addEventListener(ADMIN_PRODUCTS_REFRESH_EVENT, onProductsChange);
+    return () => window.removeEventListener(ADMIN_PRODUCTS_REFRESH_EVENT, onProductsChange);
+  }, [loadCategoryOptions]);
+
+  useEffect(() => {
+    if (category !== "All Categories" && !categoryOptions.includes(category)) {
+      setCategory("All Categories");
+    }
+  }, [categoryOptions, category]);
 
   const handleClear = () => {
     setCategory("All Categories");
@@ -95,14 +131,15 @@ export default function ProductsPage() {
             <div className="relative group">
               <i className="fi fi-rr-apps absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors"></i>
               <select 
-                value={category}
+                value={categoryOptions.includes(category) ? category : "All Categories"}
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full bg-slate-50 border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[#334155] outline-none appearance-none cursor-pointer hover:bg-slate-100 focus:bg-white focus:border-orange-100 transition-all shadow-inner"
               >
-                <option>All Categories</option>
-                <option>หมูสับ/หมูแดง</option>
-                <option>ไส้หวาน</option>
-                <option>เจ / มังสวิรัติ</option>
+                {categoryOptions.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt === "All Categories" ? "ทุกหมวดหมู่" : opt}
+                  </option>
+                ))}
               </select>
               <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
             </div>
@@ -155,9 +192,27 @@ export default function ProductsPage() {
 
       {/* Table Section — LoadingSpinner shown inside ProductTable while fetching */}
       <div className="animate-in opacity-0 delay-200 min-h-[480px]">
-        <ProductTable category={category} machine={machine} status={status} />
+        <ProductTable
+          category={category}
+          machine={machine}
+          status={status}
+          listQuery={listQuery}
+        />
       </div>
     </PageWrapper>
   );
 }
 
+export default function ProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <PageWrapper>
+          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+        </PageWrapper>
+      }
+    >
+      <ProductsPageClient />
+    </Suspense>
+  );
+}

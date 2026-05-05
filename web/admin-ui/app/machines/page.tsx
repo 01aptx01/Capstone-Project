@@ -2,34 +2,68 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import MachineCard from "@/components/machines/MachineCard";
+import { ADMIN_MACHINES_REFRESH_EVENT } from "@/components/machines/AddMachineModal";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { listMachines } from "@/lib/admin-api";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { getAdminAlerts, listMachines } from "@/lib/admin-api";
 import { apiMachineToCard, type UiMachineCard } from "@/lib/admin-mappers";
 
-export default function MachinesPage() {
+function MachinesPageClient() {
+  const searchParams = useSearchParams();
+  const listQuery = searchParams.get("q")?.trim() ?? "";
   const { openAddMachine, openExportModal } = useUI();
   const [machines, setMachines] = useState<UiMachineCard[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [alertCount, setAlertCount] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
-      const { items } = await listMachines({ page: 1, per_page: 200 });
+      const q = listQuery.trim();
+      const [{ items }, alerts] = await Promise.all([
+        listMachines({
+          page: 1,
+          per_page: 200,
+          ...(q ? { q } : {}),
+        }),
+        getAdminAlerts().catch(() => null),
+      ]);
       setMachines(items.map(apiMachineToCard));
+      if (alerts) {
+        setAlertCount(
+          (alerts.low_stock?.length ?? 0) + (alerts.machine_errors?.length ?? 0)
+        );
+      } else {
+        setAlertCount(null);
+      }
     } catch (e) {
       console.error(e);
       setMachines([]);
+      setAlertCount(null);
+      setLoadError(
+        e instanceof Error ? e.message : "โหลดรายการตู้ไม่สำเร็จ กรุณาลองใหม่"
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [listQuery]);
 
   useEffect(() => {
     queueMicrotask(() => {
       void load();
     });
+  }, [load]);
+
+  useEffect(() => {
+    const onRefresh = () => {
+      void load();
+    };
+    window.addEventListener(ADMIN_MACHINES_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(ADMIN_MACHINES_REFRESH_EVENT, onRefresh);
   }, [load]);
 
   const machineSections: ExportSection[] = useMemo(
@@ -58,9 +92,10 @@ export default function MachinesPage() {
     []
   );
 
-  const onlineCount = machines.filter(
-    (m) => m.status === "online" || m.status === undefined
+  const operationalOnlineCount = machines.filter(
+    (m) => (m.status || "online").toLowerCase() === "online"
   ).length;
+  const socketConnectedCount = machines.filter((m) => m.is_online === true).length;
 
   return (
     <PageWrapper>
@@ -91,6 +126,15 @@ export default function MachinesPage() {
         </div>
       </div>
 
+      {loadError && (
+        <div
+          role="alert"
+          className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800"
+        >
+          {loadError}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in opacity-0 delay-600">
         {[
           {
@@ -101,22 +145,23 @@ export default function MachinesPage() {
             shadow: "shadow-blue-200",
           },
           {
-            label: "กำลังทำงาน (online)",
-            value: loading ? "…" : onlineCount,
+            label: "พร้อมขาย (status=online)",
+            value: loading ? "…" : operationalOnlineCount,
             icon: "fi-rr-check-circle",
             color: "bg-emerald-500",
             shadow: "shadow-emerald-200",
           },
           {
-            label: "ออฟไลน์/ซ่อมบำรุง",
-            value: loading ? "…" : machines.length - onlineCount,
-            icon: "fi-rr-box-open",
-            color: "bg-amber-500",
-            shadow: "shadow-amber-200",
+            label: "เชื่อมต่อ Socket (is_online)",
+            value: loading ? "…" : socketConnectedCount,
+            icon: "fi-rr-wifi",
+            color: "bg-sky-500",
+            shadow: "shadow-sky-200",
           },
           {
-            label: "แจ้งเตือน",
-            value: "—",
+            label: "แจ้งเตือน (สต็อกต่ำ + ERROR)",
+            value:
+              loading ? "…" : alertCount === null ? "—" : String(alertCount),
             icon: "fi-rr-bell",
             color: "bg-rose-500",
             shadow: "shadow-rose-200",
@@ -211,5 +256,19 @@ export default function MachinesPage() {
         </div>
       </div>
     </PageWrapper>
+  );
+}
+
+export default function MachinesPage() {
+  return (
+    <Suspense
+      fallback={
+        <PageWrapper>
+          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+        </PageWrapper>
+      }
+    >
+      <MachinesPageClient />
+    </Suspense>
   );
 }

@@ -46,6 +46,8 @@ CREATE TABLE machines (
   location TEXT NULL,
   status ENUM('online','maintenance','offline') NOT NULL DEFAULT 'online',
   last_active DATETIME NULL,
+  secret_token_hash VARCHAR(255) NULL,
+  is_online TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (machine_code)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
