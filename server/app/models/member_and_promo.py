@@ -30,5 +30,7 @@ class Coupon(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     expire_date = db.Column(db.DateTime, nullable=True)
     points_cost = db.Column(db.Integer, nullable=False, server_default="0")
+    # 0 = unlimited total redemptions across all customers
+    max_uses = db.Column(db.Integer, nullable=False, server_default="0")
 
     orders = db.relationship("Order", back_populates="coupon")

@@ -129,7 +129,7 @@ function CustomersPageClient() {
               type: r.type,
               points_cost: r.points_cost,
               usage: r.usage,
-              maxUsage: r.maxUsage || "∞",
+              maxUsage: r.maxUsage > 0 ? r.maxUsage : "∞",
               expiry: r.expiry || "",
               status: r.status,
             };

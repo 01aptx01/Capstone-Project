@@ -7,6 +7,7 @@ import { apiCouponToUiRow, type UiCouponRow } from "@/lib/admin-mappers";
 import { useUI } from "@/lib/context/UIContext";
 import { useLang } from "@/lib/i18n/lang";
 import CouponFormModal from "@/components/customers/CouponFormModal";
+import CouponRedemptionsModal from "@/components/customers/CouponRedemptionsModal";
 import { ADMIN_COUPONS_REFRESH_EVENT } from "@/components/customers/coupon-constants";
 
 type CouponTabId = "all" | "active" | "expired";
@@ -42,6 +43,7 @@ export default function CouponTable() {
   const [error, setError] = useState<string | null>(null);
 
   const [editRow, setEditRow] = useState<UiCouponRow | null>(null);
+  const [redemptionFor, setRedemptionFor] = useState<{ promotion_id: number; code: string } | null>(null);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
@@ -360,7 +362,7 @@ export default function CouponTable() {
                     </div>
                   </td>
                   <td className="px-12 py-8 text-right">
-                    <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2">
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center justify-end gap-2 flex-wrap">
                       <span
                         className={`text-[11px] font-black uppercase px-3 py-1 rounded-lg border ${
                           coupon.status === "active"
@@ -380,6 +382,13 @@ export default function CouponTable() {
                       >
                         {labelForCouponStatus(coupon.status)}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => setRedemptionFor({ promotion_id: coupon.promotion_id, code: coupon.id })}
+                        className="text-xs font-black px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
+                      >
+                        {t("coupon.redemptionsOpen")}
+                      </button>
                       <button
                         type="button"
                         onClick={() => openEdit(coupon)}
@@ -407,6 +416,13 @@ export default function CouponTable() {
         onClose={closeEditModal}
         mode="edit"
         editRow={editRow}
+      />
+
+      <CouponRedemptionsModal
+        open={redemptionFor !== null}
+        onClose={() => setRedemptionFor(null)}
+        promotionId={redemptionFor?.promotion_id ?? null}
+        code={redemptionFor?.code ?? ""}
       />
 
       {isFilterOpen && (
