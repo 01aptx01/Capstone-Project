@@ -8,9 +8,26 @@ from typing import Literal
 from sqlalchemy import func, select
 
 from app.extensions import db
-from app.models import Coupon
+from app.models import Coupon, Order
 
-CouponReason = Literal["ok", "not_found", "inactive", "expired"]
+CouponReason = Literal["ok", "not_found", "inactive", "expired", "exhausted"]
+
+_STATUSES_EXCLUDE_FROM_USE_COUNT = (
+    "pending_payment",
+    "payment_failed",
+    "cancelled",
+)
+
+
+def count_promotion_redemptions(promotion_id: int) -> int:
+    """Orders that consumed this promotion (paid path, not abandoned checkout)."""
+    n = db.session.scalar(
+        select(func.count(Order.order_id)).where(
+            Order.promotion_id == promotion_id,
+            Order.status.notin_(_STATUSES_EXCLUDE_FROM_USE_COUNT),
+        )
+    )
+    return int(n or 0)
 
 
 def _is_expired(expire_date) -> bool:
@@ -35,6 +52,11 @@ def lookup_coupon_by_code(raw_code: str) -> tuple[CouponReason, Coupon | None]:
         return "inactive", c
     if _is_expired(c.expire_date):
         return "expired", c
+    max_u = int(getattr(c, "max_uses", 0) or 0)
+    if max_u > 0:
+        used = count_promotion_redemptions(c.promotion_id)
+        if used >= max_u:
+            return "exhausted", c
     return "ok", c
 
 
@@ -62,4 +84,6 @@ def reason_message_th(reason: CouponReason) -> str:
         return "คูปองนี้ถูกปิดการใช้งาน"
     if reason == "expired":
         return "คูปองหมดอายุแล้ว"
+    if reason == "exhausted":
+        return "คูปองนี้ถูกใช้ครบจำนวนแล้ว"
     return ""

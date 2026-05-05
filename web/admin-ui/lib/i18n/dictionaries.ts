@@ -177,6 +177,16 @@ export type DictKey =
   | "coupon.footer"
   | "coupon.redeemed"
   | "coupon.usageNotInApi"
+  | "coupon.redemptionsOpen"
+  | "coupon.redemptionsTitle"
+  | "coupon.redemptionsSubtitle"
+  | "coupon.redemptionsEmpty"
+  | "coupon.redemptionsClose"
+  | "coupon.redemptionsColUser"
+  | "coupon.redemptionsColOrder"
+  | "coupon.redemptionsColDate"
+  | "coupon.redemptionsColAmount"
+  | "coupon.redemptionsColStatus"
   | "coupon.edit"
   | "coupon.editTitle"
   | "coupon.editSubtitle"
@@ -435,7 +445,11 @@ export type DictKey =
   | "createCoupon.placeholder.code"
   | "createCoupon.placeholder.points"
   | "createCoupon.label.validTo"
+  | "createCoupon.label.maxUses"
   | "createCoupon.label.activate"
+  | "createCoupon.placeholder.maxUses"
+  | "createCoupon.hint.maxUses"
+  | "createCoupon.errorMaxUses"
   | "createCoupon.creating"
   | "manageStock.title"
   | "manageStock.subtitle"
@@ -752,7 +766,17 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.empty": "ไม่มีคูปองในชุดนี้",
     "coupon.footer": "แสดง {n} รายการ",
     "coupon.redeemed": "Redeemed",
-    "coupon.usageNotInApi": "ยอดใช้งานยังไม่มีใน API",
+    "coupon.usageNotInApi": "นับจากออเดอร์ที่ชำระแล้ว",
+    "coupon.redemptionsOpen": "ผู้ใช้คูปอง",
+    "coupon.redemptionsTitle": "การใช้คูปอง",
+    "coupon.redemptionsSubtitle": "สมาชิก = เบอร์โทรหลังสแกนรับแต้ม · ไม่มีสมาชิก = unknown",
+    "coupon.redemptionsEmpty": "ยังไม่มีการใช้คูปองนี้",
+    "coupon.redemptionsClose": "ปิด",
+    "coupon.redemptionsColUser": "ผู้ใช้",
+    "coupon.redemptionsColOrder": "ออเดอร์",
+    "coupon.redemptionsColDate": "วันที่",
+    "coupon.redemptionsColAmount": "ยอด",
+    "coupon.redemptionsColStatus": "สถานะ",
     "coupon.edit": "แก้ไข",
     "coupon.editTitle": "แก้ไขคูปอง",
     "coupon.editSubtitle": "รหัส ประเภทส่วนลด แต้มที่ใช้แลก (0 = ไม่บังคับแลกแต้ม)",
@@ -1013,6 +1037,10 @@ export const DICTS: Record<Lang, Dict> = {
     "createCoupon.placeholder.code": "เช่น PAO2026",
     "createCoupon.placeholder.points": "0 = ไม่ต้องใช้แต้ม",
     "createCoupon.label.validTo": "Valid To (เว้นว่าง = ไม่หมดอายุ)",
+    "createCoupon.label.maxUses": "จำกัดจำนวนครั้ง (ใบ)",
+    "createCoupon.placeholder.maxUses": "0 = ไม่จำกัด",
+    "createCoupon.hint.maxUses": "จำนวนครั้งที่ใช้ได้ทั้งระบบ (ทุกเครื่องรวมกัน)",
+    "createCoupon.errorMaxUses": "จำนวนครั้งต้องเป็นจำนวนเต็มไม่น้อยกว่า 0",
     "createCoupon.label.activate": "เปิดใช้งานทันที (is_active)",
     "createCoupon.creating": "กำลังสร้าง…",
     "manageStock.title": "จัดการสต็อคสินค้า (Manage Stock)",
@@ -1327,7 +1355,17 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.empty": "No coupons in this set",
     "coupon.footer": "Showing {n} items",
     "coupon.redeemed": "Redeemed",
-    "coupon.usageNotInApi": "Usage not available from API yet",
+    "coupon.usageNotInApi": "Counted from paid orders",
+    "coupon.redemptionsOpen": "Who used",
+    "coupon.redemptionsTitle": "Coupon redemptions",
+    "coupon.redemptionsSubtitle": "Member = phone after loyalty scan · Otherwise unknown",
+    "coupon.redemptionsEmpty": "No redemptions yet",
+    "coupon.redemptionsClose": "Close",
+    "coupon.redemptionsColUser": "User",
+    "coupon.redemptionsColOrder": "Order",
+    "coupon.redemptionsColDate": "Date",
+    "coupon.redemptionsColAmount": "Amount",
+    "coupon.redemptionsColStatus": "Status",
     "coupon.edit": "Edit",
     "coupon.editTitle": "Edit coupon",
     "coupon.editSubtitle": "Code, discount type, points to redeem (0 = optional)",
@@ -1588,6 +1626,10 @@ export const DICTS: Record<Lang, Dict> = {
     "createCoupon.placeholder.code": "e.g., PAO2026",
     "createCoupon.placeholder.points": "0 = no points required",
     "createCoupon.label.validTo": "Valid To (blank = no expiry)",
+    "createCoupon.label.maxUses": "Max redemptions",
+    "createCoupon.placeholder.maxUses": "0 = unlimited",
+    "createCoupon.hint.maxUses": "Total uses allowed across all machines",
+    "createCoupon.errorMaxUses": "Max uses must be a non-negative integer",
     "createCoupon.label.activate": "Activate immediately (is_active)",
     "createCoupon.creating": "Creating…",
     "manageStock.title": "Manage Stock",
