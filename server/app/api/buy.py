@@ -28,6 +28,9 @@ class BuyController:
 
     def _register_routes(self):
         self.blueprint.add_url_rule("/api/buy/checkout",       view_func=self.checkout,       methods=["POST"])
+        self.blueprint.add_url_rule(
+            "/api/buy/validate-coupon", view_func=self.validate_coupon, methods=["POST"]
+        )
         self.blueprint.add_url_rule("/api/buy/create-draft",   view_func=self.create_draft,   methods=["POST"])
         self.blueprint.add_url_rule("/api/buy/omise-webhook",  view_func=self.omise_webhook,  methods=["POST"])
         self.blueprint.add_url_rule("/api/buy/mock-pay",       view_func=self.mock_pay,       methods=["POST"])
@@ -61,6 +64,43 @@ class BuyController:
             return False
 
         return True
+
+    @staticmethod
+    def _normalize_cart(raw_cart) -> list:
+        cart = []
+        for item in raw_cart:
+            if not isinstance(item, dict):
+                continue
+            product_id = item.get("product_id") or item.get("id")
+            quantity = item.get("quantity") or item.get("qty")
+            if product_id is None or quantity is None:
+                continue
+            cart.append({"product_id": int(product_id), "quantity": int(quantity)})
+        return cart
+
+    def _resolve_pricing(self, machine_code: str, cart: list, coupon_code=None) -> dict | None:
+        """
+        Server-side subtotal and optional coupon. Returns None if coupon_code set but invalid.
+        """
+        from app.services.coupon_service import discount_and_final, lookup_coupon_by_code
+
+        subtotal = self.inventory_service.compute_cart_subtotal(machine_code, cart)
+        discount = 0.0
+        final = subtotal
+        promotion_id = None
+        raw = coupon_code
+        if raw is not None and str(raw).strip():
+            reason, c = lookup_coupon_by_code(raw)
+            if reason != "ok" or not c:
+                return None
+            discount, final = discount_and_final(subtotal, c)
+            promotion_id = c.promotion_id
+        return {
+            "subtotal": subtotal,
+            "discount": discount,
+            "final": final,
+            "promotion_id": promotion_id,
+        }
 
     # =============================================
     # INTERNAL: Dispense orchestration
@@ -142,6 +182,84 @@ class BuyController:
     # ROUTE HANDLERS
     # =============================================
 
+    def validate_coupon(self):
+        """Machine UI: check coupon code + cart against DB; return discount breakdown."""
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            return jsonify({"valid": False, "reason": "bad_request"}), 400
+
+        from app.services.coupon_service import (
+            discount_and_final,
+            lookup_coupon_by_code,
+            reason_message_th,
+        )
+
+        code = data.get("code") or data.get("coupon_code")
+        machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
+        cart = self._normalize_cart(data.get("cart", []))
+
+        if not cart:
+            return jsonify(
+                {"valid": False, "reason": "empty_cart", "message": "ตะกร้าว่าง"}
+            ), 200
+
+        if not self.inventory_service.check_stock(machine_code, cart):
+            return jsonify(
+                {"valid": False, "reason": "out_of_stock", "message": "สินค้าบางรายการหมดสต็อก"}
+            ), 200
+
+        subtotal = self.inventory_service.compute_cart_subtotal(machine_code, cart)
+        if subtotal <= 0:
+            return jsonify(
+                {"valid": False, "reason": "pricing_failed", "message": "ไม่สามารถคำนวณยอดได้"}
+            ), 200
+
+        reason, c = lookup_coupon_by_code(code)
+        if reason != "ok" or not c:
+            return jsonify(
+                {
+                    "valid": False,
+                    "reason": reason,
+                    "message": reason_message_th(reason),
+                }
+            ), 200
+
+        disc, final = discount_and_final(subtotal, c)
+        if final <= 0:
+            return jsonify(
+                {
+                    "valid": False,
+                    "reason": "zero_total",
+                    "message": "ยอดสุทธิต้องมากกว่า 0 บาท",
+                }
+            ), 200
+
+        pc = getattr(c, "points_cost", None) or 0
+        try:
+            pc = int(pc)
+        except (TypeError, ValueError):
+            pc = 0
+
+        if (c.type or "").lower() == "percent":
+            label_th = f"ส่วนลด {disc:.2f} บาท ({float(c.discount_amount):g}% ของยอดรวม)"
+        else:
+            label_th = f"ส่วนลด {disc:.2f} บาท (คงที่)"
+
+        return jsonify(
+            {
+                "valid": True,
+                "promotion_id": c.promotion_id,
+                "code": c.code,
+                "type": c.type,
+                "discount_amount": float(c.discount_amount),
+                "points_cost": pc,
+                "subtotal_thb": subtotal,
+                "discount_thb": disc,
+                "final_thb": final,
+                "label_th": label_th,
+            }
+        ), 200
+
     def checkout(self):
         data = request.get_json(silent=True)
         if not isinstance(data, dict):
@@ -155,31 +273,58 @@ class BuyController:
         raw_cart     = data.get("cart", [])
         machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
         draft_id     = data.get("draft_id")
+        coupon_code  = data.get("coupon_code") or data.get("couponCode")
 
-        # Normalize cart → [{product_id, quantity}]
-        cart = []
-        for item in raw_cart:
-            if not isinstance(item, dict):
-                continue
-            product_id = item.get("product_id") or item.get("id")
-            quantity   = item.get("quantity")   or item.get("qty")
-            cart.append({"product_id": int(product_id), "quantity": int(quantity)})
+        cart = self._normalize_cart(raw_cart)
 
         payment_method = "qr_code" if payment_type in ("source", "truemoney") else "credit_card"
-        total_price    = (float(amount) / 100.0) if amount is not None else 0.0
 
         # Step 1: Stock validation
         if not self.inventory_service.check_stock(machine_code, cart):
             logger.warning(f"[Checkout] Stock validation failed for machine {machine_code}")
             return jsonify({"status": "ERROR", "message": "One or more items are out of stock"}), 400
 
+        if draft_id:
+            row = self.inventory_service.get_order_totals_by_charge_id(draft_id)
+            if not row:
+                return jsonify(
+                    {"status": "ERROR", "message": "Draft order not found or already processed"}
+                ), 400
+            total_price = row["total_price"]
+            promotion_id = row["promotion_id"]
+        else:
+            pricing = self._resolve_pricing(machine_code, cart, coupon_code)
+            if pricing is None:
+                return jsonify(
+                    {"status": "ERROR", "message": "Invalid or expired coupon"}
+                ), 400
+            if pricing["final"] <= 0:
+                return jsonify(
+                    {"status": "ERROR", "message": "Order total must be greater than zero"}
+                ), 400
+            total_price = pricing["final"]
+            promotion_id = pricing["promotion_id"]
+
+        charge_amount_satang = int(round(float(total_price) * 100))
+        client_satang = int(amount) if amount is not None else None
+        if client_satang is not None and abs(client_satang - charge_amount_satang) > 2:
+            logger.warning(
+                "[Checkout] Client amount %s satang != server %s (using server)",
+                client_satang,
+                charge_amount_satang,
+            )
+
         # Step 2: Create Omise Charge
         metadata = {
             "machine_code": machine_code,
             "cart": json.dumps(cart)
         }
-        logger.info(f"[Checkout] Initiating Omise charge for {amount} via {payment_type}")
-        charge = self.payment_service.create_charge(amount, payment_type, payment_id, metadata=metadata)
+        logger.info(
+            f"[Checkout] Initiating Omise charge for {charge_amount_satang} satang via {payment_type}"
+        )
+        charge = self.payment_service.create_charge(
+            charge_amount_satang, payment_type, payment_id, metadata=metadata
+        )
 
         if not charge:
             logger.error("[Checkout] Omise charge creation failed")
@@ -200,6 +345,7 @@ class BuyController:
                 charge_id=charge.id,
                 payment_method=payment_method,
                 total_price=total_price,
+                promotion_id=promotion_id,
             )
 
         if not persisted:
@@ -281,20 +427,24 @@ class BuyController:
 
         machine_code = data.get("machine_code", "MP1-001")
         raw_cart = data.get("cart", [])
-        amount = data.get("amount")
         payment_method = data.get("payment_method", "credit_card")
-        total_price = (float(amount) / 100.0) if amount is not None else 0.0
+        coupon_code = data.get("coupon_code") or data.get("couponCode")
 
-        cart = []
-        for item in raw_cart:
-            if not isinstance(item, dict):
-                continue
-            product_id = item.get("product_id") or item.get("id")
-            quantity = item.get("quantity") or item.get("qty")
-            cart.append({"product_id": int(product_id), "quantity": int(quantity)})
+        cart = self._normalize_cart(raw_cart)
 
         if not self.inventory_service.check_stock(machine_code, cart):
             return jsonify({"status": "ERROR", "message": "One or more items are out of stock"}), 400
+
+        pricing = self._resolve_pricing(machine_code, cart, coupon_code)
+        if pricing is None:
+            return jsonify({"status": "ERROR", "message": "Invalid or expired coupon"}), 400
+        if pricing["final"] <= 0:
+            return jsonify(
+                {"status": "ERROR", "message": "Order total must be greater than zero"}
+            ), 400
+
+        total_price = pricing["final"]
+        promotion_id = pricing["promotion_id"]
 
         import uuid
         draft_id = f"draft_{uuid.uuid4().hex[:16]}"
@@ -308,6 +458,7 @@ class BuyController:
             charge_id=draft_id,
             payment_method=payment_method,
             total_price=total_price,
+            promotion_id=promotion_id,
         )
         
         if not persisted:
