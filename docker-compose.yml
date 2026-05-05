@@ -55,10 +55,12 @@ services:
   client:
     build: ./client/agent
     container_name: vending-pi
+    privileged: true
     ports:
       - "5000:5000"
     volumes:
       - agent_data:/data
+      - /dev/gpiomem:/dev/gpiomem
     environment:
       - EVENT_SINK_MODE=socket
       - SERVER_SOCKET_URL=http://192.168.1.44:8000
