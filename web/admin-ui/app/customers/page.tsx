@@ -2,7 +2,7 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import ReportCard from "@/components/dashboard/ReportCard";
-import CouponTable, { ADMIN_COUPON_CREATE_OPEN_EVENT } from "@/components/customers/CouponTable";
+import CouponTable from "@/components/customers/CouponTable";
 import CustomerTable from "@/components/customers/CustomerTable";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import { Suspense, useEffect, useMemo, useState, useCallback } from "react";
@@ -13,7 +13,7 @@ import { apiCouponToUiRow, summarizeCustomers } from "@/lib/admin-mappers";
 function CustomersPageClient() {
   const searchParams = useSearchParams();
   const listQuery = searchParams.get("q")?.trim() ?? "";
-  const { openExportModal } = useUI();
+  const { openExportModal, openCreateCoupon } = useUI();
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [totalPoints, setTotalPoints] = useState<number | null>(null);
   const [activeCoupons, setActiveCoupons] = useState<number | null>(null);
@@ -158,7 +158,7 @@ function CustomersPageClient() {
           <button
             type="button"
             className="btn-primary"
-            onClick={() => window.dispatchEvent(new Event(ADMIN_COUPON_CREATE_OPEN_EVENT))}
+            onClick={openCreateCoupon}
           >
             <i className="fi fi-rr-plus flex items-center"></i>
             สร้างคูปองใหม่
@@ -170,7 +170,7 @@ function CustomersPageClient() {
         <div className="px-4 py-3 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold">{error}</div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <div className="animate-scale-in opacity-0 delay-100">
           <ReportCard
             title="สมาชิกทั้งหมด"

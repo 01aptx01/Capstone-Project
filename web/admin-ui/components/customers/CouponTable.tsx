@@ -1,11 +1,21 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { createCoupon, listCoupons, updateCoupon } from "@/lib/admin-api";
+import { createPortal } from "react-dom";
+import { listCoupons, updateCoupon } from "@/lib/admin-api";
 import { apiCouponToUiRow, type UiCouponRow } from "@/lib/admin-mappers";
+import { useUI } from "@/lib/context/UIContext";
 
 export const ADMIN_COUPONS_REFRESH_EVENT = "admin-coupons-refresh";
-export const ADMIN_COUPON_CREATE_OPEN_EVENT = "admin-coupon-create-open";
+
+function Portal({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted) return null;
+  return createPortal(children, document.body);
+}
 
 function toDatetimeLocalValue(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -40,17 +50,6 @@ type CouponFormState = {
   is_active: boolean;
 };
 
-function emptyForm(): CouponFormState {
-  return {
-    code: "",
-    type: "fixed_amount",
-    discount_amount: "",
-    points_cost: "0",
-    expire_local: "",
-    is_active: true,
-  };
-}
-
 function rowToForm(row: UiCouponRow): CouponFormState {
   return {
     code: row.id,
@@ -62,18 +61,40 @@ function rowToForm(row: UiCouponRow): CouponFormState {
   };
 }
 
+type FilterState = {
+  status: "all" | "active" | "inactive" | "expired";
+  type: "all" | "PERCENT" | "FIXED";
+  expiryDate: string;
+};
+
+const initialFilters: FilterState = {
+  status: "all",
+  type: "all",
+  expiryDate: "",
+};
+
 export default function CouponTable() {
+  const { openCreateCoupon } = useUI();
   const [activeTab, setActiveTab] = useState("ทั้งหมด");
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<UiCouponRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [createOpen, setCreateOpen] = useState(false);
   const [editRow, setEditRow] = useState<UiCouponRow | null>(null);
-  const [form, setForm] = useState<CouponFormState>(emptyForm);
+  const [form, setForm] = useState<CouponFormState>(() => ({
+    code: "",
+    type: "fixed_amount",
+    discount_amount: "",
+    points_cost: "0",
+    expire_local: "",
+    is_active: true,
+  }));
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,64 +123,16 @@ export default function CouponTable() {
     return () => window.removeEventListener(ADMIN_COUPONS_REFRESH_EVENT, onRefresh);
   }, [load]);
 
-  useEffect(() => {
-    const onOpenCreate = () => {
-      setForm(emptyForm());
-      setFormError(null);
-      setCreateOpen(true);
-    };
-    window.addEventListener(ADMIN_COUPON_CREATE_OPEN_EVENT, onOpenCreate);
-    return () => window.removeEventListener(ADMIN_COUPON_CREATE_OPEN_EVENT, onOpenCreate);
-  }, []);
-
   const openEdit = (row: UiCouponRow) => {
     setForm(rowToForm(row));
     setFormError(null);
     setEditRow(row);
   };
 
-  const closeModals = () => {
-    setCreateOpen(false);
+  const closeEditModal = () => {
     setEditRow(null);
     setFormError(null);
     setSaving(false);
-  };
-
-  const submitCreate = async () => {
-    setFormError(null);
-    const code = form.code.trim();
-    if (!code) {
-      setFormError("กรุณากรอกรหัสคูปอง");
-      return;
-    }
-    const da = Number(form.discount_amount);
-    if (!Number.isFinite(da) || da <= 0) {
-      setFormError("ส่วนลดไม่ถูกต้อง");
-      return;
-    }
-    const pc = parsePointsCost(form.points_cost);
-    if (pc === null) {
-      setFormError("แต้มที่ใช้แลกต้องเป็นจำนวนเต็ม ≥ 0");
-      return;
-    }
-    const expireIso = fromDatetimeLocalValue(form.expire_local);
-    setSaving(true);
-    try {
-      await createCoupon({
-        code,
-        type: form.type,
-        discount_amount: da,
-        expire_date: expireIso,
-        is_active: form.is_active,
-        points_cost: pc,
-      });
-      window.dispatchEvent(new Event(ADMIN_COUPONS_REFRESH_EVENT));
-      closeModals();
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : "สร้างคูปองไม่สำเร็จ");
-    } finally {
-      setSaving(false);
-    }
   };
 
   const submitEdit = async () => {
@@ -192,7 +165,7 @@ export default function CouponTable() {
         points_cost: pc,
       });
       window.dispatchEvent(new Event(ADMIN_COUPONS_REFRESH_EVENT));
-      closeModals();
+      closeEditModal();
     } catch (e) {
       setFormError(e instanceof Error ? e.message : "บันทึกไม่สำเร็จ");
     } finally {
@@ -219,11 +192,31 @@ export default function CouponTable() {
         (coupon.name && coupon.name.toLowerCase().includes(q)) ||
         (coupon.id && coupon.id.toLowerCase().includes(q));
 
-      return tabMatch && searchMatch;
-    });
-  }, [activeTab, search, rows]);
+      const statusMatch =
+        filters.status === "all" ||
+        (filters.status === "expired"
+          ? !!expiry && expiry < now
+          : coupon.status === filters.status);
+      const typeMatch =
+        filters.type === "all" ||
+        (filters.type === "PERCENT" ? coupon.type === "PERCENT" : coupon.type !== "PERCENT");
+      const dateMatch =
+        !filters.expiryDate ||
+        (coupon.expiry
+          ? new Date(coupon.expiry).toISOString().slice(0, 10) === filters.expiryDate
+          : false);
 
-  const modalOpen = createOpen || !!editRow;
+      return tabMatch && searchMatch && statusMatch && typeMatch && dateMatch;
+    });
+  }, [activeTab, search, rows, filters]);
+
+  const clearFilters = () => {
+    setFilters(initialFilters);
+    setIsFilterOpen(false);
+  };
+
+  const hasActiveFilters =
+    filters.status !== "all" || filters.type !== "all" || !!filters.expiryDate;
 
   return (
     <div className="bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.04)] animate-in fade-in duration-700">
@@ -239,11 +232,7 @@ export default function CouponTable() {
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
           <button
             type="button"
-            onClick={() => {
-              setForm(emptyForm());
-              setFormError(null);
-              setCreateOpen(true);
-            }}
+            onClick={openCreateCoupon}
             className="px-6 py-3 rounded-2xl bg-[#f47b2a] text-white text-sm font-black shadow-md hover:opacity-95 transition-opacity"
           >
             สร้างคูปองใหม่
@@ -271,7 +260,7 @@ export default function CouponTable() {
         <div className="mx-12 mb-4 px-4 py-3 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold">{error}</div>
       )}
 
-      <div className="px-12 py-6 border-y border-white/40 bg-white/10 flex items-center gap-6">
+      <div className="px-12 py-6 border-y border-white/40 bg-white/10 flex items-center gap-4">
         <div className="relative flex-1 group">
           <i className="fi fi-rr-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors text-lg"></i>
           <input
@@ -281,14 +270,30 @@ export default function CouponTable() {
             className="w-full pl-14 pr-8 py-5 rounded-[24px] border border-white/60 bg-white/40 focus:bg-white focus:border-[#f47b2a] focus:ring-8 focus:ring-orange-500/5 outline-none transition-all duration-300 font-bold text-slate-700 placeholder:text-slate-400"
           />
         </div>
-        <button
-          type="button"
-          onClick={() => load()}
-          className="px-8 py-5 bg-white border border-white rounded-[24px] shadow-sm flex items-center gap-3 text-[14px] font-black text-slate-600 hover:text-[#f47b2a] hover:border-[#f47b2a] hover:shadow-lg transition-all duration-300"
-        >
-          <i className="fi fi-rr-refresh"></i>
-          รีเฟรช
-        </button>
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsFilterOpen(true)}
+            className={`w-14 h-14 rounded-[22px] border-2 flex items-center justify-center text-xl transition-all duration-300 ${
+              hasActiveFilters
+                ? "bg-[#f47b2a] border-[#f47b2a] text-white shadow-lg shadow-orange-500/20"
+                : "bg-white border-slate-200 text-slate-400 hover:border-[#f47b2a] hover:text-[#f47b2a] shadow-sm"
+            }`}
+            aria-label="Advanced filter"
+          >
+            <i className="fi fi-rr-filter"></i>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => load()}
+            className="px-8 py-5 bg-white border border-white rounded-[24px] shadow-sm flex items-center gap-3 text-[14px] font-black text-slate-600 hover:text-[#f47b2a] hover:border-[#f47b2a] hover:shadow-lg transition-all duration-300"
+          >
+            <i className="fi fi-rr-refresh"></i>
+            รีเฟรช
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
@@ -421,14 +426,14 @@ export default function CouponTable() {
         </p>
       </div>
 
-      {modalOpen && (
+      {editRow && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div
             role="dialog"
             aria-modal="true"
             className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-100 max-h-[90vh] overflow-y-auto"
           >
-            <h4 className="text-xl font-black text-slate-800 mb-1">{createOpen ? "สร้างคูปอง" : "แก้ไขคูปอง"}</h4>
+            <h4 className="text-xl font-black text-slate-800 mb-1">แก้ไขคูปอง</h4>
             <p className="text-sm text-slate-500 font-bold mb-6">รหัส ประเภทส่วนลด แต้มที่ใช้แลก (0 = ไม่บังคับแลกแต้ม)</p>
             {formError && <div className="mb-4 text-sm font-bold text-rose-600">{formError}</div>}
             <div className="space-y-4">
@@ -438,7 +443,7 @@ export default function CouponTable() {
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-bold"
                   value={form.code}
                   onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                  disabled={!!editRow && saving}
+                  disabled={saving}
                 />
               </label>
               <label className="block">
@@ -500,7 +505,7 @@ export default function CouponTable() {
               <button
                 type="button"
                 className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600"
-                onClick={closeModals}
+                onClick={closeEditModal}
                 disabled={saving}
               >
                 ยกเลิก
@@ -509,13 +514,104 @@ export default function CouponTable() {
                 type="button"
                 className="px-4 py-2 rounded-xl bg-[#f47b2a] text-white font-black disabled:opacity-50"
                 disabled={saving}
-                onClick={createOpen ? submitCreate : submitEdit}
+                onClick={submitEdit}
               >
                 {saving ? "กำลังบันทึก…" : "บันทึก"}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {isFilterOpen && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => setIsFilterOpen(false)}
+          >
+            <div
+              className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-800">Advanced Filter</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <i className="fi fi-rr-cross-small text-xl"></i>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                    Status
+                  </label>
+                  <select
+                    value={filters.status}
+                    onChange={(e) =>
+                      setFilters((prev) => ({ ...prev, status: e.target.value as FilterState["status"] }))
+                    }
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                  >
+                    <option value="all">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="expired">Expired</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                    Coupon Type
+                  </label>
+                  <select
+                    value={filters.type}
+                    onChange={(e) =>
+                      setFilters((prev) => ({ ...prev, type: e.target.value as FilterState["type"] }))
+                    }
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="PERCENT">Percentage (%)</option>
+                    <option value="FIXED">Fixed Amount (฿)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                    Expiry Date
+                  </label>
+                  <input
+                    type="date"
+                    value={filters.expiryDate}
+                    onChange={(e) => setFilters((prev) => ({ ...prev, expiryDate: e.target.value }))}
+                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 mt-10">
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="flex-1 py-4 bg-slate-100 text-slate-500 font-black text-[14px] rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                >
+                  Reset
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterOpen(false)}
+                  className="flex-[2] py-4 bg-[#f47b2a] text-white font-black text-[14px] rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all active:scale-95"
+                >
+                  Apply Filter
+                </button>
+              </div>
+            </div>
+          </div>
+        </Portal>
       )}
     </div>
   );
