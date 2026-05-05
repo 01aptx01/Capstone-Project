@@ -1,8 +1,6 @@
-Active: Docker compose logs banner + WS/DB connection summary
+Active: (idle / last: admin-ui inventory categories)
 Done:
-- server/main.py: startup banner shows ws.enabled/dispatch/agent.url + db=mysql://<user>@<host>/<db> + URLs + cors.origins (no secrets)
-- client/agent/docker-entrypoint.sh: compact banner shows host.url, server.url, ws.url, db.local, machine.id, sink mode/url
-- docker-compose.yml: new one-shot `compose-banner` service prints Published URLs table into compose logs
-- client/agent/machine.py: non-Pi friendly LED init fallback → virtual devices (prevents gpiozero BadPinFactory crash)
+- web/admin-ui: product categories display and filter use DB slugs meat | vegetarian | sweet (admin-mappers, Add/Edit modals, products page sort locale en)
+- web/admin-ui/lib/mock/products.json: category fields aligned to same slugs
 Next:
-- (optional) run `docker compose up -d compose-banner` after `up` if you want the URLs table printed again on demand
+- (optional) verify inventory page against live API
