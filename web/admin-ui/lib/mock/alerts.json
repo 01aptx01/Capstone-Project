@@ -1,0 +1,8 @@
+{
+  "total": 12,
+  "alerts": [
+    { "id": "A001", "machine": "M05", "type": "low_stock", "message": "Low stock: Soda (P02)", "severity": "warning", "createdAt": "2026-05-02T08:12:00Z" },
+    { "id": "A002", "machine": "M08", "type": "offline", "message": "Machine offline", "severity": "critical", "createdAt": "2026-05-02T07:42:00Z" },
+    { "id": "A003", "machine": "M01", "type": "door_open", "message": "Door opened unexpectedly", "severity": "warning", "createdAt": "2026-05-02T06:55:00Z" }
+  ]
+}

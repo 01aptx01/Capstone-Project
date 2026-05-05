@@ -1,30 +1,873 @@
 swagger: "2.0"
 info:
-  title: "Smart Vending System API"
-  description: "API สำหรับจัดการตู้ Vending Machine อัจฉริยะ"
-  version: "1.0.0"
+  title: Smart Vending System API
+  description: |
+    Flask backend for smart vending: catalog, Omise checkout, machine events, members, and admin CRUD under `/api/admin`.
+    Interactive docs (Flasgger) are also served by the server at `/apidocs` when the app is running.
 
-Components:
+    **Socket.IO (same host/port as HTTP, e.g. `http://localhost:8000`):**
+    - Machines: bcrypt token auth (agent connects with auth JSON `{ "machine_id": "<code>", "token": "<secret>" }`).
+    - Admin dashboard: join Socket.IO with auth JSON `{ "role": "admin" }` when `ADMIN_SOCKET_SECRET` is unset, or `{ "admin_token": "<secret>" }` when set. Server emits event **`dashboard_update`** to room `admin` after each machine event ingest (telemetry for live dashboards).
+
+    **Docker Compose — default published ports on the host:**
+    | Service | Host URL |
+    |---------|----------|
+    | MySQL (`db`) | `localhost:3307` |
+    | API + Socket.IO (`server`) | `http://localhost:8000` |
+    | Hardware agent (`client`) | `http://localhost:5000` |
+    | machine-ui | `http://localhost:3000` |
+    | admin-ui | `http://localhost:3001` |
+    | swagger-ui (this spec in UI) | `http://localhost:8081` (host; avoids Jenkins on 8080) |
+    | Flasgger (same server) | `http://localhost:8000/apidocs` |
+  version: "2.0.0"
+
+host: localhost:8000
+basePath: /
+schemes:
+  - http
+
+tags:
+  - name: System
+    description: Process health and diagnostics
+  - name: Inventory
+    description: Public product catalog by machine
+  - name: Payments
+    description: Checkout, drafts, webhooks, and status
+  - name: Members
+    description: Member lookup and points (machine UI)
+  - name: Machines
+    description: Agent → server event ingestion
+  - name: Admin
+    description: Admin dashboard API (`/api/admin/*`). Auth is a placeholder (`@admin_required` passes through).
+
+definitions:
+  Product:
+    type: object
+    properties:
+      product_id: { type: integer }
+      name: { type: string }
+      description: { type: string }
+      price: { type: number }
+      heating_time: { type: integer, x-nullable: true }
+      image_url: { type: string, x-nullable: true }
+      category: { type: string }
+      stock: { type: integer }
+
+  CartItem:
+    type: object
+    required: [product_id, quantity]
+    properties:
+      product_id: { type: integer }
+      quantity: { type: integer }
+
+  PaginatedList:
+    type: object
+    properties:
+      items: { type: array, items: { type: object } }
+      page: { type: integer }
+      per_page: { type: integer }
+      total: { type: integer }
+      pages: { type: integer }
+
+  AdminProduct:
+    type: object
+    properties:
+      product_id: { type: integer }
+      name: { type: string }
+      description: { type: string, x-nullable: true }
+      price: { type: number }
+      image_url: { type: string, x-nullable: true }
+      heating_time: { type: integer, x-nullable: true }
+      category: { type: string, description: "e.g. meat, vegetarian, sweet" }
+
+  AdminMachineSummary:
+    type: object
+    properties:
+      machine_code: { type: string }
+      location: { type: string, x-nullable: true }
+      status: { type: string }
+      last_active: { type: string, x-nullable: true }
+      is_online: { type: boolean }
+
+  AdminMachineCreateResponse:
+    allOf:
+      - $ref: "#/definitions/AdminMachineSummary"
+      - type: object
+        required: [secret_token]
+        properties:
+          secret_token:
+            type: string
+            description: "One-time 32-char hex token; copy now — only returned on create"
+
+  AdminCustomer:
+    type: object
+    properties:
+      user_id: { type: integer }
+      phone_number: { type: string }
+      points: { type: integer }
+      status: { type: string }
+      registered_at: { type: string, x-nullable: true }
+      last_use: { type: string, x-nullable: true }
+
+  AdminCoupon:
+    type: object
+    properties:
+      promotion_id: { type: integer }
+      code: { type: string }
+      type: { type: string, enum: [fixed_amount, percent] }
+      discount_amount: { type: number }
+      is_active: { type: boolean }
+      expire_date: { type: string, x-nullable: true }
+      points_cost: { type: integer }
+
+  AdminOrderLineItem:
+    type: object
+    properties:
+      product_id: { type: integer }
+      quantity: { type: integer }
+      product_name: { type: string, x-nullable: true }
+      price_at_purchase: { type: number }
+
+  AdminOrderListItem:
+    type: object
+    properties:
+      order_id: { type: integer }
+      machine_code: { type: string }
+      user_id: { type: integer, x-nullable: true }
+      customer_phone: { type: string, x-nullable: true }
+      promotion_id: { type: integer, x-nullable: true }
+      charge_id: { type: string, x-nullable: true }
+      total_price: { type: number }
+      payment_method: { type: string }
+      status: { type: string }
+      created_at: { type: string, x-nullable: true }
+      updated_at: { type: string, x-nullable: true }
+      item_line_count: { type: integer }
+      item_quantity_sum: { type: integer }
+      order_items:
+        type: array
+        items: { $ref: "#/definitions/AdminOrderLineItem" }
+      transactions:
+        type: array
+        items: { type: object }
 
 paths:
-  /api/buy:
-    post:
-      summary: "สั่งซื้อสินค้า"
+  /health:
+    get:
+      tags: [System]
+      summary: Lightweight liveness probe
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+            properties:
+              status: { type: string, example: server-ok }
+
+  /api/health:
+    get:
+      tags: [System]
+      summary: Deep health (MySQL, Omise, hardware agent)
+      responses:
+        "200":
+          description: All components OK
+        "207":
+          description: One or more components degraded
+        "500":
+          description: Internal error
+
+  /api/products:
+    get:
+      tags: [Inventory]
+      summary: List products with stock for a machine
       parameters:
-        - in: "body"
-          name: "body"
+        - name: machine_code
+          in: query
+          type: string
+          description: Machine identifier (default MP1-001)
+        - name: machine_id
+          in: query
+          type: string
+          description: Legacy alias for machine_code
+      responses:
+        "200":
+          description: Product rows
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Product"
+
+  /api/buy/checkout:
+    post:
+      tags: [Payments]
+      summary: Create Omise charge and pending order
+      parameters:
+        - in: body
+          name: body
           required: true
           schema:
-            type: "object"
+            type: object
+            required: [payment_id, payment_type, amount, cart]
             properties:
-              machine_id:
-                type: "integer"
-                example: 1
-              product_id:
-                type: "integer"
-                example: 1
+              payment_id: { type: string }
+              payment_type: { type: string, enum: [token, source, truemoney] }
+              amount: { type: number, description: "Amount in satang" }
+              cart:
+                type: array
+                items: { $ref: "#/definitions/CartItem" }
+              machine_code: { type: string }
+              machine_id: { type: string, description: "Legacy alias" }
+              draft_id: { type: string, description: "Optional draft from create-draft" }
       responses:
-        200:
-          description: "ซื้อสำเร็จ"
-        400:
-          description: "สินค้าหมด"
+        "200":
+          description: Paid, pending_payment, or payment_failed payload
+        "400":
+          description: Validation / stock / Omise error
+
+  /api/buy/create-draft:
+    post:
+      tags: [Payments]
+      summary: Create draft pending order (card flow)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              machine_code: { type: string }
+              cart:
+                type: array
+                items: { $ref: "#/definitions/CartItem" }
+              amount: { type: number }
+              payment_method: { type: string }
+      responses:
+        "200":
+          description: Draft created
+        "400":
+          description: Stock or validation error
+
+  /api/buy/cancel:
+    post:
+      tags: [Payments]
+      summary: Cancel pending order (and Omise charge when applicable)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [charge_id]
+            properties:
+              charge_id: { type: string }
+      responses:
+        "200":
+          description: Cancelled
+        "409":
+          description: Cannot cancel
+
+  /api/buy/status/{charge_id}:
+    get:
+      tags: [Payments]
+      summary: Poll order status (DB-backed)
+      parameters:
+        - name: charge_id
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Status object
+
+  /api/buy/mock-pay:
+    post:
+      tags: [Payments]
+      summary: Force paid + dispense (development)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [charge_id]
+            properties:
+              charge_id: { type: string }
+      responses:
+        "200":
+          description: Mock payment applied
+
+  /api/buy/omise-webhook:
+    post:
+      tags: [Payments]
+      summary: Omise webhook (HMAC when OMISE_WEBHOOK_SECRET set)
+      responses:
+        "200":
+          description: Processed or ignored
+        "401":
+          description: Invalid signature
+
+  /api/buy:
+    post:
+      tags: [Payments]
+      summary: Alias of checkout
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+      responses:
+        "200":
+          description: Same as checkout
+
+  /api/members/{phone}:
+    get:
+      tags: [Members]
+      summary: Lookup member by 10-digit phone (rate limited)
+      parameters:
+        - name: phone
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Member found
+        "400":
+          description: Invalid phone
+        "404":
+          description: Not found
+        "429":
+          description: Rate limited
+
+  /api/members/earn:
+    post:
+      tags: [Members]
+      summary: Earn points after purchase (rate limited)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              phone_number: { type: string }
+              total_price: { type: number }
+              charge_id: { type: string, description: "Optional link to order" }
+      responses:
+        "200":
+          description: Points updated
+        "400":
+          description: Invalid body
+        "429":
+          description: Rate limited
+
+  /api/machines/events:
+    post:
+      tags: [Machines]
+      summary: Ingest machine job event (agent)
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [machine_code, job_id, event_type, seq]
+            properties:
+              machine_code: { type: string }
+              job_id: { type: string }
+              event_type: { type: string }
+              state: { type: string }
+              seq: { type: integer }
+              order_charge_id: { type: string }
+              payload: { type: object }
+      responses:
+        "200":
+          description: Stored
+        "400":
+          description: Validation error
+
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: List admin users (placeholder)
+      responses:
+        "200":
+          description: Empty list placeholder
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                items: { type: object }
+
+  /api/admin/products:
+    get:
+      tags: [Admin]
+      summary: List products (paginated, optional q)
+      parameters:
+        - { name: page, in: query, type: integer, default: 1 }
+        - { name: per_page, in: query, type: integer, default: 20, maximum: 100 }
+        - { name: q, in: query, type: string }
+      responses:
+        "200":
+          description: Paginated products
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminProduct" }
+    post:
+      tags: [Admin]
+      summary: Create product
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [name, price]
+            properties:
+              name: { type: string }
+              price: { type: number }
+              description: { type: string }
+              image_url: { type: string }
+              heating_time: { type: integer }
+              category: { type: string }
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation error
+
+  /api/admin/products/categories:
+    get:
+      tags: [Admin]
+      summary: Distinct product categories in DB
+      responses:
+        "200":
+          description: Category codes used by at least one product
+          schema:
+            type: object
+            properties:
+              categories:
+                type: array
+                items: { type: string }
+
+  /api/admin/products/{product_id}:
+    put:
+      tags: [Admin]
+      summary: Update product
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          type: integer
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              name: { type: string }
+              price: { type: number }
+              description: { type: string }
+              image_url: { type: string }
+              heating_time: { type: integer }
+              category: { type: string }
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Not found
+    delete:
+      tags: [Admin]
+      summary: Delete product
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          type: integer
+      responses:
+        "200":
+          description: Deleted
+        "404":
+          description: Not found
+        "409":
+          description: Referenced by slots or orders
+
+  /api/admin/machines:
+    get:
+      tags: [Admin]
+      summary: List machines
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+        - { name: status, in: query, type: string }
+        - {
+            name: q,
+            in: query,
+            type: string,
+            description: "Substring match on machine_code or location (case-insensitive)",
+          }
+      responses:
+        "200":
+          description: Paginated machines
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminMachineSummary" }
+    post:
+      tags: [Admin]
+      summary: Create machine (returns one-time secret token)
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required: [machine_code]
+            properties:
+              machine_code: { type: string, maxLength: 20 }
+              location: { type: string, x-nullable: true }
+              status:
+                type: string
+                enum: [online, maintenance, offline]
+                default: online
+      responses:
+        "201":
+          description: Created; includes plaintext secret_token to copy once
+          schema:
+            $ref: "#/definitions/AdminMachineCreateResponse"
+        "400":
+          description: Bad request
+        "409":
+          description: machine_code already exists
+
+  /api/admin/machines/{machine_code}:
+    get:
+      tags: [Admin]
+      summary: Machine detail with slots
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Machine + slots
+        "404":
+          description: Not found
+    put:
+      tags: [Admin]
+      summary: Update machine location and/or operational status
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            description: "At least one property required."
+            properties:
+              location: { type: string, x-nullable: true }
+              status:
+                type: string
+                enum: [online, maintenance, offline]
+      responses:
+        "200":
+          description: Machine + slots after update
+        "400":
+          description: Validation error
+        "404":
+          description: Not found
+
+  /api/admin/machines/{machine_code}/slots:
+    put:
+      tags: [Admin]
+      summary: Replace all inventory slots for a machine (full snapshot)
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required: [slots]
+            properties:
+              slots:
+                type: array
+                description: "Empty array clears all slots for the machine."
+                items:
+                  type: object
+                  required: [slot_number, product_id, quantity]
+                  properties:
+                    slot_number: { type: integer, minimum: 1, maximum: 24 }
+                    product_id: { type: integer }
+                    quantity: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Machine detail after update (same shape as GET machine)
+        "400":
+          description: Validation error (unknown product_id, duplicate slot_number, etc.)
+        "404":
+          description: Machine not found
+
+  /api/admin/customers:
+    get:
+      tags: [Admin]
+      summary: List customers (users)
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+        - { name: q, in: query, type: string, description: "Phone substring" }
+      responses:
+        "200":
+          description: Paginated customers
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminCustomer" }
+
+  /api/admin/customers/{user_id}:
+    get:
+      tags: [Admin]
+      summary: Customer detail with recent orders
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          type: integer
+      responses:
+        "200":
+          description: Customer + orders
+        "404":
+          description: Not found
+
+  /api/admin/orders:
+    get:
+      tags: [Admin]
+      summary: List orders with transactions
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+        - { name: status, in: query, type: string }
+        - { name: machine_code, in: query, type: string }
+        - {
+            name: q,
+            in: query,
+            type: string,
+            description: "Substring on machine_code, charge_id, customer phone; if numeric, also matches order_id",
+          }
+      responses:
+        "200":
+          description: Paginated orders
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminOrderListItem" }
+
+  /api/admin/coupons:
+    get:
+      tags: [Admin]
+      summary: List coupons / promotions
+      parameters:
+        - { name: page, in: query, type: integer }
+        - { name: per_page, in: query, type: integer }
+      responses:
+        "200":
+          description: Paginated coupons
+          schema:
+            allOf:
+              - $ref: "#/definitions/PaginatedList"
+              - type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/definitions/AdminCoupon" }
+    post:
+      tags: [Admin]
+      summary: Create coupon
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            required: [code, type, discount_amount]
+            properties:
+              code: { type: string }
+              type: { type: string, enum: [fixed_amount, percent] }
+              discount_amount: { type: number }
+              expire_date: { type: string, x-nullable: true }
+              is_active: { type: boolean }
+              points_cost: { type: integer }
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Validation error
+        "409":
+          description: Duplicate code
+
+  /api/admin/coupons/{promotion_id}:
+    put:
+      tags: [Admin]
+      summary: Update coupon
+      parameters:
+        - name: promotion_id
+          in: path
+          required: true
+          type: integer
+        - in: body
+          name: body
+          schema:
+            type: object
+            properties:
+              code: { type: string }
+              type: { type: string, enum: [fixed_amount, percent] }
+              discount_amount: { type: number }
+              expire_date: { type: string, x-nullable: true }
+              is_active: { type: boolean }
+              points_cost: { type: integer }
+      responses:
+        "200":
+          description: Updated
+        "404":
+          description: Not found
+        "409":
+          description: Code conflict
+
+  /api/admin/dashboard/summary:
+    get:
+      tags: [Admin]
+      summary: Dashboard KPIs (sales today, online machines, top products)
+      responses:
+        "200":
+          description: Summary payload
+          schema:
+            type: object
+            properties:
+              total_sales_today: { type: number }
+              active_machines: { type: integer }
+              top_products:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    product_id: { type: integer }
+                    name: { type: string }
+                    total_sold: { type: integer }
+
+  /api/admin/reports/sales:
+    get:
+      tags: [Admin]
+      summary: Daily revenue time series for charting
+      parameters:
+        - name: days
+          in: query
+          type: integer
+          default: 30
+          maximum: 365
+          description: Number of calendar days ending today (inclusive)
+      responses:
+        "200":
+          description: Series of completed-order aggregates by day
+          schema:
+            type: object
+            properties:
+              days: { type: integer }
+              series:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    date: { type: string }
+                    revenue: { type: number }
+                    count: { type: integer }
+
+  /api/admin/alerts:
+    get:
+      tags: [Admin]
+      summary: Low stock slots and recent machine ERROR events
+      parameters:
+        - name: stock_threshold
+          in: query
+          type: integer
+          default: 5
+          description: Flag slots where quantity is strictly below this value
+        - name: include_resolved
+          in: query
+          type: boolean
+          default: false
+          description: When true, machine_errors includes resolved ERROR rows (audit/history)
+      responses:
+        "200":
+          description: Alerts payload
+          schema:
+            type: object
+            properties:
+              stock_threshold: { type: integer }
+              include_resolved: { type: boolean }
+              low_stock:
+                type: array
+                items:
+                  type: object
+              machine_errors:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: integer }
+                    machine_code: { type: string }
+                    job_id: { type: string }
+                    event_type: { type: string }
+                    state: { type: string }
+                    created_at: { type: string }
+                    is_resolved: { type: boolean }
+                    resolved_at: { type: string, x-nullable: true }
+
+  /api/admin/alerts/resolve/{event_id}:
+    post:
+      tags: [Admin]
+      summary: Mark a machine ERROR event as resolved
+      parameters:
+        - name: event_id
+          in: path
+          required: true
+          type: integer
+      responses:
+        "200":
+          description: Event marked resolved
+          schema:
+            type: object
+            properties:
+              ok: { type: boolean }
+              id: { type: integer }
+              is_resolved: { type: boolean }
+              resolved_at: { type: string }
+        "400":
+          description: Not an ERROR event
+        "404":
+          description: Event not found
+        "409":
+          description: Already resolved
