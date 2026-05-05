@@ -1,258 +1,116 @@
-# 🤖 Capstone Project: Smart Vending System
+# 🤖 Smart Vending Machine - Full Stack Solution
 
-ระบบจัดการตู้ Vending Machine อัจฉริยะที่ออกแบบมาด้วยสถาปัตยกรรมแบบ **Distributed System** แยกส่วนควบคุม (Agent) และส่วนบริหารจัดการ (Server) ออกจากกันเพื่อความยืดหยุ่นและการขยายตัวในอนาคต
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker)](https://www.docker.com/)
+[![Next.js](https://img.shields.io/badge/Frontend-Next.js%2016-black?logo=next.js)](https://nextjs.org/)
+[![Flask](https://img.shields.io/badge/Backend-Flask-lightgrey?logo=flask)](https://flask.palletsprojects.com/)
+[![Payment](https://img.shields.io/badge/Payment-Omise-blue)](https://www.omise.co/)
 
-## 🏗️ System Architecture (โครงสร้างระบบ)
+A modern, production-ready Smart Vending Machine architecture featuring a **Next.js** touchscreen interface, a **Flask** microservice backend, **MySQL** inventory management, and a **Hardware Agent** for Raspberry Pi GPIO control. Integrated with **Omise** for secure Credit Card and PromptPay (QR) payments.
 
-โปรเจกต์นี้ทำงานร่วมกันผ่าน 3 Service หลักบน Docker:
+---
 
-1.  **Server (Backend API)**
-    
-    -   **Stack:** Python (Flask)
-        
-    -   **Port:** `8000` 
-        
-    -   **Role:** ตัวแม่คอยจัดการ Business Logic ทั้งหมด เชื่อมต่อ Database และประสานงานกับส่วนอื่นๆ
-        
-2.  **Database (MySQL)**
-    
-    -   **Stack:** MySQL 8.0
-        
-    -   **Role:** คลังเก็บข้อมูลสินค้า และสถานะต่างๆ ของระบบ
-        
-3.  **Pi-Agent (Edge Control)**
-    
-    -   **Stack:** Python (Flask)
-        
-    -   **Network:** `host` mode (เพื่อการเชื่อมต่อฮาร์ดแวร์ที่รวดเร็ว)
-        
-    -   **Port:** `5000`
-        
-    -   **Role:** รันบนตัวตู้จริงเพื่อรับคำสั่งจ่ายของ (Dispense) และคอยรายงานสถานะเครื่อง
+## 🏗️ Architecture Overview
 
-4.  **Web-UI**
-    
-    -   **Stack:** React.js, Node.js, Bootstrap
-    
-    -   **Port:** `3000`
+The system is built on a distributed microservices architecture optimized for low-latency hardware interaction and secure payment processing.
 
-    -   **Role:** ส่วนติดต่อผู้ใช้งาน (User Interface) สำหรับให้ลูกค้าเลือกซื้อสินค้าบนหน้าจอpi และแอดมินสามารถดูสถานะของตู้สินค้าได้บนเว็ป
-
-
-## 📂 Project Structure
-
-Plaintext
-
-```
-Capstone-Project-main/
-├── client/
-│   └── agent/
-│       ├── agent.py        # โค้ดควบคุมการจ่ายของ (Edge Logic)
-│       └── Dockerfile      # สภาพแวดล้อมสำหรับรัน Agent
-|
-├── server/
-│   ├── main.py             # ศูนย์กลาง API Gateway
-│   ├── requirements.txt    # Library ที่ต้องใช้
-│   └── Dockerfile          # สภาพแวดล้อมสำหรับรัน Server
-|
-├── database/
-│   └── init.sql            # ไฟล์ Setup Database เริ่มต้น
-|
-├── web/
-│   └── web-ui/             # โค้ดส่วนหน้าจอ UI (React.js)
-│       ├── src/            # ไฟล์ Source Code หลัก
-│       │   ├── api/        # ส่วนเชื่อมต่อ API กับ Server
-│       │   └── pages/      # หน้าแสดงผลต่างๆ เช่น หน้าตู้ขายสินค้า
-│       └── Dockerfile      # สภาพแวดล้อมสำหรับรัน Web UI
-|
-├── docker-compose.yml      # ไฟล์บงการทุก Service ให้ทำงานร่วมกัน
-├── swagger.yaml            # เอกสารอธิบาย API (API Documentation)
-├── .gitignore              # ป้องกันไฟล์ขยะหลุดขึ้น Repo
-└── .env                    # ไฟล์เก็บ Config สำคัญ (ต้องสร้างเอง)
-
+```mermaid
+graph TD
+    A[machine-ui - Next.js] -->|API Requests| B[server - Flask API]
+    B -->|SQL| C[(MySQL DB)]
+    B -->|HTTPS| D[Omise Gateway]
+    B -->|HTTP/GPIO| E[hardware-agent - Python]
+    E -->|Motor Control| F[Physical Vending Hardware]
 ```
 
-## 🚀 Getting Started (เริ่มลุยกันเลย)
+- **`machine-ui`**: A high-performance Next.js application designed for 10.1" touchscreens. Handles UI state, Omise tokenization, and real-time polling.
+- **`server`**: The central brain. Manages business logic, inventory verification, secure charge execution via Omise, and hardware coordination. Also hosts **Socket.IO** for real-time job events.
+- **`db`**: Persistent storage for products, pricing, machine layouts, and transaction logs.
+- **`hardware-agent`**: A lightweight service running on Raspberry Pi to handle GPIO/NFC/LED + connect to server via Socket.IO.
+- **`admin-ui`**: Next.js admin dashboard (inventory, machines, orders, alerts).
 
-### 1. สิ่งที่ต้องมีในเครื่อง
+---
 
--   **Docker & Docker Compose**
-    
+## 🚀 Setup & Execution
 
-### 2. การเตรียมตัวก่อนรัน (สำคัญมาก!) 🆕
+The entire stack is containerized for seamless deployment.
 
-**ก. สร้างไฟล์ `.env`:** เนื่องจากระบบดึงค่าจาก Environment Variable ให้สร้างไฟล์ชื่อ `.env` ไว้ที่ Root Folder แล้วใส่ค่าดังนี้:
+### Prerequisites
+- Docker & Docker Compose
+- Omise Test Keys ([Sign up here](https://dashboard.omise.co/))
 
-ข้อมูลโค้ด
-
+### 1. Environment Configuration
+Copy the template and fill in your Omise keys:
+```bash
+cp .env.example .env
 ```
-DB_HOST=db
-DB_USER=root
-DB_PASSWORD=root
-DB_NAME=vending
+Edit `.env` and provide:
+- `NEXT_PUBLIC_OMISE_PUBLIC_KEY`
+- `OMISE_SECRET_KEY`
 
-```
-
-**ข. ตรวจสอบ Docker Build Path:** ในไฟล์ `docker-compose.yml` ตรวจสอบว่า `pi-agent` ชี้ไปที่ Folder ที่ถูกต้อง:
-
--   **ต้องเป็น:** `build: ./client/agent`
-    
-
-### 3. คำสั่งรันระบบ
-
-เปิด Terminal ในโฟลเดอร์หลักแล้วจัดไป:
-
-Bash
-
-```
-docker-compose up --build
-
+### 2. Launch the System
+Run the following command to build and start all services:
+```bash
+docker compose up --build
 ```
 
-_ระบบจะทำการ Build Image และดึงฐานข้อมูลขึ้นมาให้อัตโนมัติ_
+- **machine-ui**: [http://localhost:3000](http://localhost:3000)
+- **admin-ui**: [http://localhost:3001](http://localhost:3001)
+- **API backend + Socket.IO**: [http://localhost:8000](http://localhost:8000)
+- **Flasgger (server)**: [http://localhost:8000/apidocs](http://localhost:8000/apidocs)
+- **Swagger UI (mounted `swagger.yaml`)**: [http://localhost:8081](http://localhost:8081)
+- **Hardware agent**: [http://localhost:5000](http://localhost:5000)
 
-## 🔌 API Documentation & Testing 🆕
+### Log output (more structured)
+Each service prints a startup banner (URLs + key env). If you need even more detail, run:
 
-#### 🖥️ Server API (`localhost:8000`)
-
--   **System Health**
-    
-    -   **Method:** `GET`
-        
-    -   **Endpoint:** `/health`
-        
-    -   **Description:** เช็คสถานะการออนไลน์ของ Server
-        
--   **Purchase (ซื้อสินค้า)**
-    
-    -   **Method:** `POST`
-        
-    -   **Endpoint:** `/api/buy`
-        
-    -   **Description:** สั่งซื้อสินค้า ตัดสต็อก และบันทึก Transaction
-        
-    -   **Body (JSON):** `{ "machine_id": 1, "product_id": 1 }`
-        
-
-#### 🤖 Agent API (`localhost:5000`)
-
--   **Dispense Item**
-    
-    -   **Method:** `GET`
-        
-    -   **Endpoint:** `/dispense/<slot>`
-        
-    -   **Example:** `curl http://localhost:5000/dispense/1`
-        
--   **Agent Health**
-    
-    -   **Method:** `GET`
-        
-    -   **Endpoint:** `/health`
-        
-
-## 🛠️ Troubleshooting (แก้ปัญหาแบบตัวตึง)
-
--   **MySQL เชื่อมต่อไม่ได้:** ตรวจสอบไฟล์ `.env` และดูว่า Container `db` รันสมบูรณ์หรือยัง
-    
--   **Port ชน:** ถ้าเครื่องคุณใช้พอร์ต `8000`, `5000` หรือ `3306` อยู่ ให้ไปเปลี่ยนที่ `ports` ใน `docker-compose.yml`
-
-
-## 📝 Commit Message Guide
-
-ใช้หลักการ **Conventional Commits** เพื่อความเป็นระเบียบและเป็นมาตรฐานสากล
-
-**Format:** `type(scope): subject`
-
-**หัวข้อ (Type) ที่ควรใช้:**
-
--   **feat:** เพิ่มฟีเจอร์ใหม่ (New Feature)
-    
--   **fix:** แก้บั๊ก (Bug Fix)
-    
--   **docs:** แก้ไขเอกสาร เช่น README (Documentation)
-    
--   **style:** จัด format โค้ด, เติม semicolon (ไม่กระทบ logic)
-    
--   **refactor:** รื้อโค้ด เขียนใหม่ให้ดีขึ้น แต่ผลลัพธ์เหมือนเดิม
-    
--   **chore:** งานจุกจิก เช่น อัปเดต version, แก้ .gitignore
-
-# การทำงานของทั้งหมดแบบย่อ
-เราแบ่งออก 3 ส่วนหลัก คือ
-## web(html+css+javaScript)
-ส่วนนี้เราใช้ react เป็นหลัก ซึ่งเอาไว้เป็นเพียง UI ในการสั่งงาน
-- ไม่แตะ DB เอง
-- ไม่สั่ง GPIO(สั่งงาน pi) โดยตรง
-แค่บอกว่าผู้ใช้กดคำสั้งอะไร เช่น “มีคนกดซื้อแล้วนะ”
-มันจะสั่งงานไปให้ตัว Server ทำงานอีกที
-## Server(py)
-ส่วนนี้เราใช้เป็นสมองหลักในการทำงานเลยเพราะทุกส่วนต้องมาติดต่อตรงนี้ก่อนเป็นตัวจัดการ business logic
-Server ทำหน้าที่:
-- ตัดสินใจ
-- ตรวจสอบ
-- คุม flow
-- บังคับกฎ (business logic)
-เช่น เมื่อ Server ได้ request จาก Web:
-
-``` text
-รับคำสั่งจาก Web
-→ เช็ค DB
-→ ตัด stock
-→ log transaction
-→ ตัดสินใจว่าจะสั่ง Pi หรือไม่
+```bash
+docker compose up --build --no-log-prefix
 ```
 
-Server เป็นคนเดียวที่:
-- คุยกับ DB
-- คุยกับ Pi
-- รู้สถานะทั้งหมดของระบบ
+---
 
-## DB (MySQL)
-เก็บข้อมูลทั้งหมด ทุกตู้
+## 🔐 Environment Variables
 
-## Raspberry Pi(py) (Agent)
-ส่วนที่ติดต่อกับ Hardware
+Standardized configuration for the production-ready stack:
 
-Pi:
-- ไม่รู้ราคา
-- ไม่รู้ stock
-- ไม่รู้ user
+| Variable | Description | Context |
+| :--- | :--- | :--- |
+| `NEXT_PUBLIC_OMISE_PUBLIC_KEY` | Omise Public Key for client-side tokenization | Frontend |
+| `OMISE_SECRET_KEY` | Omise Secret Key (KEEP PRIVATE) | Backend |
+| `NEXT_PUBLIC_API_URL` | Backend API Endpoint | Frontend |
+| `AGENT_URL` | URL of the hardware agent | Backend |
+| `DB_HOST` / `DB_USER` ... | MySQL Database Connection | Backend |
+| `CORS_ORIGINS` | Comma-separated allowed origins (override for LAN/hardware) | Backend |
+| `SERVER_SOCKET_URL` | Socket.IO URL the agent connects to (override for LAN/hardware) | Hardware agent |
 
-Pi แค่ทำตามคำสั่ง:
-``` text
-Server (หรือ Web หลัง Server อนุญาต)
-→ /dispense/1
-→ GPIO ทำงาน
-```
+---
 
-Flow ที่ “ถูกต้องตามสถาปัตยกรรม”
+## 💳 Testing the Payment Flow
 
-กรณีซื้อของ 1 ครั้ง:
-``` pgsql
-1. User กดปุ่ม (Web)
-2. Web → Server : buy
-3. Server → DB : check & update stock
-4. DB → Server : OK
-5. Server → Web : success + slot
-6. Web → Pi Agent : dispense
-```
+To test without physical cards or hardware:
 
-# การคุยกันข้ามภาษา
-- Web (React) → เขียนด้วย JavaScript
-- Server → เขียนด้วย Python (Flask)
-- Pi Agent → Python
-- DB → MySQL (SQL)
-เราจะคุยกันด้วย __HTTP + JSON__ ผ่าน __HTTP Request / Response__
+1. **Auto-Tokenization**: Use the **"[Test] Simulate Visa Tap"** button in the UI. This uses a hardcoded test card (4242...) to generate a real Omise test token.
+2. **PromptPay (QR)**: Select PromptPay in the UI. A scannable QR code will be generated. You can simulate the payment status update using:
+   - **Webhook**: Configure an Omise webhook pointing to your `/api/buy/omise-webhook`.
+   - **Manual Bypass**: POST the `charge_id` to `/api/buy/mock-pay` to force a "PAID" status in development.
+3. **Hardware Trigger**: Check the `vending-pi` container logs. You will see `[Dispense] Motor Triggered` messages when the flow completes.
 
-เช่น การกดซื้อสินค้า
+---
 
-Web -> server -> DB
-``` json
-{
-  "machine_id": 1,
-  "product_id": 1
-}
-```
-server ก็ไปทำ Logic ต่างๆ แล้วส่งให้ DB ไปตัดของใน Database แล้ว server ส่ง respon กลับมา เช่น ``` json { status: "OK", slot: 1 } ```
+## 📖 API Documentation
 
+The backend uses **Flasgger** to provide interactive OpenAPI/Swagger documentation. Navigate to `/apidocs` on the server to explore the endpoints.
+
+For a dedicated Swagger UI that renders `swagger.yaml`, open **Swagger UI** at `http://localhost:8081`.
+
+**Key Endpoints:**
+- `GET /api/health`: Comprehensive system health check.
+- `GET /api/products`: Fetch inventory and pricing.
+- `POST /api/buy/checkout`: Execute a payment (Token or Source).
+- `GET /api/buy/status/<charge_id>`: Poll for payment completion.
+
+---
+
+## 📜 License
+This project is licensed under the MIT License - see the LICENSE file for details.

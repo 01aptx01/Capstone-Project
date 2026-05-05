@@ -1,37 +1,228 @@
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS vending;
 USE vending;
 
+-- Drop order
+DROP TABLE IF EXISTS admin_user_role;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS admin_users;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS machine_job_events;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS machine_slots;
+DROP TABLE IF EXISTS promotions;
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS machines;
+
+CREATE TABLE users (
+  user_id INT AUTO_INCREMENT PRIMARY KEY,
+  phone_number VARCHAR(20) NOT NULL,
+  points INT NOT NULL DEFAULT 0,
+  registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_use DATETIME NULL,
+  status ENUM('active','suspended','banned') NOT NULL DEFAULT 'active',
+  UNIQUE KEY uq_users_phone (phone_number),
+  -- Composite index: covers WHERE status='active' AND last_use < X (user maintenance sweeper)
+  KEY idx_users_status_lastuse (status, last_use)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE promotions (
+  promotion_id INT AUTO_INCREMENT PRIMARY KEY,
+  code VARCHAR(50) NOT NULL,
+  type ENUM('fixed_amount','percent') NOT NULL,
+  discount_amount DECIMAL(10,2) NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  expire_date DATETIME NULL,
+  points_cost INT NOT NULL DEFAULT 0,
+  UNIQUE KEY uq_promotions_code (code)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE machines (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  machine_code VARCHAR(20) UNIQUE,
-  location VARCHAR(100)
-);
+  machine_code VARCHAR(20) NOT NULL,
+  location TEXT NULL,
+  status ENUM('online','maintenance','offline') NOT NULL DEFAULT 'online',
+  last_active DATETIME NULL,
+  secret_token_hash VARCHAR(255) NULL,
+  is_online TINYINT(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (machine_code)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE products (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(50),
-  price DECIMAL(6,2)
-);
+  product_id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  description VARCHAR(100),
+  price DECIMAL(10,2) NOT NULL,
+  image_url VARCHAR(200),
+  heating_time INT,
+  category ENUM('meat', 'vegetarian', 'sweet') NOT NULL DEFAULT 'meat'
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE stock (
+CREATE TABLE machine_slots (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  machine_id INT,
-  product_id INT,
-  quantity INT
-);
+  machine_code VARCHAR(20) NOT NULL,
+  slot_number INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL DEFAULT 0,
+  UNIQUE KEY uq_machine_slot (machine_code, slot_number),
+  KEY idx_machine_slots_machine (machine_code),
+  KEY idx_machine_slots_product (product_id),
+  CONSTRAINT fk_machine_slots_machine
+    FOREIGN KEY (machine_code) REFERENCES machines(machine_code)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_machine_slots_product
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE orders (
+  order_id INT AUTO_INCREMENT PRIMARY KEY,
+  machine_code VARCHAR(20) NOT NULL,
+  user_id INT NULL,
+  promotion_id INT NULL,
+  charge_id VARCHAR(64) NULL,
+  total_price DECIMAL(10,2) NOT NULL,
+  payment_method ENUM('cash','qr_code','credit_card') NOT NULL,
+  status ENUM(
+    'pending_payment',
+    'cancelled',
+    'payment_failed',
+    'paid',
+    'dispensing',
+    'completed',
+    'dispense_failed',
+    'refunded'
+  ) NOT NULL DEFAULT 'pending_payment',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_orders_charge_id (charge_id),
+  KEY idx_orders_machine (machine_code),
+  KEY idx_orders_user (user_id),
+  KEY idx_orders_promo (promotion_id),
+  -- Composite: covers background sweeper (WHERE status='pending_payment' AND created_at < X)
+  KEY idx_orders_status_created (status, created_at),
+  -- Composite: covers dispatch_pending_jobs (WHERE machine_code=X AND status='paid')
+  KEY idx_orders_machine_status (machine_code, status),
+  CONSTRAINT fk_orders_machine
+    FOREIGN KEY (machine_code) REFERENCES machines(machine_code)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_orders_user
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_orders_promotion
+    FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id)
+    ON UPDATE CASCADE ON DELETE SET NULL
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE order_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  order_id INT NOT NULL,
+  product_id INT NOT NULL,
+  quantity INT NOT NULL DEFAULT 1,
+  price_at_purchase DECIMAL(10,2) NOT NULL,
+  KEY idx_order_items_order (order_id),
+  KEY idx_order_items_product (product_id),
+  CONSTRAINT fk_order_items_order
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_order_items_product
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE machine_job_events (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  machine_code VARCHAR(20) NOT NULL,
+  job_id VARCHAR(64) NOT NULL,
+  order_charge_id VARCHAR(64) NULL,
+  event_type VARCHAR(50) NOT NULL,
+  state VARCHAR(50) NULL,
+  seq INT NOT NULL,
+  payload_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+  resolved_at DATETIME NULL,
+  UNIQUE KEY uq_mje_job_seq (job_id, seq),
+  KEY idx_mje_machine (machine_code),
+  KEY idx_mje_job (job_id),
+  KEY idx_mje_charge (order_charge_id),
+  KEY idx_mje_created (created_at),
+  CONSTRAINT fk_machine_job_events_machine_code
+    FOREIGN KEY (machine_code) REFERENCES machines(machine_code)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE admin_users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_admin_users_email (email)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(64) NOT NULL,
+  description VARCHAR(255) NULL,
+  UNIQUE KEY uq_roles_name (name)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE admin_user_role (
+  admin_user_id INT NOT NULL,
+  role_id INT NOT NULL,
+  PRIMARY KEY (admin_user_id, role_id),
+  CONSTRAINT fk_aur_admin_user
+    FOREIGN KEY (admin_user_id) REFERENCES admin_users(id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_aur_role
+    FOREIGN KEY (role_id) REFERENCES roles(id)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE transactions (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  machine_id INT,
-  product_id INT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+  order_id INT NOT NULL,
+  provider VARCHAR(32) NOT NULL,
+  provider_ref VARCHAR(128) NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  currency VARCHAR(3) NOT NULL DEFAULT 'THB',
+  fee_amount DECIMAL(10,2) NULL,
+  status VARCHAR(32) NOT NULL,
+  raw_payload_json JSON NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_transactions_order (order_id),
+  KEY idx_transactions_provider_ref (provider_ref),
+  CONSTRAINT fk_transactions_order
+    FOREIGN KEY (order_id) REFERENCES orders(order_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-INSERT INTO machines (machine_code, location)
-VALUES ('VM001', 'Demo');
+-- =====================
+-- SEED DATA
+-- =====================
 
-INSERT INTO products (name, price)
-VALUES ('Cola', 20.00);
+-- Machine
+INSERT INTO machines (machine_code, location, status) VALUES ('MP1-001', 'KMUTT', 'online');
 
-INSERT INTO stock (machine_id, product_id, quantity)
-VALUES (1, 1, 10);
+-- Products
+INSERT INTO products (name, description, price, heating_time, image_url, category) VALUES
+('เปามดแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png', 'meat'),
+('เปาหมูสับ', 'หมูสับไข่เค็ม รสกลมกล่อม', 32.00, 20, '/product/img/pao-moosub.png', 'meat'),
+('เปากุ้ง', 'เนื้อกุ้งเด้งเต็มคำ', 32.00, 15, '/product/img/pao-shrimp.png', 'meat'),
+('เปาเต้าหู้', 'ไส้เต้าหู้รสกลมกล่อม', 22.00, 12, '/product/img/pao-tofu.png', 'vegetarian'),
+('เปาเห็ดหอม', 'ไส้เห็ดหอม รสกลมกล่อม', 25.00, 15, '/product/img/pao-mushroom.png', 'vegetarian'),
+('เปาครีม', 'ครีมคัสตาร์ด หอมหวานละมุน', 25.00, 12, '/product/img/pao-cream.png', 'sweet');
+
+-- Stock (20 each for machine 1)
+INSERT INTO machine_slots (machine_code, slot_number, product_id, quantity) VALUES
+('MP1-001', 1, 1, 20),
+('MP1-001', 2, 2, 20),
+('MP1-001', 3, 3, 20),
+('MP1-001', 4, 4, 20),
+('MP1-001', 5, 5, 20),
+('MP1-001', 6, 6, 20);

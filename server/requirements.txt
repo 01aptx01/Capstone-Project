@@ -1,3 +1,14 @@
 flask
+flask-cors
+flask-sqlalchemy
+flask-migrate
+sqlalchemy
 mysql-connector-python
 flasgger
+omise
+requests
+python-dotenv
+python-socketio
+eventlet
+pytz
+bcrypt

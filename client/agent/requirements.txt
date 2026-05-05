@@ -1,7 +1,16 @@
 flask
+flask-cors
 requests
 python-socketio
+
 adafruit-blinka
 adafruit-circuitpython-pca9685
+adafruit-circuitpython-bitbangio
 mfrc522
+spidev
 pygame
+
+websocket-client
+gpiozero
+rpi-lgpio
+python-dotenv

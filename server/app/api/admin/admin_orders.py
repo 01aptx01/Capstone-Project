@@ -1,0 +1,121 @@
+"""Admin order list with customer and transaction context."""
+
+from decimal import Decimal
+
+from flask import jsonify, request
+from sqlalchemy import func, or_, select
+from sqlalchemy.orm import selectinload
+
+from app.api.admin import admin_bp
+from app.api.admin.decorators import admin_required
+from app.api.admin.pagination import get_pagination_params, list_envelope
+from app.extensions import db
+from app.models import Order, OrderItem, Transaction, User
+
+
+def _dec(value):
+    if value is None:
+        return None
+    return float(value) if isinstance(value, Decimal) else value
+
+
+def _tx_to_dict(t: Transaction) -> dict:
+    return {
+        "id": t.id,
+        "provider": t.provider,
+        "provider_ref": t.provider_ref,
+        "amount": _dec(t.amount),
+        "currency": t.currency,
+        "status": t.status,
+        "created_at": t.created_at.isoformat() if t.created_at else None,
+    }
+
+
+def _order_item_line(it: OrderItem) -> dict:
+    name = it.product.name if getattr(it, "product", None) else None
+    return {
+        "product_id": it.product_id,
+        "quantity": it.quantity,
+        "product_name": name,
+        "price_at_purchase": _dec(it.price_at_purchase),
+    }
+
+
+def _order_list_item(o: Order) -> dict:
+    phone = o.member.phone_number if o.member else None
+    txs = sorted(o.transactions, key=lambda x: x.id) if o.transactions else []
+    lines = sorted(o.items, key=lambda x: x.id) if getattr(o, "items", None) else []
+    item_line_count = len(lines)
+    item_quantity_sum = sum((li.quantity or 0) for li in lines)
+    order_items = [_order_item_line(li) for li in lines]
+    return {
+        "order_id": o.order_id,
+        "machine_code": o.machine_code,
+        "user_id": o.user_id,
+        "customer_phone": phone,
+        "promotion_id": o.promotion_id,
+        "charge_id": o.charge_id,
+        "total_price": _dec(o.total_price),
+        "payment_method": o.payment_method,
+        "status": o.status,
+        "created_at": o.created_at.isoformat() if o.created_at else None,
+        "updated_at": o.updated_at.isoformat() if o.updated_at else None,
+        "transactions": [_tx_to_dict(t) for t in txs],
+        "order_items": order_items,
+        "item_line_count": item_line_count,
+        "item_quantity_sum": item_quantity_sum,
+    }
+
+
+@admin_bp.route("/orders", methods=["GET"])
+@admin_required
+def admin_list_orders():
+    page, per_page = get_pagination_params()
+    status_filter = (request.args.get("status") or "").strip() or None
+    machine_code = (request.args.get("machine_code") or "").strip() or None
+    q = (request.args.get("q") or "").strip()
+
+    filters = []
+    if status_filter:
+        filters.append(Order.status == status_filter)
+    if machine_code:
+        filters.append(Order.machine_code == machine_code)
+    if q:
+        pattern = f"%{q.lower()}%"
+        q_parts = [
+            func.lower(Order.machine_code).like(pattern),
+            func.lower(func.coalesce(Order.charge_id, "")).like(pattern),
+        ]
+        if q.isdigit():
+            try:
+                oid = int(q)
+                q_parts.append(Order.order_id == oid)
+            except ValueError:
+                pass
+        phone_match = select(User.user_id).where(
+            func.lower(User.phone_number).like(pattern)
+        )
+        q_parts.append(Order.user_id.in_(phone_match))
+        filters.append(or_(*q_parts))
+
+    count_stmt = select(func.count(Order.order_id))
+    if filters:
+        count_stmt = count_stmt.where(*filters)
+    total = db.session.scalar(count_stmt) or 0
+
+    list_stmt = select(Order).options(
+        selectinload(Order.member),
+        selectinload(Order.transactions),
+        selectinload(Order.items).selectinload(OrderItem.product),
+    )
+    if filters:
+        list_stmt = list_stmt.where(*filters)
+    list_stmt = (
+        list_stmt.order_by(Order.order_id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+    )
+    rows = db.session.scalars(list_stmt).all()
+    items = [_order_list_item(o) for o in rows]
+
+    return jsonify(list_envelope(items, total, page, per_page)), 200

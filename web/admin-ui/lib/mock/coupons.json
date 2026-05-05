@@ -1,0 +1,42 @@
+[
+  {
+    "id": "CPN-001",
+    "name": "ส่วนลด 20% สำหรับสมาชิกใหม่",
+    "type": "Percentage",
+    "points": 50,
+    "usage": 142,
+    "maxUsage": 500,
+    "expiry": "2026-05-31",
+    "status": "active"
+  },
+  {
+    "id": "CPN-002",
+    "name": "ส่วนลด 10 บาท ทุกเมนู",
+    "type": "Fixed Amount",
+    "points": 40,
+    "usage": 856,
+    "maxUsage": 1000,
+    "expiry": "2026-04-30",
+    "status": "active"
+  },
+  {
+    "id": "CPN-003",
+    "name": "ส่วนลด 50 บาท เมื่อซื้อครบ 200",
+    "type": "Fixed Amount",
+    "points": 80,
+    "usage": 500,
+    "maxUsage": 500,
+    "expiry": "2026-04-15",
+    "status": "fully_claimed"
+  },
+  {
+    "id": "CPN-004",
+    "name": "ส่วนลด 5% ประจำเดือนเมษายน",
+    "type": "Percentage",
+    "points": 0,
+    "usage": 120,
+    "maxUsage": null,
+    "expiry": "2026-04-30",
+    "status": "active"
+  }
+]

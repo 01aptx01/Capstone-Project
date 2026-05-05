@@ -1,5 +1,34 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Flask admin API
+
+- Set **`NEXT_PUBLIC_ADMIN_API_URL`** in `.env.local` (see `.env.local.example`) to a URL the **browser** can reach, e.g. `http://localhost:8000` — not a Docker-only hostname unless the browser resolves it.
+- If **machine-ui** uses port **3000**, run admin-ui on **3001**: `npx next dev -p 3001` (CORS in `docker-compose` includes `http://localhost:3001`).
+- **Still mock** (Next route handlers under `app/api/`): `/api/dashboard`, `/api/notifications`, `/api/alerts`, `/api/sales`. Products, machines, orders, coupons, and customers read from Flask `/api/admin/*`.
+
+## Docker Compose (repo root)
+
+From the project root:
+
+```bash
+docker compose up --build
+```
+
+On startup, **server**, **agent (Pi)**, **machine-ui**, **admin-ui**, and **swagger-ui** print a short URL block (`Host browser` vs in-container `Local` / `Network`). See the comment table at the top of [`docker-compose.yml`](../../docker-compose.yml) for the canonical port map.
+
+| Service | From your host |
+|---------|----------------|
+| API + Socket.IO | `http://localhost:8000` |
+| machine-ui | `http://localhost:3000` |
+| admin-ui | `http://localhost:3001` |
+| swagger-ui | `http://localhost:8081` |
+| agent (Pi) | `http://localhost:5000` |
+| MySQL | `localhost:3307` |
+
+- **admin-ui** maps host **3001** → container **3000**. Build arg `NEXT_PUBLIC_ADMIN_API_URL` defaults to `http://localhost:8000` for the browser.
+- **swagger-ui** loads `swagger.yaml` read-only; **Try it out** uses `http://localhost:8000` (CORS includes `http://localhost:8081`). Host port **8081** avoids clashing with Jenkins on **8080**.
+- Flasgger: **`http://localhost:8000/apidocs`** (same `swagger.yaml` mount on the server).
+
 ## Getting Started
 
 First, run the development server:

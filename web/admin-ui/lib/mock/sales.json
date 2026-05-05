@@ -1,0 +1,14 @@
+{
+  "summary": {
+    "today": 1458.5,
+    "yesterday": 1298.3,
+    "change_percent": 12.5
+  },
+  "transactions": [
+    { "orderId": "O1001", "time": "06:12", "machine": "M01", "amount": 120.5, "items": 3, "status": "completed" },
+    { "orderId": "O1002", "time": "07:03", "machine": "M02", "amount": 50.0, "items": 1, "status": "completed" },
+    { "orderId": "O1003", "time": "08:45", "machine": "M01", "amount": 5.0, "items": 1, "status": "refunded" },
+    { "orderId": "O1004", "time": "10:15", "machine": "M03", "amount": 180.0, "items": 4, "status": "completed" }
+  ],
+  "byHour": [0, 5, 20, 40, 80, 120, 200, 400]
+}
