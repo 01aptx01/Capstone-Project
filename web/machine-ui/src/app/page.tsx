@@ -76,8 +76,11 @@ export default function VendingPage() {
   // Card network detection is intentionally omitted — Omise token/charge handles brand internally.
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเก็บรอบการดึงสถานะจ่ายเงิน
   const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const currentChargeIdRef = useRef<string | null>(null); // เก็บค่าล่าสุดไว้ใช้ใน setInterval/setTimeout
   const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
+  const nfcBlockTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isNfcBlocked, setIsNfcBlocked] = useState(false);
 
   // -- Agent Job (Hardware) States --
   // These are now driven by the useJobSocket hook below (Socket.IO → Server)
@@ -432,6 +435,78 @@ export default function VendingPage() {
     }
   }, [activeModal, agentJobState]);
 
+  // NFC Reader Listener (จำลองการพิมพ์จากเครื่องอ่าน NFC) สำหรับบัตรเครดิตต่างๆ
+  useEffect(() => {
+    if (
+      activeModal === "payment" && 
+      selectedPaymentMethod !== null && 
+      selectedPaymentMethod !== "promptpay" && 
+      paymentStep === 2
+    ) {
+      let nfcBuffer = "";
+      let lastKeyTime = Date.now();
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (isProcessingPayment || isNfcBlocked) return;
+
+        const now = Date.now();
+        // ถ้าทิ้งช่วงกดเกิน 100ms ให้เริ่มนับใหม่ (เครื่องอ่านจะพิมพ์เร็วมาก)
+        if (now - lastKeyTime > 100) {
+          nfcBuffer = "";
+        }
+        lastKeyTime = now;
+
+        if (e.key === "Enter") {
+          if (nfcBuffer.length > 3) { // ถือว่าเป็น NFC tap
+            e.preventDefault();
+            // บล็อก NFC 5 วินาที กันผู้ใช้แปะซ้ำรัวๆ (แก้ error 500)
+            setIsNfcBlocked(true);
+            if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
+            nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
+            
+            simulateNfcTap("visa");
+            nfcBuffer = "";
+          }
+        } else if (e.key.length === 1) {
+          nfcBuffer += e.key;
+        }
+      };
+
+      window.addEventListener("keydown", handleKeyDown);
+      return () => window.removeEventListener("keydown", handleKeyDown);
+    }
+  }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
+
+  // Polling สำหรับ Hardware NFC Tap (จาก Python Agent / MFRC522)
+  useEffect(() => {
+    if (
+      activeModal === "payment" && 
+      selectedPaymentMethod !== null && 
+      selectedPaymentMethod !== "promptpay" && 
+      paymentStep === 2
+    ) {
+      const pollNfc = async () => {
+        if (isProcessingPayment || isNfcBlocked) return;
+        try {
+          // ตรวจสอบสถานะการแตะบัตรจาก Agent (localhost:5000)
+          const res = await fetch("http://localhost:5000/nfc/status");
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === "tapped") {
+              console.log("[Frontend] Hardware NFC Tap detected via Agent!");
+              simulateNfcTap("visa");
+            }
+          }
+        } catch (e) {
+          // ถ้า Agent ไม่ได้รันอยู่ หรือมีปัญหาการเชื่อมต่อ ให้เงียบไว้
+        }
+      };
+
+      const interval = setInterval(pollNfc, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
+
 
   // ==========================================
   // PAYMENT API LOGIC
@@ -460,6 +535,8 @@ export default function VendingPage() {
   };
 
   const processPayment = async (paymentData: { type: "token" | "source" | "truemoney"; id: string; amount: number; }) => {
+    if (isProcessingPayment) return;
+    setIsProcessingPayment(true);
     const controller = new AbortController();
     const timeoutMs = 60000;
     const startedAt = Date.now();
@@ -529,6 +606,7 @@ export default function VendingPage() {
       }, 3000);
     } finally {
       clearTimeout(timeoutId);
+      setIsProcessingPayment(false);
     }
   };
 
@@ -1537,13 +1615,43 @@ export default function VendingPage() {
                         </p>
                         {/* กดเพื่อจำลองการแตะบัตร NFC */}
                         <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                          <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("visa")}>
+                          <button
+                            style={{ ...testBtnStyle, width: "120px", opacity: (isProcessingPayment || isNfcBlocked) ? 0.5 : 1 }}
+                            onClick={() => {
+                              if (isProcessingPayment || isNfcBlocked) return;
+                              setIsNfcBlocked(true);
+                              if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
+                              nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
+                              simulateNfcTap("visa");
+                            }}
+                            disabled={isProcessingPayment || isNfcBlocked}
+                          >
                             Visa
                           </button>
-                          <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("mastercard")}>
+                          <button
+                            style={{ ...testBtnStyle, width: "120px", opacity: (isProcessingPayment || isNfcBlocked) ? 0.5 : 1 }}
+                            onClick={() => {
+                              if (isProcessingPayment || isNfcBlocked) return;
+                              setIsNfcBlocked(true);
+                              if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
+                              nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
+                              simulateNfcTap("mastercard");
+                            }}
+                            disabled={isProcessingPayment || isNfcBlocked}
+                          >
                             Mastercard
                           </button>
-                          <button style={{ ...testBtnStyle, width: "120px" }} onClick={() => simulateNfcTap("unionpay")}>
+                          <button
+                            style={{ ...testBtnStyle, width: "120px", opacity: (isProcessingPayment || isNfcBlocked) ? 0.5 : 1 }}
+                            onClick={() => {
+                              if (isProcessingPayment || isNfcBlocked) return;
+                              setIsNfcBlocked(true);
+                              if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
+                              nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
+                              simulateNfcTap("unionpay");
+                            }}
+                            disabled={isProcessingPayment || isNfcBlocked}
+                          >
                             UnionPay
                           </button>
                         </div>

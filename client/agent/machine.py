@@ -11,6 +11,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 logger = logging.getLogger(__name__)
 
 JOB_STATES = ["TRANSFER_TO_OVEN", "HEATING", "DISPENSING", "DONE", "ERROR"]
@@ -37,6 +43,17 @@ try:  # Optional Raspberry Pi GPIO backend.
 except Exception:  # pragma: no cover - hardware dependency
 	LED = None
 	RGBLED = None
+
+try:
+	import board
+	import busio
+	import digitalio
+	from mfrc522 import SimpleMFRC522 # type: ignore
+except ImportError:
+	board = None
+	busio = None
+	digitalio = None
+	SimpleMFRC522 = None
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
@@ -112,6 +129,11 @@ class MachineConfig:
 	rgb_led_pins: list[int] = field(default_factory=lambda: _split_ints(os.environ.get("RGB_LED_PINS")) or DEFAULT_RGB_LED_PINS.copy())
 	sound_dir: Path = field(default_factory=_sound_directory)
 	nfc_auto_approve: bool = field(default_factory=lambda: _env_flag("NFC_AUTO_APPROVE", default=True))
+	nfc_mosi_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MOSI_PIN") or 5))
+	nfc_miso_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MISO_PIN") or 6))
+	nfc_sck_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_SCK_PIN") or 13))
+	nfc_nss_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_NSS_PIN") or 19))
+	nfc_rst_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_RST_PIN") or 26))
 	browser_args: list[str] = field(
 		default_factory=lambda: [
 			"--kiosk",
@@ -281,7 +303,8 @@ class StepRGBController:
 		devices: list[Any] = []
 		for index in range(len(STEP_ORDER)):
 			start = index * 3
-			devices.append(RGBLED(red=pins[start], green=pins[start + 1], blue=pins[start + 2]))
+			# Hardware pins are ordered B, G, R
+			devices.append(RGBLED(red=pins[start + 2], green=pins[start + 1], blue=pins[start]))
 		return devices
 
 	def set_step(self, step_name: str, *, success: bool = True) -> None:
@@ -313,6 +336,22 @@ class StepRGBController:
 			for device in self._devices:
 				self._apply_color(device, color)
 
+	def set_standby(self) -> None:
+		with self._lock:
+			for step_name in STEP_ORDER:
+				self._states[step_name] = "white"
+			for device in self._devices:
+				self._apply_color(device, (1.0, 1.0, 1.0))
+
+	def set_step_active(self, step_name: str) -> None:
+		if step_name not in STEP_ORDER:
+			return
+		index = STEP_ORDER.index(step_name)
+		with self._lock:
+			self._states[step_name] = "blue"
+			device = self._devices[index]
+			self._apply_color(device, (0.0, 0.0, 1.0))
+
 	def clear(self) -> None:
 		with self._lock:
 			for step_name in STEP_ORDER:
@@ -341,6 +380,7 @@ class AudioPlayer:
 		self._lock = threading.Lock()
 		explicit = os.environ.get("VLC_COMMAND")
 		if explicit:
+			explicit = explicit.strip()
 			resolved = shutil.which(explicit)
 			self._player_cmd = resolved or explicit
 		else:
@@ -384,6 +424,75 @@ class NfcPaymentGate:
 		self._config = config
 		self._event = threading.Event()
 		self._lock = threading.Lock()
+		self._last_tap_at = 0.0
+		self._debounce_interval = 5.0 # Seconds to block after successful tap
+		
+		self._reader = None
+		self._adafruit_reader = None
+
+		if board:
+			try:
+				import bitbangio
+				# Get board pins dynamically based on config
+				sck_pin = getattr(board, f"D{self._config.nfc_sck_pin}")
+				mosi_pin = getattr(board, f"D{self._config.nfc_mosi_pin}")
+				miso_pin = getattr(board, f"D{self._config.nfc_miso_pin}")
+				nss_pin = getattr(board, f"D{self._config.nfc_nss_pin}")
+				rst_pin = getattr(board, f"D{self._config.nfc_rst_pin}")
+
+				spi = bitbangio.SPI(sck_pin, mosi_pin, miso_pin)
+				cs = digitalio.DigitalInOut(nss_pin)
+				rst = digitalio.DigitalInOut(rst_pin)
+
+				try:
+					from adafruit_mfrc522 import MFRC522 # type: ignore
+					self._adafruit_reader = MFRC522(spi, cs, rst)
+					threading.Thread(target=self._poll_loop_adafruit, daemon=True).start()
+					logger.info(f"[Machine] Adafruit MFRC522 polling started (SCK:{self._config.nfc_sck_pin}, MOSI:{self._config.nfc_mosi_pin}, MISO:{self._config.nfc_miso_pin})")
+				except ImportError:
+					if SimpleMFRC522:
+						self._reader = SimpleMFRC522()
+						threading.Thread(target=self._poll_loop, daemon=True).start()
+						logger.info("[Machine] SimpleMFRC522 hardware polling started")
+			except Exception as e:
+				logger.error(f"[Machine] NFC Hardware init failed: {e}")
+
+	def _poll_loop_adafruit(self) -> None:
+		if not self._adafruit_reader:
+			return
+		while True:
+			try:
+				# Adafruit library style
+				uid = self._adafruit_reader.read_uid()
+				if uid:
+					tag_id = "".join([hex(i) for i in uid])
+					self.handle_hardware_tap(tag_id)
+			except Exception as e:
+				logger.error(f"[Machine] Adafruit NFC Poll Error: {e}")
+			time.sleep(0.5)
+
+	def _poll_loop(self) -> None:
+		if not self._reader:
+			return
+		while True:
+			try:
+				tag_id = getattr(self._reader, "read_id_no_block", lambda: None)()
+				if tag_id:
+					self.handle_hardware_tap(str(tag_id))
+			except Exception as e:
+				logger.error(f"[Machine] Simple NFC Poll Error: {e}")
+			time.sleep(0.5)
+
+	def handle_hardware_tap(self, tag_id: str) -> None:
+		now = time.time()
+		with self._lock:
+			if now - self._last_tap_at < self._debounce_interval:
+				logger.debug(f"[Machine] NFC tag {tag_id} ignored (debouncing)")
+				return
+			
+			self._last_tap_at = now
+			logger.info(f"[Machine] NFC tag {tag_id} tapped")
+			self.tap()
 
 	def tap(self) -> None:
 		with self._lock:
@@ -445,12 +554,20 @@ class MachineController:
 
 		self.nfc.reset()
 		self.slot_leds.all_off()
-		self.step_leds.clear()
+		self.step_leds.set_standby()
 
 	def _step_index(self, step_name: str) -> Optional[int]:
 		if step_name not in STEP_ORDER:
 			return None
 		return STEP_ORDER.index(step_name)
+
+	def mark_step_active(self, step_name: str) -> None:
+		with self._lock:
+			self.state.active_step = step_name
+			self.state.last_error = None
+
+		self.step_leds.set_step_active(step_name)
+		self.audio.play_step(step_name)
 
 	def mark_step_complete(self, step_name: str) -> None:
 		with self._lock:
@@ -458,7 +575,6 @@ class MachineController:
 			self.state.last_error = None
 
 		self.step_leds.set_step(step_name, success=True)
-		self.audio.play_step(step_name)
 
 	def mark_error(self, message: str) -> None:
 		with self._lock:
@@ -503,9 +619,10 @@ class MachineController:
 				self.mark_error("NFC payment timeout")
 				return False
 
+			self.mark_step_active("TRANSFER_TO_OVEN")
 			self.mark_step_complete("TRANSFER_TO_OVEN")
 
-			self.mark_step_complete("HEATING")
+			self.mark_step_active("HEATING")
 			for item in items:
 				product_id = int(item.get("product_id") or item.get("id") or 1)
 				quantity = max(1, int(item.get("quantity") or item.get("qty") or 1))
@@ -513,11 +630,17 @@ class MachineController:
 				for _ in range(quantity):
 					self.dispense_slot(slot_index)
 
+			self.mark_step_complete("HEATING")
+
+			self.mark_step_active("DISPENSING")
 			self.mark_step_complete("DISPENSING")
+			
+			self.mark_step_active("DONE")
 			self.mark_step_complete("DONE")
+			
 			self.step_leds.set_all(success=True)
 			time.sleep(1.0)
-			self.step_leds.clear()
+			self.step_leds.set_standby()
 			return True
 		except Exception as exc:
 			self.mark_error(str(exc))
@@ -528,7 +651,9 @@ machine = MachineController.from_env()
 
 
 def bootstrap_machine() -> MachineController:
+	logger.info(f"[Machine] booting with config: {json.dumps(load_machine_config(), ensure_ascii=False)}")
 	machine.boot()
+	logger.info("[Machine] Hardware initialization complete. Waiting for jobs...")
 	return machine
 
 
@@ -557,6 +682,11 @@ def load_machine_config() -> Dict[str, Any]:
 		"rgb_led_pins": machine.config.rgb_led_pins,
 		"sound_dir": str(machine.config.sound_dir),
 		"nfc_auto_approve": machine.config.nfc_auto_approve,
+		"nfc_mosi_pin": machine.config.nfc_mosi_pin,
+		"nfc_miso_pin": machine.config.nfc_miso_pin,
+		"nfc_sck_pin": machine.config.nfc_sck_pin,
+		"nfc_nss_pin": machine.config.nfc_nss_pin,
+		"nfc_rst_pin": machine.config.nfc_rst_pin,
 	}
 
 
