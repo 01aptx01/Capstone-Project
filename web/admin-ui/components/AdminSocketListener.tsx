@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 import { getAdminSocket } from "@/lib/admin-socket";
+import { dispatchAdminAlertsRefresh } from "@/lib/admin-alerts-refresh";
 import { useLang } from "@/lib/i18n/lang";
 
 type DashboardPayload = {
@@ -31,6 +32,7 @@ export default function AdminSocketListener() {
       if (!isDashboardPayload(payload)) return;
 
       if (payload.type === "machine_event" && payload.state === "ERROR") {
+        dispatchAdminAlertsRefresh();
         const mc = payload.machine_code ?? "—";
         const jid = payload.job_id ?? "";
         const eid = payload.event_id;
