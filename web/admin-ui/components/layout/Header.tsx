@@ -4,6 +4,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLang } from "@/lib/i18n/lang";
+import type { DictKey } from "@/lib/i18n/dictionaries";
 import {
   listProducts,
   listMachines,
@@ -15,13 +17,13 @@ import {
   type ApiOrderListItem,
 } from "@/lib/admin-api";
 
-const STATIC_NAV: { href: string; label: string; keywords: string[] }[] = [
-  { href: "/", label: "แดชบอร์ด", keywords: ["dashboard", "แดช", "หน้าแรก", "home"] },
-  { href: "/products", label: "คลังสินค้า", keywords: ["สินค้า", "product", "inventory", "คลัง"] },
-  { href: "/machines", label: "จัดการตู้", keywords: ["ตู้", "machine", "vending"] },
-  { href: "/orders", label: "คำสั่งซื้อ", keywords: ["ออเดอร์", "order", "ซื้อ"] },
-  { href: "/customers", label: "ลูกค้า & คูปอง", keywords: ["ลูกค้า", "customer", "คูปอง", "member"] },
-  { href: "/settings", label: "ตั้งค่า", keywords: ["settings", "ตั้งค่า"] },
+const STATIC_NAV: { href: string; labelKey: DictKey; keywords: string[] }[] = [
+  { href: "/", labelKey: "nav.dashboard", keywords: ["dashboard", "แดช", "หน้าแรก", "home"] },
+  { href: "/products", labelKey: "nav.products", keywords: ["สินค้า", "product", "inventory", "คลัง"] },
+  { href: "/machines", labelKey: "nav.machines", keywords: ["ตู้", "machine", "vending"] },
+  { href: "/orders", labelKey: "nav.orders", keywords: ["ออเดอร์", "order", "ซื้อ"] },
+  { href: "/customers", labelKey: "nav.customersCoupons", keywords: ["ลูกค้า", "customer", "คูปอง", "member"] },
+  { href: "/settings", labelKey: "nav.settings", keywords: ["settings", "ตั้งค่า"] },
 ];
 
 const SEARCH_PER_PAGE = 8;
@@ -36,6 +38,7 @@ type Notification = {
 
 export default function Header() {
   const router = useRouter();
+  const { href, t, lang } = useLang();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -114,20 +117,20 @@ export default function Header() {
   }, []);
 
   const navigateSearch = useCallback(
-    (href: string) => {
+    (rawHref: string) => {
       setPaletteOpen(false);
       setQuery("");
       setDebouncedQuery("");
-      router.push(href);
+      router.push(href(rawHref));
     },
-    [router]
+    [router, href]
   );
 
   const navMatches = (() => {
-    const t = debouncedQuery.toLowerCase();
-    if (!t) return STATIC_NAV.slice(0, 6);
+    const q = debouncedQuery.toLowerCase();
+    if (!q) return STATIC_NAV.slice(0, 6);
     return STATIC_NAV.filter((n) =>
-      [n.label, ...n.keywords].some((s) => s.toLowerCase().includes(t))
+      [t(n.labelKey), ...n.keywords].some((s) => s.toLowerCase().includes(q))
     ).slice(0, 8);
   })();
 
@@ -170,17 +173,18 @@ export default function Header() {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   }
 
-  function fmtTime(t: string) {
+  function fmtTime(value: string) {
     try {
-      const date = new Date(t);
-      return new Intl.DateTimeFormat('th-TH', { 
-        hour: '2-digit', 
+      const date = new Date(value);
+      const locale = lang === "en" ? "en-US" : "th-TH";
+      return new Intl.DateTimeFormat(locale, {
+        hour: '2-digit',
         minute: '2-digit',
         day: '2-digit',
         month: 'short'
       }).format(date);
     } catch (e) {
-      return t;
+      return value;
     }
   }
 
@@ -198,7 +202,7 @@ export default function Header() {
               aria-expanded={paletteOpen}
               aria-controls="admin-global-search-panel"
               role="combobox"
-              placeholder="ค้นหาตู้ สินค้า ลูกค้า ออเดอร์ หรือเมนู…"
+              placeholder={t("header.searchPlaceholder")}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setPaletteOpen(true)}
@@ -219,12 +223,10 @@ export default function Header() {
               role="listbox"
             >
               {!debouncedQuery && (
-                <div className="command-hint">
-                  พิมพ์เพื่อค้นหาข้ามสินค้า ตู้ ลูกค้า และออเดอร์ หรือเลือกทางลัดด้านล่าง
-                </div>
+                <div className="command-hint">{t("header.palette.hint")}</div>
               )}
               {searchLoading && debouncedQuery && (
-                <div className="command-hint">กำลังค้นหา…</div>
+                <div className="command-hint">{t("header.palette.searching")}</div>
               )}
               {!searchLoading &&
                 debouncedQuery &&
@@ -233,12 +235,12 @@ export default function Header() {
                 !customerHits.length &&
                 !orderHits.length &&
                 navMatches.length === 0 && (
-                <div className="command-hint">ไม่พบผลลัพธ์ในฐานข้อมูลสำหรับ &ldquo;{debouncedQuery}&rdquo;</div>
+                <div className="command-hint">{t("header.palette.noResults")} &ldquo;{debouncedQuery}&rdquo;</div>
               )}
 
               {navMatches.length > 0 && (
                 <div className="command-section">
-                  <div className="command-section-title">เมนู</div>
+                  <div className="command-section-title">{t("header.palette.menu")}</div>
                   {navMatches.map((n) => (
                     <button
                       key={n.href}
@@ -247,7 +249,7 @@ export default function Header() {
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => navigateSearch(n.href)}
                     >
-                      <span className="command-row-label">{n.label}</span>
+                      <span className="command-row-label">{t(n.labelKey)}</span>
                       <span className="command-row-meta">{n.href}</span>
                     </button>
                   ))}
@@ -256,7 +258,7 @@ export default function Header() {
 
               {productHits.length > 0 && (
                 <div className="command-section">
-                  <div className="command-section-title">สินค้า</div>
+                  <div className="command-section-title">{t("header.palette.products")}</div>
                   {productHits.map((p) => (
                     <button
                       key={p.product_id}
@@ -276,7 +278,7 @@ export default function Header() {
 
               {machineHits.length > 0 && (
                 <div className="command-section">
-                  <div className="command-section-title">ตู้</div>
+                  <div className="command-section-title">{t("header.palette.machines")}</div>
                   {machineHits.map((m) => (
                     <button
                       key={m.machine_code}
@@ -296,7 +298,7 @@ export default function Header() {
 
               {customerHits.length > 0 && (
                 <div className="command-section">
-                  <div className="command-section-title">ลูกค้า</div>
+                  <div className="command-section-title">{t("header.palette.customers")}</div>
                   {customerHits.map((c) => (
                     <button
                       key={c.user_id}
@@ -316,7 +318,7 @@ export default function Header() {
 
               {orderHits.length > 0 && (
                 <div className="command-section">
-                  <div className="command-section-title">ออเดอร์</div>
+                  <div className="command-section-title">{t("header.palette.orders")}</div>
                   {orderHits.map((o) => (
                     <button
                       key={o.order_id}
@@ -350,9 +352,9 @@ export default function Header() {
           {open && (
             <div className="notification-dropdown animate-in shadow-premium" ref={dropdownRef}>
               <div className="header">
-                <div className="title">การแจ้งเตือน</div>
+                <div className="title">{t("header.notifications")}</div>
                 <button onClick={(e) => markAllRead(e)} className="mark-read">
-                  อ่านทั้งหมด
+                  {t("header.notificationsMarkAllRead")}
                 </button>
               </div>
               <div className="list">
@@ -365,7 +367,7 @@ export default function Header() {
                 {!loading && notifications.length === 0 && (
                   <div className="notification-empty">
                     <i className="fi fi-rr-inbox text-3xl opacity-20 mb-3 block"></i>
-                    <p>ไม่มีการแจ้งเตือนใหม่</p>
+                    <p>{t("header.notificationsEmpty")}</p>
                   </div>
                 )}
                 {!loading && notifications.map((n) => (
@@ -380,7 +382,7 @@ export default function Header() {
                 ))}
               </div>
               <div className="footer">
-                <Link href="/notifications">ดูทั้งหมด</Link>
+                <Link href={href("/notifications")}>{t("header.notificationsViewAll")}</Link>
               </div>
             </div>
           )}
@@ -417,20 +419,20 @@ export default function Header() {
               </div>
               
               <div className="menu-group">
-                <Link href="/profile" className="menu-item">
+                <Link href={href("/profile")} className="menu-item">
                   <i className="fi fi-rr-user"></i>
-                  <span>โปรไฟล์</span>
+                  <span>{t("header.profile")}</span>
                 </Link>
-                <Link href="/settings" className="menu-item">
+                <Link href={href("/settings")} className="menu-item">
                   <i className="fi fi-rr-settings"></i>
-                  <span>ตั้งค่า</span>
+                  <span>{t("header.settings")}</span>
                 </Link>
               </div>
               
               <div className="menu-group border-t">
-                <Link href="/logout" className="menu-item logout">
+                <Link href={href("/logout")} className="menu-item logout">
                   <i className="fi fi-rr-exit"></i>
-                  <span>ออกจากระบบ</span>
+                  <span>{t("header.logout")}</span>
                 </Link>
               </div>
             </div>

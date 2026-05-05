@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import productsData from "@/lib/mock/products.json";
+import { useLang } from "@/lib/i18n/lang";
 
 export default function ManageStock({ onCancel, onSave }: { onCancel: () => void, onSave: () => void }) {
+  const { t } = useLang();
   const [confirmAction, setConfirmAction] = useState<"save" | "cancel" | null>(null);
   const [portalMounted, setPortalMounted] = useState(false);
   const [stock, setStock] = useState(() => 
@@ -51,9 +53,9 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
   };
 
   const getStatus = (qty: number) => {
-    if (qty === 0) return { label: "Out of Stock", color: "bg-rose-100 text-rose-600 border-rose-200" };
-    if (qty < 10) return { label: "Low Stock", color: "bg-orange-100 text-[var(--primary)] border-orange-200" };
-    return { label: "In Stock", color: "bg-emerald-100 text-emerald-600 border-emerald-200" };
+    if (qty === 0) return { label: t("manageStock.status.out"), color: "bg-rose-100 text-rose-600 border-rose-200" };
+    if (qty < 10) return { label: t("manageStock.status.low"), color: "bg-orange-100 text-[var(--primary)] border-orange-200" };
+    return { label: t("manageStock.status.in"), color: "bg-emerald-100 text-emerald-600 border-emerald-200" };
   };
 
   const handleSave = () => {
@@ -77,15 +79,15 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
     <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] animate-in fade-in duration-500">
       <div className="flex items-center justify-between mb-8 pb-6 border-b border-[var(--border)]">
         <div>
-          <h3 className="text-[20px] font-black text-[var(--text)]">จัดการสต็อคสินค้า (Manage Stock)</h3>
-          <p className="text-[var(--text-muted)] text-[14px] font-medium mt-1">อัปเดตจำนวนสินค้าภายในตู้</p>
+          <h3 className="text-[20px] font-black text-[var(--text)]">{t("manageStock.title")}</h3>
+          <p className="text-[var(--text-muted)] text-[14px] font-medium mt-1">{t("manageStock.subtitle")}</p>
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
           className="flex items-center gap-2 px-5 py-2.5 bg-[var(--surface-2)] text-[var(--text)] rounded-xl text-[14px] font-bold hover:bg-[var(--border)] transition-all"
         >
           <i className="fi fi-rr-plus"></i>
-          เพิ่มสินค้าใหม่
+          {t("manageStock.addProduct")}
         </button>
       </div>
 
@@ -93,10 +95,10 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[var(--surface-2)] border-b border-[var(--border)]">
-              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider w-[80px] whitespace-nowrap">Edit</th>
-              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap">Product Name</th>
-              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider w-[200px] whitespace-nowrap">Quantity</th>
-              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider w-[150px] whitespace-nowrap">Status</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider w-[80px] whitespace-nowrap">{t("manageStock.table.col.edit")}</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider whitespace-nowrap">{t("manageStock.table.col.productName")}</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider w-[200px] whitespace-nowrap">{t("manageStock.table.col.quantity")}</th>
+              <th className="px-6 py-4 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-wider w-[150px] whitespace-nowrap">{t("manageStock.table.col.status")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
@@ -163,13 +165,13 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
           onClick={handleCancel}
           className="px-8 py-3 bg-[var(--surface-1)] border-2 border-[var(--border)] text-[var(--text-muted)] rounded-xl font-bold shadow-sm hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-all"
         >
-          Cancel
+          {t("manageStock.cancel")}
         </button>
         <button 
           onClick={handleSave}
           className="px-8 py-3 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-xl font-black shadow-[0_8px_20px_rgba(244,123,42,0.25)] hover:shadow-[0_10px_25px_rgba(244,123,42,0.35)] hover:-translate-y-0.5 transition-all"
         >
-          Save Changes
+          {t("manageStock.saveChanges")}
         </button>
       </div>
 
@@ -189,8 +191,8 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
           <div className="bg-[var(--surface-1)] w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300">
             <div className="px-8 py-6 border-b border-[var(--border)] flex items-center justify-between bg-[var(--surface-2)]/50">
               <div>
-                <h3 className="text-[20px] font-black text-[var(--text)]">เพิ่มสินค้าใหม่</h3>
-                <p className="text-[var(--text)]0 text-[14px] font-medium mt-1">เลือกสินค้าจากคลังเพื่อเพิ่มลงในตู้</p>
+                <h3 className="text-[20px] font-black text-[var(--text)]">{t("manageStock.addModalTitle")}</h3>
+                <p className="text-[var(--text-muted)] text-[14px] font-medium mt-1">{t("manageStock.addModalSubtitle")}</p>
               </div>
               <button 
                 onClick={() => setIsAddModalOpen(false)}
@@ -206,7 +208,7 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
                 <input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="ค้นหาชื่อสินค้า หรือรหัสสินค้า..."
+                  placeholder={t("manageStock.searchPlaceholder")}
                   className="w-full pl-14 pr-6 py-4 rounded-2xl border-2 border-[var(--border)] bg-[var(--surface-2)] focus:bg-[var(--surface-1)] focus:border-[var(--primary)] outline-none transition-all font-bold text-[var(--text)] placeholder:text-[var(--text-muted)]"
                 />
               </div>
@@ -215,7 +217,7 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
                 {availableProducts.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-[var(--text-muted)] gap-3 py-10">
                     <i className="fi fi-rr-box-open text-4xl opacity-50"></i>
-                    <p className="font-bold">ไม่พบสินค้าที่ค้นหา</p>
+                    <p className="font-bold">{t("manageStock.empty")}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -243,7 +245,7 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
               {selectedProductId && (
                 <div className="bg-orange-50/50 border border-orange-100 rounded-2xl p-5 flex items-center justify-between animate-in slide-in-from-bottom-4">
                   <div>
-                    <div className="text-[13px] font-bold text-[var(--text)]0 mb-1">ระบุจำนวนเริ่มต้น</div>
+                    <div className="text-[13px] font-bold text-[var(--text-muted)] mb-1">{t("manageStock.initialQty")}</div>
                     <div className="flex items-center gap-3 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl p-1 w-max shadow-sm">
                       <button 
                         onClick={() => setInitialQuantity(q => Math.max(1, q - 1))}
@@ -269,7 +271,7 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
                     onClick={handleAddProduct}
                     className="px-8 py-3.5 bg-[var(--primary)] text-[var(--primary-contrast)] rounded-xl font-black shadow-[0_8px_20px_rgba(244,123,42,0.25)] hover:-translate-y-0.5 transition-all"
                   >
-                    ยืนยันการเพิ่ม
+                    {t("manageStock.confirmAdd")}
                   </button>
                 </div>
               )}
@@ -298,10 +300,14 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
               </div>
               <div>
                 <h3 className="text-[18px] font-black text-[var(--text)]">
-                  {confirmAction === "save" ? "Confirm Save" : "Discard Changes"}
+                  {confirmAction === "save"
+                    ? t("manageStock.confirm.saveTitle")
+                    : t("manageStock.confirm.discardTitle")}
                 </h3>
                 <p className="text-[var(--text)]0 text-[13px] font-medium leading-tight">
-                  Are you sure you want to {confirmAction === "save" ? "save these changes?" : "discard these changes?"}
+                  {confirmAction === "save"
+                    ? t("manageStock.confirm.saveBody")
+                    : t("manageStock.confirm.discardBody")}
                 </p>
               </div>
             </div>
@@ -310,7 +316,7 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
                 onClick={() => setConfirmAction(null)}
                 className="px-5 py-2.5 bg-[var(--surface-2)] text-[var(--text)] rounded-xl font-bold hover:bg-[var(--border)] transition-all text-[14px]"
               >
-                No, go back
+                {t("manageStock.confirm.noGoBack")}
               </button>
               <button 
                 onClick={confirmActionHandler}
@@ -320,7 +326,9 @@ export default function ManageStock({ onCancel, onSave }: { onCancel: () => void
                     : 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/20 hover:shadow-rose-500/40'
                 }`}
               >
-                Yes, {confirmAction === "save" ? "Save" : "Discard"}
+                {confirmAction === "save"
+                  ? t("manageStock.confirm.yesSave")
+                  : t("manageStock.confirm.yesDiscard")}
               </button>
             </div>
           </div>

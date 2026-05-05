@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import Modal from "@/components/ui/Modal";
 import { updateMachine } from "@/lib/admin-api";
 import { ADMIN_MACHINES_REFRESH_EVENT } from "@/components/machines/AddMachineModal";
+import { useLang } from "@/lib/i18n/lang";
 
 interface EditMachineModalProps {
   open: boolean;
@@ -12,13 +13,16 @@ interface EditMachineModalProps {
   machine: Record<string, unknown> | null;
 }
 
-const STATUS_OPTIONS: { value: string; label: string }[] = [
-  { value: "online", label: "พร้อมขาย (online)" },
-  { value: "maintenance", label: "ซ่อมบำรุง (maintenance)" },
-  { value: "offline", label: "ปิด / ออฟไลน์ (offline)" },
-];
-
 export default function EditMachineModal({ open, onClose, machine }: EditMachineModalProps) {
+  const { t } = useLang();
+  const STATUS_OPTIONS = useMemo<{ value: string; label: string }[]>(
+    () => [
+      { value: "online", label: t("editMachine.option.online") },
+      { value: "maintenance", label: t("editMachine.option.maintenance") },
+      { value: "offline", label: t("editMachine.option.offline") },
+    ],
+    [t]
+  );
   const [machineCode, setMachineCode] = useState("");
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("online");
@@ -40,7 +44,7 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!machineCode) {
-      toast.error("ไม่พบรหัสตู้");
+      toast.error(t("editMachine.errorNotFound"));
       return;
     }
     setSaving(true);
@@ -49,13 +53,13 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
         location: location.trim() === "" ? null : location.trim(),
         status,
       });
-      toast.success("บันทึกข้อมูลตู้แล้ว");
+      toast.success(t("editMachine.toastSaved"));
       if (typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent(ADMIN_MACHINES_REFRESH_EVENT));
       }
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "บันทึกไม่สำเร็จ";
+      const msg = err instanceof Error ? err.message : t("editMachine.toastFailed");
       toast.error(msg);
     } finally {
       setSaving(false);
@@ -63,7 +67,7 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="แก้ไขข้อมูลตู้ขายสินค้า">
+    <Modal open={open} onClose={onClose} title={t("editMachine.title")}>
       <div className="relative overflow-hidden">
         <div className="absolute top-0 right-0 -z-10 p-12 opacity-5 pointer-events-none">
           <svg
@@ -81,13 +85,13 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 relative z-10 p-2">
-          <p className="text-[12px] font-bold text-[var(--text)]0 leading-relaxed">
-            รหัสตู้ (machine_code) อ่านอย่างเดียวจากฐานข้อมูล — แก้ได้เฉพาะสถานที่และสถานะปฏิบัติการ
+          <p className="text-[12px] font-bold text-[var(--text-muted)] leading-relaxed">
+            {t("editMachine.note")}
           </p>
 
           <div className="group space-y-2">
             <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em]">
-              รหัสตู้
+              {t("editMachine.label.machineId")}
             </label>
             <input
               type="text"
@@ -99,7 +103,7 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
 
           <div className="group space-y-2">
             <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
-              สถานที่ตั้ง (location)
+              {t("editMachine.label.location")}
             </label>
             <div className="relative">
               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors">
@@ -107,7 +111,7 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
               </span>
               <input
                 type="text"
-                placeholder="เว้นว่างได้ — จะบันทึกเป็นค่าว่างในระบบ"
+                placeholder={t("editMachine.placeholder.location")}
                 className="w-full pl-14 pr-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[24px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[var(--text)]"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -118,7 +122,7 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
 
           <div className="group space-y-2">
             <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
-              สถานะปฏิบัติการ (status ในฐานข้อมูล)
+              {t("editMachine.label.status")}
             </label>
             <div className="relative">
               <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none">
@@ -147,16 +151,16 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="flex-1 px-8 py-5 bg-[var(--surface-2)] text-[var(--text)]0 rounded-[28px] text-[15px] font-black hover:bg-[var(--border)] transition-all active:scale-95 disabled:opacity-50"
+              className="flex-1 px-8 py-5 bg-[var(--surface-2)] text-[var(--text-muted)] rounded-[28px] text-[15px] font-black hover:bg-[var(--border)] transition-all active:scale-95 disabled:opacity-50"
             >
-              ยกเลิก
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="flex-[2] px-8 py-5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-[28px] text-[16px] font-black shadow-[0_20px_40px_rgba(244,123,42,0.25)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.35)] hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <span>{saving ? "กำลังบันทึก…" : "บันทึกการแก้ไข"}</span>
+              <span>{saving ? t("editMachine.saving") : t("editMachine.save")}</span>
               <div className="w-8 h-8 bg-[var(--surface-1)]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <i className="fi fi-rr-check text-lg"></i>
               </div>

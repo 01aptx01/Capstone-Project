@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { listProducts } from "@/lib/admin-api";
 import { enrichProductsWithStock, type UiProductRow } from "@/lib/admin-mappers";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { useLang } from "@/lib/i18n/lang";
 
 const REFRESH = "admin-products-refresh";
 
@@ -24,6 +25,7 @@ export default function ProductTable({
   listQuery = "",
 }: ProductTableProps) {
   const { openEditProduct } = useUI();
+  const { t } = useLang();
   const [products, setProducts] = useState<UiProductRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -109,13 +111,13 @@ export default function ProductTable({
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-[var(--surface-2)]/50">
-              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">ข้อมูลสินค้า</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">หมวดหมู่</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">จำนวนตู้ที่จำหน่าย</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">คงเหลือ</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">ราคา</th>
-              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">สถานะ</th>
-              <th className="px-8 py-6 text-center text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">จัดการ</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">{t("product.table.col.info")}</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">{t("product.table.col.category")}</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">{t("product.table.col.machines")}</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">{t("product.table.col.qty")}</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">{t("product.table.col.price")}</th>
+              <th className="px-8 py-6 text-left text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">{t("product.table.col.status")}</th>
+              <th className="px-8 py-6 text-center text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.15em] whitespace-nowrap">{t("product.table.col.actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -134,7 +136,7 @@ export default function ProductTable({
                     <div className="w-20 h-20 bg-[var(--surface-2)] rounded-full flex items-center justify-center">
                       <i className="fi fi-rr-search text-[32px]"></i>
                     </div>
-                    <p className="text-[15px] font-bold text-[var(--text)]0">ไม่พบข้อมูลสินค้าที่ค้นหา</p>
+                    <p className="text-[15px] font-bold text-[var(--text-muted)]">{t("product.table.empty")}</p>
                   </div>
                 </td>
               </tr>
@@ -182,13 +184,13 @@ export default function ProductTable({
                         <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-[13px] font-black text-[var(--primary)]">
                           {p.machines}
                         </div>
-                        <span className="text-[13px] font-bold text-[var(--text-muted)]">จุดติดตั้ง</span>
+                        <span className="text-[13px] font-bold text-[var(--text-muted)]">{t("product.table.installPoint")}</span>
                       </div>
                     </td>
                     <td className="px-8 py-5">
                       <span className="text-[17px] font-black text-[var(--text)]">
                         {p.quantity}{" "}
-                        <span className="text-[13px] font-bold text-[var(--text-muted)] ml-1">ชิ้น</span>
+                        <span className="text-[13px] font-bold text-[var(--text-muted)] ml-1">{t("product.table.unit")}</span>
                       </span>
                     </td>
                     <td className="px-8 py-5">
@@ -204,7 +206,7 @@ export default function ProductTable({
                           whileTap={{ scale: 0.9 }}
                           onClick={() => openEditProduct(p as unknown as Record<string, unknown>)}
                           className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-orange-200 hover:shadow-lg hover: transition-colors"
-                          title="แก้ไขข้อมูล"
+                          title={t("product.table.titleEdit")}
                         >
                           <i className="fi fi-rr-edit text-lg"></i>
                         </motion.button>
@@ -212,7 +214,7 @@ export default function ProductTable({
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                           className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] hover:text-rose-500 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-100 transition-colors"
-                          title="ดูประวัติสต็อก"
+                          title={t("product.table.titleHistory")}
                         >
                           <i className="fi fi-rr-time-past text-lg"></i>
                         </motion.button>
@@ -228,7 +230,9 @@ export default function ProductTable({
 
       <div className="bg-[var(--surface-2)]/50 px-8 py-6 border-t border-[var(--border)] flex items-center justify-between">
         <div className="text-[13px] font-black text-[var(--text-muted)] uppercase tracking-wider">
-          แสดง {filteredProducts.length} รายการ (จากทั้งหมด {products.length} ที่โหลด)
+          {t("product.table.footer")
+            .replace("{filtered}", String(filteredProducts.length))
+            .replace("{total}", String(products.length))}
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -236,7 +240,7 @@ export default function ProductTable({
             onClick={() => load()}
             className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-sm font-bold text-[var(--text)] hover:border-[var(--primary)]"
           >
-            รีเฟรช
+            {t("product.refresh")}
           </button>
         </div>
       </div>

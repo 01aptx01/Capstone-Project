@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useUI } from "@/lib/context/UIContext";
+import { useLang } from "@/lib/i18n/lang";
+import type { DictKey } from "@/lib/i18n/dictionaries";
 
 interface MachineCardProps {
   id: string;
@@ -13,11 +15,11 @@ interface MachineCardProps {
   image?: string;
 }
 
-function statusLabel(status: string | undefined): string {
+function statusKey(status: string | undefined): DictKey {
   const s = (status || "online").toLowerCase();
-  if (s === "maintenance") return "ซ่อมบำรุง";
-  if (s === "offline") return "ออฟไลน์";
-  return "พร้อมขาย";
+  if (s === "maintenance") return "machine.card.statusMaintenance";
+  if (s === "offline") return "machine.card.statusOffline";
+  return "machine.card.statusOnline";
 }
 
 export default function MachineCard({
@@ -30,6 +32,7 @@ export default function MachineCard({
   image,
 }: MachineCardProps) {
   const { openEditMachine } = useUI();
+  const { t, href } = useLang();
   const st = (status || "online").toLowerCase();
   const operationalOnline = st === "online";
   const socketConnected = Boolean(isSocketOnline);
@@ -42,7 +45,7 @@ export default function MachineCard({
 
   return (
     <Link
-      href={`/machines/${encodeURIComponent(id)}`}
+      href={href(`/machines/${encodeURIComponent(id)}`)}
       className="group block bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] p-4 transition-all duration-300 hover:shadow-[0_10px_30px_rgba(0,0,0,0.05)] hover:-translate-y-1"
     >
       <div className="relative bg-[var(--surface-2)] rounded-[16px] aspect-[1.7/1] flex items-center justify-center mb-5 overflow-hidden">
@@ -59,21 +62,21 @@ export default function MachineCard({
         <div className="absolute top-4 left-4 flex flex-col gap-1.5 max-w-[70%]">
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 ${opBadgeClass} text-[var(--primary-contrast)] text-[9px] font-black uppercase tracking-wider rounded-md shadow-sm`}
-            title="สถานะปฏิบัติการในฐานข้อมูล (machines.status)"
+            title={t("machine.card.opStatusTitle")}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full bg-[var(--surface-1)] ${operationalOnline ? "animate-pulse" : ""}`}
             ></span>
-            {statusLabel(status)}
+            {t(statusKey(status))}
           </div>
           <div
             className={`flex items-center gap-1.5 px-2.5 py-1 ${socketConnected ? "bg-sky-600" : "bg-[var(--text-muted)]"} text-[var(--primary-contrast)] text-[9px] font-black uppercase tracking-wider rounded-md shadow-sm`}
-            title="การเชื่อมต่อ Socket.IO ล่าสุด (machines.is_online)"
+            title={t("machine.card.socketTitle")}
           >
             <span
               className={`w-1.5 h-1.5 rounded-full bg-[var(--surface-1)] ${socketConnected ? "animate-pulse" : ""}`}
             ></span>
-            {socketConnected ? "เชื่อมต่อ" : "ไม่เชื่อมต่อ"}
+            {socketConnected ? t("machine.card.socketOn") : t("machine.card.socketOff")}
           </div>
         </div>
 

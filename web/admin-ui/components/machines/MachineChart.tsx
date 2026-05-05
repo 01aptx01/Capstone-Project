@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useLang } from "@/lib/i18n/lang";
 
 const fallbackDay = [15, 30, 95, 180, 250, 160, 110, 60];
 const fallbackWeek = [600, 720, 560, 900, 1100, 1050, 1280];
@@ -13,6 +14,7 @@ function formatCurrency(n: number) {
 }
 
 export default function MachineChart() {
+  const { t } = useLang();
   const [viewMode, setViewMode] = useState<"realtime" | "historical">("realtime");
   const [realtimePeriod, setRealtimePeriod] = useState("Day");
   const [historicalPeriod, setHistoricalPeriod] = useState("Day");
@@ -185,7 +187,7 @@ export default function MachineChart() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <h3 className="text-[18px] font-bold text-[var(--text)]">
-              กราฟยอดขายตู้
+              {t("chart.machineTitle")}
             </h3>
             <div className="flex items-center bg-[var(--surface-2)] p-1 rounded-xl">
               <button
@@ -235,7 +237,7 @@ export default function MachineChart() {
             exit={{ opacity: 0, height: 0 }}
             className="flex items-center gap-4 pt-2 border-t border-[var(--border)] overflow-hidden"
           >
-            <span className="text-[14px] font-medium text-[var(--text-muted)]">ระบุช่วงเวลา:</span>
+            <span className="text-[14px] font-medium text-[var(--text-muted)]">{t("chart.rangeLabel")}</span>
             {historicalPeriod === "Day" && (
               <div className="flex items-center gap-2">
                 <input 
@@ -244,7 +246,7 @@ export default function MachineChart() {
                   value={dateRange.start}
                   onChange={(e) => setDateRange(s => ({...s, start: e.target.value}))}
                 />
-                <span className="text-[var(--text-muted)] text-[13px] font-medium">ถึง</span>
+                <span className="text-[var(--text-muted)] text-[13px] font-medium">{t("datePicker.through")}</span>
                 <input 
                   type="date" 
                   className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)]"
@@ -261,7 +263,7 @@ export default function MachineChart() {
                   value={monthRange.start}
                   onChange={(e) => setMonthRange(s => ({...s, start: e.target.value}))}
                 />
-                <span className="text-[var(--text-muted)] text-[13px] font-medium">ถึง</span>
+                <span className="text-[var(--text-muted)] text-[13px] font-medium">{t("datePicker.through")}</span>
                 <input 
                   type="month" 
                   className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)]"
@@ -279,7 +281,7 @@ export default function MachineChart() {
                   value={yearRange.start}
                   onChange={(e) => setYearRange(s => ({...s, start: e.target.value}))}
                 />
-                <span className="text-[var(--text-muted)] text-[13px] font-medium">ถึง</span>
+                <span className="text-[var(--text-muted)] text-[13px] font-medium">{t("datePicker.through")}</span>
                 <input 
                   type="number" 
                   placeholder="YYYY"

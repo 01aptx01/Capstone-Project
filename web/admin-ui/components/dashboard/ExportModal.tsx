@@ -9,6 +9,7 @@ import {
   type ExportPDFSection,
 } from "@/lib/utils/exportUtils";
 import { ExportSection } from "@/lib/context/UIContext";
+import { useLang } from "@/lib/i18n/lang";
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -18,6 +19,7 @@ interface ExportModalProps {
 }
 
 export default function ExportModal({ isOpen, onClose, sections, pageTitle }: ExportModalProps) {
+  const { t } = useLang();
   const [selectedSections, setSelectedSections] = useState<string[]>([]);
   const [exportFormats, setExportFormats] = useState<Set<'csv' | 'pdf'>>(new Set(['csv']));
   const [isExporting, setIsExporting] = useState(false);
@@ -79,7 +81,7 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
       }
 
       if (fetched.length === 0) {
-        alert("กรุณาเลือกข้อมูลอย่างน้อย 1 อย่าง");
+        alert(t("exportModal.selectAtLeast"));
         return;
       }
 
@@ -106,7 +108,7 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
 
       if (exportFormats.has("csv")) {
         if (allData.length === 0) {
-          alert("ไม่มีข้อมูลสำหรับ CSV");
+          alert(t("exportModal.noCsvData"));
         } else {
           exportToCSV(allData, allColumns, filename, { reportTitle: pageTitle });
         }
@@ -151,8 +153,8 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
               <i className="fi fi-rr-download" />
             </div>
             <div>
-              <h2 className="text-[20px] font-black text-[var(--text)] tracking-tight leading-none">ส่งออกข้อมูล</h2>
-              <p className="text-[13px] text-[var(--text)]0 font-bold mt-1.5 uppercase tracking-wider">{pageTitle}</p>
+              <h2 className="text-[20px] font-black text-[var(--text)] tracking-tight leading-none">{t("exportModal.title")}</h2>
+              <p className="text-[13px] text-[var(--text-muted)] font-bold mt-1.5 uppercase tracking-wider">{pageTitle}</p>
             </div>
           </div>
           <button onClick={onClose} className="w-10 h-10 flex items-center justify-center rounded-full bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text)] transition-all shadow-sm">
@@ -165,12 +167,12 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
           {/* 1. Data Selection */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">1 — เลือกข้อมูลที่ต้องการ</p>
+              <p className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">{t("exportModal.step1")}</p>
               <button 
                 onClick={() => setSelectedSections(selectedSections.length === sections.length ? [] : sections.map(s => s.id))}
                 className="text-[12px] font-black text-[var(--primary)] hover:underline uppercase tracking-wider"
               >
-                {selectedSections.length === sections.length ? "Clear All" : "Select All"}
+                {selectedSections.length === sections.length ? t("exportModal.clearAll") : t("exportModal.selectAll")}
               </button>
             </div>
             <div className="space-y-2.5">
@@ -201,7 +203,7 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
 
           {/* 2. Format Selection */}
           <div className="space-y-4">
-            <p className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">2 — รูปแบบไฟล์</p>
+            <p className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">{t("exportModal.step2")}</p>
             <div className="grid grid-cols-2 gap-4">
               {formatKeys.map(fmt => {
                 const info = formatInfo[fmt];
@@ -236,7 +238,7 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
 
         {/* Footer */}
         <div className="p-8 bg-[var(--surface-2)]/50 border-t border-[var(--border)] flex gap-4">
-          <button onClick={onClose} className="flex-1 py-4 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)]0 font-black text-[15px] rounded-2xl hover:bg-[var(--surface-2)] transition-all active:scale-95">ยกเลิก</button>
+          <button onClick={onClose} className="flex-1 py-4 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] font-black text-[15px] rounded-2xl hover:bg-[var(--surface-2)] transition-all active:scale-95">{t("common.cancel")}</button>
           <button 
             onClick={handleExport}
             disabled={isExporting || selectedSections.length === 0}
@@ -244,10 +246,10 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
           >
             {isExporting ? (
               <span className="flex items-center justify-center gap-2">
-                <i className="fi fi-rr-spinner animate-spin" /> กำลังส่งออก...
+                <i className="fi fi-rr-spinner animate-spin" /> {t("exportModal.exporting")}
               </span>
             ) : (
-              <span>ดาวน์โหลดข้อมูล ({selectedSections.length} รายการ)</span>
+              <span>{t("exportModal.download").replace("{n}", String(selectedSections.length))}</span>
             )}
           </button>
         </div>

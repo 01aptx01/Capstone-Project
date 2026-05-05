@@ -150,6 +150,8 @@ export type UiOrderRow = {
   id: string;
   time: string;
   items: string;
+  lineCount: number;
+  qtySum: number;
   amount: number;
   status: string;
   machine_code?: string;
@@ -169,12 +171,14 @@ export function apiOrderToUiRow(o: ApiOrderListItem): UiOrderRow {
       : lines.reduce((s, li) => s + (li.quantity || 0), 0);
   let itemsLabel = "—";
   if (lineCount > 0) {
-    itemsLabel = `${lineCount} รายการ (${qtySum} ชิ้น)`;
+    itemsLabel = `${lineCount} (${qtySum})`;
   }
   return {
     id: String(o.order_id),
     time: o.created_at || "—",
     items: itemsLabel,
+    lineCount,
+    qtySum,
     amount: o.total_price,
     status: o.status,
     machine_code: o.machine_code,

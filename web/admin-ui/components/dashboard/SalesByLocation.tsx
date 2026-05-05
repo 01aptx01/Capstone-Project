@@ -1,19 +1,22 @@
 "use client";
 
+import { useLang } from "@/lib/i18n/lang";
+
 export default function SalesByLocation() {
+  const { t } = useLang();
   const locations = [
-    { name: "อาคาร LX (พหุวิทยาการ)", value: 56025, percentage: 45 },
-    { name: "อาคารวิศวกรรมศาสตร์ S11", value: 32140, percentage: 26 },
-    { name: "อาคาร CB1", value: 24335, percentage: 19 },
-    { name: "หอพักนักศึกษา", value: 12000, percentage: 10 },
+    { name: t("salesByLocation.loc1"), value: 56025, percentage: 45 },
+    { name: t("salesByLocation.loc2"), value: 32140, percentage: 26 },
+    { name: t("salesByLocation.loc3"), value: 24335, percentage: 19 },
+    { name: t("salesByLocation.loc4"), value: 12000, percentage: 10 },
   ];
 
   return (
     <div className="vibrant-card !rounded-[40px] p-8 h-full shadow-2xl shadow-orange-900/[0.03]">
       <div className="flex justify-between items-center mb-10">
         <div>
-          <h3 className="text-[22px] font-black text-[var(--text)] tracking-tight mb-1">Sales by Location</h3>
-          <p className="text-[14px] font-semibold text-[var(--text-muted)]">Distribution across campus</p>
+          <h3 className="text-[22px] font-black text-[var(--text)] tracking-tight mb-1">{t("salesByLocation.title")}</h3>
+          <p className="text-[14px] font-semibold text-[var(--text-muted)]">{t("salesByLocation.subtitle")}</p>
         </div>
       </div>
 
@@ -32,7 +35,7 @@ export default function SalesByLocation() {
                   <span className="text-[15px] font-black text-[var(--text)] block mb-0.5">
                     {loc.name}
                   </span>
-                  <span className="text-[12px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{loc.percentage}% Contribution</span>
+                  <span className="text-[12px] font-bold text-[var(--text-muted)] uppercase tracking-widest">{t("salesByLocation.contribution").replace("{n}", String(loc.percentage))}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -51,4 +54,3 @@ export default function SalesByLocation() {
     </div>
   );
 }
-

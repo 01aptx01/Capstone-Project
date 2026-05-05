@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import toast from "react-hot-toast";
 import { getAdminSocket } from "@/lib/admin-socket";
+import { useLang } from "@/lib/i18n/lang";
 
 type DashboardPayload = {
   type?: string;
@@ -21,6 +22,8 @@ function isDashboardPayload(p: unknown): p is DashboardPayload {
  * Mounts once in the app shell: connects admin Socket.IO and listens for server events.
  */
 export default function AdminSocketListener() {
+  const { t } = useLang();
+
   useEffect(() => {
     const s = getAdminSocket();
 
@@ -28,7 +31,7 @@ export default function AdminSocketListener() {
       if (!isDashboardPayload(payload)) return;
 
       if (payload.type === "machine_event" && payload.state === "ERROR") {
-        const mc = payload.machine_code ?? "ตู้";
+        const mc = payload.machine_code ?? "—";
         const jid = payload.job_id ?? "";
         const eid = payload.event_id;
         const dedupeKey =
@@ -37,10 +40,10 @@ export default function AdminSocketListener() {
             : `admin-err-${mc}-${jid}-${payload.ts ?? ""}`;
         toast.error(
           <span>
-            <strong>ข้อผิดพลาดจากตู้ {mc}</strong>
+            <strong>{t("alerts.toast.machineErrorTitle").replace("{code}", mc)}</strong>
             <br />
             <span className="text-sm opacity-90">
-              เปิดหน้า Alerts เพื่อตรวจสอบและ Resolve
+              {t("alerts.toast.openAlerts")}
               {jid ? ` (job: ${jid})` : ""}
             </span>
           </span>,
@@ -75,7 +78,7 @@ export default function AdminSocketListener() {
       s.off("connect", onConnect);
       s.off("connect_error", onConnectError);
     };
-  }, []);
+  }, [t]);
 
   return null;
 }

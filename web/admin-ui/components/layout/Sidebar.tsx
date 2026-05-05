@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
+import { useLang } from "@/lib/i18n/lang";
 import {
   LayoutDashboard,
   Package,
@@ -14,19 +15,20 @@ import {
 
 export default function Sidebar() {
   const pathname = usePathname() || "/";
+  const { href, t } = useLang();
 
   const nav: { name: string; href: string; Icon: LucideIcon }[] = [
-    { name: "แดชบอร์ด", href: "/", Icon: LayoutDashboard },
-    { name: "คลังสินค้า", href: "/products", Icon: Package },
-    { name: "จัดการตู้", href: "/machines", Icon: Cpu },
-    { name: "คำสั่งซื้อ", href: "/orders", Icon: ShoppingCart },
-    { name: "ลูกค้า & คูปอง", href: "/customers", Icon: Users },
+    { name: t("nav.dashboard"), href: "/", Icon: LayoutDashboard },
+    { name: t("nav.products"), href: "/products", Icon: Package },
+    { name: t("nav.machines"), href: "/machines", Icon: Cpu },
+    { name: t("nav.orders"), href: "/orders", Icon: ShoppingCart },
+    { name: t("nav.customersCoupons"), href: "/customers", Icon: Users },
   ];
 
   return (
     <aside className="sidebar">
       <div className="sidebar-top">
-        <Link href="/" className="sidebar-brand group">
+        <Link href={href("/")} className="sidebar-brand group">
           <div className="logo-container group-hover:rotate-[360deg] transition-transform duration-1000">
             <Image
               src="/Logo_modpao.png"
@@ -52,7 +54,7 @@ export default function Sidebar() {
           return (
             <Link
               key={item.name}
-              href={item.href}
+              href={href(item.href)}
               className={`sidebar-link ${active ? "active group" : "hover-trigger group"} animate-slide-left opacity-0`}
               style={{
                 animationDelay: `${index * 80}ms`,
@@ -98,7 +100,7 @@ export default function Sidebar() {
       <div className="sidebar-bottom px-6 pb-10">
         <div className="bottom-links flex flex-col gap-2">
           <Link
-            href="/settings"
+            href={href("/settings")}
             className={`bottom-link group flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${pathname === "/settings" ? "active" : ""}`}
           >
             <div
@@ -112,11 +114,11 @@ export default function Sidebar() {
               <i className="fi fi-rr-settings text-lg"></i>
             </div>
             <span className="font-bold text-[15px]" style={{ color: "var(--text)" }}>
-              ตั้งค่า
+              {t("nav.settings")}
             </span>
           </Link>
           <Link
-            href="/logout"
+            href={href("/logout")}
             className="bottom-link group logout flex items-center gap-3 px-3 py-2 rounded-xl transition-all"
           >
             <div
@@ -130,7 +132,7 @@ export default function Sidebar() {
               <i className="fi fi-rr-exit text-lg"></i>
             </div>
             <span className="font-bold text-[15px]" style={{ color: "var(--danger)" }}>
-              ออกจากระบบ
+              {t("nav.logout")}
             </span>
           </Link>
         </div>

@@ -20,11 +20,13 @@ import {
   type RechartsSalesDatum,
   type UiDashboardStatCards,
 } from "@/lib/admin-mappers";
+import { useLang } from "@/lib/i18n/lang";
 
 const SALES_REPORT_DAYS = 30;
 
 export default function Home() {
   const { openExportModal } = useUI();
+  const { t, href } = useLang();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UiDashboardStatCards | null>(null);
@@ -56,7 +58,7 @@ export default function Home() {
       setTopProductNames(summary.top_products.map((p) => p.name).slice(0, 5));
     } catch (e) {
       console.error(e);
-      setError(e instanceof Error ? e.message : "โหลดแดชบอร์ดไม่สำเร็จ");
+      setError(e instanceof Error ? e.message : t("page.dashboard.errorLoad"));
       setStats(null);
       setRechartsData([]);
       setLiveBuckets(null);
@@ -64,7 +66,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -77,39 +79,42 @@ export default function Home() {
     return [
       {
         id: "overview",
-        label: "ข้อมูลภาพรวม (Overview Stats)",
-        description: "ยอดขายรวม, จำนวนคำสั่งซื้อ, และตู้ที่พร้อมใช้งาน",
+        label: t("page.dashboard.export.overview"),
+        description: t("page.dashboard.export.overviewDesc"),
         columns: [
-          { key: "metric", label: "หัวข้อ" },
-          { key: "value", label: "ค่าที่ได้" },
+          { key: "metric", label: t("page.dashboard.export.col.topic") },
+          { key: "value", label: t("page.dashboard.export.col.value") },
         ],
         fetchData: async () => [
           {
-            metric: "ยอดขายวันนี้ (สำเร็จ)",
+            metric: t("page.dashboard.export.metric.salesToday"),
             value: s?.salesTodayLabel ?? "—",
           },
           {
-            metric: "จำนวนออเดอร์วันนี้ (สำเร็จ)",
+            metric: t("page.dashboard.export.metric.ordersToday"),
             value: s != null ? String(s.ordersToday) : "—",
           },
           {
-            metric: "ตู้ออนไลน์ / ทั้งหมด",
+            metric: t("page.dashboard.export.metric.machinesOnline"),
             value: s != null ? `${s.machinesOnline} / ${s.machinesTotal}` : "—",
           },
           {
-            metric: "แจ้งเตือนสต็อกต่ำ (ช่อง)",
+            metric: t("page.dashboard.export.metric.lowStock"),
             value: s != null ? String(s.lowStockCount) : "—",
           },
         ],
       },
       {
         id: "sales_series",
-        label: "ยอดขายรายวัน (Sales series)",
-        description: `ช่วง ${SALES_REPORT_DAYS} วันล่าสุดจาก /api/admin/reports/sales`,
+        label: t("page.dashboard.export.salesSeries"),
+        description: t("page.dashboard.export.salesSeriesDesc").replace(
+          "{days}",
+          String(SALES_REPORT_DAYS)
+        ),
         columns: [
-          { key: "date", label: "วันที่" },
-          { key: "revenue", label: "รายได้ (฿)" },
-          { key: "orders", label: "ออเดอร์" },
+          { key: "date", label: t("page.dashboard.export.col.date") },
+          { key: "revenue", label: t("page.dashboard.export.col.revenue") },
+          { key: "orders", label: t("page.dashboard.export.col.orders") },
         ],
         fetchData: async () =>
           rechartsData.map((row) => ({
@@ -120,24 +125,27 @@ export default function Home() {
       },
       {
         id: "top_products",
-        label: "สินค้าขายดี (จาก summary)",
-        description: "Top จาก /api/admin/dashboard/summary",
-        columns: [{ key: "rank", label: "#" }, { key: "name", label: "ชื่อ" }],
+        label: t("page.dashboard.export.topProducts"),
+        description: t("page.dashboard.export.topProductsDesc"),
+        columns: [
+          { key: "rank", label: t("page.dashboard.export.col.rank") },
+          { key: "name", label: t("page.dashboard.export.col.name") },
+        ],
         fetchData: async () =>
           topProductNames.map((name, i) => ({ rank: String(i + 1), name })),
       },
     ];
-  }, [stats, rechartsData, topProductNames]);
+  }, [stats, rechartsData, topProductNames, t]);
 
   return (
     <PageWrapper>
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-[28px] font-bold text-[var(--text)] mb-1">
-            แดชบอร์ดภาพรวม
+            {t("page.dashboard.title")}
           </h1>
           <p className="text-[var(--text-muted)] text-[15px]">
-            ภาพรวมข้อมูลการทำงานของตู้ทั้งหมด รายงานและสถิติวิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก
+            {t("page.dashboard.subtitle")}
           </p>
         </div>
 
@@ -148,11 +156,11 @@ export default function Home() {
             disabled={loading}
             className="px-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl font-bold text-sm text-[var(--text)] disabled:opacity-50"
           >
-            รีเฟรช
+            {t("common.refresh")}
           </button>
           <button
             type="button"
-            onClick={() => openExportModal(dashboardSections, "ภาพรวม Dashboard")}
+            onClick={() => openExportModal(dashboardSections, t("page.dashboard.exportModalTitle"))}
             className="flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary)] text-[var(--primary-contrast)] px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(244,123,42,0.15)] transition-all"
           >
             <svg
@@ -169,7 +177,7 @@ export default function Home() {
               <polyline points="7 10 12 15 17 10"></polyline>
               <line x1="12" y1="15" x2="12" y2="3"></line>
             </svg>
-            Export
+            {t("common.export")}
           </button>
         </div>
       </div>
@@ -181,45 +189,45 @@ export default function Home() {
       )}
 
       {loading && !stats && (
-        <div className="mb-6 text-[var(--text)]0 font-bold text-sm">กำลังโหลดข้อมูลแดชบอร์ด…</div>
+        <div className="mb-6 text-[var(--text)]0 font-bold text-sm">{t("page.dashboard.loading")}</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 items-stretch">
         <div className="animate-scale-in opacity-0">
           <DashboardCard
-            title="ยอดขายวันนี้"
+            title={t("page.dashboard.card.salesToday")}
             value={stats?.salesTodayLabel ?? "—"}
             icon={<i className="fi fi-rr-stats"></i>}
             accentColor="var(--chart-series-1)"
-            href="/sales"
+            href={href("/sales")}
           />
         </div>
         <div className="animate-scale-in opacity-0 delay-100">
           <DashboardCard
-            title="จำนวนคำสั่งซื้อ (วันนี้)"
+            title={t("page.dashboard.card.ordersToday")}
             value={stats != null ? stats.ordersToday : "—"}
             icon={<i className="fi fi-rr-shopping-cart"></i>}
             accentColor="var(--success)"
-            href="/orders"
+            href={href("/orders")}
           />
         </div>
         <div className="animate-scale-in opacity-0 delay-200">
           <DashboardCard
-            title="ตู้ที่พร้อมใช้งาน"
+            title={t("page.dashboard.card.machinesReady")}
             value={stats != null ? stats.machinesOnline : "—"}
             subValue={stats != null ? `/ ${stats.machinesTotal}` : undefined}
             icon={<i className="fi fi-rr-vending-machine"></i>}
             accentColor="var(--warn)"
-            href="/machines"
+            href={href("/machines")}
           />
         </div>
         <div className="animate-scale-in opacity-0 delay-300">
           <DashboardCard
-            title="แจ้งเตือนสต็อกต่ำ"
+            title={t("page.dashboard.card.lowStock")}
             value={stats != null ? stats.lowStockCount : "—"}
             icon={<i className="fi fi-rr-warning"></i>}
             accentColor="var(--danger)"
-            href="/alerts"
+            href={href("/alerts")}
           />
         </div>
       </div>

@@ -86,7 +86,7 @@ function VerifyOTPContent() {
             <i className="fi fi-rr-check text-4xl"></i>
           </div>
           <h2 className="text-2xl font-black text-[var(--text)]">Verified!</h2>
-          <p className="text-[var(--text)]0 font-medium">Redirecting to dashboard...</p>
+        <p className="text-[var(--text)]0 font-medium">Redirecting to dashboard...</p>
         </div>
       )}
 
@@ -96,7 +96,7 @@ function VerifyOTPContent() {
         </div>
         <h1 className="text-2xl font-black text-[var(--text)] mb-2">OTP Verification</h1>
         <p className="text-[var(--text)]0 text-[14px] text-center px-4">
-          We've sent a 6-digit code to<br/>
+          We&apos;ve sent a 6-digit code to<br/>
           <span className="font-bold text-[var(--text)]">{phone}</span>
         </p>
       </div>
@@ -138,7 +138,7 @@ function VerifyOTPContent() {
 
       <div className="mt-8 text-center">
         <p className="text-[14px] font-medium text-[var(--text)]0">
-          Didn't receive the code?{" "}
+          Didn&apos;t receive the code?{" "}
           {timer > 0 ? (
             <span className="text-[var(--text-muted)]">Resend in <span className="font-bold text-[var(--text)]">{timer}s</span></span>
           ) : (

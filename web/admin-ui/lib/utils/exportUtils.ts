@@ -20,6 +20,44 @@ type JsPDFWithAutoTable = jsPDF & {
   lastAutoTable?: { finalY: number };
 };
 
+function getActiveLang(): "en" | "th" {
+  if (typeof document !== "undefined" && document.documentElement.lang === "en") {
+    return "en";
+  }
+  return "th";
+}
+
+const EXPORT_LABELS = {
+  th: {
+    fontFailed: "โหลดฟอนต์ไทยไม่สำเร็จ",
+    fontFailedStatus: (status: number) => `โหลดฟอนต์ไทยไม่สำเร็จ (${status})`,
+    noData: "ไม่มีข้อมูลที่จะส่งออก",
+    reportPrefix: (title: string) => `รายงาน: ${title}`,
+    exportedAt: (when: string) => `ส่งออกเมื่อ: ${when}`,
+    pdfDate: (when: string) => `วันที่ส่งออก: ${when}`,
+    pdfFooter: (page: number, total: number) =>
+      `เอกสารจากระบบจัดการตู้สินค้า — หน้า ${page} / ${total}`,
+    emptySection: "ไม่มีข้อมูลในชุดนี้",
+    locale: "th-TH",
+  },
+  en: {
+    fontFailed: "Failed to load Thai font",
+    fontFailedStatus: (status: number) => `Failed to load Thai font (${status})`,
+    noData: "No data to export",
+    reportPrefix: (title: string) => `Report: ${title}`,
+    exportedAt: (when: string) => `Exported at: ${when}`,
+    pdfDate: (when: string) => `Export date: ${when}`,
+    pdfFooter: (page: number, total: number) =>
+      `Vending Management System — page ${page} / ${total}`,
+    emptySection: "No data in this section",
+    locale: "en-US",
+  },
+} as const;
+
+function getExportLabels() {
+  return EXPORT_LABELS[getActiveLang()];
+}
+
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   let binary = "";
   const bytes = new Uint8Array(buffer);
@@ -35,7 +73,7 @@ async function getSarabunBase64(): Promise<string> {
   if (sarabunBase64Cache) return sarabunBase64Cache;
   const res = await fetch("/fonts/Sarabun-Regular.ttf");
   if (!res.ok) {
-    throw new Error(`โหลดฟอนต์ไทยไม่สำเร็จ (${res.status})`);
+    throw new Error(getExportLabels().fontFailedStatus(res.status));
   }
   const buf = await res.arrayBuffer();
   sarabunBase64Cache = arrayBufferToBase64(buf);
@@ -63,8 +101,9 @@ export function exportToCSV(
   filename: string = "export",
   meta?: { reportTitle?: string }
 ) {
+  const labels = getExportLabels();
   if (!data || data.length === 0) {
-    alert("ไม่มีข้อมูลที่จะส่งออก");
+    alert(labels.noData);
     return;
   }
 
@@ -77,8 +116,10 @@ export function exportToCSV(
 
   const lines: string[] = [];
   if (meta?.reportTitle) {
-    lines.push(padFirstColumn(`รายงาน: ${meta.reportTitle}`));
-    lines.push(padFirstColumn(`ส่งออกเมื่อ: ${new Date().toLocaleString("th-TH")}`));
+    lines.push(padFirstColumn(labels.reportPrefix(meta.reportTitle)));
+    lines.push(
+      padFirstColumn(labels.exportedAt(new Date().toLocaleString(labels.locale)))
+    );
     lines.push(emptyRow);
   }
 
@@ -121,8 +162,9 @@ export async function exportToPDFSections(
   pageTitle: string,
   filename: string
 ): Promise<void> {
+  const labels = getExportLabels();
   if (!sections.length) {
-    alert("ไม่มีข้อมูลที่จะส่งออก");
+    alert(labels.noData);
     return;
   }
 
@@ -131,7 +173,7 @@ export async function exportToPDFSections(
     fontBase64 = await getSarabunBase64();
   } catch (e) {
     console.error(e);
-    alert(e instanceof Error ? e.message : "โหลดฟอนต์ไทยไม่สำเร็จ");
+    alert(e instanceof Error ? e.message : labels.fontFailed);
     return;
   }
 
@@ -151,7 +193,12 @@ export async function exportToPDFSections(
   doc.setFontSize(9);
   doc.setTextColor(...SLATE_600);
   doc.text(
-    `วันที่ส่งออก: ${new Date().toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}`,
+    labels.pdfDate(
+      new Date().toLocaleString(labels.locale, {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    ),
     MM_MARGIN,
     y
   );
@@ -162,7 +209,7 @@ export async function exportToPDFSections(
     doc.setFontSize(8);
     doc.setTextColor(...SLATE_400);
     const total = doc.getNumberOfPages();
-    const footer = `เอกสารจากระบบจัดการตู้สินค้า — หน้า ${data.pageNumber} / ${total}`;
+    const footer = labels.pdfFooter(data.pageNumber, total);
     doc.text(footer, pageW / 2, pageH - 6, { align: "center" });
   };
 
@@ -183,7 +230,7 @@ export async function exportToPDFSections(
     const head = [section.columns.map((c) => c.label)];
     const body =
       section.rows.length === 0
-        ? [section.columns.map((_, i) => (i === 0 ? "ไม่มีข้อมูลในชุดนี้" : "—"))]
+        ? [section.columns.map((_, i) => (i === 0 ? labels.emptySection : "—"))]
         : section.rows.map((row) => section.columns.map((col) => formatCell(row[col.key])));
 
     autoTable(doc, {

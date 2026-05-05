@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { UIProvider } from "@/lib/context/UIContext";
 import GlobalModals from "@/components/layout/GlobalModals";
 import AppToasterAndSocket from "@/components/AppToasterAndSocket";
 import AppLayout from "@/components/layout/AppLayout";
+import { LangProvider } from "@/lib/i18n/lang";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -29,11 +31,15 @@ export default function RootLayout({
         <link rel='stylesheet' href='https://cdn-uicons.flaticon.com/2.5.1/uicons-solid-rounded/css/uicons-solid-rounded.css' />
       </head>
       <body className="min-h-full bg-[var(--background)] text-[var(--foreground)]">
-        <UIProvider>
-          <AppToasterAndSocket />
-          <AppLayout>{children}</AppLayout>
-          <GlobalModals />
-        </UIProvider>
+        <Suspense fallback={null}>
+          <LangProvider>
+            <UIProvider>
+              <AppToasterAndSocket />
+              <AppLayout>{children}</AppLayout>
+              <GlobalModals />
+            </UIProvider>
+          </LangProvider>
+        </Suspense>
       </body>
     </html>
   );
