@@ -20,7 +20,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
   const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: "",
-    category: "หมูสับ/หมูแดง",
+    category: "meat",
     unit_price: "",
     description: "",
     image_url: "",
@@ -47,7 +47,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
       window.dispatchEvent(new Event(ADMIN_PRODUCTS_REFRESH_EVENT));
       setFormData({
         name: "",
-        category: "หมูสับ/หมูแดง",
+        category: "meat",
         unit_price: "",
         description: "",
         image_url: "",
@@ -115,9 +115,9 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
-                <option>หมูสับ/หมูแดง</option>
-                <option>เจ / มังสวิรัติ</option>
-                <option>ไส้หวาน</option>
+                <option value="meat">meat</option>
+                <option value="vegetarian">vegetarian</option>
+                <option value="sweet">sweet</option>
               </select>
             </div>
             <div className="group space-y-1.5">

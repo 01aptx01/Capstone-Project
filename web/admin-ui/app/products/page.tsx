@@ -61,7 +61,7 @@ function ProductsPageClient() {
       const labels = codes
         .map((c) => apiCategoryToLabel(c))
         .filter((v, i, a) => a.indexOf(v) === i)
-        .sort((a, b) => a.localeCompare(b, "th"));
+        .sort((a, b) => a.localeCompare(b, "en"));
       setCategoryOptions([ALL_CATEGORIES, ...labels]);
     } catch (e) {
       console.error(e);
