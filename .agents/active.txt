@@ -1,2 +1,2 @@
-เพิ่ม how-to-run.md ที่ root — คู่มือรัน Docker, env, เพิ่มตู้, rebuild machine-ui/client, troubleshooting
-Next (ถ้าต้องการ): ลิงก์จาก README.md ไป how-to-run.md
+Admin machines UI harden (plan): เสร็จ — PUT metadata + swagger, updateMachine, EditMachineModal, cards/mappers/list alerts, detail refresh/toast/is_online/last_active. tsc + py_compile ผ่าน.
+Next (ถ้าต้องการ): ลิงก์ README → how-to-run.md หรืองานอื่นที่ผู้ใช้ระบุ

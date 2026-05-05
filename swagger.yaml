@@ -563,6 +563,66 @@ paths:
           description: Machine + slots
         "404":
           description: Not found
+    put:
+      tags: [Admin]
+      summary: Update machine location and/or operational status
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            description: "At least one property required."
+            properties:
+              location: { type: string, x-nullable: true }
+              status:
+                type: string
+                enum: [online, maintenance, offline]
+      responses:
+        "200":
+          description: Machine + slots after update
+        "400":
+          description: Validation error
+        "404":
+          description: Not found
+
+  /api/admin/machines/{machine_code}/slots:
+    put:
+      tags: [Admin]
+      summary: Replace all inventory slots for a machine (full snapshot)
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required: [slots]
+            properties:
+              slots:
+                type: array
+                description: "Empty array clears all slots for the machine."
+                items:
+                  type: object
+                  required: [slot_number, product_id, quantity]
+                  properties:
+                    slot_number: { type: integer, minimum: 1, maximum: 24 }
+                    product_id: { type: integer }
+                    quantity: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Machine detail after update (same shape as GET machine)
+        "400":
+          description: Validation error (unknown product_id, duplicate slot_number, etc.)
+        "404":
+          description: Machine not found
 
   /api/admin/customers:
     get:
