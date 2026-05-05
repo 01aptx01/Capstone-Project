@@ -31,7 +31,7 @@ export default function CartSidebar({ cart, stockById, totalPrice, totalHeatingT
             <div className="cart-icon">
               <ShoppingCart size={50} />
             </div>
-            <div className="cart-empty-text">ตะกร้าว่างๆ</div>
+            <div className="cart-empty-text">ตะกร้าว่าง</div>
           </div>
         ) : (
           <div className="cart-item-list">
