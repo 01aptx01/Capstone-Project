@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    actor Admin as ผู้ดูแล
+    participant UI as admin-ui
+    participant API as Flask /api/admin/*
+    participant DB as MySQL / SQLAlchemy
+
+    Note over Admin,DB: @admin_required ปัจจุบันเป็น placeholder\n(ยังไม่บังคับ JWT ใน decorators.py)
+
+    Admin->>UI: จัดการระบบ
+    UI->>API: GET /dashboard/summary
+    UI->>API: CRUD /products, /products/categories
+    UI->>API: /machines, /machines/:code/slots
+    UI->>API: /customers, /orders
+    UI->>API: /coupons, /coupons/:id/redemptions
+    UI->>API: /alerts, /alerts/resolve/:id
+    UI->>API: /reports/sales
+    UI->>API: GET /users
+    API->>DB: queries ตาม module
+    API-->>UI: JSON
+    UI-->>Admin: แสดงผล

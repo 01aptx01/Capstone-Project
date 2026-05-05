@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    actor User as ลูกค้า
+    participant UI as machine-ui
+    participant API as Flask GET /api/products
+    participant Svc as ProductService
+    participant DB as MySQL
+
+    User->>UI: เลือกเครื่อง (machine_code)
+    UI->>API: GET /api/products?machine_code=...
+    API->>Svc: get_products_by_machine()
+    Svc->>DB: SELECT products + LEFT JOIN machine_slots
+    DB-->>Svc: rows
+    Svc-->>API: list[dict]
+    API-->>UI: 200 JSON
+    UI-->>User: แสดงเมนูและสต็อก

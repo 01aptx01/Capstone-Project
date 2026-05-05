@@ -1,0 +1,21 @@
+sequenceDiagram
+    autonumber
+    participant UI as machine-ui
+    participant BC as BuyController GET /api/buy/status/:charge_id
+    participant Mem as order_statuses (in-memory)
+    participant DB as MySQL orders.status
+    participant Om as Omise (optional)
+
+    loop จนกว่าจะ terminal
+        UI->>BC: GET status
+        BC->>Mem: lookup charge_id
+        alt มีใน memory
+            Mem-->>BC: pending_payment | paid | ...
+        else ไม่มีใน memory
+            BC->>DB: SELECT status by charge_id
+            BC->>Om: Charge.retrieve ถ้า DB ยัง pending\nแต่ Omise successful
+            Om-->>BC: charge object
+            BC->>BC: อาจ trigger _execute_dispense\nเมื่อ reconcile
+        end
+        BC-->>UI: status JSON
+    end
