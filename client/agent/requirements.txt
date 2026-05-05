@@ -5,8 +5,9 @@ python-socketio
 
 adafruit-blinka
 adafruit-circuitpython-pca9685
-adafruit-circuitpython-mfrc522
+adafruit-circuitpython-bitbangio
 mfrc522
+spidev
 pygame
 
 websocket-client

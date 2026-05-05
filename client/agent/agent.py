@@ -3,12 +3,6 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from flask import Flask
-from flask_cors import CORS
-
-from routes import routes
-from ws_client import start_ws_client
-
 # Configure Logging
 logging.basicConfig(
     level=logging.INFO,
@@ -16,6 +10,12 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+from flask import Flask
+from flask_cors import CORS
+
+from routes import routes
+from ws_client import start_ws_client
 
 
 def create_app() -> Flask:
