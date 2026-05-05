@@ -49,7 +49,7 @@ try:
 	import busio
 	import digitalio
 	from mfrc522 import SimpleMFRC522 # type: ignore
-except ImportError:
+except Exception:
 	board = None
 	busio = None
 	digitalio = None
@@ -129,10 +129,11 @@ class MachineConfig:
 	rgb_led_pins: list[int] = field(default_factory=lambda: _split_ints(os.environ.get("RGB_LED_PINS")) or DEFAULT_RGB_LED_PINS.copy())
 	sound_dir: Path = field(default_factory=_sound_directory)
 	nfc_auto_approve: bool = field(default_factory=lambda: _env_flag("NFC_AUTO_APPROVE", default=True))
-	nfc_mosi_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MOSI_PIN") or 5))
-	nfc_miso_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MISO_PIN") or 6))
-	nfc_sck_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_SCK_PIN") or 13))
-	nfc_nss_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_NSS_PIN") or 19))
+	nfc_mosi_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MOSI_PIN") or 6))
+	nfc_miso_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_MISO_PIN") or 13))
+	nfc_sck_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_SCK_PIN") or 5))
+	nfc_nss_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_SDA_PIN") or os.environ.get("NFC_NSS_PIN") or 11))
+	nfc_irq_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_IRQ_PIN") or 19))
 	nfc_rst_pin: int = field(default_factory=lambda: int(os.environ.get("NFC_RST_PIN") or 26))
 	browser_args: list[str] = field(
 		default_factory=lambda: [
@@ -261,7 +262,14 @@ class SlotLEDController:
 		pins = list(self._config.slot_led_pins)
 		if LED is None or len(pins) < self._slot_count:
 			return [_VirtualLED(f"slot-{index + 1}") for index in range(self._slot_count)]
-		return [LED(pin) for pin in pins[: self._slot_count]]
+		devices: list[Any] = []
+		for index, pin in enumerate(pins[: self._slot_count]):
+			try:
+				devices.append(LED(pin))
+			except Exception as exc:
+				logger.warning(f"[Machine] slot LED init failed for pin={pin}: {exc} (using virtual)")
+				devices.append(_VirtualLED(f"slot-{index + 1}"))
+		return devices
 
 	def set_slot(self, slot_index: int, enabled: bool) -> None:
 		if slot_index < 0 or slot_index >= self._slot_count:
@@ -304,7 +312,11 @@ class StepRGBController:
 		for index in range(len(STEP_ORDER)):
 			start = index * 3
 			# Hardware pins are ordered B, G, R
-			devices.append(RGBLED(red=pins[start + 2], green=pins[start + 1], blue=pins[start]))
+			try:
+				devices.append(RGBLED(red=pins[start + 2], green=pins[start + 1], blue=pins[start]))
+			except Exception as exc:
+				logger.warning(f"[Machine] RGB LED init failed for step={index + 1}: {exc} (using virtual)")
+				devices.append(_VirtualRGBLED(f"step-{index + 1}"))
 		return devices
 
 	def set_step(self, step_name: str, *, success: bool = True) -> None:
@@ -423,16 +435,20 @@ class NfcPaymentGate:
 	def __init__(self, config: MachineConfig):
 		self._config = config
 		self._event = threading.Event()
-		self._lock = threading.Lock()
+		self._lock = threading.RLock()  # Use RLock to prevent deadlock
 		self._last_tap_at = 0.0
-		self._debounce_interval = 5.0 # Seconds to block after successful tap
+		self._debounce_interval = 2.0 # Seconds to block after successful tap
 		
 		self._reader = None
 		self._adafruit_reader = None
 
+		logger.info("[Machine] Initializing NFC Payment Gate...")
 		if board:
 			try:
-				import bitbangio
+				try:
+					import adafruit_bitbangio as bitbangio
+				except ImportError:
+					import bitbangio
 				# Get board pins dynamically based on config
 				sck_pin = getattr(board, f"D{self._config.nfc_sck_pin}")
 				mosi_pin = getattr(board, f"D{self._config.nfc_mosi_pin}")
@@ -445,17 +461,33 @@ class NfcPaymentGate:
 				rst = digitalio.DigitalInOut(rst_pin)
 
 				try:
-					from adafruit_mfrc522 import MFRC522 # type: ignore
+					# Try to import the adafruit driver (must be provided as a local file since not on PyPI)
+					try:
+						from adafruit_mfrc522 import MFRC522 # type: ignore
+					except ImportError:
+						# Fallback to local import if the user puts the file in the same directory
+						import sys
+						sys.path.append(os.path.dirname(__file__))
+						from adafruit_mfrc522 import MFRC522 # type: ignore
 					self._adafruit_reader = MFRC522(spi, cs, rst)
 					threading.Thread(target=self._poll_loop_adafruit, daemon=True).start()
-					logger.info(f"[Machine] Adafruit MFRC522 polling started (SCK:{self._config.nfc_sck_pin}, MOSI:{self._config.nfc_mosi_pin}, MISO:{self._config.nfc_miso_pin})")
+					logger.info(f"[Machine] NFC BitBang SPI started on SCK:{self._config.nfc_sck_pin}, MOSI:{self._config.nfc_mosi_pin}, MISO:{self._config.nfc_miso_pin}, SDA:{self._config.nfc_nss_pin}")
 				except ImportError:
+					logger.warning("[Machine] adafruit_mfrc522 library not found. Falling back to SimpleMFRC522.")
+					logger.warning("[Machine] NOTE: SimpleMFRC522 usually requires Hardware SPI pins (10, 9, 11). Custom pins might NOT work without adafruit_mfrc522.py local file.")
 					if SimpleMFRC522:
-						self._reader = SimpleMFRC522()
+						# Try to initialize with custom pins if the library version supports it
+						try:
+							self._reader = SimpleMFRC522(bus=0, device=0, pin_rst=self._config.nfc_rst_pin)
+						except:
+							self._reader = SimpleMFRC522()
 						threading.Thread(target=self._poll_loop, daemon=True).start()
 						logger.info("[Machine] SimpleMFRC522 hardware polling started")
 			except Exception as e:
 				logger.error(f"[Machine] NFC Hardware init failed: {e}")
+
+		else:
+			logger.warning("[Machine] 'board' module not found. NFC hardware will be disabled (Simulation mode only).")
 
 	def _poll_loop_adafruit(self) -> None:
 		if not self._adafruit_reader:
@@ -466,10 +498,11 @@ class NfcPaymentGate:
 				uid = self._adafruit_reader.read_uid()
 				if uid:
 					tag_id = "".join([hex(i) for i in uid])
+					logger.info(f"[Machine] NFC tag detected raw: {tag_id}")
 					self.handle_hardware_tap(tag_id)
 			except Exception as e:
 				logger.error(f"[Machine] Adafruit NFC Poll Error: {e}")
-			time.sleep(0.5)
+			time.sleep(0.3)
 
 	def _poll_loop(self) -> None:
 		if not self._reader:
@@ -485,13 +518,16 @@ class NfcPaymentGate:
 
 	def handle_hardware_tap(self, tag_id: str) -> None:
 		now = time.time()
+		should_tap = False
 		with self._lock:
 			if now - self._last_tap_at < self._debounce_interval:
-				logger.debug(f"[Machine] NFC tag {tag_id} ignored (debouncing)")
-				return
-			
-			self._last_tap_at = now
-			logger.info(f"[Machine] NFC tag {tag_id} tapped")
+				logger.info(f"[Machine] NFC tag {tag_id} ignored (debounce {self._debounce_interval}s, wait {self._debounce_interval - (now - self._last_tap_at):.1f}s more)")
+			else:
+				self._last_tap_at = now
+				logger.info(f"[Machine] NFC tag {tag_id} tapped - triggering payment")
+				should_tap = True
+		# Call tap() OUTSIDE the lock to prevent deadlock
+		if should_tap:
 			self.tap()
 
 	def tap(self) -> None:
@@ -509,6 +545,8 @@ class NfcPaymentGate:
 			self.tap()
 			return True
 
+		# Reset the event BEFORE waiting so old signals don't cause instant return
+		self._event.clear()
 		logger.info("[Machine] waiting for NFC tap")
 		return self._event.wait(timeout)
 
@@ -686,6 +724,7 @@ def load_machine_config() -> Dict[str, Any]:
 		"nfc_miso_pin": machine.config.nfc_miso_pin,
 		"nfc_sck_pin": machine.config.nfc_sck_pin,
 		"nfc_nss_pin": machine.config.nfc_nss_pin,
+		"nfc_irq_pin": machine.config.nfc_irq_pin,
 		"nfc_rst_pin": machine.config.nfc_rst_pin,
 	}
 

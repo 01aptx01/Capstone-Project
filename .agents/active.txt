@@ -1,16 +1,8 @@
-Admin UI i18n — VERIFIED ครบทุกหน้า (final pass)
-สรุปที่ทำเสร็จในรอบล่าสุด:
-- sales/page.tsx: badges (Paid/Processing/Failed) + pagination + Previous/Next ใช้ t()
-- profile/ProfileView.tsx: รายการกิจกรรมล่าสุด (refill/firmware/cashCheck) + เวลา (X นาที/ชั่วโมงที่แล้ว/เมื่อวาน) ใช้ t()
-- security/SecurityView.tsx: mock sessions location/time + tooltip "ออกจากระบบของอุปกรณ์นี้" ใช้ t()
-- dashboard/SalesByLocation.tsx, SalesByFlavor.tsx: ชื่อสถานที่/รสชาติ + title/subtitle/contribution ใช้ t()
-- reports/page.tsx: export section "Sales by Location" ใช้ t() ครบ
-- Header: fmtTime ปรับ locale ตาม lang (th-TH/en-US)
-- lib/admin-mappers.ts: UiOrderRow แยก lineCount + qtySum (เลิกฝัง "X รายการ (Y ชิ้น)" คงที่)
-- orders/page.tsx: render รายการสินค้า + export ใช้ t("page.orders.itemsLabel") {lines}/{qty}
-- lib/axios.ts: error fallback toast เปลี่ยนภาษาตาม document.documentElement.lang
-- lib/utils/exportUtils.ts: เพิ่ม EXPORT_LABELS{th,en} ใช้กับ CSV/PDF (alert noData, font failed, header รายงาน, export date, footer, empty section, locale string)
-- dictionaries.ts: เพิ่มคีย์ใหม่ — page.sales.badge.*, page.sales.pagination/previous/next, profile.activity.*, security.session.*, salesByLocation.*, salesByFlavor.*, page.orders.itemsLabel
-Build: ✅ npm run build ผ่าน (Exit 0, TypeScript OK, 22 routes)
-ภาษาที่เหลือเป็นไทยใน source: เฉพาะใน dictionaries.ts (ค่าแปลภาษาไทยเอง) + currency symbol "฿" + code comments
-Next: review จริงในเบราว์เซอร์โดยสลับ ?lang=en/?lang=th และไล่หน้า dashboard, products, machines, machines/[id], orders, sales, reports, alerts, customers, coupons, profile, security, settings, login, register, verify-otp, logout
+Active: Docker compose logs banner + WS/DB connection summary
+Done:
+- server/main.py: startup banner shows ws.enabled/dispatch/agent.url + db=mysql://<user>@<host>/<db> + URLs + cors.origins (no secrets)
+- client/agent/docker-entrypoint.sh: compact banner shows host.url, server.url, ws.url, db.local, machine.id, sink mode/url
+- docker-compose.yml: new one-shot `compose-banner` service prints Published URLs table into compose logs
+- client/agent/machine.py: non-Pi friendly LED init fallback → virtual devices (prevents gpiozero BadPinFactory crash)
+Next:
+- (optional) run `docker compose up -d compose-banner` after `up` if you want the URLs table printed again on demand
