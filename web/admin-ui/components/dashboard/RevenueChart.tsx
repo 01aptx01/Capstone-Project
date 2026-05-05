@@ -24,7 +24,7 @@ function formatTooltipValue(v: number) {
 export default function RevenueChart({ data = [], loading }: RevenueChartProps) {
   if (loading) {
     return (
-      <div className="vibrant-card !rounded-[40px] p-10 h-full min-h-[320px] flex items-center justify-center text-slate-500 font-bold">
+      <div className="vibrant-card !rounded-[40px] p-10 h-full min-h-[320px] flex items-center justify-center font-bold" style={{ color: "var(--text-muted)" }}>
         กำลังโหลดกราฟยอดขาย…
       </div>
     );
@@ -32,7 +32,7 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
 
   if (!data.length) {
     return (
-      <div className="vibrant-card !rounded-[40px] p-10 h-full min-h-[320px] flex items-center justify-center text-slate-500 font-bold">
+      <div className="vibrant-card !rounded-[40px] p-10 h-full min-h-[320px] flex items-center justify-center font-bold" style={{ color: "var(--text-muted)" }}>
         ยังไม่มีข้อมูลยอดขายในช่วงที่เลือก
       </div>
     );
@@ -43,11 +43,11 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-[24px] font-black text-[#334155] tracking-tight">
+            <h3 className="text-[24px] font-black tracking-tight" style={{ color: "var(--text)" }}>
               กราฟยอดการขาย
             </h3>
           </div>
-          <p className="text-[14px] font-semibold text-slate-400">
+          <p className="text-[14px] font-semibold" style={{ color: "var(--text-muted)" }}>
             รายได้รายวัน (ออเดอร์สำเร็จ) จาก API — ช่วง {data.length} วันล่าสุด
           </p>
         </div>
@@ -56,15 +56,15 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
       <div className="h-[320px] w-full min-w-0">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-            <CartesianGrid strokeDasharray="4 4" stroke="#E2E8F0" />
+            <CartesianGrid strokeDasharray="4 4" stroke="var(--chart-grid)" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 12, fontWeight: 700, fill: "#64748B" }}
+              tick={{ fontSize: 12, fontWeight: 700, fill: "var(--chart-tick)" }}
               tickLine={false}
-              axisLine={{ stroke: "#E2E8F0" }}
+              axisLine={{ stroke: "var(--chart-axis)" }}
             />
             <YAxis
-              tick={{ fontSize: 12, fontWeight: 600, fill: "#94A3B8" }}
+              tick={{ fontSize: 12, fontWeight: 600, fill: "var(--chart-tick)" }}
               tickLine={false}
               axisLine={false}
               tickFormatter={(v) =>
@@ -74,7 +74,9 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
             <Tooltip
               contentStyle={{
                 borderRadius: 16,
-                border: "1px solid #E2E8F0",
+                border: "1px solid var(--chart-tooltip-border)",
+                background: "var(--chart-tooltip-bg)",
+                color: "var(--text)",
                 fontWeight: 700,
               }}
               formatter={(value) => [
@@ -89,9 +91,9 @@ export default function RevenueChart({ data = [], loading }: RevenueChartProps) 
             <Line
               type="monotone"
               dataKey="revenue"
-              stroke="#f47b2a"
+              stroke="var(--chart-series-1)"
               strokeWidth={3}
-              dot={{ r: 5, fill: "#fff", stroke: "#f47b2a", strokeWidth: 2 }}
+              dot={{ r: 5, fill: "var(--chart-dot-bg)", stroke: "var(--chart-series-1)", strokeWidth: 2 }}
               activeDot={{ r: 7 }}
             />
           </LineChart>

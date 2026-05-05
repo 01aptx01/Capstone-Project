@@ -440,8 +440,8 @@ export default function Header() {
 
       <style jsx>{`
         .app-header {
-          background: white !important;
-          border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+          background: var(--header-bg) !important;
+          border-bottom: 1px solid var(--header-border) !important;
         }
 
         .header-search-wrap {
@@ -450,15 +450,15 @@ export default function Header() {
         }
 
         .header-search {
-          background: rgba(0, 0, 0, 0.03) !important;
-          border: 1px solid transparent !important;
+          background: var(--input-bg) !important;
+          border: 1px solid var(--input-border) !important;
           transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
 
         .header-search:focus-within {
-          background: white !important;
+          background: var(--surface-1) !important;
           border-color: var(--primary) !important;
-          box-shadow: 0 10px 25px rgba(244, 123, 42, 0.08) !important;
+          box-shadow: 0 0 0 8px var(--ring) !important;
           width: 600px;
         }
 
@@ -469,9 +469,9 @@ export default function Header() {
           top: calc(100% + 10px);
           max-height: min(420px, 70vh);
           overflow-y: auto;
-          background: white;
+          background: var(--surface-1);
           border-radius: 18px;
-          border: 1px solid rgba(0, 0, 0, 0.08);
+          border: 1px solid var(--border);
           padding: 10px 0;
           z-index: 300;
         }
@@ -486,7 +486,7 @@ export default function Header() {
 
         .command-section {
           padding: 6px 0;
-          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          border-top: 1px solid var(--border);
         }
 
         .command-section:first-of-type {
@@ -499,7 +499,7 @@ export default function Header() {
           font-weight: 900;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: rgba(0, 0, 0, 0.35);
+          color: var(--text-muted);
         }
 
         .command-row {
@@ -517,13 +517,13 @@ export default function Header() {
         }
 
         .command-row:hover {
-          background: rgba(244, 123, 42, 0.06);
+          background: var(--warn-bg);
         }
 
         .command-row-label {
           font-weight: 800;
           font-size: 0.9rem;
-          color: #334155;
+          color: var(--text);
           min-width: 0;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -542,13 +542,13 @@ export default function Header() {
         }
 
         .search-shortcut {
-          background: white;
+          background: var(--surface-1);
           padding: 2px 6px;
           border-radius: 6px;
           font-size: 0.7rem;
           font-weight: 800;
           color: var(--muted);
-          border: 1px solid rgba(0,0,0,0.1);
+          border: 1px solid var(--border);
         }
 
         .bell {
@@ -570,22 +570,22 @@ export default function Header() {
 
         .badge {
           background: var(--primary) !important;
-          border: 2px solid white !important;
-          box-shadow: 0 0 10px rgba(244, 123, 42, 0.4) !important;
+          border: 2px solid var(--surface-1) !important;
+          box-shadow: 0 0 0 8px var(--ring) !important;
         }
 
         .glass {
-          background: rgba(255, 255, 255, 0.8) !important;
+          background: var(--card-bg) !important;
           backdrop-filter: blur(20px) saturate(180%) !important;
-          border: 1px solid rgba(255, 255, 255, 0.5) !important;
+          border: 1px solid var(--card-border) !important;
         }
 
         .notification-dropdown {
           top: calc(100% + 12px) !important;
           border-radius: 20px !important;
           width: 380px !important;
-          background: white !important;
-          border: 1px solid rgba(0,0,0,0.1) !important;
+          background: var(--surface-1) !important;
+          border: 1px solid var(--border) !important;
           backdrop-filter: none !important;
         }
 
@@ -613,11 +613,11 @@ export default function Header() {
         }
 
         .notification-dropdown .item:hover {
-          background: rgba(244, 123, 42, 0.03);
+          background: var(--warn-bg);
         }
 
         .notification-dropdown .item.unread {
-          background: rgba(244, 123, 42, 0.02);
+          background: var(--warn-bg);
         }
 
         .status-dot {
@@ -647,14 +647,14 @@ export default function Header() {
 
         .item-time {
           font-size: 0.75rem;
-          color: rgba(0,0,0,0.3);
+          color: var(--text-muted);
           margin-top: 8px;
         }
 
         .notification-dropdown .footer {
           padding: 14px;
           text-align: center;
-          border-top: 1px solid rgba(0,0,0,0.03);
+          border-top: 1px solid var(--border);
         }
 
         .notification-dropdown .footer a {
@@ -690,8 +690,8 @@ export default function Header() {
           top: calc(100% + 12px) !important;
           border-radius: 20px !important;
           padding: 12px !important;
-          background: white !important;
-          border: 1px solid rgba(0,0,0,0.1) !important;
+          background: var(--surface-1) !important;
+          border: 1px solid var(--border) !important;
           backdrop-filter: none !important;
         }
 
@@ -713,7 +713,7 @@ export default function Header() {
         }
 
         .border-t {
-          border-top: 1px solid rgba(0,0,0,0.05);
+          border-top: 1px solid var(--border);
           margin-top: 8px;
           padding-top: 8px !important;
         }

@@ -24,11 +24,11 @@ export default function DashboardCard({
   trend, 
   trendDirection = "neutral", 
   accentColor = "var(--card-accent)",
-  valueColor = "#334155",
+  valueColor = "var(--text)",
   href
 }: DashboardCardProps) {
-  const trendBg = trendDirection === "up" ? "#ECFDF5" : trendDirection === "down" ? "#FEF2F2" : "#FFF7ED";
-  const trendColor = trendDirection === "up" ? "#065F46" : trendDirection === "down" ? "#991B1B" : "#C2410C";
+  const trendBg = trendDirection === "up" ? "var(--success-bg)" : trendDirection === "down" ? "var(--danger-bg)" : "var(--surface-1)7ED";
+  const trendColor = trendDirection === "up" ? "var(--success)" : trendDirection === "down" ? "var(--danger)" : "var(--warn)";
   const trendIcon = trendDirection === "up" ? "↗" : trendDirection === "down" ? "↘" : "";
 
   // Mouse spotlight effect
@@ -63,13 +63,13 @@ export default function DashboardCard({
       <div className="flex items-center relative z-10">
         <div className="flex items-center gap-4">
           <div
-            className="w-14 h-14 rounded-full flex items-center justify-center text-2xl text-white shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-6"
+            className="w-14 h-14 rounded-full flex items-center justify-center text-2xl text-[var(--primary-contrast)] shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-6"
             style={{ backgroundColor: accentColor }}
           >
             {icon}
           </div>
           <div>
-            <div className="text-[13px] xl:text-[14px] font-bold text-[#64748B] mb-1 group-hover:text-[#f47b2a] transition-colors">{title}</div>
+            <div className="text-[13px] xl:text-[14px] font-bold text-[var(--text-muted)] mb-1 group-hover:text-[var(--primary)] transition-colors">{title}</div>
             <div className="text-[22px] xl:text-[26px] font-extrabold leading-none flex items-baseline gap-2" style={{ color: valueColor }}>
               <motion.span 
                 initial={{ opacity: 0, y: 10 }}
@@ -80,7 +80,7 @@ export default function DashboardCard({
                 {value}
               </motion.span>
               {subValue && (
-                <span className="text-[14px] font-medium text-[#94A3B8]">{subValue}</span>
+                <span className="text-[14px] font-medium text-[var(--text-muted)]">{subValue}</span>
               )}
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function DashboardCard({
       )}
       
       {/* Subtle background glow on hover */}
-      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[#f47b2a]/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
+      <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-[var(--primary)]/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none" />
     </motion.div>
   );
 

@@ -26,7 +26,7 @@ export default function LogoutPage() {
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       {/* Dark Backdrop Overlay */}
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
+      <div className="absolute inset-0 bg-[var(--overlay)]/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
       
       {/* Modal Content */}
       <div className="relative z-10 logout-content animate-in zoom-in-95 duration-300">
@@ -34,8 +34,8 @@ export default function LogoutPage() {
           <div className="premium-loader"></div>
           <div className="loader-icon"><i className="fi fi-rr-exit"></i></div>
         </div>
-        <h2 className="text-2xl font-black text-slate-800 mb-3">กำลังออกจากระบบ...</h2>
-        <p className="text-slate-500 font-medium text-[15px]">ขอบคุณที่ใช้งานระบบ MOD PAO Vending Management</p>
+        <h2 className="text-2xl font-black text-[var(--text)] mb-3">กำลังออกจากระบบ...</h2>
+        <p className="text-[var(--text)]0 font-medium text-[15px]">ขอบคุณที่ใช้งานระบบ MOD PAO Vending Management</p>
       </div>
 
       <style jsx>{`
@@ -59,8 +59,8 @@ export default function LogoutPage() {
         .premium-loader {
           width: 100%;
           height: 100%;
-          border: 4px solid #f0f0f0;
-          border-top: 4px solid #f47b2a;
+          border: 4px solid var(--border);
+          border-top: 4px solid var(--primary);
           border-radius: 50%;
           animation: spin 1s linear infinite;
         }
@@ -72,7 +72,7 @@ export default function LogoutPage() {
           align-items: center;
           justify-content: center;
           font-size: 2rem;
-          color: #f47b2a;
+          color: var(--primary);
         }
 
         @keyframes spin {

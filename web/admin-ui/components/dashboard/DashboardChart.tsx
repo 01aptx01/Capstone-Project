@@ -259,18 +259,18 @@ export default function DashboardChart({
   
 
   return (
-    <div className="bg-white border border-[#E2E8F0] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+    <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
       <div className="flex flex-col mb-10 gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h3 className="text-[18px] font-bold text-[#334155]">
+            <h3 className="text-[18px] font-bold text-[var(--text)]">
               แนวโน้มยอดขาย
             </h3>
-            <div className="flex items-center bg-[#F1F5F9] p-1 rounded-xl">
+            <div className="flex items-center bg-[var(--surface-2)] p-1 rounded-xl">
               <button
                 onClick={() => setViewMode("realtime")}
                 className={`px-3 py-1 rounded-lg text-[13px] font-bold transition-all ${
-                  viewMode === "realtime" ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+                  viewMode === "realtime" ? "bg-[var(--surface-1)] text-[var(--text)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"
                 }`}
               >
                 Real-time
@@ -278,14 +278,14 @@ export default function DashboardChart({
               <button
                 onClick={() => setViewMode("historical")}
                 className={`px-3 py-1 rounded-lg text-[13px] font-bold transition-all ${
-                  viewMode === "historical" ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+                  viewMode === "historical" ? "bg-[var(--surface-1)] text-[var(--text)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"
                 }`}
               >
                 Historical
               </button>
             </div>
           </div>
-          <div className="flex bg-[#F1F5F9] p-1 rounded-xl">
+          <div className="flex bg-[var(--surface-2)] p-1 rounded-xl">
             {(viewMode === "realtime" ? ["Day", "Week", "Month"] : ["Day", "Month", "Year"]).map((p) => (
               <button
                 key={p}
@@ -302,7 +302,7 @@ export default function DashboardChart({
                   }
                 }}
                 className={`px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all ${
-                  (viewMode === "realtime" ? realtimePeriod : historicalPeriod) === p ? "bg-white text-[#334155] shadow-sm" : "text-[#64748B] hover:text-[#334155]"
+                  (viewMode === "realtime" ? realtimePeriod : historicalPeriod) === p ? "bg-[var(--surface-1)] text-[var(--text)] shadow-sm" : "text-[var(--text-muted)] hover:text-[var(--text)]"
                 }`}
               >
                 {p}
@@ -318,21 +318,21 @@ export default function DashboardChart({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="flex items-center gap-4 pt-2 border-t border-[#E2E8F0] overflow-hidden"
+            className="flex items-center gap-4 pt-2 border-t border-[var(--border)] overflow-hidden"
           >
-            <span className="text-[14px] font-medium text-[#64748B]">ระบุช่วงเวลา:</span>
+            <span className="text-[14px] font-medium text-[var(--text-muted)]">ระบุช่วงเวลา:</span>
             {historicalPeriod === "Day" && (
               <div className="flex items-center gap-2">
                 <input 
                   type="date" 
-                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)]"
                   value={dateRange.start}
                   onChange={(e) => setDateRange(s => ({...s, start: e.target.value}))}
                 />
-                <span className="text-[#64748B] text-[13px] font-medium">ถึง</span>
+                <span className="text-[var(--text-muted)] text-[13px] font-medium">ถึง</span>
                 <input 
                   type="date" 
-                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)]"
                   value={dateRange.end}
                   onChange={(e) => setDateRange(s => ({...s, end: e.target.value}))}
                 />
@@ -342,14 +342,14 @@ export default function DashboardChart({
               <div className="flex items-center gap-2">
                 <input 
                   type="month" 
-                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)]"
                   value={monthRange.start}
                   onChange={(e) => setMonthRange(s => ({...s, start: e.target.value}))}
                 />
-                <span className="text-[#64748B] text-[13px] font-medium">ถึง</span>
+                <span className="text-[var(--text-muted)] text-[13px] font-medium">ถึง</span>
                 <input 
                   type="month" 
-                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a]"
+                  className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)]"
                   value={monthRange.end}
                   onChange={(e) => setMonthRange(s => ({...s, end: e.target.value}))}
                 />
@@ -360,15 +360,15 @@ export default function DashboardChart({
                 <input 
                   type="number" 
                   placeholder="YYYY"
-                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a] w-24"
+                  className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)] w-24"
                   value={yearRange.start}
                   onChange={(e) => setYearRange(s => ({...s, start: e.target.value}))}
                 />
-                <span className="text-[#64748B] text-[13px] font-medium">ถึง</span>
+                <span className="text-[var(--text-muted)] text-[13px] font-medium">ถึง</span>
                 <input 
                   type="number" 
                   placeholder="YYYY"
-                  className="px-3 py-1.5 border border-[#E2E8F0] rounded-lg text-[13px] outline-none focus:border-[#f47b2a] w-24"
+                  className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)] w-24"
                   value={yearRange.end}
                   onChange={(e) => setYearRange(s => ({...s, end: e.target.value}))}
                 />
@@ -381,7 +381,7 @@ export default function DashboardChart({
 
       <div className="relative h-[300px] w-full flex">
         {/* Y-Axis Labels */}
-        <div className="flex flex-col justify-between text-[12px] font-medium text-[#94A3B8] pr-6 pb-6 h-[260px]">
+        <div className="flex flex-col justify-between text-[12px] font-medium text-[var(--text-muted)] pr-6 pb-6 h-[260px]">
           {yLabels.map((label) => (
             <div key={label}>{label}</div>
           ))}
@@ -392,7 +392,7 @@ export default function DashboardChart({
           {/* Horizontal Grid Lines */}
           <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
             {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="w-full border-t border-dashed border-[#E2E8F0]" />
+              <div key={i} className="w-full border-t border-dashed border-[var(--border)]" />
             ))}
           </div>
 
@@ -408,15 +408,15 @@ export default function DashboardChart({
               >
                 <defs>
                   <linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#f47b2a" stopOpacity="0.12" />
-                    <stop offset="100%" stopColor="#f47b2a" stopOpacity="0" />
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.12" />
+                    <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
                   </linearGradient>
                   <linearGradient id="strokeGrad" x1="0" x2="1">
-                    <stop offset="0%" stopColor="#FF8A3D" />
-                    <stop offset="100%" stopColor="#f47b2a" />
+                    <stop offset="0%" stopColor="var(--primary)" />
+                    <stop offset="100%" stopColor="var(--primary)" />
                   </linearGradient>
                   <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feDropShadow dx="0" dy="8" stdDeviation="16" floodColor="#f47b2a" floodOpacity="0.12" />
+                    <feDropShadow dx="0" dy="8" stdDeviation="16" floodColor="var(--primary)" floodOpacity="0.12" />
                   </filter>
                 </defs>
 
@@ -436,7 +436,7 @@ export default function DashboardChart({
                   />
                 )}
 
-                {projPath && <path d={projPath} fill="none" stroke="#f47b2a" strokeWidth={2} strokeDasharray="6 6" opacity={0.9} />}
+                {projPath && <path d={projPath} fill="none" stroke="var(--primary)" strokeWidth={2} strokeDasharray="6 6" opacity={0.9} />}
 
                 {/* markers */}
                 {points.map((p, i) => (
@@ -446,15 +446,15 @@ export default function DashboardChart({
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.1, duration: 0.5, type: "spring" }}
                   >
-                    <circle cx={p.x} cy={p.y} r={10} fill="#f47b2a" opacity={0.12} />
-                    <circle cx={p.x} cy={p.y} r={6} fill="#FFFFFF" stroke="#f47b2a" strokeWidth={2} />
+                    <circle cx={p.x} cy={p.y} r={10} fill="var(--primary)" opacity={0.12} />
+                    <circle cx={p.x} cy={p.y} r={6} fill="var(--surface-1)" stroke="var(--primary)" strokeWidth={2} />
                   </motion.g>
                 ))}
 
                 {projPoint && (
                   <g key="proj">
-                    <circle cx={projPoint.x} cy={projPoint.y} r={10} fill="#f47b2a" opacity={0.06} />
-                    <circle cx={projPoint.x} cy={projPoint.y} r={6} fill="#FFFFFF" stroke="#f47b2a" strokeWidth={2} strokeDasharray="2 2" />
+                    <circle cx={projPoint.x} cy={projPoint.y} r={10} fill="var(--primary)" opacity={0.06} />
+                    <circle cx={projPoint.x} cy={projPoint.y} r={6} fill="var(--surface-1)" stroke="var(--primary)" strokeWidth={2} strokeDasharray="2 2" />
                   </g>
                 )}
               </svg>
@@ -482,7 +482,7 @@ export default function DashboardChart({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       transition={{ delay: i * 0.1 + 0.3 }}
-                      style={{ position: "absolute", bottom: heightPx + 10, left: "50%", transform: "translateX(-50%)" }} className="text-[12px] font-bold text-[#334155] opacity-0 group-hover:opacity-100 transition-opacity"
+                      style={{ position: "absolute", bottom: heightPx + 10, left: "50%", transform: "translateX(-50%)" }} className="text-[12px] font-bold text-[var(--text)] opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       {typeof v === "number" ? `฿${v}` : v}
                     </motion.div>
@@ -491,10 +491,10 @@ export default function DashboardChart({
                       animate={{ height: `${heightPercent}%` }}
                       transition={{ duration: 1, ease: "easeOut", delay: i * 0.05 }}
                       className={`w-full rounded-lg transition-colors duration-300 ${
-                        isHighlighted ? "bg-gradient-to-t from-[#FF8A3D] to-[#f47b2a] border-[#f47b2a] shadow-lg shadow-orange-500/20" : "bg-gradient-to-t from-[#FFE6CC] to-[#FFDAB5] hover:from-[#FFDAB5] hover:to-[#FFC58F]"
+                        isHighlighted ? "bg-gradient-to-t from-[var(--primary)] to-[var(--primary)] border-[var(--primary)] shadow-lg " : "bg-gradient-to-t from-[var(--warn-bg)] to-[var(--warn-bg)] hover:from-[var(--warn-bg)] hover:to-[var(--warn-bg)]"
                       }`}
                     />
-                    <div style={{ position: "absolute", bottom: -28, left: "50%", transform: "translateX(-50%)" }} className="whitespace-nowrap text-[12px] font-bold text-[#64748B]">
+                    <div style={{ position: "absolute", bottom: -28, left: "50%", transform: "translateX(-50%)" }} className="whitespace-nowrap text-[12px] font-bold text-[var(--text-muted)]">
                       {labels[i]}
                     </div>
                   </motion.div>

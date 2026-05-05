@@ -30,8 +30,8 @@ export default function ProfileView() {
         
         <div className="hero-content">
           <div className="avatar-section animate-float">
-            <div className="avatar-container glass !p-1.5 !rounded-[42px] border-white/50">
-              <div className="relative overflow-hidden rounded-[38px] bg-slate-100">
+            <div className="avatar-container glass !p-1.5 !rounded-[42px] border-[var(--border)]/50">
+              <div className="relative overflow-hidden rounded-[38px] bg-[var(--surface-2)]">
                 <Image src="/Pao.png" alt="Admin" width={140} height={140} className="avatar-img transition-transform duration-700 hover:scale-110" />
               </div>
               <div className="status-indicator online animate-pulse"></div>
@@ -41,29 +41,29 @@ export default function ProfileView() {
             </div>
             <div className="identity-text">
               <div className="name-row">
-                <h1 className="text-slate-800 drop-shadow-sm">{formData.name}</h1>
-                <span className="verified-badge bg-slate-200/50 backdrop-blur-md p-1.5 rounded-full border border-slate-300 text-[#f47b2a]" title="Verified Staff">
+                <h1 className="text-[var(--text)] drop-shadow-sm">{formData.name}</h1>
+                <span className="verified-badge bg-[var(--border)]/50 backdrop-blur-md p-1.5 rounded-full border border-[var(--border)] text-[var(--primary)]" title="Verified Staff">
                   <i className="fi fi-rr-badge-check"></i>
                 </span>
               </div>
               <div className="meta-row">
-                <span className="meta-item text-slate-600"><i className="fi fi-rr-briefcase !text-slate-400"></i> {formData.role}</span>
-                <span className="meta-item text-slate-600"><i className="fi fi-rr-marker !text-slate-400"></i> {formData.location}</span>
-                <span className="meta-item text-slate-600"><i className="fi fi-rr-calendar !text-slate-400"></i> เข้าร่วมเมื่อ {formData.joined}</span>
+                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-briefcase !text-[var(--text-muted)]"></i> {formData.role}</span>
+                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-marker !text-[var(--text-muted)]"></i> {formData.location}</span>
+                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-calendar !text-[var(--text-muted)]"></i> เข้าร่วมเมื่อ {formData.joined}</span>
               </div>
             </div>
           </div>
 
           <div className="hero-actions">
             {!isEditing ? (
-              <button className="btn-edit !bg-white !text-slate-700 hover:!bg-[#f47b2a] hover:!text-white transition-all duration-300 shadow-xl" onClick={() => setIsEditing(true)}>
+              <button className="btn-edit !bg-[var(--surface-1)] !text-[var(--text)] hover:!bg-[var(--primary)] hover:!text-[var(--primary-contrast)] transition-all duration-300 shadow-xl" onClick={() => setIsEditing(true)}>
                 <i className="fi fi-rr-settings-sliders"></i>
                 จัดการโปรไฟล์
               </button>
             ) : (
               <div className="edit-buttons">
-                <button className="btn-cancel glass !bg-slate-100 !text-slate-700 !border-slate-200 hover:!bg-slate-200" onClick={() => setIsEditing(false)}>ยกเลิก</button>
-                <button className="btn-save !bg-[#f47b2a] !text-white hover:!bg-[#EA580C]" onClick={handleSave}>บันทึกข้อมูล</button>
+                <button className="btn-cancel glass !bg-[var(--surface-2)] !text-[var(--text)] !border-[var(--border)] hover:!bg-[var(--border)]" onClick={() => setIsEditing(false)}>ยกเลิก</button>
+                <button className="btn-save !bg-[var(--primary)] !text-[var(--primary-contrast)] hover:!bg-[var(--primary)]" onClick={handleSave}>บันทึกข้อมูล</button>
               </div>
             )}
           </div>
@@ -73,80 +73,80 @@ export default function ProfileView() {
       <div className="profile-grid">
         {/* Left: Detailed Info */}
         <div className="grid-left animate-slide-left opacity-0 delay-150">
-          <div className="glass info-card !rounded-[40px] p-10 mb-8 shadow-2xl border-white/40 bg-white">
-            <div className="card-header border-b border-slate-200/50 pb-6 mb-8">
+          <div className="glass info-card !rounded-[40px] p-10 mb-8 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
+            <div className="card-header border-b border-[var(--border)]/50 pb-6 mb-8">
               <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
-                <i className="fi fi-rr-info text-[#f47b2a] text-[28px]"></i> ข้อมูลบัญชี
+                <i className="fi fi-rr-info text-[var(--primary)] text-[28px]"></i> ข้อมูลบัญชี
               </h3>
             </div>
             <div className="info-form">
               <div className="form-row">
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ชื่อ-นามสกุล</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">ชื่อ-นามสกุล</label>
                   {isEditing ? (
-                    <input type="text" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-4 w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                    <input type="text" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
                   ) : (
-                    <div className="static-value text-[18px] font-bold text-slate-700">{formData.name}</div>
+                    <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.name}</div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ตำแหน่ง</label>
-                  <div className="static-value text-[18px] font-bold text-slate-700">{formData.role}</div>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">ตำแหน่ง</label>
+                  <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.role}</div>
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">อีเมล</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">อีเมล</label>
                   {isEditing ? (
-                    <input type="email" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-4 w-full" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                    <input type="email" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                   ) : (
-                    <div className="static-value text-[18px] font-bold text-slate-700">{formData.email}</div>
+                    <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.email}</div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">เบอร์โทรศัพท์</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">เบอร์โทรศัพท์</label>
                   {isEditing ? (
-                    <input type="text" className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !py-4 px-4 w-full" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                    <input type="text" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                   ) : (
-                    <div className="static-value text-[18px] font-bold text-slate-700">{formData.phone}</div>
+                    <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.phone}</div>
                   )}
                 </div>
               </div>
 
               <div className="form-group full mt-4">
-                <label className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3 block">เกี่ยวกับฉัน</label>
+                <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">เกี่ยวกับฉัน</label>
                 {isEditing ? (
-                  <textarea rows={4} className="glass !bg-white !border-slate-200 focus:!border-[#f47b2a] !rounded-2xl !p-4 w-full" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
+                  <textarea rows={4} className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !p-4 w-full" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
                 ) : (
-                  <p className="bio-text text-[16px] text-slate-600 leading-relaxed font-medium">{formData.bio}</p>
+                  <p className="bio-text text-[16px] text-[var(--text)] leading-relaxed font-medium">{formData.bio}</p>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="glass activity-card !rounded-[40px] p-10 shadow-2xl border-white/40 bg-white">
-            <div className="card-header border-b border-slate-200/50 pb-6 mb-8 flex justify-between items-center">
+          <div className="glass activity-card !rounded-[40px] p-10 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
+            <div className="card-header border-b border-[var(--border)]/50 pb-6 mb-8 flex justify-between items-center">
               <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
-                <i className="fi fi-rr-time-past text-[#f47b2a] text-[28px]"></i> กิจกรรมล่าสุด
+                <i className="fi fi-rr-time-past text-[var(--primary)] text-[28px]"></i> กิจกรรมล่าสุด
               </h3>
-              <button className="text-[14px] font-bold text-[#f47b2a] hover:underline px-4 py-2 rounded-full hover:bg-[#f47b2a]/5 transition-all">ดูทั้งหมด</button>
+              <button className="text-[14px] font-bold text-[var(--primary)] hover:underline px-4 py-2 rounded-full hover:bg-[var(--primary)]/5 transition-all">ดูทั้งหมด</button>
             </div>
             <div className="timeline space-y-8">
               {[
-                { icon: "fi fi-rr-box", color: "from-[#f47b2a] to-[#FB923C]", bg: "bg-orange-50", title: "เติมสินค้าในตู้", machine: "Vending Central Ladprao", time: "10 นาทีที่แล้ว" },
-                { icon: "fi fi-rr-refresh", color: "from-[#3B82F6] to-[#60A5FA]", bg: "bg-blue-50", title: "อัปเดตเฟิร์มแวร์ตู้", machine: "#M-045", time: "3 ชั่วโมงที่แล้ว" },
-                { icon: "fi fi-rr-coins", color: "from-[#10B981] to-[#34D399]", bg: "bg-emerald-50", title: "ตรวจสอบยอดเงินสดประจำวัน", machine: "", time: "เมื่อวานนี้, 18:30" }
+                { icon: "fi fi-rr-box", color: "from-[var(--primary)] to-[var(--primary)]", bg: "bg-orange-50", title: "เติมสินค้าในตู้", machine: "Vending Central Ladprao", time: "10 นาทีที่แล้ว" },
+                { icon: "fi fi-rr-refresh", color: "from-[var(--chart-series-1)] to-[var(--chart-series-1)]", bg: "bg-[var(--surface-2)]", title: "อัปเดตเฟิร์มแวร์ตู้", machine: "#M-045", time: "3 ชั่วโมงที่แล้ว" },
+                { icon: "fi fi-rr-coins", color: "from-[var(--success)] to-[var(--success)]", bg: "bg-[var(--success-bg)]", title: "ตรวจสอบยอดเงินสดประจำวัน", machine: "", time: "เมื่อวานนี้, 18:30" }
               ].map((item, idx) => (
                 <div key={idx} className="timeline-item flex gap-6 group">
-                  <div className={`w-14 h-14 rounded-[20px] bg-gradient-to-br ${item.color} flex items-center justify-center text-white text-xl shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}>
+                  <div className={`w-14 h-14 rounded-[20px] bg-gradient-to-br ${item.color} flex items-center justify-center text-[var(--primary-contrast)] text-xl shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}>
                     <i className={item.icon}></i>
                   </div>
                   <div className="timeline-info py-1">
-                    <p className="text-[17px] font-bold text-[#334155] mb-1">
-                      {item.title} {item.machine && <strong className="text-[#f47b2a]">{item.machine}</strong>}
+                    <p className="text-[17px] font-bold text-[var(--text)] mb-1">
+                      {item.title} {item.machine && <strong className="text-[var(--primary)]">{item.machine}</strong>}
                     </p>
-                    <span className="text-[14px] font-semibold text-slate-400">{item.time}</span>
+                    <span className="text-[14px] font-semibold text-[var(--text-muted)]">{item.time}</span>
                   </div>
                 </div>
               ))}
@@ -156,39 +156,39 @@ export default function ProfileView() {
 
         {/* Right: Stats & Progress */}
         <div className="grid-right animate-slide-right opacity-0 delay-300">
-          <div className="vibrant-card completion-card !rounded-[40px] !border-none !bg-gradient-to-br from-[#F8FAFC] to-[#F1F5F9] text-slate-700 p-10 mb-8 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#f47b2a] blur-[100px] opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity"></div>
+          <div className="vibrant-card completion-card !rounded-[40px] !border-none !bg-gradient-to-br from-[var(--surface-2)] to-[var(--surface-2)] text-[var(--text)] p-10 mb-8 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)] blur-[100px] opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity"></div>
             <div className="relative z-10">
               <div className="progress-header flex justify-between items-end mb-4">
                 <div className="flex flex-col">
-                  <span className="text-[12px] font-black text-slate-400 uppercase tracking-widest mb-1">Profile Completion</span>
-                  <span className="text-[32px] font-black leading-none text-slate-800">85%</span>
+                  <span className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Profile Completion</span>
+                  <span className="text-[32px] font-black leading-none text-[var(--text)]">85%</span>
                 </div>
-                <div className="w-12 h-12 rounded-full border-2 border-slate-200 flex items-center justify-center text-slate-400 group-hover:border-[#f47b2a] group-hover:text-[#f47b2a] transition-colors">
+                <div className="w-12 h-12 rounded-full border-2 border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] group-hover:border-[var(--primary)] group-hover:text-[var(--primary)] transition-colors">
                   <i className="fi fi-rr-star"></i>
                 </div>
               </div>
-              <div className="progress-bar h-3 bg-slate-100 rounded-full mb-6 overflow-hidden">
-                <div className="progress-fill h-full bg-gradient-to-r from-[#f47b2a] to-[#FB923C] shadow-[0_0_20px_rgba(244,123,42,0.3)] rounded-full" style={{ width: '85%' }}></div>
+              <div className="progress-bar h-3 bg-[var(--surface-2)] rounded-full mb-6 overflow-hidden">
+                <div className="progress-fill h-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] shadow-[0_0_20px_rgba(244,123,42,0.3)] rounded-full" style={{ width: '85%' }}></div>
               </div>
-              <p className="text-[14px] font-medium text-slate-500 leading-relaxed">เพิ่มรูปหน้าปกเพื่อเพิ่มความสมบูรณ์เป็น 100% และรับเหรียญตรา &quot;Admin Elite&quot;</p>
+              <p className="text-[14px] font-medium text-[var(--text)]0 leading-relaxed">เพิ่มรูปหน้าปกเพื่อเพิ่มความสมบูรณ์เป็น 100% และรับเหรียญตรา &quot;Admin Elite&quot;</p>
             </div>
           </div>
 
-          <div className="glass stats-card !rounded-[40px] p-2 shadow-2xl border-white/40 bg-white">
+          <div className="glass stats-card !rounded-[40px] p-2 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
             <div className="grid grid-cols-2 gap-2">
               {[
-                { val: "12", lbl: "ตู้ที่ดูแล", icon: "fi fi-rr-box", color: "text-blue-500", bg: "bg-blue-50" },
+                { val: "12", lbl: "ตู้ที่ดูแล", icon: "fi fi-rr-box", color: "text-blue-500", bg: "bg-[var(--surface-2)]" },
                 { val: "4.8", lbl: "เรตติ้ง", icon: "fi fi-rr-star", color: "text-amber-500", bg: "bg-amber-50" },
-                { val: "1.2k", lbl: "ยอดขายรวม", icon: "fi fi-rr-bank", color: "text-[#f47b2a]", bg: "bg-orange-50" },
-                { val: "100%", lbl: "Uptime", icon: "fi fi-rr-bolt", color: "text-emerald-500", bg: "bg-emerald-50" }
+                { val: "1.2k", lbl: "ยอดขายรวม", icon: "fi fi-rr-bank", color: "text-[var(--primary)]", bg: "bg-orange-50" },
+                { val: "100%", lbl: "Uptime", icon: "fi fi-rr-bolt", color: "text-emerald-500", bg: "bg-[var(--success-bg)]" }
               ].map((stat, idx) => (
-                <div key={idx} className="vibrant-card !rounded-[32px] !border-none !bg-white p-8 flex flex-col items-center justify-center group hover:!bg-slate-50 transition-all duration-500">
+                <div key={idx} className="vibrant-card !rounded-[32px] !border-none !bg-[var(--surface-1)] p-8 flex flex-col items-center justify-center group hover:!bg-[var(--surface-2)] transition-all duration-500">
                   <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform`}>
                     <i className={stat.icon}></i>
                   </div>
-                  <span className="stat-val text-[28px] font-black text-slate-800">{stat.val}</span>
-                  <span className="stat-lbl text-[12px] font-black text-slate-400 uppercase tracking-widest">{stat.lbl}</span>
+                  <span className="stat-val text-[28px] font-black text-[var(--text)]">{stat.val}</span>
+                  <span className="stat-lbl text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest">{stat.lbl}</span>
                 </div>
               ))}
             </div>
@@ -207,7 +207,7 @@ export default function ProfileView() {
           position: relative;
           border-radius: 48px;
           overflow: hidden;
-          background: #F1F5F9;
+          background: var(--surface-2);
           box-shadow: 0 20px 50px rgba(0,0,0,0.05);
           margin-bottom: 40px;
           height: 380px;
@@ -219,7 +219,7 @@ export default function ProfileView() {
         .hero-bg {
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, #F8FAFC, #E2E8F0);
+          background: linear-gradient(135deg, var(--surface-2), var(--border));
         }
 
         .mesh-gradient {
@@ -273,7 +273,7 @@ export default function ProfileView() {
           z-index: 10;
         }
 
-        .status-indicator.online { background: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
+        .status-indicator.online { background: var(--success); box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
 
         .edit-avatar-btn {
           position: absolute;

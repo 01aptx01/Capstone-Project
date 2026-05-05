@@ -51,10 +51,10 @@ export default function ReportsPage() {
       <div className="flex flex-col gap-6 mb-8">
         <div className="flex items-center justify-between animate-in opacity-0">
           <div>
-            <h1 className="text-[32px] font-black text-[#334155] mb-2 tracking-tight">
+            <h1 className="text-[32px] font-black text-[var(--text)] mb-2 tracking-tight">
               รายงานและสถิติ
             </h1>
-            <p className="text-[#64748B] text-[15px] font-medium">วิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก</p>
+            <p className="text-[var(--text-muted)] text-[15px] font-medium">วิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก</p>
           </div>
           <div className="flex gap-4">
             <button 
@@ -89,8 +89,8 @@ export default function ReportsPage() {
             subValue="/เดือน"
             trend="5.2%"
             icon={<i className="fi fi-rr-box-open"></i>}
-            iconBg="#c0e5ffff"
-            iconColor="#3b82f6"
+            iconBg="var(--surface-2)"
+            iconColor="var(--chart-series-1)"
           />
         </div>
         <div className="animate-in opacity-0 delay-300 h-full">
@@ -100,8 +100,8 @@ export default function ReportsPage() {
             subValue="ออเดอร์"
             trend="12.0%"
             icon={<i className="fi fi-rr-shopping-cart"></i>}
-            iconBg="#c0fbe7ff"
-            iconColor="#10b981"
+            iconBg="var(--success-bg)"
+            iconColor="var(--success)"
           />
         </div>
         <div className="animate-in opacity-0 delay-400 h-full">
@@ -112,8 +112,8 @@ export default function ReportsPage() {
             trend="2"
             trendDirection="down"
             icon={<i className="fi fi-rr-bolt"></i>}
-            iconBg="#ffd7e2ff"
-            iconColor="#e8205a"
+            iconBg="var(--danger-bg)"
+            iconColor="var(--danger)"
           />
         </div>
       </div>
