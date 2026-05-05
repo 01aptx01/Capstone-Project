@@ -141,31 +141,31 @@ export default function MachineDetailPage({ params }: PageProps) {
         {
           title: "ช่องทั้งหมด",
           value: String(slotDraft.length),
-          color: "#1e293b",
+          color: "var(--text)",
         },
         {
           title: "จำนวนชิ้นในตู้",
           value: String(totalUnits),
-          color: "#1e293b",
+          color: "var(--text)",
         },
         {
           title: "เชื่อมต่อ Socket (is_online)",
           value: machine.is_online ? "เชื่อมต่อ" : "ไม่เชื่อมต่อ",
-          color: machine.is_online ? "#0ea5e9" : "#94a3b8",
+          color: machine.is_online ? "var(--chart-series-1)" : "var(--text-muted)",
         },
         {
           title: "อัปเดตล่าสุด (DB)",
           value: machine.last_active || "—",
-          color: "#64748B",
+          color: "var(--text-muted)",
         },
         {
           title: "สถานะปฏิบัติการ (status)",
           value: machine.status,
           color: operationalOnline
-            ? "#10B981"
+            ? "var(--success)"
             : operationalMaintenance
-              ? "#d97706"
-              : "#F43F5E",
+              ? "var(--warn)"
+              : "var(--danger)",
         },
       ]
     : [];
@@ -232,7 +232,7 @@ export default function MachineDetailPage({ params }: PageProps) {
           <button
             type="button"
             onClick={() => router.back()}
-            className="w-12 h-12 rounded-full border border-[#E2E8F0] bg-white flex items-center justify-center text-[#64748B] hover:text-[#FF6A00] hover:border-[#FF6A00] hover:shadow-md transition-all group"
+            className="w-12 h-12 rounded-full border border-[var(--border)] bg-[var(--surface-1)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-[var(--primary)] hover:shadow-md transition-all group"
           >
             <svg
               width="20"
@@ -251,14 +251,14 @@ export default function MachineDetailPage({ params }: PageProps) {
           </button>
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-[28px] font-black text-[#1e293b]">
+              <h1 className="text-[28px] font-black text-[var(--text)]">
                 {loading ? "…" : machine?.machine_code || id}
               </h1>
               {!loading && machine && (
                 <span
                   className={`px-3 py-1 text-[12px] font-bold rounded-full border flex items-center gap-1.5 ${
                     operationalOnline
-                      ? "bg-[#ECFDF5] text-[#059669] border-[#D1FAE5]"
+                      ? "bg-[var(--success-bg)] text-[var(--success)] border-[var(--success-bg)]"
                       : operationalMaintenance
                         ? "bg-amber-50 text-amber-800 border-amber-100"
                         : "bg-rose-50 text-rose-700 border-rose-100"
@@ -267,7 +267,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${
                       operationalOnline
-                        ? "bg-[#10B981] animate-pulse"
+                        ? "bg-[var(--success)] animate-pulse"
                         : operationalMaintenance
                           ? "bg-amber-500"
                           : "bg-rose-500"
@@ -277,7 +277,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                 </span>
               )}
             </div>
-            <div className="text-[14px] font-bold text-[#94A3B8]">
+            <div className="text-[14px] font-bold text-[var(--text-muted)]">
               {machine?.location?.trim()
                 ? machine.location
                 : "ไม่ระบุสถานที่"}
@@ -288,7 +288,7 @@ export default function MachineDetailPage({ params }: PageProps) {
           type="button"
           onClick={() => void handleRefresh()}
           disabled={loading || refreshing}
-          className="shrink-0 self-start px-4 py-2.5 rounded-xl border border-[#E2E8F0] bg-white text-[13px] font-bold text-[#64748B] hover:border-[#FF6A00] hover:text-[#FF6A00] disabled:opacity-50 transition-colors"
+          className="shrink-0 self-start px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[13px] font-bold text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50 transition-colors"
         >
           {refreshing ? "กำลังรีเฟรช…" : "รีเฟรชจากระบบ"}
         </button>
@@ -304,9 +304,9 @@ export default function MachineDetailPage({ params }: PageProps) {
             {metrics.map((m, i) => (
               <div
                 key={i}
-                className="bg-white border border-[#E2E8F0] rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
+                className="bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)]"
               >
-                <div className="text-[13px] font-bold text-[#64748B] mb-2">{m.title}</div>
+                <div className="text-[13px] font-bold text-[var(--text-muted)] mb-2">{m.title}</div>
                 <div className="text-[22px] font-black leading-tight break-all" style={{ color: m.color }}>
                   {m.value}
                 </div>
@@ -314,9 +314,9 @@ export default function MachineDetailPage({ params }: PageProps) {
             ))}
           </div>
 
-          <div className="bg-white border border-[#E2E8F0] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+          <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <h3 className="text-[18px] font-black text-[#1e293b]">สต็อกตามช่อง</h3>
+              <h3 className="text-[18px] font-black text-[var(--text)]">สต็อกตามช่อง</h3>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -327,7 +327,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                     slotDraft.length >= MAX_SLOTS_PER_MACHINE ||
                     products.length === 0
                   }
-                  className="px-4 py-2 rounded-xl border border-[#E2E8F0] bg-white text-[13px] font-bold text-[#64748B] hover:border-[#FF6A00] hover:text-[#FF6A00] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[13px] font-bold text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   เพิ่มช่อง
                 </button>
@@ -337,7 +337,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                     if (machine) setSlotDraft(slotsToDraft(machine.slots));
                   }}
                   disabled={saving}
-                  className="px-4 py-2 rounded-xl border border-[#E2E8F0] bg-white text-[13px] font-bold text-[#64748B] hover:border-slate-400 disabled:opacity-50 transition-colors"
+                  className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[13px] font-bold text-[var(--text-muted)] hover:border-[var(--border)] disabled:opacity-50 transition-colors"
                 >
                   ยกเลิกการแก้ไข
                 </button>
@@ -345,14 +345,14 @@ export default function MachineDetailPage({ params }: PageProps) {
                   type="button"
                   onClick={handleSaveSlots}
                   disabled={saving || productsLoading}
-                  className="px-4 py-2 rounded-xl bg-[#FF6A00] text-white text-[13px] font-bold hover:bg-[#e85f00] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] text-[13px] font-bold hover:bg-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {saving ? "กำลังบันทึก…" : "บันทึกสต็อก"}
                 </button>
               </div>
             </div>
             {productsLoading && (
-              <p className="text-[13px] font-bold text-[#94A3B8] mb-4">กำลังโหลดรายการสินค้า…</p>
+              <p className="text-[13px] font-bold text-[var(--text-muted)] mb-4">กำลังโหลดรายการสินค้า…</p>
             )}
             {!productsLoading && products.length === 0 && (
               <p className="text-[13px] font-bold text-amber-700 mb-4">
@@ -362,18 +362,18 @@ export default function MachineDetailPage({ params }: PageProps) {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-slate-100">
-                    <th className="py-3 px-2 font-black text-slate-400">ช่อง</th>
-                    <th className="py-3 px-2 font-black text-slate-400">สินค้า</th>
-                    <th className="py-3 px-2 font-black text-slate-400">จำนวน</th>
-                    <th className="py-3 px-2 font-black text-slate-400">ราคา</th>
-                    <th className="py-3 px-2 font-black text-slate-400 w-24"> </th>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">ช่อง</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">สินค้า</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">จำนวน</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">ราคา</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)] w-24"> </th>
                   </tr>
                 </thead>
                 <tbody>
                   {slotDraft.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="py-8 px-2 text-center font-bold text-[#94A3B8]">
+                      <td colSpan={5} className="py-8 px-2 text-center font-bold text-[var(--text-muted)]">
                         ยังไม่มีช่องสต็อก — กด &quot;เพิ่มช่อง&quot; เพื่อเริ่มต้น
                       </td>
                     </tr>
@@ -384,11 +384,11 @@ export default function MachineDetailPage({ params }: PageProps) {
                     .map((row) => {
                       const prod = productById.get(row.product_id);
                       return (
-                        <tr key={row.rowKey} className="border-b border-slate-50">
+                        <tr key={row.rowKey} className="border-b border-[var(--border)]">
                           <td className="py-3 px-2 font-bold align-middle">{row.slot_number}</td>
                           <td className="py-3 px-2 align-middle">
                             <select
-                              className="w-full max-w-[280px] rounded-lg border border-slate-200 px-2 py-1.5 font-bold text-[#1e293b] bg-white"
+                              className="w-full max-w-[280px] rounded-lg border border-[var(--border)] px-2 py-1.5 font-bold text-[var(--text)] bg-[var(--surface-1)]"
                               value={row.product_id}
                               onChange={(e) =>
                                 updateDraftRow(row.rowKey, {
@@ -413,7 +413,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                             <input
                               type="number"
                               min={0}
-                              className="w-24 rounded-lg border border-slate-200 px-2 py-1.5 font-black text-[#1e293b]"
+                              className="w-24 rounded-lg border border-[var(--border)] px-2 py-1.5 font-black text-[var(--text)]"
                               value={row.quantity}
                               onChange={(e) =>
                                 updateDraftRow(row.rowKey, {
@@ -442,7 +442,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                 </tbody>
               </table>
             </div>
-            <p className="mt-4 text-[12px] font-bold text-[#94A3B8]">
+            <p className="mt-4 text-[12px] font-bold text-[var(--text-muted)]">
               ตู้: {machineCode} — บันทึกจะแทนที่สต็อกทั้งหมดของตู้นี้ (สูงสุด {MAX_SLOTS_PER_MACHINE}{" "}
               ช่อง)
             </p>

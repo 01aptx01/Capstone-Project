@@ -101,10 +101,10 @@ function MachinesPageClient() {
     <PageWrapper>
       <div className="flex justify-between items-center mb-8 animate-in opacity-0">
         <div>
-          <h1 className="text-3xl font-black text-[#334155] tracking-tight mb-2">
+          <h1 className="text-3xl font-black text-[var(--text)] tracking-tight mb-2">
             จัดการตู้สินค้า
           </h1>
-          <p className="text-slate-400 font-medium">
+          <p className="text-[var(--text-muted)] font-medium">
             ติดตามสถานะ สต็อกสินค้า และประสิทธิภาพของตู้จำหน่ายสินค้าอัตโนมัติแบบ Real-time
           </p>
         </div>
@@ -112,13 +112,13 @@ function MachinesPageClient() {
           <button
             type="button"
             onClick={() => load()}
-            className="px-4 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold text-sm"
+            className="px-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold text-sm"
           >
             รีเฟรช
           </button>
           <button
             onClick={() => openExportModal(machineSections, "จัดการตู้สินค้า")}
-            className="px-6 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
+            className="px-6 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
           >
             <i className="fi fi-rr-download text-sm"></i>
             <span>Export</span>
@@ -141,14 +141,14 @@ function MachinesPageClient() {
             label: "ตู้ทั้งหมด",
             value: loading ? "…" : machines.length,
             icon: "fi-rr-vending-machine",
-            color: "bg-blue-500",
+            color: "bg-[var(--surface-2)]0",
             shadow: "shadow-blue-200",
           },
           {
             label: "พร้อมขาย (status=online)",
             value: loading ? "…" : operationalOnlineCount,
             icon: "fi-rr-check-circle",
-            color: "bg-emerald-500",
+            color: "bg-[var(--success-bg)]0",
             shadow: "shadow-emerald-200",
           },
           {
@@ -172,15 +172,15 @@ function MachinesPageClient() {
             className="vibrant-card p-6 flex items-center gap-5 hover:translate-y-[-4px] transition-transform duration-300"
           >
             <div
-              className={`w-14 h-14 rounded-full ${stat.color} flex items-center justify-center text-xl text-white shadow-lg ${stat.shadow}`}
+              className={`w-14 h-14 rounded-full ${stat.color} flex items-center justify-center text-xl text-[var(--primary-contrast)] shadow-lg ${stat.shadow}`}
             >
               <i className={`fi ${stat.icon}`}></i>
             </div>
             <div>
-              <div className="text-slate-400 font-bold text-[12px] uppercase tracking-widest">
+              <div className="text-[var(--text-muted)] font-bold text-[12px] uppercase tracking-widest">
                 {stat.label}
               </div>
-              <div className="text-2xl font-black text-[#334155]">{stat.value}</div>
+              <div className="text-2xl font-black text-[var(--text)]">{stat.value}</div>
             </div>
           </div>
         ))}
@@ -188,13 +188,13 @@ function MachinesPageClient() {
 
       <div className="space-y-8">
         <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-black text-[#334155] tracking-tight flex items-center gap-3">
-            <span className="w-2 h-8 bg-[#f47b2a] rounded-full"></span>
+          <h2 className="text-2xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
+            <span className="w-2 h-8 bg-[var(--primary)] rounded-full"></span>
             รายชื่อตู้ทั้งหมด
           </h2>
           <button
             onClick={openAddMachine}
-            className="px-5 py-2.5 bg-[#f47b2a] text-white rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
+            className="px-5 py-2.5 bg-[var(--primary)] text-[var(--primary-contrast)] rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
           >
             <i className="fi fi-rr-plus text-sm"></i>
             <span>เพิ่มตู้สินค้า</span>
@@ -221,9 +221,9 @@ function MachinesPageClient() {
               ))}
 
               {!loading && machines.length === 0 && (
-                <div className="col-span-full flex min-h-[200px] flex-col items-center justify-center rounded-[40px] border border-dashed border-slate-200 bg-slate-50/50 px-6 py-12 text-center">
-                  <p className="text-lg font-black text-slate-600">ยังไม่มีตู้ในระบบ</p>
-                  <p className="mt-2 text-sm font-medium text-slate-500">
+                <div className="col-span-full flex min-h-[200px] flex-col items-center justify-center rounded-[40px] border border-dashed border-[var(--border)] bg-[var(--surface-2)]/50 px-6 py-12 text-center">
+                  <p className="text-lg font-black text-[var(--text)]">ยังไม่มีตู้ในระบบ</p>
+                  <p className="mt-2 text-sm font-medium text-[var(--text)]0">
                     เพิ่มตู้ใหม่จากปุ่มด้านบน หรือตรวจสอบการเชื่อมต่อ API
                   </p>
                 </div>
@@ -231,25 +231,25 @@ function MachinesPageClient() {
 
           <div
             onClick={openAddMachine}
-            className="group relative border-4 border-dashed border-slate-100 rounded-[40px] p-8 flex flex-col items-center justify-center min-h-[380px] hover:border-[#f47b2a]/30 hover:bg-orange-50/30 transition-all duration-700 cursor-pointer animate-scale-in opacity-0"
+            className="group relative border-4 border-dashed border-[var(--border)] rounded-[40px] p-8 flex flex-col items-center justify-center min-h-[380px] hover:border-[var(--primary)]/30 hover:bg-orange-50/30 transition-all duration-700 cursor-pointer animate-scale-in opacity-0"
             style={{
               animationDelay: `${200 + (loading ? 0 : machines.length) * 100}ms`,
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-orange-50/50 opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-[40px]"></div>
-            <div className="relative z-10 w-24 h-24 bg-white rounded-[32px] flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 shadow-xl shadow-slate-200/50 border border-slate-50 group-hover:border-orange-200">
-              <i className="fi fi-rr-plus text-[40px] text-slate-200 group-hover:text-[#f47b2a] transition-colors duration-500"></i>
+            <div className="relative z-10 w-24 h-24 bg-[var(--surface-1)] rounded-[32px] flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-12 transition-all duration-700 shadow-xl /50 border border-[var(--border)] group-hover:border-orange-200">
+              <i className="fi fi-rr-plus text-[40px] text-[var(--text)] group-hover:text-[var(--primary)] transition-colors duration-500"></i>
             </div>
             <div className="relative z-10 text-center">
-              <div className="text-[22px] font-black text-slate-300 group-hover:text-[#f47b2a] tracking-tight transition-colors duration-500">
+              <div className="text-[22px] font-black text-[var(--text-muted)] group-hover:text-[var(--primary)] tracking-tight transition-colors duration-500">
                 เพิ่มตู้สินค้าใหม่
               </div>
-              <p className="text-slate-300 font-bold text-sm mt-3 max-w-[200px] mx-auto leading-relaxed group-hover:text-orange-400 transition-colors duration-500">
+              <p className="text-[var(--text-muted)] font-bold text-sm mt-3 max-w-[200px] mx-auto leading-relaxed group-hover:text-orange-400 transition-colors duration-500">
                 คลิกเพื่อเชื่อมต่อและจัดการตู้ใหม่เข้ากับระบบส่วนกลาง
               </p>
             </div>
-            <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-slate-100 rounded-tl-xl group-hover:border-[#f47b2a]/20 transition-colors"></div>
-            <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-slate-100 rounded-br-xl group-hover:border-[#f47b2a]/20 transition-colors"></div>
+            <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-[var(--border)] rounded-tl-xl group-hover:border-[var(--primary)]/20 transition-colors"></div>
+            <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-[var(--border)] rounded-br-xl group-hover:border-[var(--primary)]/20 transition-colors"></div>
           </div>
             </>
           )}
@@ -264,7 +264,7 @@ export default function MachinesPage() {
     <Suspense
       fallback={
         <PageWrapper>
-          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+          <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">กำลังโหลด…</p>
         </PageWrapper>
       }
     >

@@ -73,7 +73,7 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
             fill="none"
             stroke="currentColor"
             strokeWidth="0.5"
-            className="text-[#f47b2a]"
+            className="text-[var(--primary)]"
           >
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
             <line x1="9" y1="3" x2="9" y2="21"></line>
@@ -81,34 +81,34 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6 relative z-10 p-2">
-          <p className="text-[12px] font-bold text-slate-500 leading-relaxed">
+          <p className="text-[12px] font-bold text-[var(--text)]0 leading-relaxed">
             รหัสตู้ (machine_code) อ่านอย่างเดียวจากฐานข้อมูล — แก้ได้เฉพาะสถานที่และสถานะปฏิบัติการ
           </p>
 
           <div className="group space-y-2">
-            <label className="text-[11px] font-black text-slate-400 ml-2 uppercase tracking-[0.2em]">
+            <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em]">
               รหัสตู้
             </label>
             <input
               type="text"
               readOnly
-              className="w-full px-6 py-4 bg-slate-100 border border-slate-200 rounded-[24px] text-[15px] font-bold text-slate-600 cursor-not-allowed"
+              className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[24px] text-[15px] font-bold text-[var(--text)] cursor-not-allowed"
               value={machineCode}
             />
           </div>
 
           <div className="group space-y-2">
-            <label className="text-[11px] font-black text-slate-400 ml-2 uppercase tracking-[0.2em] group-focus-within:text-[#f47b2a] transition-colors">
+            <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
               สถานที่ตั้ง (location)
             </label>
             <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#f47b2a] transition-colors">
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors">
                 <i className="fi fi-rr-marker"></i>
               </span>
               <input
                 type="text"
                 placeholder="เว้นว่างได้ — จะบันทึกเป็นค่าว่างในระบบ"
-                className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-[24px] outline-none focus:border-[#f47b2a]/30 focus:bg-white focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[#334155]"
+                className="w-full pl-14 pr-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[24px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[var(--text)]"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 disabled={saving}
@@ -117,15 +117,15 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
           </div>
 
           <div className="group space-y-2">
-            <label className="text-[11px] font-black text-slate-400 ml-2 uppercase tracking-[0.2em] group-focus-within:text-[#f47b2a] transition-colors">
+            <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-[0.2em] group-focus-within:text-[var(--primary)] transition-colors">
               สถานะปฏิบัติการ (status ในฐานข้อมูล)
             </label>
             <div className="relative">
-              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none">
+              <span className="absolute left-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none">
                 <i className="fi fi-rr-power"></i>
               </span>
               <select
-                className="w-full pl-14 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-[24px] outline-none focus:border-[#f47b2a]/30 focus:bg-white focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[#334155] appearance-none cursor-pointer"
+                className="w-full pl-14 pr-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[24px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[var(--text)] appearance-none cursor-pointer"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 disabled={saving}
@@ -136,7 +136,7 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
                   </option>
                 ))}
               </select>
-              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none">
+              <span className="absolute right-6 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none">
                 <i className="fi fi-rr-angle-small-down text-xl"></i>
               </span>
             </div>
@@ -147,17 +147,17 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="flex-1 px-8 py-5 bg-slate-100 text-slate-500 rounded-[28px] text-[15px] font-black hover:bg-slate-200 transition-all active:scale-95 disabled:opacity-50"
+              className="flex-1 px-8 py-5 bg-[var(--surface-2)] text-[var(--text)]0 rounded-[28px] text-[15px] font-black hover:bg-[var(--border)] transition-all active:scale-95 disabled:opacity-50"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-[2] px-8 py-5 bg-gradient-to-r from-[#f47b2a] to-[#FB923C] text-white rounded-[28px] text-[16px] font-black shadow-[0_20px_40px_rgba(244,123,42,0.25)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.35)] hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex-[2] px-8 py-5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-[28px] text-[16px] font-black shadow-[0_20px_40px_rgba(244,123,42,0.25)] hover:shadow-[0_25px_50px_rgba(244,123,42,0.35)] hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3 group disabled:opacity-60 disabled:cursor-not-allowed"
             >
               <span>{saving ? "กำลังบันทึก…" : "บันทึกการแก้ไข"}</span>
-              <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+              <div className="w-8 h-8 bg-[var(--surface-1)]/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                 <i className="fi fi-rr-check text-lg"></i>
               </div>
             </button>

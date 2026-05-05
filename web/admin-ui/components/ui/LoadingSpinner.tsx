@@ -7,11 +7,17 @@ export default function LoadingSpinner({ className = "" }: { className?: string 
       className={`flex h-full min-h-[inherit] w-full flex-1 flex-col items-center justify-center gap-3 ${className}`}
     >
       <div
-        className="h-12 w-12 shrink-0 animate-spin rounded-full border-4 border-slate-200 border-t-[#f47b2a]"
+        className="h-12 w-12 shrink-0 animate-spin rounded-full border-4"
+        style={{
+          borderColor: "var(--border)",
+          borderTopColor: "var(--primary)",
+        }}
         role="status"
         aria-label="Loading"
       />
-      <span className="text-sm font-bold text-slate-500">กำลังโหลด…</span>
+      <span className="text-sm font-bold" style={{ color: "var(--text-muted)" }}>
+        กำลังโหลด…
+      </span>
     </div>
   );
 }

@@ -124,7 +124,7 @@ function OrdersPageClient() {
     const s = status.toLowerCase();
     if (s === "completed")
       return (
-        <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-emerald-100">
+        <span className="px-3 py-1 bg-[var(--success-bg)] text-emerald-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-emerald-100">
           Completed
         </span>
       );
@@ -141,7 +141,7 @@ function OrdersPageClient() {
         </span>
       );
     return (
-      <span className="px-3 py-1 bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-slate-100">
+      <span className="px-3 py-1 bg-[var(--surface-2)] text-[var(--text)] text-[11px] font-black uppercase tracking-wider rounded-lg border border-[var(--border)]">
         {status}
       </span>
     );
@@ -151,10 +151,10 @@ function OrdersPageClient() {
     <PageWrapper>
       <div className="flex items-center justify-between animate-in opacity-0">
         <div>
-          <h1 className="text-[36px] font-black text-[#334155] mb-2 tracking-tight">
+          <h1 className="text-[36px] font-black text-[var(--text)] mb-2 tracking-tight">
             ประวัติการสั่งซื้อ
           </h1>
-          <p className="text-[#64748B] text-[16px] font-medium">
+          <p className="text-[var(--text-muted)] text-[16px] font-medium">
             ตรวจสอบและจัดการรายการธุรกรรมทั้งหมดในระบบ
           </p>
         </div>
@@ -162,7 +162,7 @@ function OrdersPageClient() {
           <button
             type="button"
             onClick={() => load()}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-[#334155]"
+            className="px-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl font-bold text-sm text-[var(--text)]"
           >
             รีเฟรช
           </button>
@@ -182,8 +182,8 @@ function OrdersPageClient() {
             title="ออเดอร์ทั้งหมด"
             value={loading ? "…" : String(total)}
             icon={<i className="fi fi-rr-shopping-cart"></i>}
-            iconBg="#EEF2FF"
-            iconColor="#4F46E5"
+            iconBg="var(--surface-2)"
+            iconColor="var(--chart-series-1)"
           />
         </div>
         <div className="animate-in opacity-0 delay-200">
@@ -191,8 +191,8 @@ function OrdersPageClient() {
             title="รอดำเนินการ / ยกเลิก"
             value={loading ? "…" : String(summary.pending)}
             icon={<i className="fi fi-rr-time-past"></i>}
-            iconBg="#FFF7ED"
-            iconColor="#F59E0B"
+            iconBg="var(--surface-1)7ED"
+            iconColor="var(--warn)"
           />
         </div>
         <div className="animate-in opacity-0 delay-300">
@@ -200,8 +200,8 @@ function OrdersPageClient() {
             title="สำเร็จแล้ว"
             value={loading ? "…" : String(summary.completed)}
             icon={<i className="fi fi-rr-check-circle"></i>}
-            iconBg="#ECFDF5"
-            iconColor="#10B981"
+            iconBg="var(--success-bg)"
+            iconColor="var(--success)"
           />
         </div>
         <div className="animate-in opacity-0 delay-400">
@@ -209,42 +209,42 @@ function OrdersPageClient() {
             title="ยอดเงินรวม (ชุดที่โหลด)"
             value={loading ? "…" : `฿${summary.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             icon={<i className="fi fi-rr-coins"></i>}
-            iconBg="#FDF2F8"
-            iconColor="#DB2777"
+            iconBg="var(--surface-2)"
+            iconColor="var(--chart-series-1)"
           />
         </div>
       </div>
 
       <div className="vibrant-card !rounded-[32px] overflow-hidden animate-in opacity-0 delay-500 min-h-[320px]">
-        <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-          <h2 className="text-[20px] font-black text-[#334155]">รายการออเดอร์ล่าสุด</h2>
+        <div className="p-8 border-b border-[var(--border)] flex items-center justify-between">
+          <h2 className="text-[20px] font-black text-[var(--text)]">รายการออเดอร์ล่าสุด</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-slate-50/50">
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+              <tr className="bg-[var(--surface-2)]/50">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   Order ID
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   เวลา
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   ตู้
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   ลูกค้า
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   ช่องทางจ่าย
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   สินค้า
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   Total
                 </th>
-                <th className="px-8 py-5 text-[12px] font-black text-slate-400 uppercase tracking-widest text-left whitespace-nowrap">
+                <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
                   Status
                 </th>
               </tr>
@@ -261,35 +261,35 @@ function OrdersPageClient() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-8 py-16 text-center">
-                    <p className="text-lg font-black text-slate-500">ไม่มีออเดอร์ในชุดที่โหลด</p>
-                    <p className="mt-2 text-sm font-medium text-slate-400">
+                    <p className="text-lg font-black text-[var(--text)]0">ไม่มีออเดอร์ในชุดที่โหลด</p>
+                    <p className="mt-2 text-sm font-medium text-[var(--text-muted)]">
                       ลองรีเฟรชหรือตรวจสอบการเชื่อมต่อกับเซิร์ฟเวอร์
                     </p>
                   </td>
                 </tr>
               ) : (
                 rows.map((o) => (
-                  <tr key={o.id} className="group hover:bg-slate-50/50 transition-colors">
+                  <tr key={o.id} className="group hover:bg-[var(--surface-2)]/50 transition-colors">
                     <td className="px-8 py-5">
-                      <span className="text-[15px] font-black text-[#334155]">{o.id}</span>
+                      <span className="text-[15px] font-black text-[var(--text)]">{o.id}</span>
                     </td>
-                    <td className="px-8 py-5 text-[14px] font-semibold text-[#64748B] max-w-[200px] truncate">
+                    <td className="px-8 py-5 text-[14px] font-semibold text-[var(--text-muted)] max-w-[200px] truncate">
                       {o.time}
                     </td>
-                    <td className="px-8 py-5 text-[13px] font-bold font-mono text-slate-600">
+                    <td className="px-8 py-5 text-[13px] font-bold font-mono text-[var(--text)]">
                       {o.machine_code || "—"}
                     </td>
-                    <td className="px-8 py-5 text-[13px] font-bold text-slate-600">
+                    <td className="px-8 py-5 text-[13px] font-bold text-[var(--text)]">
                       {o.customer_phone || "—"}
                     </td>
-                    <td className="px-8 py-5 text-[12px] font-bold text-slate-600 uppercase">
+                    <td className="px-8 py-5 text-[12px] font-bold text-[var(--text)] uppercase">
                       {o.payment_method || "—"}
                     </td>
                     <td className="px-8 py-5">
-                      <span className="text-[14px] font-bold text-slate-600">{o.items}</span>
+                      <span className="text-[14px] font-bold text-[var(--text)]">{o.items}</span>
                     </td>
                     <td className="px-8 py-5">
-                      <span className="text-[16px] font-black text-[#334155]">
+                      <span className="text-[16px] font-black text-[var(--text)]">
                         ฿{Number(o.amount).toFixed(2)}
                       </span>
                     </td>
@@ -300,8 +300,8 @@ function OrdersPageClient() {
             </tbody>
           </table>
         </div>
-        <div className="p-6 bg-slate-50/30 border-t border-slate-50 flex items-center justify-between">
-          <p className="text-[13px] font-bold text-slate-400">
+        <div className="p-6 bg-[var(--surface-2)]/30 border-t border-[var(--border)] flex items-center justify-between">
+          <p className="text-[13px] font-bold text-[var(--text-muted)]">
             แสดง {rows.length} รายการ (ทั้งหมดในระบบ {total} ตาม API)
           </p>
         </div>
@@ -315,7 +315,7 @@ export default function OrdersPage() {
     <Suspense
       fallback={
         <PageWrapper>
-          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+          <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">กำลังโหลด…</p>
         </PageWrapper>
       }
     >
