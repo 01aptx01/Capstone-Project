@@ -9,15 +9,14 @@ import type {
 } from "./admin-api";
 import { getMachine, listMachines } from "./admin-api";
 
-/** DB category -> Thai label shown in admin UI */
-export const CATEGORY_TO_LABEL: Record<string, string> = {
-  meat: "หมูสับ/หมูแดง",
-  vegetarian: "เจ / มังสวิรัติ",
-  sweet: "ไส้หวาน",
-};
+/** UI / export uses DB category strings as-is: meat | vegetarian | sweet */
+const CANONICAL_CATEGORIES = new Set(["meat", "vegetarian", "sweet"]);
 
-/** Thai label -> DB category for POST/PUT */
+/** Map legacy Thai labels (and aliases) -> DB category for POST/PUT */
 export const LABEL_TO_CATEGORY: Record<string, string> = {
+  meat: "meat",
+  vegetarian: "vegetarian",
+  sweet: "sweet",
   "หมูสับ/หมูแดง": "meat",
   "เจ / มังสวิรัติ": "vegetarian",
   มังสวิรัติ: "vegetarian",
@@ -26,11 +25,17 @@ export const LABEL_TO_CATEGORY: Record<string, string> = {
 };
 
 export function apiCategoryToLabel(cat: string): string {
-  return CATEGORY_TO_LABEL[cat] || cat;
+  const raw = (cat || "").trim();
+  const lower = raw.toLowerCase();
+  if (CANONICAL_CATEGORIES.has(lower)) return lower;
+  return (LABEL_TO_CATEGORY[raw] ?? LABEL_TO_CATEGORY[lower] ?? lower) || "meat";
 }
 
 export function uiLabelToApiCategory(label: string): string {
-  return LABEL_TO_CATEGORY[label] || "meat";
+  const raw = (label || "").trim();
+  const lower = raw.toLowerCase();
+  if (CANONICAL_CATEGORIES.has(lower)) return lower;
+  return LABEL_TO_CATEGORY[raw] ?? LABEL_TO_CATEGORY[lower] ?? "meat";
 }
 
 /** Product row for ProductTable / export */
