@@ -1,7 +1,6 @@
 "use client";
-import React from 'react';
 import { Product } from './ProductCard';
-import { ShoppingCart, Trash2, ScanQrCode, Timer } from 'lucide-react';
+import { ShoppingCart, Trash2, TicketPercent, Timer } from 'lucide-react';
 
 export interface CartItem extends Product {
   qty: number;
@@ -9,6 +8,8 @@ export interface CartItem extends Product {
 
 interface Props {
   cart: CartItem[];
+  /** Current catalog stock by product_id (from GET /api/products) */
+  stockById: Record<number, number>;
   totalPrice: number;
   totalHeatingTime: number;
   onCheckout: () => void;
@@ -16,9 +17,10 @@ interface Props {
   onDecrease: (id: number) => void;
   onRemove: (id: number) => void;
   onOpenInfo: () => void;
+  onOpenContact: () => void;
 }
 
-export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo }: Props) {
+export default function CartSidebar({ cart, stockById, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact }: Props) {
   return (
     <div className="sidebar">
       <button className="info-btn" onClick={onOpenInfo}>i</button>
@@ -29,33 +31,48 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
             <div className="cart-icon">
               <ShoppingCart size={50} />
             </div>
-            <div className="cart-empty-text">ตะกร้าว่างๆ</div>
+            <div className="cart-empty-text">ตะกร้าว่าง</div>
           </div>
         ) : (
           <div className="cart-item-list">
-            {cart.map((item) => (
+            {cart.map((item) => {
+              const liveStock = stockById[item.id] ?? item.stock ?? 0;
+              const atSkuCap = item.qty >= liveStock;
+              const disablePlus = atSkuCap;
+              return (
               <div className="cart-item-row" key={item.id}>
                 {/* บรรทัดบน: ชื่อ และ ราคารวมของสินค้านั้น */}
                 <div className="cart-item-main">
                   <div style={{ fontWeight: 600, fontSize: '16px' }}>{item.name}</div>
-                  <div style={{ fontWeight: 700, fontSize: '16px', color: '#f47b2a' }}>
-                    {item.price * item.qty} ฿
+                  <div style={{ fontWeight: 700, fontSize: '16px', color: '#333' }}>
+                    {item.price * item.qty} <span>฿</span>
                   </div>
                 </div>
 
                 {/* บรรทัดล่าง: ปุ่มจัดการจำนวน และ ปุ่มลบ */}
                 <div className="cart-item-actions">
-                  <div className="qty-controls">
-                    <button className="btn-qty" onClick={() => onDecrease(item.id)}>-</button>
-                    <span className="qty-val">{item.qty}</span>
-                    <button className="btn-qty" onClick={() => onIncrease(item.id)}>+</button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div className="qty-controls">
+                      <button className="btn-qty" onClick={() => onDecrease(item.id)}>-</button>
+                      <span className="qty-val">{item.qty}</span>
+                      <button
+                        className="btn-qty"
+                        onClick={() => onIncrease(item.id)}
+                        disabled={disablePlus}
+                        style={{ opacity: disablePlus ? 0.45 : 1 }}
+                      >+</button>
+                    </div>
+                    {liveStock > 0 && liveStock <= 3 && (
+                      <span style={{ color: '#ef4444', fontSize: '12px', fontWeight: 600 }}>สินค้าคงเหลือ {liveStock} ชิ้น</span>
+                    )}
                   </div>
                   <button className="btn-remove" onClick={() => onRemove(item.id)}>
                     <Trash2 size={20} />
                   </button>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
@@ -73,7 +90,7 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
 
         <div className="total-row">
           <div className="total-label">รวมทั้งหมด:</div>
-          <div className="total-amount">{totalPrice} ฿</div>
+          <div className="total-amount">{totalPrice} <span>฿</span></div>
         </div>
 
         <button
@@ -84,10 +101,10 @@ export default function CartSidebar({ cart, totalPrice, totalHeatingTime, onChec
           ชำระเงิน
         </button>
         <button className="preorder-btn">
-          <ScanQrCode size={20} /> สั่งอาหารล่วงหน้า
+          <TicketPercent size={20} /> ใช้คูปอง
         </button>
 
-        <a href="#" className="contact-link">ติดต่อสอบถามเพิ่มเติม</a>
+        <a onClick={onOpenContact} style={{ cursor: 'pointer' }} className="contact-link">ติดต่อสอบถามเพิ่มเติม</a>
       </div>
     </div>
   );

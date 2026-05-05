@@ -1,0 +1,8 @@
+Active: Docker compose logs banner + WS/DB connection summary
+Done:
+- server/main.py: startup banner shows ws.enabled/dispatch/agent.url + db=mysql://<user>@<host>/<db> + URLs + cors.origins (no secrets)
+- client/agent/docker-entrypoint.sh: compact banner shows host.url, server.url, ws.url, db.local, machine.id, sink mode/url
+- docker-compose.yml: new one-shot `compose-banner` service prints Published URLs table into compose logs
+- client/agent/machine.py: non-Pi friendly LED init fallback → virtual devices (prevents gpiozero BadPinFactory crash)
+Next:
+- (optional) run `docker compose up -d compose-banner` after `up` if you want the URLs table printed again on demand

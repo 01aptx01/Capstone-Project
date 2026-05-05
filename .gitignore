@@ -4,3 +4,7 @@ __pycache__/
 node_modules/
 dist/
 build/
+.cursorrules
+.agents/
+remember.md
+.cursor/
