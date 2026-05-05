@@ -38,6 +38,7 @@ CREATE TABLE promotions (
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   expire_date DATETIME NULL,
   points_cost INT NOT NULL DEFAULT 0,
+  max_uses INT NOT NULL DEFAULT 0 COMMENT '0 = unlimited redemptions',
   UNIQUE KEY uq_promotions_code (code)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

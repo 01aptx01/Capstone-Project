@@ -22,6 +22,7 @@ const emptyForm = {
   discountType: "Percentage" as DiscountType,
   discountValue: "",
   pointsCost: "0",
+  maxUses: "0",
   validTo: "",
   isActive: true,
 };
@@ -50,6 +51,7 @@ function uiRowToFormData(row: UiCouponRow) {
     discountType: (row.type === "PERCENT" ? "Percentage" : "Fixed Amount") as DiscountType,
     discountValue: String(row.discount_amount),
     pointsCost: String(row.points_cost ?? 0),
+    maxUses: String(row.maxUsage ?? 0),
     validTo: isoExpiryToDateInput(row.expiry),
     isActive: row.is_active,
   };
@@ -121,6 +123,13 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
       return;
     }
 
+    const maxUsesParsed =
+      formData.maxUses.trim() === "" ? 0 : Number.parseInt(formData.maxUses, 10);
+    if (!Number.isFinite(maxUsesParsed) || maxUsesParsed < 0) {
+      setFormError(t("createCoupon.errorMaxUses"));
+      return;
+    }
+
     if (mode === "edit" && !editRow) {
       setFormError(t("coupon.error.saveFailed"));
       return;
@@ -135,6 +144,7 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
         expire_date: fromDateInput(formData.validTo),
         is_active: formData.isActive,
         points_cost: points,
+        max_uses: maxUsesParsed,
       };
 
       if (mode === "create") {
@@ -292,6 +302,22 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
                   />
                 </div>
                 <div className="group space-y-2">
+                  <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-widest group-focus-within:text-[var(--primary)] transition-colors">
+                    {t("createCoupon.label.maxUses")}
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder={t("createCoupon.placeholder.maxUses")}
+                    className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] transition-all font-black text-[var(--text)]"
+                    value={formData.maxUses}
+                    onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
+                    disabled={submitting}
+                  />
+                  <p className="text-[11px] font-bold text-[var(--text-muted)] ml-2">{t("createCoupon.hint.maxUses")}</p>
+                </div>
+                <div className="group space-y-2 md:col-span-2">
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-widest group-focus-within:text-[var(--primary)] transition-colors">
                     {t("createCoupon.label.validTo")}
                   </label>

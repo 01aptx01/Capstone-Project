@@ -126,6 +126,20 @@ export type ApiCoupon = {
   expire_date: string | null;
   /** แต้มที่ต้องใช้แลก (0 = ไม่บังคับแลกแต้มใน flow นี้) */
   points_cost?: number;
+  /** จำนวนครั้งสูงสุดที่ใช้ได้ทั้งระบบ (0 = ไม่จำกัด) */
+  max_uses?: number;
+  /** นับจากออเดอร์ที่ไม่ใช่ pending/cancel/failed */
+  used_count?: number;
+};
+
+export type ApiCouponRedemption = {
+  order_id: number;
+  charge_id: string | null;
+  status: string;
+  total_price: number;
+  created_at: string | null;
+  /** เบอร์สมาชิก หรือ "unknown" ถ้ายังไม่ผูกหลังจ่าย */
+  user_label: string;
 };
 
 export async function listProducts(params?: {
@@ -301,6 +315,14 @@ export async function listCoupons(params?: {
   return adminFetch<Paginated<ApiCoupon>>(`/coupons${q ? `?${q}` : ""}`);
 }
 
+export async function listCouponRedemptions(promotionId: number): Promise<{
+  items: ApiCouponRedemption[];
+  promotion_id: number;
+  code: string;
+}> {
+  return adminFetch(`/coupons/${promotionId}/redemptions`);
+}
+
 export async function createCoupon(body: {
   code: string;
   type: string;
@@ -308,6 +330,7 @@ export async function createCoupon(body: {
   expire_date?: string | null;
   is_active?: boolean;
   points_cost?: number;
+  max_uses?: number;
 }): Promise<ApiCoupon> {
   return adminFetch<ApiCoupon>("/coupons", {
     method: "POST",
@@ -325,6 +348,7 @@ export async function updateCoupon(
     type: string;
     code: string;
     points_cost: number;
+    max_uses: number;
   }>
 ): Promise<ApiCoupon> {
   return adminFetch<ApiCoupon>(`/coupons/${promotionId}`, {
