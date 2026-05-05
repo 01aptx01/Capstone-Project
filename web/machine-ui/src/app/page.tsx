@@ -88,6 +88,8 @@ export default function VendingPage() {
 
   // -- Flow & Queue States --
   const [isAfterPayment, setIsAfterPayment] = useState(false);
+  /** เริ่มนับเวลา/สเต็ปอุ่นแล้วระหว่างหน้าสะสมแต้ม (ไม่ต้องรอปิด numpad) */
+  const heatingTimelineStartedRef = useRef(false);
   const [queue, setQueue] = useState<Product[]>([]);
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
   const [isInitialStep1Delay, setIsInitialStep1Delay] = useState(false); // ช่วง 2-3 วินาทีแรก (Step 1 hold)
@@ -184,6 +186,18 @@ export default function VendingPage() {
   const DISPENSE_WINDOW = 2; // seconds each item gets for its "serving" label
   const STEP4_HOLD = 3; // seconds to hold the Step 3 (กำลังเสิร์ฟ) state
   const FINAL_STEP_HOLD = 3; // seconds to hold Step 4 (พร้อมทาน) state before completing
+  /** บวก 3 วินาทีต่อ 1 ประเภทเวลาอุ่น (ค่า heatingTime ที่ไม่ซ้ำในรถเข็น) */
+  const SECONDS_PER_HEATING_TIME_TYPE = 3;
+
+  /**
+   * เวลารอประมาณในรถเข็น: เวลาอุ่นมากที่สุด + (3 × จำนวนประเภทเวลาอุ่น)
+   * แยกจาก calculateTotalProcessTime ที่ใช้ timeline หลังชำระเงิน
+   */
+  const estimateApproxWaitSeconds = (q: Product[]): number => {
+    if (q.length === 0) return 0;
+    const times = q.map((p) => p.heatingTime);
+    return Math.max(...times) + SECONDS_PER_HEATING_TIME_TYPE * new Set(times).size;
+  };
 
   /**
    * Build a schedule array: for each item in the sorted queue,
@@ -215,7 +229,7 @@ export default function VendingPage() {
     return STEP1_DELAY + lastWindowEnd + STEP4_HOLD + FINAL_STEP_HOLD;
   };
 
-  const totalHeatingTime = calculateTotalProcessTime(
+  const totalHeatingTime = estimateApproxWaitSeconds(
     cart.flatMap((item) => Array.from({ length: item.qty }, () => item))
   );
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
@@ -364,7 +378,24 @@ export default function VendingPage() {
     [products],
   );
 
+  const exitPostPaymentLoyalty = () => {
+    setIsAfterPayment(false);
+  };
+
+  /** เริ่ม state การอุ่น (เวลา + step) โดยไม่สลับ modal — ใช้คู่กับหน้า numpad หลังจ่ายเงิน */
+  const beginHeatingTimelineOnly = (q: Product[]) => {
+    if (!agentJobState) {
+      const totalProcessTime = calculateTotalProcessTime(q);
+      if (!heatingTimelineStartedRef.current) {
+        setGlobalTimeLeft(totalProcessTime);
+        heatingTimelineStartedRef.current = true;
+      }
+    }
+    setIsInitialStep1Delay(true);
+  };
+
   const handleProcessingCompleteClose = () => {
+    heatingTimelineStartedRef.current = false;
     setActiveModal("none");
     void fetchProducts({ silent: true });
   };
@@ -425,15 +456,20 @@ export default function VendingPage() {
     }
   }, [activeModal, numpadCountdown, isAfterPayment]);
 
-  // Timer: นับถอยหลังระบบอุ่นสินค้ารวม
+  // Timer: นับถอยหลังระบบอุ่น — ทำงานทั้งตอนหน้าสะสมแต้ม (หลังจ่าย) และหน้า processing
+  const localHeatCountdownActive =
+    !agentJobState &&
+    (activeModal === "processing" ||
+      (activeModal === "numpad" && isAfterPayment) ||
+      (activeModal === "points_result" && isAfterPayment));
+
   useEffect(() => {
-    if (activeModal === "processing" && !agentJobState) {
-      const interval = setInterval(() => {
-        setGlobalTimeLeft((prev) => Math.max(0, prev - 1));
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [activeModal, agentJobState]);
+    if (!localHeatCountdownActive) return;
+    const interval = setInterval(() => {
+      setGlobalTimeLeft((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [localHeatCountdownActive, agentJobState]);
 
   // NFC Reader Listener (จำลองการพิมพ์จากเครื่องอ่าน NFC) สำหรับบัตรเครดิตต่างๆ
   useEffect(() => {
@@ -527,10 +563,10 @@ export default function VendingPage() {
     setCart([]);
     setRealQrCode(null);
 
-    // ไปหน้าสะสมแต้ม
     setIsAfterPayment(true);
     setPhoneNumber("");
     setNumpadCountdown(60);
+    beginHeatingTimelineOnly(flatQueue);
     setActiveModal("numpad");
   };
 
@@ -611,22 +647,39 @@ export default function VendingPage() {
   };
 
   const pollPaymentStatus = (chargeId: string) => {
-    if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    /** ถี่ขึ้นเพื่อรู้ผลเร็วหลังสแกน TrueMoney / PromptPay (ยังอยู่ใน ~2 นาที) */
+    const PAYMENT_POLL_INTERVAL_MS = 1000;
+    const MAX_ATTEMPTS = 120;
+
     console.log(`[Frontend] Starting poll for charge: ${chargeId}`);
 
-    // Max 60 attempts × 2s = 2 minutes, then auto-cancel
     let attempts = 0;
-    const MAX_ATTEMPTS = 60;
+    let inFlight = false;
+    let stopped = false;
 
-    pollingIntervalRef.current = setInterval(async () => {
+    const stopPolling = () => {
+      stopped = true;
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+
+    const tick = async () => {
+      if (stopped || inFlight) return;
+      inFlight = true;
       attempts++;
       if (attempts > MAX_ATTEMPTS) {
         console.warn(`[Frontend] Poll timeout after ${MAX_ATTEMPTS} attempts — auto-cancelling`);
-        clearInterval(pollingIntervalRef.current!);
-        pollingIntervalRef.current = null;
+        stopPolling();
         await cancelAndClosePaymentModal();
+        inFlight = false;
         return;
       }
 
@@ -634,18 +687,39 @@ export default function VendingPage() {
         const res = await fetch(`${apiUrl}/api/buy/status/${chargeId}`);
         if (res.ok) {
           const data = await res.json();
+          const st = String(data.status ?? "").toLowerCase();
           console.log(`[Frontend] Poll result for ${chargeId} [${attempts}/${MAX_ATTEMPTS}]:`, data.status);
-          if (data.status === "PAID" || data.status === "paid") {
+          if (st === "paid" || st === "dispensing" || st === "completed") {
             console.log("[Frontend] Payment confirmed via polling!");
+            stopPolling();
             handlePaymentSuccess();
+            return;
+          }
+          if (
+            st === "dispense_failed" ||
+            st === "refunded" ||
+            st === "cancelled" ||
+            st === "canceled" ||
+            st === "payment_failed" ||
+            st === "failed"
+          ) {
+            stopPolling();
+            alert("การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่หรือลองใหม่");
+            await cancelAndClosePaymentModal();
+            return;
           }
         } else {
           console.error(`[Frontend] Poll failed with status: ${res.status}`);
         }
       } catch (e) {
         console.error("[Frontend] Polling exception:", e);
+      } finally {
+        inFlight = false;
       }
-    }, 2000);
+    };
+
+    void tick();
+    pollingIntervalRef.current = setInterval(() => void tick(), PAYMENT_POLL_INTERVAL_MS);
   };
 
   // --- ฟังก์ชันสร้าง QR Code ---
@@ -786,6 +860,7 @@ export default function VendingPage() {
 
   // Modal Actions
   const handleCheckout = () => {
+    heatingTimelineStartedRef.current = false;
     setSelectedPaymentMethod(null);
     setPaymentStep(1);
     setRealQrCode(null);
@@ -909,7 +984,7 @@ export default function VendingPage() {
   const TEST_CARDS: Record<TestCardBrand, { name: string; number: string }> = {
     visa: { name: "Test Visa Machine", number: "4242424242424242" },
     mastercard: { name: "Test Mastercard Machine", number: "5555555555554444" },
-    unionpay: { name: "Test UnionPay Machine", number: "6200000000000005" },
+    unionpay: { name: "Test UnionPay Machine", number: "6250947000000006" },
   };
 
   // --- 💡 ฟังก์ชันจำลองการแตะบัตรที่เครื่องอ่าน NFC ---
@@ -950,15 +1025,11 @@ export default function VendingPage() {
   };
 
   const startHeatingProcess = () => {
-    // คำนวณเวลาและเริ่มหน้าจอ Processing
-    if (!agentJobState) {
-      const totalProcessTime = calculateTotalProcessTime(queue);
-      // Start timer from full process time (includes 2s Step1 delay + max heat + 3s Step3 hold)
-      setGlobalTimeLeft(totalProcessTime);
+    if (!heatingTimelineStartedRef.current) {
+      beginHeatingTimelineOnly(queue);
     }
-    setIsAfterPayment(false);
-    setIsInitialStep1Delay(true);
     setActiveModal("processing");
+    exitPostPaymentLoyalty();
   };
 
   return (
@@ -1112,19 +1183,18 @@ export default function VendingPage() {
             </div>
           )}
 
-          {/* Modal 3: Numpad (กรอกเบอร์โทร) */}
+          {/* Modal 3: Numpad (กรอกเบอร์โทร / สะสมแต้มหลังจ่าย) */}
           {activeModal === "numpad" && (
             <div
               className="numpad-modal-box"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* ปุ่ม Timeout / Close ของ Numpad */}
               <button
                 className="timeout-close-btn"
                 onClick={
                   isAfterPayment
-                    ? startHeatingProcess // ถ้าหลังจ่ายเงินให้ข้าม
-                    : () => setActiveModal("none") // ถ้าก่อนจ่ายให้ปิด
+                    ? startHeatingProcess
+                    : () => setActiveModal("none")
                 }
               >
                 <span>{numpadCountdown}</span>
@@ -1135,14 +1205,12 @@ export default function VendingPage() {
                   ? "กรุณากรอกเบอร์เพื่อสะสมแต้ม"
                   : "โปรดกรอกหมายเลขโทรศัพท์"}
               </div>
-              {/* จอแสดงเบอร์โทร */}
               <div
                 className="phone-display"
                 style={{ opacity: phoneNumber ? 1 : 0.6 }}
               >
                 {displayFormattedPhone()}
               </div>
-              {/* แป้นพิมพ์ */}
               <div className="numpad-grid">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                   <button
