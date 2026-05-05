@@ -11,11 +11,17 @@ import {
   listMachines,
   listCustomers,
   listOrders,
+  getAdminAlerts,
   type ApiProduct,
   type ApiMachineSummary,
   type ApiCustomer,
   type ApiOrderListItem,
 } from "@/lib/admin-api";
+import {
+  mapAdminAlertsToHeaderNotifications,
+  type HeaderNotification,
+} from "@/lib/map-admin-alerts-to-header-notifications";
+import { ADMIN_ALERTS_REFRESH_EVENT } from "@/lib/admin-alerts-refresh";
 
 const STATIC_NAV: { href: string; labelKey: DictKey; keywords: string[] }[] = [
   { href: "/", labelKey: "nav.dashboard", keywords: ["dashboard", "แดช", "หน้าแรก", "home"] },
@@ -28,21 +34,14 @@ const STATIC_NAV: { href: string; labelKey: DictKey; keywords: string[] }[] = [
 
 const SEARCH_PER_PAGE = 8;
 
-type Notification = {
-  id: string;
-  title: string;
-  body: string;
-  time: string;
-  read: boolean;
-};
-
 export default function Header() {
   const router = useRouter();
   const { href, t, lang } = useLang();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
   const [loading, setLoading] = useState(false);
+  const notificationReadIdsRef = useRef<Set<string>>(new Set());
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const profileBtnRef = useRef<HTMLDivElement | null>(null);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -62,6 +61,37 @@ export default function Header() {
   const [orderHits, setOrderHits] = useState<ApiOrderListItem[]>([]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const loadHeaderAlerts = useCallback(
+    async (opts?: { forDropdown?: boolean }) => {
+      if (opts?.forDropdown) setLoading(true);
+      try {
+        const data = await getAdminAlerts();
+        const mapped = mapAdminAlertsToHeaderNotifications(data, t);
+        setNotifications(
+          mapped.map((n) => ({
+            ...n,
+            read: notificationReadIdsRef.current.has(n.id),
+          })),
+        );
+      } catch {
+        setNotifications([]);
+      } finally {
+        if (opts?.forDropdown) setLoading(false);
+      }
+    },
+    [t],
+  );
+
+  useEffect(() => {
+    void loadHeaderAlerts();
+  }, [loadHeaderAlerts]);
+
+  useEffect(() => {
+    const onRefresh = () => void loadHeaderAlerts();
+    window.addEventListener(ADMIN_ALERTS_REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(ADMIN_ALERTS_REFRESH_EVENT, onRefresh);
+  }, [loadHeaderAlerts]);
 
   useEffect(() => {
     if (typeof navigator === "undefined") return;
@@ -154,28 +184,23 @@ export default function Header() {
   async function toggle() {
     const willOpen = !open;
     setOpen(willOpen);
-    if (willOpen && notifications.length === 0) {
-      setLoading(true);
-      try {
-        const r = await fetch("/api/notifications");
-        const j = await r.json();
-        setNotifications(Array.isArray(j) ? j : []);
-      } catch (e) {
-        setNotifications([]);
-      } finally {
-        setLoading(false);
-      }
-    }
+    if (willOpen) void loadHeaderAlerts({ forDropdown: true });
   }
 
   function markAllRead(e?: React.MouseEvent) {
     try { e?.stopPropagation(); } catch (err) {}
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    setNotifications((prev) => {
+      const next = prev.map((n) => ({ ...n, read: true }));
+      for (const n of next) notificationReadIdsRef.current.add(n.id);
+      return next;
+    });
   }
 
   function fmtTime(value: string) {
+    if (!value.trim()) return "";
     try {
       const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "";
       const locale = lang === "en" ? "en-US" : "th-TH";
       return new Intl.DateTimeFormat(locale, {
         hour: '2-digit',
@@ -376,13 +401,15 @@ export default function Header() {
                     <div className="content">
                       <div className="item-title">{n.title}</div>
                       <div className="item-body">{n.body}</div>
-                      <div className="item-time">{fmtTime(n.time)}</div>
+                      {n.time.trim() ? (
+                        <div className="item-time">{fmtTime(n.time)}</div>
+                      ) : null}
                     </div>
                   </div>
                 ))}
               </div>
               <div className="footer">
-                <Link href={href("/notifications")}>{t("header.notificationsViewAll")}</Link>
+                <Link href={href("/alerts")}>{t("header.notificationsViewAll")}</Link>
               </div>
             </div>
           )}
