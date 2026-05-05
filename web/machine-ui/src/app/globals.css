@@ -155,12 +155,23 @@ body {
     font-size: 11px;
     font-weight: 800;
     z-index: 2;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.category-sweet { color: #b45309; background: #fef3c7; }
-.category-meat { color: #ef4444; background: #fef2f2; }
-.category-vegetarian { color: #059669; background: #ecfdf5; }
+.category-sweet {
+    color: #b45309;
+    background: #fef3c7;
+}
+
+.category-meat {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+.category-vegetarian {
+    color: #059669;
+    background: #ecfdf5;
+}
 
 .product-title {
     font-size: 16px;
@@ -1510,10 +1521,9 @@ body {
     }
 }
 
-@keyframes pulse-red {
-
+/* @keyframes pulse-red {
     box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
-}
+} */
 
 .step-item {
     display: flex;
@@ -1718,8 +1728,13 @@ body {
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @keyframes fadeSwitch {
@@ -1727,6 +1742,7 @@ body {
         opacity: 0;
         transform: translateY(-5px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
