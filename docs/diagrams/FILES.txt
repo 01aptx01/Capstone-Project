@@ -1,0 +1,35 @@
+Capstone-Project Mermaid sources (docs/diagrams/)
+===============================================
+
+Use case
+  usecase.mmd                 — useCaseDiagram (Mermaid 10+)
+  usecase-alt-flowchart.mmd   — fallback flowchart
+
+Class
+  class-domain-models.mmd     — SQLAlchemy entities / FK
+  class-application-layer.mmd — BuyController, services, Product/Health
+
+State
+  state-order-lifecycle.mmd   — orders.status
+  state-coupon-validation.mmd — lookup_coupon_by_code outcomes
+  state-hardware-job-event.mmd — job.state → order + refund
+
+Sequence
+  sequence-01-products.mmd
+  sequence-02-validate-coupon.mmd
+  sequence-03-checkout-card-immediate.mmd
+  sequence-04-checkout-qr-webhook.mmd
+  sequence-05-draft-and-upgrade.mmd
+  sequence-06-cancel-and-mock-pay.mmd
+  sequence-07-poll-payment-status.mmd
+  sequence-08-members-loyalty.mmd
+  sequence-09-machine-events-http.mmd
+  sequence-10-health-check.mmd
+  sequence-11-socketio-connect.mmd
+  sequence-12-socketio-job-state-persist.mmd
+  sequence-13-admin-api-surface.mmd
+
+Other
+  context-architecture.mmd    — deployment-style flowchart
+
+Preview: paste .mmd body into https://mermaid.live or use Mermaid VS Code extension.

@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    participant UI as machine-ui
+    participant BC as BuyController
+    participant Inv as InventoryService
+    participant Om as OmisePaymentService
+    participant DB as MySQL
+
+    UI->>BC: POST /api/buy/create-draft (cart, coupon, machine)
+    BC->>Inv: check_stock, _resolve_pricing
+    BC->>Inv: create_pending_order(charge_id=draft_*)
+    Inv->>DB: INSERT orders + items
+    BC-->>UI: charge_id = draft_...
+
+    Note over UI: ลูกค้าแตะบัตร / เลือกชำระ
+
+    UI->>BC: POST /api/buy/checkout (draft_id, payment_id, ...)
+    BC->>Inv: get_order_totals_by_charge_id(draft_id)
+    BC->>Om: create_charge
+    BC->>Inv: upgrade_draft_order(draft_id → charge.id)
+    Inv->>DB: UPDATE orders SET charge_id, ...
+    BC->>BC: clear in-memory draft keys
+    BC-->>UI: pending_payment or paid

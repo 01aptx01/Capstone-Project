@@ -1,0 +1,141 @@
+%% SQLAlchemy domain models — app/models/*
+%% Tables: machines, products, machine_slots, orders, order_items, promotions, users, transactions, machine_job_events, admin_users, roles, admin_user_role
+
+classDiagram
+    direction TB
+
+    class Machine {
+        +String machine_code PK
+        +Text location
+        +String status
+        +DateTime last_active
+        +String secret_token_hash
+        +Boolean is_online
+    }
+
+    class Product {
+        +Integer product_id PK
+        +String name
+        +String description
+        +Decimal price
+        +String image_url
+        +Integer heating_time
+        +String category
+    }
+
+    class MachineSlot {
+        +Integer id PK
+        +String machine_code FK
+        +Integer slot_number
+        +Integer product_id FK
+        +Integer quantity
+    }
+
+    class MachineEvent {
+        <<maps to machine_job_events>>
+        +BigInteger id PK
+        +String machine_code FK
+        +String job_id
+        +String order_charge_id
+        +String event_type
+        +String state
+        +Integer seq
+        +JSON payload_json
+        +DateTime created_at
+        +Boolean is_resolved
+        +DateTime resolved_at
+    }
+
+    class User {
+        <<table users>>
+        +Integer user_id PK
+        +String phone_number UK
+        +Integer points
+        +DateTime registered_at
+        +DateTime last_use
+        +String status
+    }
+
+    class Coupon {
+        <<table promotions>>
+        +Integer promotion_id PK
+        +String code UK
+        +String type
+        +Decimal discount_amount
+        +Boolean is_active
+        +DateTime expire_date
+        +Integer points_cost
+        +Integer max_uses
+    }
+
+    class Order {
+        +Integer order_id PK
+        +String machine_code FK
+        +Integer user_id FK
+        +Integer promotion_id FK
+        +String charge_id UK
+        +Decimal total_price
+        +String payment_method
+        +String status
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class OrderItem {
+        +Integer id PK
+        +Integer order_id FK
+        +Integer product_id FK
+        +Integer quantity
+        +Decimal price_at_purchase
+    }
+
+    class Transaction {
+        +Integer id PK
+        +Integer order_id FK
+        +String provider
+        +String provider_ref
+        +Decimal amount
+        +String currency
+        +Decimal fee_amount
+        +String status
+        +JSON raw_payload_json
+        +DateTime created_at
+    }
+
+    class AdminUser {
+        +Integer id PK
+        +String email UK
+        +String password_hash
+        +Boolean is_active
+        +DateTime created_at
+        +DateTime updated_at
+    }
+
+    class Role {
+        +Integer id PK
+        +String name UK
+        +String description
+    }
+
+    class admin_user_role {
+        <<association>>
+        +admin_user_id PK,FK
+        +role_id PK,FK
+    }
+
+    Machine "1" *-- "many" MachineSlot : slots
+    Machine "1" *-- "many" Order : orders
+    Machine "1" *-- "many" MachineEvent : events
+
+    Product "1" *-- "many" MachineSlot : slots
+    Product "1" *-- "many" OrderItem : order_items
+
+    User "1" o-- "many" Order : member
+    Coupon "1" o-- "many" Order : coupon
+
+    Order "1" *-- "many" OrderItem : items
+    Order "1" *-- "many" Transaction : transactions
+
+    AdminUser "many" -- "many" Role : roles
+    AdminUser "many" -- admin_user_role
+    Role "many" -- admin_user_role
