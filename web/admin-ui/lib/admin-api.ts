@@ -39,6 +39,13 @@ export type ApiMachineSummary = {
   location: string | null;
   status: string;
   last_active: string | null;
+  is_online?: boolean;
+};
+
+/** Response from `POST /api/admin/machines` (includes one-time plaintext token). */
+export type ApiMachineCreateResponse = ApiMachineSummary & {
+  is_online: boolean;
+  secret_token: string;
 };
 
 export type ApiMachineSlot = {
@@ -54,6 +61,13 @@ export type ApiMachineSlot = {
 };
 
 export type ApiMachineDetail = ApiMachineSummary & { slots: ApiMachineSlot[] };
+
+/** Payload row for `PUT /api/admin/machines/:code/slots` (ids are assigned server-side). */
+export type ApiMachineSlotInput = {
+  slot_number: number;
+  product_id: number;
+  quantity: number;
+};
 
 export type ApiCustomer = {
   user_id: number;
@@ -129,6 +143,12 @@ export async function listProducts(params?: {
   );
 }
 
+/** Distinct product.category values from DB (`GET /api/admin/products/categories`). */
+export async function listProductCategories(): Promise<string[]> {
+  const res = await adminFetch<{ categories: string[] }>("/products/categories");
+  return Array.isArray(res.categories) ? res.categories : [];
+}
+
 export async function createProduct(body: {
   name: string;
   price: number;
@@ -173,14 +193,16 @@ export async function listMachines(params?: {
   page?: number;
   per_page?: number;
   status?: string;
+  q?: string;
 }): Promise<Paginated<ApiMachineSummary>> {
   const sp = new URLSearchParams();
   if (params?.page) sp.set("page", String(params.page));
   if (params?.per_page) sp.set("per_page", String(params.per_page));
   if (params?.status) sp.set("status", params.status);
-  const q = sp.toString();
+  if (params?.q) sp.set("q", params.q);
+  const qs = sp.toString();
   return adminFetch<Paginated<ApiMachineSummary>>(
-    `/machines${q ? `?${q}` : ""}`
+    `/machines${qs ? `?${qs}` : ""}`
   );
 }
 
@@ -188,6 +210,43 @@ export async function getMachine(
   machineCode: string
 ): Promise<ApiMachineDetail> {
   return adminFetch<ApiMachineDetail>(`/machines/${encodeURIComponent(machineCode)}`);
+}
+
+export async function updateMachine(
+  machineCode: string,
+  body: { location?: string | null; status?: string }
+): Promise<ApiMachineDetail> {
+  return adminFetch<ApiMachineDetail>(`/machines/${encodeURIComponent(machineCode)}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
+}
+
+export async function updateMachineSlots(
+  machineCode: string,
+  slots: ApiMachineSlotInput[]
+): Promise<ApiMachineDetail> {
+  return adminFetch<ApiMachineDetail>(
+    `/machines/${encodeURIComponent(machineCode)}/slots`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ slots }),
+      skipGlobalErrorToast: true,
+    }
+  );
+}
+
+export async function createMachine(body: {
+  machine_code: string;
+  location?: string | null;
+  status?: string;
+}): Promise<ApiMachineCreateResponse> {
+  return adminFetch<ApiMachineCreateResponse>("/machines", {
+    method: "POST",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
 }
 
 export async function listCustomers(params?: {
@@ -217,15 +276,17 @@ export async function listOrders(params?: {
   per_page?: number;
   status?: string;
   machine_code?: string;
+  q?: string;
 }): Promise<Paginated<ApiOrderListItem>> {
   const sp = new URLSearchParams();
   if (params?.page) sp.set("page", String(params.page));
   if (params?.per_page) sp.set("per_page", String(params.per_page));
   if (params?.status) sp.set("status", params.status);
   if (params?.machine_code) sp.set("machine_code", params.machine_code);
-  const q = sp.toString();
+  if (params?.q) sp.set("q", params.q);
+  const qs = sp.toString();
   return adminFetch<Paginated<ApiOrderListItem>>(
-    `/orders${q ? `?${q}` : ""}`
+    `/orders${qs ? `?${qs}` : ""}`
   );
 }
 

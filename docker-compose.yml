@@ -77,8 +77,10 @@ services:
     environment:
       - EVENT_SINK_MODE=socket
       - SERVER_SOCKET_URL=http://server:8000
+      # Must match a row in `machines`; token from Admin → Create machine (plaintext once).
       - MACHINE_ID=${MACHINE_ID:-MP1-001}
-      - MACHINE_SECRET_KEY=${MACHINE_SECRET_KEY:-}
+      - MACHINE_CODE=${MACHINE_CODE:-}
+      - MACHINE_TOKEN=${MACHINE_TOKEN:-}
       - AGENT_DB_PATH=/data/agent.db
       - EVENT_SINK_URL=http://server:8000/api/machines/events
       - TZ=Asia/Bangkok
@@ -93,6 +95,7 @@ services:
         - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
         - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
         - NEXT_PUBLIC_AGENT_BASE_URL=${NEXT_PUBLIC_AGENT_BASE_URL:-}
+        - NEXT_PUBLIC_MACHINE_CODE=${NEXT_PUBLIC_MACHINE_CODE:-MP1-001}
     environment:
       - TZ=Asia/Bangkok
       - DOCKER_PUBLISHED_PORT=3000
