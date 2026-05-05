@@ -111,6 +111,30 @@ class InventoryService:
             cur.close()
             db.close()
 
+    def compute_cart_subtotal(self, machine_code: str, cart_items: list) -> float:
+        """Sum catalog prices × qty for cart lines (THB, 2 decimals)."""
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            if not self._ensure_machine_exists(cur, machine_code):
+                logger.error(
+                    f"❌ [InventoryService] compute_cart_subtotal: Machine {machine_code} not found"
+                )
+                return 0.0
+            total = 0.0
+            for item in cart_items:
+                product_id = int(item["product_id"])
+                qty = int(item["quantity"])
+                price = self._get_product_price(cur, product_id)
+                total += price * qty
+            return round(total, 2)
+        except Exception as e:
+            logger.error(f"❌ [InventoryService] compute_cart_subtotal error: {e}")
+            return 0.0
+        finally:
+            cur.close()
+            db.close()
+
     def create_pending_order(
         self,
         machine_code: str,
@@ -118,6 +142,7 @@ class InventoryService:
         charge_id: str,
         payment_method: str,
         total_price: float,
+        promotion_id: int | None = None,
     ) -> bool:
         db = self.get_db()
         cur = db.cursor(dictionary=True)
@@ -130,13 +155,22 @@ class InventoryService:
                 db.rollback()
                 return False
 
-            cur.execute(
-                """
-                INSERT INTO orders (machine_code, charge_id, total_price, payment_method, status)
-                VALUES (%s, %s, %s, %s, 'pending_payment')
-                """,
-                (machine_code, charge_id, total_price, payment_method),
-            )
+            if promotion_id is not None:
+                cur.execute(
+                    """
+                    INSERT INTO orders (machine_code, charge_id, total_price, payment_method, status, promotion_id)
+                    VALUES (%s, %s, %s, %s, 'pending_payment', %s)
+                    """,
+                    (machine_code, charge_id, total_price, payment_method, promotion_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO orders (machine_code, charge_id, total_price, payment_method, status)
+                    VALUES (%s, %s, %s, %s, 'pending_payment')
+                    """,
+                    (machine_code, charge_id, total_price, payment_method),
+                )
             order_id = cur.lastrowid
 
             for item in cart_items:
@@ -160,6 +194,31 @@ class InventoryService:
             logger.error(f"❌ [InventoryService] create_pending_order error for charge {charge_id}: {e}")
             return False
 
+        finally:
+            cur.close()
+            db.close()
+
+    def get_order_totals_by_charge_id(self, charge_id: str) -> dict | None:
+        """Return { total_price: float, promotion_id: int|None } for a pending order, or None."""
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT total_price, promotion_id
+                FROM orders
+                WHERE charge_id = %s AND status = 'pending_payment'
+                """,
+                (charge_id,),
+            )
+            row = cur.fetchone()
+            if not row:
+                return None
+            pid = row.get("promotion_id")
+            return {
+                "total_price": float(row["total_price"]),
+                "promotion_id": int(pid) if pid is not None else None,
+            }
         finally:
             cur.close()
             db.close()

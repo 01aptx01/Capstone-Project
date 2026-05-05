@@ -1,6 +1,7 @@
 "use client";
 import { Product } from './ProductCard';
 import { ShoppingCart, Trash2, TicketPercent, Timer } from 'lucide-react';
+import type { AppliedCoupon } from './CouponModal';
 
 export interface CartItem extends Product {
   qty: number;
@@ -11,6 +12,9 @@ interface Props {
   /** Current catalog stock by product_id (from GET /api/products) */
   stockById: Record<number, number>;
   totalPrice: number;
+  /** Amount to charge after coupon (same as totalPrice when no coupon) */
+  payableTotal: number;
+  appliedCoupon: AppliedCoupon | null;
   totalHeatingTime: number;
   onCheckout: () => void;
   onIncrease: (id: number) => void;
@@ -18,9 +22,11 @@ interface Props {
   onRemove: (id: number) => void;
   onOpenInfo: () => void;
   onOpenContact: () => void;
+  onOpenCoupon: () => void;
+  onRemoveCoupon: () => void;
 }
 
-export default function CartSidebar({ cart, stockById, totalPrice, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact }: Props) {
+export default function CartSidebar({ cart, stockById, totalPrice, payableTotal, appliedCoupon, totalHeatingTime, onCheckout, onIncrease, onDecrease, onRemove, onOpenInfo, onOpenContact, onOpenCoupon, onRemoveCoupon }: Props) {
   return (
     <div className="sidebar">
       <button className="info-btn" onClick={onOpenInfo}>i</button>
@@ -88,10 +94,32 @@ export default function CartSidebar({ cart, stockById, totalPrice, totalHeatingT
           </div>
         )}
 
+        {appliedCoupon && (
+          <div className="total-row" style={{ borderBottom: 'none', paddingBottom: 4 }}>
+            <div className="total-label">คูปอง {appliedCoupon.code}</div>
+            <div className="total-amount" style={{ color: '#16a34a' }}>-{appliedCoupon.discount_thb.toFixed(0)} <span>฿</span></div>
+          </div>
+        )}
+
         <div className="total-row">
           <div className="total-label">รวมทั้งหมด:</div>
-          <div className="total-amount">{totalPrice} <span>฿</span></div>
+          <div className="total-amount">
+            {appliedCoupon ? (
+              <>
+                <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '15px', marginRight: 8 }}>{totalPrice}</span>
+                {payableTotal.toFixed(payableTotal % 1 === 0 ? 0 : 2)} <span>฿</span>
+              </>
+            ) : (
+              <>{totalPrice} <span>฿</span></>
+            )}
+          </div>
         </div>
+
+        {appliedCoupon && (
+          <span className="coupon-remove-link" role="button" tabIndex={0} onClick={onRemoveCoupon} onKeyDown={(e) => e.key === 'Enter' && onRemoveCoupon()}>
+            ยกเลิกคูปอง
+          </span>
+        )}
 
         <button
           className="checkout-btn"
@@ -100,8 +128,8 @@ export default function CartSidebar({ cart, stockById, totalPrice, totalHeatingT
         >
           ชำระเงิน
         </button>
-        <button className="preorder-btn">
-          <TicketPercent size={20} /> ใช้คูปอง
+        <button type="button" className="preorder-btn" onClick={onOpenCoupon} disabled={cart.length === 0}>
+          <TicketPercent size={20} /> {appliedCoupon ? "เปลี่ยนคูปอง" : "ใช้คูปอง"}
         </button>
 
         <a onClick={onOpenContact} style={{ cursor: 'pointer' }} className="contact-link">ติดต่อสอบถามเพิ่มเติม</a>

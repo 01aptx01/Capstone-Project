@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import ProductCard, { Product } from "../components/ProductCard";
 import CartSidebar, { CartItem } from "../components/CartSidebar";
+import CouponModal, { type AppliedCoupon } from "../components/CouponModal";
 import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
@@ -14,6 +15,7 @@ type ModalType =
   | "usage"
   | "numpad"
   | "contact"
+  | "coupon"
   | "payment"
   | "processing"
   | "points_result"
@@ -233,6 +235,73 @@ export default function VendingPage() {
     cart.flatMap((item) => Array.from({ length: item.qty }, () => item))
   );
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
+
+  const cartSignature = useMemo(
+    () =>
+      cart
+        .map((item) => `${item.id}:${item.qty}`)
+        .sort()
+        .join("|"),
+    [cart],
+  );
+
+  /** ล้างคูปองเมื่อตะกร้าว่าง; เมื่อมีสินค้าและมีคูปอง — คำนวณยอดใหม่กับตะกร้าปัจจุบัน (ไม่ล้างเพราะแค่เพิ่มของ) */
+  useEffect(() => {
+    if (cart.length === 0) {
+      setAppliedCoupon(null);
+      return;
+    }
+    if (!appliedCoupon?.code) return;
+
+    const code = appliedCoupon.code;
+    let cancelled = false;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const payloadCart = cart.map((item) => ({ product_id: item.id, quantity: item.qty }));
+
+    void (async () => {
+      try {
+        const res = await fetch(`${apiUrl}/api/buy/validate-coupon`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code,
+            machine_code: machineCode,
+            cart: payloadCart,
+          }),
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (!data.valid) {
+          setAppliedCoupon(null);
+          return;
+        }
+        setAppliedCoupon((prev) => {
+          if (!prev || prev.code !== code) return prev;
+          return {
+            ...prev,
+            subtotal_thb: data.subtotal_thb,
+            discount_thb: data.discount_thb,
+            final_thb: data.final_thb,
+            label_th: data.label_th,
+            points_cost: data.points_cost ?? prev.points_cost,
+          };
+        });
+      } catch {
+        if (!cancelled) setAppliedCoupon(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cartSignature, cart.length, appliedCoupon?.code, machineCode]);
+
+  const payableTotal = useMemo(() => {
+    if (appliedCoupon && cart.length > 0) return appliedCoupon.final_thb;
+    return totalPrice;
+  }, [appliedCoupon, cart.length, totalPrice]);
+
   const totalProcessTime = calculateTotalProcessTime(queue);
 
   // Check if this is a multi-flavor order (more than 1 unique heatingTime across items)
@@ -558,9 +627,11 @@ export default function VendingPage() {
     const flatQueue = cart.flatMap((item) => Array(item.qty).fill(item));
     flatQueue.sort((a, b) => a.heatingTime - b.heatingTime);
 
-    totalPriceRef.current = totalPrice; // Save total price for points
+    const paidTotal = appliedCoupon ? appliedCoupon.final_thb : totalPrice;
+    totalPriceRef.current = paidTotal;
     setQueue(flatQueue);
     setCart([]);
+    setAppliedCoupon(null);
     setRealQrCode(null);
 
     setIsAfterPayment(true);
@@ -592,6 +663,7 @@ export default function VendingPage() {
           payment_type: paymentData.type,
           payment_id: paymentData.id,
           draft_id: currentChargeId?.startsWith("draft_") ? currentChargeId : undefined,
+          coupon_code: appliedCoupon?.code,
         }),
       });
 
@@ -736,7 +808,7 @@ export default function VendingPage() {
     Omise.createSource(
       "promptpay",
       {
-        amount: totalPrice * 100,
+        amount: Math.round(payableTotal * 100),
         currency: "THB",
       },
       async (statusCode: number, response: any) => {
@@ -750,7 +822,7 @@ export default function VendingPage() {
 
         // Send sourceId to Backend
         setPaymentStep(2);
-        processPayment({ type: "source", id: sourceId, amount: totalPrice * 100 });
+        processPayment({ type: "source", id: sourceId, amount: Math.round(payableTotal * 100) });
       },
     );
   };
@@ -758,7 +830,7 @@ export default function VendingPage() {
   const handleDirectTrueMoney = async () => {
     setPaymentStep(2);
     setRealQrCode(null);
-    processPayment({ type: "truemoney", id: "", amount: totalPrice * 100 });
+    processPayment({ type: "truemoney", id: "", amount: Math.round(payableTotal * 100) });
   };
 
   const handleProceedToTap = async () => {
@@ -774,8 +846,9 @@ export default function VendingPage() {
         body: JSON.stringify({
           machine_code: machineCode,
           cart: cart.map((item) => ({ product_id: item.id, quantity: item.qty })),
-          amount: totalPrice * 100,
+          amount: Math.round(payableTotal * 100),
           payment_method: "credit_card",
+          coupon_code: appliedCoupon?.code,
         }),
       });
       const data = await response.json();
@@ -1011,7 +1084,7 @@ export default function VendingPage() {
       if (statusCode === 200) {
         console.log("[Frontend] Test Token Generated:", response.id);
         // Step 2: Send token to Backend for real charge execution
-        processPayment({ type: "token", id: response.id, amount: totalPrice * 100 });
+        processPayment({ type: "token", id: response.id, amount: Math.round(payableTotal * 100) });
       } else {
         console.error("[Frontend] Omise Tokenization Failed:", response);
         alert(`Tokenization Error: ${response.message || "Unknown error"}`);
@@ -1087,12 +1160,16 @@ export default function VendingPage() {
         stockById={stockById}
         totalHeatingTime={totalHeatingTime}
         totalPrice={totalPrice}
+        payableTotal={payableTotal}
+        appliedCoupon={appliedCoupon}
         onCheckout={handleCheckout}
         onIncrease={handleIncrease}
         onDecrease={handleDecrease}
         onRemove={handleRemove}
         onOpenInfo={() => setActiveModal("info")}
         onOpenContact={() => setActiveModal("contact")}
+        onOpenCoupon={() => setActiveModal("coupon")}
+        onRemoveCoupon={() => setAppliedCoupon(null)}
       />
 
       {/* --- OVERLAY & MODALS --- */}
@@ -1110,6 +1187,16 @@ export default function VendingPage() {
           }
         >
           {/* Modal 1: เมนู Info */}
+          {activeModal === "coupon" && (
+            <CouponModal
+              open
+              onClose={() => setActiveModal("none")}
+              onApplied={setAppliedCoupon}
+              machineCode={machineCode}
+              cart={cart.map((item) => ({ product_id: item.id, quantity: item.qty }))}
+            />
+          )}
+
           {activeModal === "info" && (
             <div className="modal-box" onClick={(e) => e.stopPropagation()}>
               <button
