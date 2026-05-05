@@ -12,6 +12,7 @@ import requests
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from ws_outbox import enqueue_event
+from machine import machine
 
 routes = Blueprint("routes", __name__)
 logger = logging.getLogger(__name__)
@@ -114,15 +115,10 @@ class JobManager:
         expanded = self._expand_queue(job)
         if not expanded:
             return 0
-        times = sorted([int(x.get("heating_time", 15)) for x in expanded])
-        total = 5  # Transfer
-        elapsed = 0
-        for t in times:
-            if t > elapsed:
-                total += (t - elapsed)
-                elapsed = t
-            total += 3  # Dispense takes 3 seconds per item
-        return total
+        # Match actual tick logic: max heating time + 3s for each item
+        times = [int(x.get("heating_time", 15)) for x in expanded]
+        max_heating = max(times)
+        return max_heating + 3 * len(expanded)
 
     def subscribe(self, job: Job) -> queue.Queue:
         q: queue.Queue = queue.Queue()
@@ -223,7 +219,18 @@ def _run_mock_job(job: Job) -> None:
                 )
                 time.sleep(1)
 
+        # 1. Turn on GREEN slot lights FIRST for all items
+        active_slots = []
+        for i, it, target_time in items_with_time:
+            slot_index = machine.resolve_slot_index(it.get("product_id", 1))
+            machine.set_slot_active(slot_index, True)
+            if slot_index not in active_slots:
+                active_slots.append(slot_index)
+                
+        # 2. Then proceed with the RGB steps
         job.state = "TRANSFER_TO_OVEN"
+        machine.mark_step_active("TRANSFER_TO_OVEN")
+        machine.mark_step_complete("TRANSFER_TO_OVEN")
         job_manager.publish(
             job,
             _mk_event(
@@ -233,11 +240,14 @@ def _run_mock_job(job: Job) -> None:
                 payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
             ),
         )
-        tick(5)
+        # tick(5) # Removed 5s delay to match UI logic
 
         elapsed_heating = 0
         for i, it, target_time in items_with_time:
             if job.done:
+                # Ensure lights turn off if cancelled
+                for slot in active_slots:
+                    machine.set_slot_active(slot, False)
                 return
             
             job.current_item_index = i
@@ -245,6 +255,7 @@ def _run_mock_job(job: Job) -> None:
             time_to_heat = target_time - elapsed_heating
             if time_to_heat > 0:
                 job.state = "HEATING"
+                machine.mark_step_active("HEATING")
                 job_manager.publish(
                     job,
                     _mk_event(
@@ -270,10 +281,12 @@ def _run_mock_job(job: Job) -> None:
                     ),
                 )
                 tick(time_to_heat)
+                machine.mark_step_complete("HEATING")
                 elapsed_heating = target_time
 
             # Step 2: Dispense this item
             job.state = "DISPENSING"
+            machine.mark_step_active("DISPENSING")
             job_manager.publish(
                 job,
                 _mk_event(
@@ -283,11 +296,15 @@ def _run_mock_job(job: Job) -> None:
                     payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
                 ),
             )
+            slot_index = machine.resolve_slot_index(it.get("product_id", 1))
+            # Just simulate time, light is already ON from the beginning
             tick(3)
+            machine.mark_step_complete("DISPENSING")
 
         job.state = "DONE"
         job.remaining_seconds = 0
         job.done = True
+        
         job_manager.publish(
             job,
             _mk_event(
@@ -298,10 +315,21 @@ def _run_mock_job(job: Job) -> None:
             ),
         )
 
+        machine.mark_step_active("DONE")
+        machine.mark_step_complete("DONE")
+        machine.step_leds.set_all(success=True)
+        # Turn off all green slot lights
+        for slot in active_slots:
+            machine.set_slot_active(slot, False)
+            
+        time.sleep(2.0)
+        machine.step_leds.set_standby()
+
     except Exception as e:
         job.state = "ERROR"
         job.error_message = str(e)
         job.done = True
+        machine.mark_error(str(e))
         job_manager.publish(
             job,
             _mk_event(
@@ -417,6 +445,14 @@ def job_events(job_id: str):
             "X-Accel-Buffering": "no",
         },
     )
+
+@routes.route("/nfc/status", methods=["GET"])
+def nfc_status():
+    """Endpoint for UI to poll for NFC tap status."""
+    if machine.nfc._event.is_set():
+        machine.nfc.reset()
+        return jsonify({"status": "tapped"}), 200
+    return jsonify({"status": "waiting"}), 200
 
 @routes.route("/")
 def index():

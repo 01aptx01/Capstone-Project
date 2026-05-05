@@ -67,8 +67,8 @@ def _verify_machine_token_auth(machine_id: str, raw_token: str) -> Tuple[bool, s
 sio = socketio.Server(
     async_mode="eventlet",
     cors_allowed_origins="*",
-    logger=False,
-    engineio_logger=False,
+    logger=True,
+    engineio_logger=True,
 )
 
 ADMIN_ROOM = "admin"
