@@ -11,6 +11,7 @@ import {
   type ApiMachineSlotInput,
   type ApiProduct,
 } from "@/lib/admin-api";
+import { useLang } from "@/lib/i18n/lang";
 
 const MAX_SLOTS_PER_MACHINE = 24;
 
@@ -40,6 +41,7 @@ function slotsToDraft(slots: ApiMachineDetail["slots"]): SlotDraftRow[] {
 export default function MachineDetailPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
+  const { t } = useLang();
   const [machine, setMachine] = useState<ApiMachineDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export default function MachineDetailPage({ params }: PageProps) {
         await loadMachine();
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "โหลดข้อมูลตู้ไม่สำเร็จ");
+          setError(e instanceof Error ? e.message : t("machine.detail.errorLoad"));
           setMachine(null);
           setSlotDraft([]);
           setLoading(false);
@@ -87,9 +89,9 @@ export default function MachineDetailPage({ params }: PageProps) {
     setError(null);
     try {
       await loadMachine();
-      toast.success("รีเฟรชข้อมูลจากระบบแล้ว");
+      toast.success(t("machine.detail.toastRefreshed"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "รีเฟรชไม่สำเร็จ");
+      setError(e instanceof Error ? e.message : t("machine.detail.toastRefreshFail"));
     } finally {
       setRefreshing(false);
     }
@@ -139,27 +141,27 @@ export default function MachineDetailPage({ params }: PageProps) {
   const metrics = machine
     ? [
         {
-          title: "ช่องทั้งหมด",
+          title: t("machine.detail.stat.slots"),
           value: String(slotDraft.length),
           color: "var(--text)",
         },
         {
-          title: "จำนวนชิ้นในตู้",
+          title: t("machine.detail.stat.qty"),
           value: String(totalUnits),
           color: "var(--text)",
         },
         {
-          title: "เชื่อมต่อ Socket (is_online)",
-          value: machine.is_online ? "เชื่อมต่อ" : "ไม่เชื่อมต่อ",
+          title: t("machine.detail.stat.socket"),
+          value: machine.is_online ? t("machine.detail.socketOn") : t("machine.detail.socketOff"),
           color: machine.is_online ? "var(--chart-series-1)" : "var(--text-muted)",
         },
         {
-          title: "อัปเดตล่าสุด (DB)",
+          title: t("machine.detail.stat.dbUpdated"),
           value: machine.last_active || "—",
           color: "var(--text-muted)",
         },
         {
-          title: "สถานะปฏิบัติการ (status)",
+          title: t("machine.detail.stat.status"),
           value: machine.status,
           color: operationalOnline
             ? "var(--success)"
@@ -217,9 +219,9 @@ export default function MachineDetailPage({ params }: PageProps) {
       const updated = await updateMachineSlots(machine.machine_code, payload);
       setMachine(updated);
       setSlotDraft(slotsToDraft(updated.slots));
-      toast.success("บันทึกสต็อกแล้ว");
+      toast.success(t("machine.detail.toastSaved"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "บันทึกสต็อกไม่สำเร็จ");
+      setError(e instanceof Error ? e.message : t("machine.detail.toastSaveFail"));
     } finally {
       setSaving(false);
     }
@@ -280,7 +282,7 @@ export default function MachineDetailPage({ params }: PageProps) {
             <div className="text-[14px] font-bold text-[var(--text-muted)]">
               {machine?.location?.trim()
                 ? machine.location
-                : "ไม่ระบุสถานที่"}
+                : t("machine.detail.locationUnknown")}
             </div>
           </div>
         </div>
@@ -290,7 +292,7 @@ export default function MachineDetailPage({ params }: PageProps) {
           disabled={loading || refreshing}
           className="shrink-0 self-start px-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[13px] font-bold text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50 transition-colors"
         >
-          {refreshing ? "กำลังรีเฟรช…" : "รีเฟรชจากระบบ"}
+          {refreshing ? t("machine.detail.refreshing") : t("machine.detail.refresh")}
         </button>
       </div>
 
@@ -316,7 +318,7 @@ export default function MachineDetailPage({ params }: PageProps) {
 
           <div className="bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-              <h3 className="text-[18px] font-black text-[var(--text)]">สต็อกตามช่อง</h3>
+              <h3 className="text-[18px] font-black text-[var(--text)]">{t("machine.detail.stockBySlot")}</h3>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -329,7 +331,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                   }
                   className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[13px] font-bold text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  เพิ่มช่อง
+                  {t("machine.detail.addSlot")}
                 </button>
                 <button
                   type="button"
@@ -339,7 +341,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                   disabled={saving}
                   className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[13px] font-bold text-[var(--text-muted)] hover:border-[var(--border)] disabled:opacity-50 transition-colors"
                 >
-                  ยกเลิกการแก้ไข
+                  {t("machine.detail.cancelEdit")}
                 </button>
                 <button
                   type="button"
@@ -347,26 +349,24 @@ export default function MachineDetailPage({ params }: PageProps) {
                   disabled={saving || productsLoading}
                   className="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] text-[13px] font-bold hover:bg-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {saving ? "กำลังบันทึก…" : "บันทึกสต็อก"}
+                  {saving ? t("machine.detail.saving") : t("machine.detail.saveStock")}
                 </button>
               </div>
             </div>
             {productsLoading && (
-              <p className="text-[13px] font-bold text-[var(--text-muted)] mb-4">กำลังโหลดรายการสินค้า…</p>
+              <p className="text-[13px] font-bold text-[var(--text-muted)] mb-4">{t("machine.detail.loadingProducts")}</p>
             )}
             {!productsLoading && products.length === 0 && (
-              <p className="text-[13px] font-bold text-amber-700 mb-4">
-                ยังไม่มีสินค้าในระบบ — เพิ่มสินค้าก่อนจึงจะตั้งสต็อกตู้ได้
-              </p>
+              <p className="text-[13px] font-bold text-amber-700 mb-4">{t("machine.detail.noProducts")}</p>
             )}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="border-b border-[var(--border)]">
-                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">ช่อง</th>
-                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">สินค้า</th>
-                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">จำนวน</th>
-                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">ราคา</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">{t("machine.detail.col.slot")}</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">{t("machine.detail.col.product")}</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">{t("machine.detail.col.qty")}</th>
+                    <th className="py-3 px-2 font-black text-[var(--text-muted)]">{t("machine.detail.col.price")}</th>
                     <th className="py-3 px-2 font-black text-[var(--text-muted)] w-24"> </th>
                   </tr>
                 </thead>
@@ -374,7 +374,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                   {slotDraft.length === 0 && (
                     <tr>
                       <td colSpan={5} className="py-8 px-2 text-center font-bold text-[var(--text-muted)]">
-                        ยังไม่มีช่องสต็อก — กด &quot;เพิ่มช่อง&quot; เพื่อเริ่มต้น
+                        {t("machine.detail.emptySlots")}
                       </td>
                     </tr>
                   )}
@@ -399,7 +399,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                             >
                               {!products.some((p) => p.product_id === row.product_id) && (
                                 <option value={row.product_id}>
-                                  #{row.product_id} (ไม่พบในรายการ)
+                                  #{row.product_id} {t("machine.detail.notInList")}
                                 </option>
                               )}
                               {products.map((p) => (
@@ -433,7 +433,7 @@ export default function MachineDetailPage({ params }: PageProps) {
                               disabled={saving}
                               className="text-[12px] font-bold text-rose-600 hover:underline disabled:opacity-50"
                             >
-                              ลบช่อง
+                              {t("machine.detail.removeSlot")}
                             </button>
                           </td>
                         </tr>
@@ -443,8 +443,9 @@ export default function MachineDetailPage({ params }: PageProps) {
               </table>
             </div>
             <p className="mt-4 text-[12px] font-bold text-[var(--text-muted)]">
-              ตู้: {machineCode} — บันทึกจะแทนที่สต็อกทั้งหมดของตู้นี้ (สูงสุด {MAX_SLOTS_PER_MACHINE}{" "}
-              ช่อง)
+              {t("machine.detail.saveHint")
+                .replace("{code}", machineCode)
+                .replace("{max}", String(MAX_SLOTS_PER_MACHINE))}
             </p>
           </div>
         </>

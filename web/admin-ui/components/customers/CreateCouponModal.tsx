@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { createCoupon } from "@/lib/admin-api";
 import { ADMIN_COUPONS_REFRESH_EVENT } from "@/components/customers/CouponTable";
+import { useLang } from "@/lib/i18n/lang";
 
 interface CreateCouponModalProps {
   open: boolean;
@@ -30,6 +31,7 @@ function fromDateInput(value: string): string | null {
 }
 
 export default function CreateCouponModal({ open, onClose }: CreateCouponModalProps) {
+  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
   const [show, setShow] = useState(false);
   const [formData, setFormData] = useState(emptyForm);
@@ -69,19 +71,19 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
 
     const code = formData.couponCode.trim();
     if (!code) {
-      setFormError("กรุณากรอกรหัสคูปอง (Coupon Code)");
+      setFormError(t("createCoupon.errorRequired"));
       return;
     }
 
     const discount = Number(formData.discountValue);
     if (!Number.isFinite(discount) || discount <= 0) {
-      setFormError("จำนวนส่วนลดต้องมากกว่า 0");
+      setFormError(t("createCoupon.errorDiscount"));
       return;
     }
 
     const points = formData.pointsCost.trim() === "" ? 0 : Number.parseInt(formData.pointsCost, 10);
     if (!Number.isFinite(points) || points < 0) {
-      setFormError("แต้มที่ใช้แลกต้องเป็นจำนวนเต็มไม่น้อยกว่า 0");
+      setFormError(t("createCoupon.errorPoints"));
       return;
     }
 
@@ -98,7 +100,7 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
       window.dispatchEvent(new Event(ADMIN_COUPONS_REFRESH_EVENT));
       onClose();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "สร้างคูปองไม่สำเร็จ");
+      setFormError(err instanceof Error ? err.message : t("createCoupon.errorFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -124,8 +126,8 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
               <i className="fi fi-rr-ticket"></i>
             </div>
             <div>
-              <h2 className="text-[22px] font-black text-[var(--text)] tracking-tight leading-none">Create New Coupon</h2>
-              <p className="text-[13px] text-[var(--text)]0 font-bold mt-1.5 uppercase tracking-wider">สร้างคูปองใหม่ผ่าน API</p>
+              <h2 className="text-[22px] font-black text-[var(--text)] tracking-tight leading-none">{t("createCoupon.headline")}</h2>
+              <p className="text-[13px] text-[var(--text-muted)] font-bold mt-1.5 uppercase tracking-wider">{t("createCoupon.subtitle")}</p>
             </div>
           </div>
           <button
@@ -159,7 +161,7 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
                   <input
                     type="text"
                     required
-                    placeholder="เช่น PAO2026"
+                    placeholder={t("createCoupon.placeholder.code")}
                     className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all font-black text-[var(--text)] tracking-widest"
                     value={formData.couponCode}
                     onChange={(e) => setFormData({ ...formData, couponCode: e.target.value.toUpperCase() })}
@@ -221,7 +223,7 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
                     type="number"
                     min="0"
                     step="1"
-                    placeholder="0 = ไม่ต้องใช้แต้ม"
+                    placeholder={t("createCoupon.placeholder.points")}
                     className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] transition-all font-black text-[var(--text)]"
                     value={formData.pointsCost}
                     onChange={(e) => setFormData({ ...formData, pointsCost: e.target.value })}
@@ -230,7 +232,7 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
                 </div>
                 <div className="group space-y-2">
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-widest group-focus-within:text-[var(--primary)] transition-colors">
-                    Valid To (เว้นว่าง = ไม่หมดอายุ)
+                    {t("createCoupon.label.validTo")}
                   </label>
                   <input
                     type="date"
@@ -248,7 +250,7 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
                     disabled={submitting}
                     className="w-5 h-5 accent-[var(--primary)]"
                   />
-                  <span className="text-sm font-black text-[var(--text)]">เปิดใช้งานทันที (is_active)</span>
+                  <span className="text-sm font-black text-[var(--text)]">{t("createCoupon.label.activate")}</span>
                 </label>
               </div>
             </div>
@@ -259,16 +261,16 @@ export default function CreateCouponModal({ open, onClose }: CreateCouponModalPr
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="flex-1 py-4 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)]0 font-black text-[15px] rounded-[22px] hover:bg-[var(--surface-2)] transition-all active:scale-95 disabled:opacity-50"
+              className="flex-1 py-4 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] font-black text-[15px] rounded-[22px] hover:bg-[var(--surface-2)] transition-all active:scale-95 disabled:opacity-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={submitting}
               className="flex-[2] py-4 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] font-black text-[16px] rounded-[22px] shadow-[0_15px_30px_rgba(244,123,42,0.25)] hover:shadow-[0_20px_40px_rgba(244,123,42,0.35)] hover:-translate-y-1 transition-all active:translate-y-0 active:scale-[0.98] disabled:opacity-60 disabled:pointer-events-none"
             >
-              {submitting ? "กำลังสร้าง…" : "Create Coupon"}
+              {submitting ? t("createCoupon.creating") : t("createCoupon.headline")}
             </button>
           </div>
         </form>

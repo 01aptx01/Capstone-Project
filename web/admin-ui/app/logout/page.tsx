@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
+import { useLang } from "@/lib/i18n/lang";
 
 export default function LogoutPage() {
   const router = useRouter();
+  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -34,8 +36,8 @@ export default function LogoutPage() {
           <div className="premium-loader"></div>
           <div className="loader-icon"><i className="fi fi-rr-exit"></i></div>
         </div>
-        <h2 className="text-2xl font-black text-[var(--text)] mb-3">กำลังออกจากระบบ...</h2>
-        <p className="text-[var(--text)]0 font-medium text-[15px]">ขอบคุณที่ใช้งานระบบ MOD PAO Vending Management</p>
+        <h2 className="text-2xl font-black text-[var(--text)] mb-3">{t("logout.title")}</h2>
+        <p className="text-[var(--text-muted)] font-medium text-[15px]">{t("logout.subtitle")}</p>
       </div>
 
       <style jsx>{`

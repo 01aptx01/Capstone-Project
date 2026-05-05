@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useLang } from "@/lib/i18n/lang";
 
 export default function HeaderDateSelector() {
+  const { t } = useLang();
   const [isOpen, setIsOpen] = useState(false);
 
   const [appliedRange, setAppliedRange] = useState({ start: "", end: "" });
@@ -46,8 +48,8 @@ export default function HeaderDateSelector() {
   };
 
   const displayString = (appliedRange.start || appliedRange.end)
-    ? `${appliedRange.start ? formatDisplay(appliedRange.start) : '...'} ถึง ${appliedRange.end ? formatDisplay(appliedRange.end) : '...'}`
-    : "ระบุช่วงเวลา";
+    ? `${appliedRange.start ? formatDisplay(appliedRange.start) : '...'} ${t("datePicker.through")} ${appliedRange.end ? formatDisplay(appliedRange.end) : '...'}`
+    : t("datePicker.label");
 
   return (
     <div className="relative" ref={popoverRef}>
@@ -80,12 +82,12 @@ export default function HeaderDateSelector() {
         >
           <div className="flex items-center gap-2 mb-4">
             <i className="fi fi-rr-calendar-clock" style={{ color: "var(--primary)" }}></i>
-            <h3 className="font-bold" style={{ color: "var(--text)" }}>เลือกช่วงเวลา</h3>
+            <h3 className="font-bold" style={{ color: "var(--text)" }}>{t("datePicker.title")}</h3>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-[12px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>ตั้งแต่เดือน</label>
+              <label className="block text-[12px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>{t("datePicker.from")}</label>
               <input
                 type="month"
                 className="w-full px-3 py-2 border-2 rounded-xl text-[14px] font-bold outline-none transition-all"
@@ -100,7 +102,7 @@ export default function HeaderDateSelector() {
             </div>
 
             <div>
-              <label className="block text-[12px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>ถึงเดือน</label>
+              <label className="block text-[12px] font-bold uppercase tracking-wider mb-1.5" style={{ color: "var(--text-muted)" }}>{t("datePicker.to")}</label>
               <input
                 type="month"
                 className="w-full px-3 py-2 border-2 rounded-xl text-[14px] font-bold outline-none transition-all"
@@ -125,7 +127,7 @@ export default function HeaderDateSelector() {
                 borderColor: "var(--border)",
               }}
             >
-              ล้าง
+              {t("datePicker.clear")}
             </button>
             <button
               onClick={handleApply}
@@ -136,7 +138,7 @@ export default function HeaderDateSelector() {
                 boxShadow: "var(--shadow-primary)",
               }}
             >
-              ตกลง
+              {t("datePicker.apply")}
             </button>
           </div>
         </div>

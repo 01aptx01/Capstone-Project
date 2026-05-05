@@ -9,11 +9,13 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getAdminAlerts, listMachines } from "@/lib/admin-api";
 import { apiMachineToCard, type UiMachineCard } from "@/lib/admin-mappers";
+import { useLang } from "@/lib/i18n/lang";
 
 function MachinesPageClient() {
   const searchParams = useSearchParams();
   const listQuery = searchParams.get("q")?.trim() ?? "";
   const { openAddMachine, openExportModal } = useUI();
+  const { t } = useLang();
   const [machines, setMachines] = useState<UiMachineCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -45,12 +47,12 @@ function MachinesPageClient() {
       setMachines([]);
       setAlertCount(null);
       setLoadError(
-        e instanceof Error ? e.message : "โหลดรายการตู้ไม่สำเร็จ กรุณาลองใหม่"
+        e instanceof Error ? e.message : t("page.machines.error.loadFailed")
       );
     } finally {
       setLoading(false);
     }
-  }, [listQuery]);
+  }, [listQuery, t]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -70,13 +72,13 @@ function MachinesPageClient() {
     () => [
       {
         id: "machines_list",
-        label: "รายชื่อตู้ทั้งหมด (All Machines)",
-        description: "ข้อมูลตู้สินค้าทั้งหมดในระบบ",
+        label: t("page.machines.listTitle"),
+        description: t("page.machines.export.desc"),
         columns: [
-          { key: "id", label: "รหัสตู้" },
-          { key: "name", label: "ชื่อตู้" },
-          { key: "location", label: "สถานที่" },
-          { key: "status", label: "สถานะ" },
+          { key: "id", label: t("page.machines.export.col.id") },
+          { key: "name", label: t("page.machines.export.col.name") },
+          { key: "location", label: t("page.machines.export.col.location") },
+          { key: "status", label: t("page.machines.export.col.status") },
         ],
         fetchData: async () => {
           const { items } = await listMachines({ page: 1, per_page: 500 });
@@ -89,7 +91,7 @@ function MachinesPageClient() {
         },
       },
     ],
-    []
+    [t]
   );
 
   const operationalOnlineCount = machines.filter(
@@ -102,10 +104,10 @@ function MachinesPageClient() {
       <div className="flex justify-between items-center mb-8 animate-in opacity-0">
         <div>
           <h1 className="text-3xl font-black text-[var(--text)] tracking-tight mb-2">
-            จัดการตู้สินค้า
+            {t("page.machines.title")}
           </h1>
           <p className="text-[var(--text-muted)] font-medium">
-            ติดตามสถานะ สต็อกสินค้า และประสิทธิภาพของตู้จำหน่ายสินค้าอัตโนมัติแบบ Real-time
+            {t("page.machines.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -114,14 +116,14 @@ function MachinesPageClient() {
             onClick={() => load()}
             className="px-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold text-sm"
           >
-            รีเฟรช
+            {t("common.refresh")}
           </button>
           <button
-            onClick={() => openExportModal(machineSections, "จัดการตู้สินค้า")}
+            onClick={() => openExportModal(machineSections, t("page.machines.exportTitle"))}
             className="px-6 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
           >
             <i className="fi fi-rr-download text-sm"></i>
-            <span>Export</span>
+            <span>{t("page.machines.export")}</span>
           </button>
         </div>
       </div>
@@ -138,28 +140,28 @@ function MachinesPageClient() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in opacity-0 delay-600">
         {[
           {
-            label: "ตู้ทั้งหมด",
+            label: t("page.machines.stat.total"),
             value: loading ? "…" : machines.length,
             icon: "fi-rr-vending-machine",
             color: "bg-[var(--surface-2)]0",
             shadow: "shadow-blue-200",
           },
           {
-            label: "พร้อมขาย (status=online)",
+            label: t("page.machines.stat.online"),
             value: loading ? "…" : operationalOnlineCount,
             icon: "fi-rr-check-circle",
             color: "bg-[var(--success-bg)]0",
             shadow: "shadow-emerald-200",
           },
           {
-            label: "เชื่อมต่อ Socket (is_online)",
+            label: t("page.machines.stat.socket"),
             value: loading ? "…" : socketConnectedCount,
             icon: "fi-rr-wifi",
             color: "bg-sky-500",
             shadow: "shadow-sky-200",
           },
           {
-            label: "แจ้งเตือน (สต็อกต่ำ + ERROR)",
+            label: t("page.machines.stat.alerts"),
             value:
               loading ? "…" : alertCount === null ? "—" : String(alertCount),
             icon: "fi-rr-bell",
@@ -190,14 +192,14 @@ function MachinesPageClient() {
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-black text-[var(--text)] tracking-tight flex items-center gap-3">
             <span className="w-2 h-8 bg-[var(--primary)] rounded-full"></span>
-            รายชื่อตู้ทั้งหมด
+            {t("page.machines.listTitle")}
           </h2>
           <button
             onClick={openAddMachine}
             className="px-5 py-2.5 bg-[var(--primary)] text-[var(--primary-contrast)] rounded-xl font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
           >
             <i className="fi fi-rr-plus text-sm"></i>
-            <span>เพิ่มตู้สินค้า</span>
+            <span>{t("page.machines.addMachine")}</span>
           </button>
         </div>
 
@@ -222,9 +224,9 @@ function MachinesPageClient() {
 
               {!loading && machines.length === 0 && (
                 <div className="col-span-full flex min-h-[200px] flex-col items-center justify-center rounded-[40px] border border-dashed border-[var(--border)] bg-[var(--surface-2)]/50 px-6 py-12 text-center">
-                  <p className="text-lg font-black text-[var(--text)]">ยังไม่มีตู้ในระบบ</p>
+                  <p className="text-lg font-black text-[var(--text)]">{t("page.machines.emptyTitle")}</p>
                   <p className="mt-2 text-sm font-medium text-[var(--text)]0">
-                    เพิ่มตู้ใหม่จากปุ่มด้านบน หรือตรวจสอบการเชื่อมต่อ API
+                    {t("page.machines.emptyHint")}
                   </p>
                 </div>
               )}
@@ -242,10 +244,10 @@ function MachinesPageClient() {
             </div>
             <div className="relative z-10 text-center">
               <div className="text-[22px] font-black text-[var(--text-muted)] group-hover:text-[var(--primary)] tracking-tight transition-colors duration-500">
-                เพิ่มตู้สินค้าใหม่
+                {t("page.machines.addTileTitle")}
               </div>
               <p className="text-[var(--text-muted)] font-bold text-sm mt-3 max-w-[200px] mx-auto leading-relaxed group-hover:text-orange-400 transition-colors duration-500">
-                คลิกเพื่อเชื่อมต่อและจัดการตู้ใหม่เข้ากับระบบส่วนกลาง
+                {t("page.machines.addTileHint")}
               </p>
             </div>
             <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-[var(--border)] rounded-tl-xl group-hover:border-[var(--primary)]/20 transition-colors"></div>
@@ -259,15 +261,18 @@ function MachinesPageClient() {
   );
 }
 
+function MachinesPageFallback() {
+  const { t } = useLang();
+  return (
+    <PageWrapper>
+      <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">{t("common.loading")}</p>
+    </PageWrapper>
+  );
+}
+
 export default function MachinesPage() {
   return (
-    <Suspense
-      fallback={
-        <PageWrapper>
-          <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">กำลังโหลด…</p>
-        </PageWrapper>
-      }
-    >
+    <Suspense fallback={<MachinesPageFallback />}>
       <MachinesPageClient />
     </Suspense>
   );

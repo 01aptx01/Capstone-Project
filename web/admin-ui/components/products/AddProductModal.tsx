@@ -7,6 +7,7 @@ import Modal from "@/components/ui/Modal";
 import { createProduct } from "@/lib/admin-api";
 import { uiLabelToApiCategory } from "@/lib/admin-mappers";
 import { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
+import { useLang } from "@/lib/i18n/lang";
 
 interface AddProductModalProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface AddProductModalProps {
 }
 
 export default function AddProductModal({ open, onClose }: AddProductModalProps) {
+  const { t } = useLang();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -29,7 +31,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
     setFormError(null);
     const price = parseFloat(formData.unit_price);
     if (!formData.name.trim() || Number.isNaN(price)) {
-      setFormError("กรอกชื่อและราคาให้ถูกต้อง");
+      setFormError(t("addProduct.errorInvalid"));
       return;
     }
     setSubmitting(true);
@@ -41,7 +43,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
         description: formData.description.trim() || null,
         image_url: formData.image_url.trim() || null,
       });
-      toast.success("เพิ่มสินค้าสำเร็จ");
+      toast.success(t("addProduct.toastCreated"));
       window.dispatchEvent(new Event(ADMIN_PRODUCTS_REFRESH_EVENT));
       setFormData({
         name: "",
@@ -60,7 +62,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
           )
         : err instanceof Error
           ? err.message
-          : "บันทึกไม่สำเร็จ";
+          : t("editMachine.toastFailed");
       setFormError(msg);
       toast.error(msg);
     } finally {
@@ -69,7 +71,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="เพิ่มสินค้าใหม่ในคลัง">
+    <Modal open={open} onClose={onClose} title={t("addProduct.title")}>
       <div className="absolute top-0 right-0 -z-10 p-12 opacity-5 pointer-events-none">
         <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--primary)]">
           <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
@@ -83,11 +85,11 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
 
         <div className="space-y-4">
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ชื่อสินค้า</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.name")}</label>
             <input
               type="text"
               required
-              placeholder="ชื่อสินค้า"
+              placeholder={t("addProduct.placeholder.name")}
               className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -95,10 +97,10 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
           </div>
 
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ลิงก์รูปภาพ (URL)</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.imageUrl")}</label>
             <input
               type="url"
-              placeholder="https://... หรือ /product/img/..."
+              placeholder={t("addProduct.placeholder.imageUrl")}
               className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
               value={formData.image_url}
               onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
@@ -107,7 +109,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
 
           <div className="grid grid-cols-2 gap-4">
             <div className="group space-y-1.5">
-              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">หมวดหมู่</label>
+              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.category")}</label>
               <select
                 className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)] cursor-pointer"
                 value={formData.category}
@@ -119,7 +121,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
               </select>
             </div>
             <div className="group space-y-1.5">
-              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ราคาต่อชิ้น (฿)</label>
+              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.unitPrice")}</label>
               <input
                 type="number"
                 required
@@ -134,9 +136,9 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
           </div>
 
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">รายละเอียด</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.description")}</label>
             <textarea
-              placeholder="รายละเอียดสินค้า..."
+              placeholder={t("addProduct.placeholder.description")}
               rows={3}
               className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)] resize-none"
               value={formData.description}
@@ -146,23 +148,23 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
         </div>
 
         <p className="text-xs text-[var(--text-muted)] font-medium">
-          สต็อกต่อตู้แก้ที่เมนูตู้จำหน่าย — API สินค้าไม่เก็บจำนวนคงเหลือรวม
+          {t("addProduct.note")}
         </p>
 
         <div className="flex gap-4 pt-4">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-6 py-4 bg-[var(--surface-2)] text-[var(--text)]0 rounded-[20px] text-[15px] font-bold hover:bg-[var(--border)] transition-all active:scale-95"
+            className="flex-1 px-6 py-4 bg-[var(--surface-2)] text-[var(--text-muted)] rounded-[20px] text-[15px] font-bold hover:bg-[var(--border)] transition-all active:scale-95"
           >
-            ยกเลิก
+            {t("common.cancel")}
           </button>
           <button
             type="submit"
             disabled={submitting}
             className="flex-[2] px-6 py-4 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-[20px] text-[15px] font-black shadow-[0_12px_30px_rgba(244,123,42,0.25)] hover:shadow-[0_15px_40px_rgba(244,123,42,0.35)] disabled:opacity-60 transition-all flex items-center justify-center gap-2"
           >
-            {submitting ? "กำลังบันทึก..." : "ยืนยันการเพิ่มสินค้า"}
+            {submitting ? t("addProduct.creating") : t("addProduct.confirm")}
           </button>
         </div>
       </form>

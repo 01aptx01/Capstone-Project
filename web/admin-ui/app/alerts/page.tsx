@@ -1,14 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import PageWrapper from "@/components/layout/PageWrapper";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import { getAdminAlerts, resolveAlert, type AdminAlertsResponse } from "@/lib/admin-api";
+import { useLang } from "@/lib/i18n/lang";
 import toast from "react-hot-toast";
 import { isAxiosError } from "axios";
 
-export default function AlertsPage() {
+function AlertsPageClient() {
   const { openExportModal } = useUI();
+  const { t } = useLang();
+  const searchParams = useSearchParams();
+  void searchParams; // lang param picked up by LangProvider
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AdminAlertsResponse | null>(null);
   const [includeResolved, setIncludeResolved] = useState(false);
@@ -37,7 +44,7 @@ export default function AlertsPage() {
     setResolvingId(eventId);
     try {
       await resolveAlert(eventId);
-      toast.success("ทำเครื่องหมายว่าแก้ไขแล้ว");
+      toast.success(t("alerts.toast.resolved"));
       await load();
     } catch (e) {
       console.error(e);
@@ -49,7 +56,7 @@ export default function AlertsPage() {
           )
         : e instanceof Error
           ? e.message
-          : "Resolve ไม่สำเร็จ";
+          : "Resolve failed";
       toast.error(msg);
     } finally {
       setResolvingId(null);
@@ -59,18 +66,21 @@ export default function AlertsPage() {
   const alertSections: ExportSection[] = useMemo(() => {
     const errs = data?.machine_errors ?? [];
     const low = data?.low_stock ?? [];
+    const threshold = data?.stock_threshold ?? 5;
     return [
       {
         id: "machine_errors",
-        label: "ข้อผิดพลาดจากตู้ (Machine ERROR)",
-        description: includeResolved ? "รวมที่ resolve แล้ว" : "เฉพาะที่ยังไม่ resolve",
+        label: t("page.alerts.sectionErrors"),
+        description: includeResolved
+          ? t("page.alerts.export.errorsIncl")
+          : t("page.alerts.export.errorsOnly"),
         columns: [
           { key: "id", label: "Event ID" },
-          { key: "machine", label: "ตู้" },
-          { key: "event_type", label: "ประเภท" },
-          { key: "state", label: "สถานะ" },
-          { key: "created_at", label: "เวลา" },
-          { key: "is_resolved", label: "แก้แล้ว" },
+          { key: "machine", label: t("page.alerts.machineLabel") },
+          { key: "event_type", label: t("page.alerts.export.col.eventType") },
+          { key: "state", label: t("page.alerts.export.col.state") },
+          { key: "created_at", label: t("page.orders.col.time") },
+          { key: "is_resolved", label: t("page.alerts.export.col.resolved") },
         ],
         fetchData: async () =>
           errs.map((r) => ({
@@ -84,13 +94,13 @@ export default function AlertsPage() {
       },
       {
         id: "low_stock",
-        label: "สต็อกต่ำ (Low stock)",
-        description: `เกณฑ์ quantity < ${data?.stock_threshold ?? 5}`,
+        label: t("page.alerts.sectionLowStock").replace("{n}", String(threshold)),
+        description: t("page.alerts.export.lowThreshold").replace("{n}", String(threshold)),
         columns: [
-          { key: "machine_code", label: "ตู้" },
-          { key: "slot", label: "ช่อง" },
-          { key: "product_name", label: "สินค้า" },
-          { key: "quantity", label: "จำนวน" },
+          { key: "machine_code", label: t("page.alerts.machineLabel") },
+          { key: "slot", label: t("page.alerts.slotLabel") },
+          { key: "product_name", label: t("machine.detail.col.product") },
+          { key: "quantity", label: t("machine.detail.col.qty") },
         ],
         fetchData: async () =>
           low.map((r) => ({
@@ -101,16 +111,14 @@ export default function AlertsPage() {
           })),
       },
     ];
-  }, [data, includeResolved]);
+  }, [data, includeResolved, t]);
 
   return (
     <PageWrapper>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 animate-in opacity-0">
         <div>
-          <h1 className="text-[32px] font-black text-[var(--text)] tracking-tight">การแจ้งเตือน</h1>
-          <p className="text-[var(--text-muted)] font-medium">
-            สต็อกต่ำและเหตุการณ์ ERROR จากตู้ (อัปเดตจาก API)
-          </p>
+          <h1 className="text-[32px] font-black text-[var(--text)] tracking-tight">{t("page.alerts.title")}</h1>
+          <p className="text-[var(--text-muted)] font-medium">{t("page.alerts.subtitle")}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-sm font-bold text-[var(--text)] cursor-pointer">
@@ -120,7 +128,7 @@ export default function AlertsPage() {
               onChange={(e) => setIncludeResolved(e.target.checked)}
               className="rounded border-[var(--border)]"
             />
-            แสดง ERROR ที่ resolve แล้ว
+            {t("page.alerts.includeResolved")}
           </label>
           <button
             type="button"
@@ -128,15 +136,15 @@ export default function AlertsPage() {
             disabled={loading}
             className="px-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold text-sm disabled:opacity-50"
           >
-            รีเฟรช
+            {t("common.refresh")}
           </button>
           <button
             type="button"
-            onClick={() => openExportModal(alertSections, "การแจ้งเตือน (Alerts)")}
+            onClick={() => openExportModal(alertSections, t("page.alerts.exportTitle"))}
             className="px-6 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2"
           >
             <i className="fi fi-rr-download text-sm"></i>
-            <span>Export รายงาน</span>
+            <span>{t("page.alerts.export")}</span>
           </button>
         </div>
       </div>
@@ -146,13 +154,13 @@ export default function AlertsPage() {
           <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center">
             <i className="fi fi-rr-cross-circle text-lg"></i>
           </div>
-          <h2 className="text-xl font-extrabold text-[var(--text)]">ข้อผิดพลาดจากตู้ (ERROR)</h2>
+          <h2 className="text-xl font-extrabold text-[var(--text)]">{t("page.alerts.sectionErrors")}</h2>
         </div>
 
         {loading && !data ? (
-          <p className="text-[var(--text)]0 font-bold">กำลังโหลด…</p>
+          <p className="text-[var(--text-muted)] font-bold">{t("page.alerts.loading")}</p>
         ) : (data?.machine_errors?.length ?? 0) === 0 ? (
-          <p className="text-[var(--text)]0 font-medium">ไม่มีรายการในขณะนี้</p>
+          <p className="text-[var(--text-muted)] font-medium">{t("page.alerts.empty")}</p>
         ) : (
           <div className="space-y-4">
             {data!.machine_errors.map((ev, index) => (
@@ -167,28 +175,24 @@ export default function AlertsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="font-bold text-[var(--text)] text-lg">
-                        {ev.event_type}
-                      </span>
+                      <span className="font-bold text-[var(--text)] text-lg">{ev.event_type}</span>
                       <span className="text-[var(--text-muted)] font-medium text-sm">
-                        · ตู้ {ev.machine_code}
+                        {t("page.alerts.machinePrefix")}{ev.machine_code}
                       </span>
                       <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-red-100 text-red-700">
                         {ev.state}
                       </span>
                       {ev.is_resolved && (
                         <span className="text-xs font-bold text-emerald-700 bg-[var(--success-bg)] px-2 py-0.5 rounded">
-                          แก้แล้ว
+                          {t("page.alerts.badgeResolved")}
                         </span>
                       )}
                     </div>
-                    <div className="text-sm text-[var(--text)]0 font-medium">
+                    <div className="text-sm text-[var(--text-muted)] font-medium">
                       job_id: {ev.job_id ?? "—"} · id: {ev.id}
                     </div>
                     <div className="text-sm font-semibold text-[var(--text-muted)] mt-1">
-                      {ev.created_at
-                        ? new Date(ev.created_at).toLocaleString()
-                        : "—"}
+                      {ev.created_at ? new Date(ev.created_at).toLocaleString() : "—"}
                     </div>
                   </div>
                   {!ev.is_resolved && (
@@ -198,7 +202,7 @@ export default function AlertsPage() {
                       onClick={() => void onResolve(ev.id)}
                       className="shrink-0 px-5 py-2.5 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] font-bold text-sm hover:bg-[var(--primary)] disabled:opacity-50 transition-colors"
                     >
-                      {resolvingId === ev.id ? "กำลังดำเนินการ…" : "Resolve"}
+                      {resolvingId === ev.id ? t("page.alerts.resolving") : t("page.alerts.resolve")}
                     </button>
                   )}
                 </div>
@@ -214,13 +218,13 @@ export default function AlertsPage() {
             <i className="fi fi-rr-box-open text-lg"></i>
           </div>
           <h2 className="text-xl font-extrabold text-[var(--text)]">
-            สต็อกต่ำ (ต่ำกว่า {data?.stock_threshold ?? 5})
+            {t("page.alerts.lowStockTitle").replace("{n}", String(data?.stock_threshold ?? 5))}
           </h2>
         </div>
         {loading && !data ? (
-          <p className="text-[var(--text)]0 font-bold">กำลังโหลด…</p>
+          <p className="text-[var(--text-muted)] font-bold">{t("page.alerts.loading")}</p>
         ) : (data?.low_stock?.length ?? 0) === 0 ? (
-          <p className="text-[var(--text)]0 font-medium">ไม่มีช่องที่ต่ำกว่าเกณฑ์</p>
+          <p className="text-[var(--text-muted)] font-medium">{t("page.alerts.emptyLow")}</p>
         ) : (
           <div className="space-y-3">
             {data!.low_stock.map((r) => (
@@ -230,16 +234,36 @@ export default function AlertsPage() {
               >
                 <div className="font-bold text-[var(--text)]">
                   {r.product_name}{" "}
-                  <span className="text-[var(--text)]0 font-medium text-sm">
-                    ({r.machine_code} · ช่อง {r.slot})
+                  <span className="text-[var(--text-muted)] font-medium text-sm">
+                    {t("page.alerts.slotLine")
+                      .replace("{machine}", r.machine_code)
+                      .replace("{slot}", String(r.slot))}
                   </span>
                 </div>
-                <div className="text-amber-800 font-black">คงเหลือ {r.quantity}</div>
+                <div className="text-amber-800 font-black">
+                  {t("page.alerts.remain").replace("{n}", String(r.quantity))}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
     </PageWrapper>
+  );
+}
+
+function AlertsPageFallback() {
+  return (
+    <PageWrapper>
+      <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">Loading…</p>
+    </PageWrapper>
+  );
+}
+
+export default function AlertsPage() {
+  return (
+    <Suspense fallback={<AlertsPageFallback />}>
+      <AlertsPageClient />
+    </Suspense>
   );
 }

@@ -9,11 +9,13 @@ import { useSearchParams } from "next/navigation";
 import { listOrders } from "@/lib/admin-api";
 import type { ApiOrderListItem } from "@/lib/admin-api";
 import { apiOrderToUiRow } from "@/lib/admin-mappers";
+import { useLang } from "@/lib/i18n/lang";
 
 function OrdersPageClient() {
   const searchParams = useSearchParams();
   const listQuery = searchParams.get("q")?.trim() ?? "";
   const { openExportModal } = useUI();
+  const { t } = useLang();
   const [rows, setRows] = useState<ReturnType<typeof apiOrderToUiRow>[]>([]);
   const [rawItems, setRawItems] = useState<ApiOrderListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -69,35 +71,35 @@ function OrdersPageClient() {
     () => [
       {
         id: "orders_summary",
-        label: "สรุปคำสั่งซื้อ (Orders Summary)",
-        description: "จำนวนออเดอร์ตามสถานะ (จากชุดข้อมูลที่โหลด)",
+        label: t("page.orders.export.summaryLabel"),
+        description: t("page.orders.export.summaryDesc"),
         columns: [
-          { key: "metric", label: "สถานะ" },
-          { key: "value", label: "จำนวน" },
+          { key: "metric", label: t("page.orders.export.col.metric") },
+          { key: "value", label: t("page.orders.export.col.value") },
         ],
         fetchData: async () => [
-          { metric: "ออเดอร์ทั้งหมด (API)", value: String(total) },
-          { metric: "รอดำเนินการ / ยกเลิก", value: String(summary.pending) },
-          { metric: "สำเร็จแล้ว", value: String(summary.completed) },
+          { metric: t("page.orders.export.metric.totalApi"), value: String(total) },
+          { metric: t("page.orders.export.metric.pendingCancelled"), value: String(summary.pending) },
+          { metric: t("page.orders.export.metric.completed"), value: String(summary.completed) },
           {
-            metric: "ยอดรวมในหน้า (ประมาณ)",
+            metric: t("page.orders.export.metric.revenueApprox"),
             value: `฿${summary.revenue.toFixed(2)}`,
           },
         ],
       },
       {
         id: "orders_list",
-        label: "รายการออเดอร์ (Order List)",
-        description: "รายละเอียดคำสั่งซื้อ",
+        label: t("page.orders.export.listLabel"),
+        description: t("page.orders.export.listDesc"),
         columns: [
-          { key: "id", label: "เลขออเดอร์" },
-          { key: "time", label: "เวลา" },
-          { key: "machine_code", label: "ตู้" },
-          { key: "customer_phone", label: "ลูกค้า" },
-          { key: "payment_method", label: "ช่องทางจ่าย" },
-          { key: "items", label: "สินค้า" },
-          { key: "amount", label: "ยอดเงิน (฿)" },
-          { key: "status", label: "สถานะ" },
+          { key: "id", label: t("page.orders.col.orderId") },
+          { key: "time", label: t("page.orders.col.time") },
+          { key: "machine_code", label: t("page.orders.col.machine") },
+          { key: "customer_phone", label: t("page.orders.col.customer") },
+          { key: "payment_method", label: t("page.orders.col.payment") },
+          { key: "items", label: t("page.orders.col.items") },
+          { key: "amount", label: t("page.orders.col.total") },
+          { key: "status", label: t("page.orders.col.status") },
         ],
         fetchData: async () => {
           const res = await listOrders({ page: 1, per_page: 500 });
@@ -109,7 +111,12 @@ function OrdersPageClient() {
               machine_code: r.machine_code ?? "",
               customer_phone: r.customer_phone ?? "",
               payment_method: r.payment_method ?? "",
-              items: r.items,
+              items:
+                r.lineCount > 0
+                  ? t("page.orders.itemsLabel")
+                      .replace("{lines}", String(r.lineCount))
+                      .replace("{qty}", String(r.qtySum))
+                  : "—",
               amount: r.amount,
               status: r.status,
             };
@@ -117,7 +124,7 @@ function OrdersPageClient() {
         },
       },
     ],
-    [total, summary.pending, summary.completed, summary.revenue]
+    [total, summary.pending, summary.completed, summary.revenue, t]
   );
 
   const getStatusBadge = (status: string) => {
@@ -125,7 +132,7 @@ function OrdersPageClient() {
     if (s === "completed")
       return (
         <span className="px-3 py-1 bg-[var(--success-bg)] text-emerald-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-emerald-100">
-          Completed
+          {t("page.orders.badge.completed")}
         </span>
       );
     if (s === "pending_payment" || s === "cancelled" || s === "payment_failed")
@@ -137,7 +144,7 @@ function OrdersPageClient() {
     if (s === "refunded")
       return (
         <span className="px-3 py-1 bg-rose-50 text-rose-600 text-[11px] font-black uppercase tracking-wider rounded-lg border border-rose-100">
-          Refunded
+          {t("page.orders.badge.refunded")}
         </span>
       );
     return (
@@ -152,10 +159,10 @@ function OrdersPageClient() {
       <div className="flex items-center justify-between animate-in opacity-0">
         <div>
           <h1 className="text-[36px] font-black text-[var(--text)] mb-2 tracking-tight">
-            ประวัติการสั่งซื้อ
+            {t("page.orders.title")}
           </h1>
           <p className="text-[var(--text-muted)] text-[16px] font-medium">
-            ตรวจสอบและจัดการรายการธุรกรรมทั้งหมดในระบบ
+            {t("page.orders.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -164,14 +171,14 @@ function OrdersPageClient() {
             onClick={() => load()}
             className="px-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl font-bold text-sm text-[var(--text)]"
           >
-            รีเฟรช
+            {t("common.refresh")}
           </button>
           <button
-            onClick={() => openExportModal(orderSections, "คำสั่งซื้อ (Orders)")}
+            onClick={() => openExportModal(orderSections, t("page.orders.exportTitle"))}
             className="btn-primary"
           >
             <i className="fi fi-rr-download flex items-center"></i>
-            Export รายงาน
+            {t("page.orders.export")}
           </button>
         </div>
       </div>
@@ -179,7 +186,7 @@ function OrdersPageClient() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <div className="animate-in opacity-0 delay-100">
           <ReportCard
-            title="ออเดอร์ทั้งหมด"
+            title={t("page.orders.card.total")}
             value={loading ? "…" : String(total)}
             icon={<i className="fi fi-rr-shopping-cart"></i>}
             iconBg="var(--surface-2)"
@@ -188,7 +195,7 @@ function OrdersPageClient() {
         </div>
         <div className="animate-in opacity-0 delay-200">
           <ReportCard
-            title="รอดำเนินการ / ยกเลิก"
+            title={t("page.orders.card.pending")}
             value={loading ? "…" : String(summary.pending)}
             icon={<i className="fi fi-rr-time-past"></i>}
             iconBg="var(--surface-1)7ED"
@@ -197,7 +204,7 @@ function OrdersPageClient() {
         </div>
         <div className="animate-in opacity-0 delay-300">
           <ReportCard
-            title="สำเร็จแล้ว"
+            title={t("page.orders.card.completed")}
             value={loading ? "…" : String(summary.completed)}
             icon={<i className="fi fi-rr-check-circle"></i>}
             iconBg="var(--success-bg)"
@@ -206,7 +213,7 @@ function OrdersPageClient() {
         </div>
         <div className="animate-in opacity-0 delay-400">
           <ReportCard
-            title="ยอดเงินรวม (ชุดที่โหลด)"
+            title={t("page.orders.card.revenue")}
             value={loading ? "…" : `฿${summary.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
             icon={<i className="fi fi-rr-coins"></i>}
             iconBg="var(--surface-2)"
@@ -217,39 +224,39 @@ function OrdersPageClient() {
 
       <div className="vibrant-card !rounded-[32px] overflow-hidden animate-in opacity-0 delay-500 min-h-[320px]">
         <div className="p-8 border-b border-[var(--border)] flex items-center justify-between">
-          <h2 className="text-[20px] font-black text-[var(--text)]">รายการออเดอร์ล่าสุด</h2>
+          <h2 className="text-[20px] font-black text-[var(--text)]">{t("page.orders.tableTitle")}</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="bg-[var(--surface-2)]/50">
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  Order ID
+                  {t("page.orders.col.orderId")}
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  เวลา
+                  {t("page.orders.col.time")}
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  ตู้
+                  {t("page.orders.col.machine")}
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  ลูกค้า
+                  {t("page.orders.col.customer")}
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  ช่องทางจ่าย
+                  {t("page.orders.col.payment")}
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  สินค้า
+                  {t("page.orders.col.items")}
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  Total
+                  {t("page.orders.col.total")}
                 </th>
                 <th className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap">
-                  Status
+                  {t("page.orders.col.status")}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-[var(--border)]">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="p-0">
@@ -261,9 +268,9 @@ function OrdersPageClient() {
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-8 py-16 text-center">
-                    <p className="text-lg font-black text-[var(--text)]0">ไม่มีออเดอร์ในชุดที่โหลด</p>
+                    <p className="text-lg font-black text-[var(--text)]">{t("page.orders.empty")}</p>
                     <p className="mt-2 text-sm font-medium text-[var(--text-muted)]">
-                      ลองรีเฟรชหรือตรวจสอบการเชื่อมต่อกับเซิร์ฟเวอร์
+                      {t("page.orders.emptyHint")}
                     </p>
                   </td>
                 </tr>
@@ -286,7 +293,13 @@ function OrdersPageClient() {
                       {o.payment_method || "—"}
                     </td>
                     <td className="px-8 py-5">
-                      <span className="text-[14px] font-bold text-[var(--text)]">{o.items}</span>
+                      <span className="text-[14px] font-bold text-[var(--text)]">
+                        {o.lineCount > 0
+                          ? t("page.orders.itemsLabel")
+                              .replace("{lines}", String(o.lineCount))
+                              .replace("{qty}", String(o.qtySum))
+                          : "—"}
+                      </span>
                     </td>
                     <td className="px-8 py-5">
                       <span className="text-[16px] font-black text-[var(--text)]">
@@ -302,7 +315,7 @@ function OrdersPageClient() {
         </div>
         <div className="p-6 bg-[var(--surface-2)]/30 border-t border-[var(--border)] flex items-center justify-between">
           <p className="text-[13px] font-bold text-[var(--text-muted)]">
-            แสดง {rows.length} รายการ (ทั้งหมดในระบบ {total} ตาม API)
+            {t("page.orders.footer").replace("{loaded}", String(rows.length)).replace("{total}", String(total))}
           </p>
         </div>
       </div>
@@ -310,15 +323,18 @@ function OrdersPageClient() {
   );
 }
 
+function OrdersPageFallback() {
+  const { t } = useLang();
+  return (
+    <PageWrapper>
+      <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">{t("common.loading")}</p>
+    </PageWrapper>
+  );
+}
+
 export default function OrdersPage() {
   return (
-    <Suspense
-      fallback={
-        <PageWrapper>
-          <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">กำลังโหลด…</p>
-        </PageWrapper>
-      }
-    >
+    <Suspense fallback={<OrdersPageFallback />}>
       <OrdersPageClient />
     </Suspense>
   );
