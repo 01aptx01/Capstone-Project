@@ -1,6 +1,5 @@
-Active: (idle / last: admin-ui inventory categories)
+Active: (idle / last: admin-ui coupon edit modal)
 Done:
-- web/admin-ui: product categories display and filter use DB slugs meat | vegetarian | sweet (admin-mappers, Add/Edit modals, products page sort locale en)
-- web/admin-ui/lib/mock/products.json: category fields aligned to same slugs
+- web/admin-ui: CouponFormModal shared create/edit UI (same layout as create); CouponTable edit opens it; CreateCouponModal wraps create-only; coupon-constants for refresh event
 Next:
-- (optional) verify inventory page against live API
+- (optional) verify coupon create/edit against live API
