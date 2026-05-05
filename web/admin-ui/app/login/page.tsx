@@ -9,7 +9,7 @@ export default function LoginPage() {
     <div style={{
       position: "fixed", inset: 0, display: "flex",
       alignItems: "center", justifyContent: "center",
-      background: "#f8fafc", zIndex: 9999, padding: "24px",
+      background: "var(--bg)", zIndex: 9999, padding: "24px",
     }}>
       <div style={{ width: "100%", maxWidth: "440px", minHeight: "560px", flexShrink: 0 }}>
         <LoginCard />

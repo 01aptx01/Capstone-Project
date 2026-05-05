@@ -63,15 +63,15 @@ export default function Sidebar() {
                 <Icon
                   className={`h-5 w-5 shrink-0 transition-all duration-100 ${
                     active
-                      ? "scale-110 text-[#f47b2a]"
-                      : "text-slate-400 group-hover:text-slate-600"
+                      ? "scale-110 text-[var(--primary)]"
+                      : "text-[var(--text-muted)] group-hover:text-[var(--text)]"
                   }`}
                   aria-hidden
                 />
               </span>
               <span
                 className={`label transition-all duration-100 ${
-                  active ? "text-[#f47b2a]" : "text-slate-500 group-hover:text-slate-700"
+                  active ? "text-[var(--primary)]" : "text-[var(--text-muted)] group-hover:text-[var(--text)]"
                 }`}
               >
                 {item.name}
@@ -96,149 +96,104 @@ export default function Sidebar() {
       <div className="sidebar-spacer" />
 
       <div className="sidebar-bottom px-6 pb-10">
-        {/* <button
-          onClick={openAddMachine}
-          className="add-btn mb-8 relative group overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-[#f47b2a] to-[#FB923C] group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="relative z-10 flex items-center justify-center gap-3">
-            <div className="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center group-hover:rotate-[360deg] transition-transform duration-1000">
-              <i className="fi fi-rr-plus-small text-2xl"></i>
-            </div>
-            <span className="tracking-tight">เพิ่มตู้ใหม่</span>
-          </div>
-          <div className="absolute top-0 -left-[100%] w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:left-[100%] transition-all duration-1000"></div>
-        </button> */}
-
-        <div className="bottom-links space-y-2">
-          <Link href="/settings" className={`bottom-link group ${pathname === '/settings' ? 'active' : ''}`}>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300 ${pathname === '/settings' ? 'bg-orange-50 text-[#f47b2a]' : 'bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-slate-600'}`}>
+        <div className="bottom-links flex flex-col gap-2">
+          <Link
+            href="/settings"
+            className={`bottom-link group flex items-center gap-3 px-3 py-2 rounded-xl transition-all ${pathname === "/settings" ? "active" : ""}`}
+          >
+            <div
+              className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-all duration-300 border"
+              style={{
+                background: pathname === "/settings" ? "var(--warn-bg)" : "var(--surface-2)",
+                color: pathname === "/settings" ? "var(--primary)" : "var(--text-muted)",
+                borderColor: "var(--border)",
+              }}
+            >
               <i className="fi fi-rr-settings text-lg"></i>
             </div>
-            <span className="font-bold">ตั้งค่า</span>
+            <span className="font-bold text-[15px]" style={{ color: "var(--text)" }}>
+              ตั้งค่า
+            </span>
           </Link>
-          <Link href="/logout" className="bottom-link group logout">
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-400 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-all duration-300">
+          <Link
+            href="/logout"
+            className="bottom-link group logout flex items-center gap-3 px-3 py-2 rounded-xl transition-all"
+          >
+            <div
+              className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-all duration-300 border"
+              style={{
+                background: "var(--danger-bg)",
+                color: "var(--danger)",
+                borderColor: "var(--border)",
+              }}
+            >
               <i className="fi fi-rr-exit text-lg"></i>
             </div>
-            <span className="font-bold text-rose-500">ออกจากระบบ</span>
+            <span className="font-bold text-[15px]" style={{ color: "var(--danger)" }}>
+              ออกจากระบบ
+            </span>
           </Link>
         </div>
       </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
-        .sidebar {
-          background: #FFFFFF;
-          box-shadow: 20px 0 60px rgba(15, 23, 42, 0.02);
-          border-right: 1px solid rgba(15, 23, 42, 0.04);
-        }
-
         .logo-container {
           width: 48px;
           height: 48px;
-          background: white;
+          background: var(--surface-1);
           border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-          border: 1px solid rgba(0, 0, 0, 0.02);
+          box-shadow: var(--shadow-sm);
+          border: 1px solid var(--border);
         }
 
         .sidebar-brand-title {
           font-weight: 950;
           font-size: 1.3rem;
           letter-spacing: -0.8px;
-          color: #334155;
+          color: var(--text);
           line-height: 1;
         }
 
         .sidebar-brand-sub {
           font-size: 0.65rem;
           font-weight: 800;
-          color: #94A3B8;
+          color: var(--text-muted);
           letter-spacing: 1px;
           text-transform: uppercase;
           margin-top: 4px;
         }
 
-        .sidebar-link {
-          height: 52px;
-          margin-bottom: 8px;
-          padding: 0 18px !important;
-          border-radius: 18px !important;
-          border: 1.5px solid transparent !important;
-          transition: all 0.1s ease !important;
-        }
-
         .sidebar-link:hover:not(.active) {
-          background: #f8fafc !important;
+          background: var(--surface-2) !important;
           transform: translateX(4px);
         }
 
         .sidebar-link.active {
-          background: #FFF7ED !important;
+          background: var(--warn-bg) !important;
           transform: translateX(4px) !important;
         }
 
-        .sidebar-link .icon-container {
-          margin-right: 14px;
-        }
-
-        .sidebar-link .label {
-          font-size: 0.95rem;
-          font-weight: 800;
-        }
-
-        .add-btn {
-          width: 100%;
-          height: 60px;
-          border: none;
-          border-radius: 20px;
-          color: white;
-          font-weight: 900;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 15px 35px rgba(244, 123, 42, 0.25);
-        }
-        
-        .add-btn:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 20px 45px rgba(244, 123, 42, 0.35);
-        }
-
-        .bottom-links {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
         .bottom-link {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 10px;
-          border-radius: 16px;
-          color: #64748B;
-          font-size: 0.95rem;
-          transition: all 0.3s;
+          color: var(--text-muted);
           text-decoration: none;
         }
 
         .bottom-link:hover:not(.logout) {
-          background: #f8fafc;
-          color: #334155;
+          background: var(--surface-2);
+          color: var(--text);
           transform: translateX(4px);
         }
 
         .bottom-link.active {
-          background: rgba(244, 123, 42, 0.03);
-          color: #f47b2a;
+          background: rgba(244, 123, 42, 0.08);
+          color: var(--primary);
         }
 
         .bottom-link.logout:hover {
-          background: #fff1f2;
+          background: var(--danger-bg);
           transform: translateX(4px);
         }
       `}} />

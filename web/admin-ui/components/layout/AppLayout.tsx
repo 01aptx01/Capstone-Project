@@ -4,12 +4,18 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
+import { applyDarkModeClass, getStoredDarkMode } from "@/lib/theme";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
   
   const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/verify-otp";
+
+  useEffect(() => {
+    const stored = getStoredDarkMode();
+    if (stored !== null) applyDarkModeClass(stored);
+  }, []);
 
   useEffect(() => {
     // Simulate auth check/loading state on route change
@@ -22,12 +28,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isChecking) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-slate-50 fixed inset-0 z-[9999]">
+      <div className="flex h-screen w-screen items-center justify-center fixed inset-0 z-[9999]" style={{ background: "var(--bg)" }}>
         <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
-          <div className="w-16 h-16 bg-orange-100 rounded-2xl mb-6 flex items-center justify-center text-[#f47b2a] shadow-inner">
+          <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center shadow-inner" style={{ background: "var(--warn-bg)", color: "var(--primary)" }}>
              <i className="fi fi-rr-spinner animate-spin text-3xl"></i>
           </div>
-          <div className="font-black text-slate-400 tracking-widest uppercase text-sm">Authenticating</div>
+          <div className="font-black tracking-widest uppercase text-sm" style={{ color: "var(--text-muted)" }}>Authenticating</div>
         </div>
       </div>
     );
@@ -35,11 +41,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (isAuthPage) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center relative overflow-hidden">
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "var(--bg)" }}>
         {/* Background decorative elements for Auth Pages */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-          <div className="absolute -top-[10%] -right-[5%] w-[50%] h-[50%] rounded-full bg-[#f47b2a] opacity-10 blur-[100px]"></div>
-          <div className="absolute top-[60%] -left-[10%] w-[40%] h-[40%] rounded-full bg-blue-500 opacity-5 blur-[100px]"></div>
+          <div className="absolute -top-[10%] -right-[5%] w-[50%] h-[50%] rounded-full opacity-10 blur-[100px]" style={{ background: "var(--primary)" }}></div>
+          <div className="absolute top-[60%] -left-[10%] w-[40%] h-[40%] rounded-full opacity-5 blur-[100px]" style={{ background: "var(--chart-series-1)" }}></div>
         </div>
         <div className="relative z-10 w-full flex justify-center py-10">
            {children}

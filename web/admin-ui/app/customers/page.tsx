@@ -132,10 +132,10 @@ function CustomersPageClient() {
     <PageWrapper>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between animate-in opacity-0">
         <div>
-          <h1 className="text-[36px] font-black text-[#334155] mb-2 tracking-tight">
+          <h1 className="text-[36px] font-black text-[var(--text)] mb-2 tracking-tight">
             ลูกค้า & คูปอง
           </h1>
-          <p className="text-[#64748B] text-[16px] font-medium">
+          <p className="text-[var(--text-muted)] text-[16px] font-medium">
             ดูรายชื่อสมาชิก แต้มสะสม และจัดการคูปองส่วนลด (รวมแต้มที่ใช้แลกคูปอง)
           </p>
         </div>
@@ -143,14 +143,14 @@ function CustomersPageClient() {
           <button
             type="button"
             onClick={() => load()}
-            className="px-6 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold shadow-sm hover:shadow-md transition-all"
+            className="px-6 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold shadow-sm hover:shadow-md transition-all"
           >
             รีเฟรช
           </button>
           <button
             type="button"
             onClick={() => openExportModal(customerSections, "ลูกค้า & คูปอง")}
-            className="px-6 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
+            className="px-6 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
           >
             <i className="fi fi-rr-download text-sm"></i>
             <span>Export ข้อมูล</span>
@@ -167,7 +167,12 @@ function CustomersPageClient() {
       </div>
 
       {error && (
-        <div className="px-4 py-3 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold">{error}</div>
+        <div
+          className="px-4 py-3 rounded-xl text-sm font-bold border"
+          style={{ background: "var(--warn-bg)", color: "var(--text)", borderColor: "var(--border)" }}
+        >
+          {error}
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6">
@@ -177,8 +182,8 @@ function CustomersPageClient() {
             value={fmt(memberCount)}
             subValue="คน"
             icon={<i className="fi fi-rr-users"></i>}
-            iconBg="#EFF6FF"
-            iconColor="#3B82F6"
+            iconBg="var(--surface-2)"
+            iconColor="var(--chart-series-1)"
           />
         </div>
         <div className="animate-scale-in opacity-0 delay-200">
@@ -187,8 +192,8 @@ function CustomersPageClient() {
             value={fmt(totalPoints)}
             subValue="Pts (จากรายการที่โหลด)"
             icon={<i className="fi fi-rr-coins"></i>}
-            iconBg="#FFF7ED"
-            iconColor="#f47b2a"
+            iconBg="var(--surface-2)"
+            iconColor="var(--primary)"
           />
         </div>
         <div className="animate-scale-in opacity-0 delay-300">
@@ -197,8 +202,8 @@ function CustomersPageClient() {
             value="—"
             subValue="ยังไม่มีใน API"
             icon={<i className="fi fi-rr-ticket"></i>}
-            iconBg="#ECFDF5"
-            iconColor="#10B981"
+            iconBg="var(--success-bg)"
+            iconColor="var(--success)"
           />
         </div>
         <div className="animate-scale-in opacity-0 delay-400">
@@ -207,15 +212,18 @@ function CustomersPageClient() {
             value={fmt(activeCoupons)}
             subValue="รายการ"
             icon={<i className="fi fi-rr-gift"></i>}
-            iconBg="#F5F3FF"
-            iconColor="#8B5CF6"
+            iconBg="var(--surface-2)"
+            iconColor="var(--chart-series-1)"
           />
         </div>
       </div>
 
       <div className="space-y-8 animate-in opacity-0 delay-500 pb-12">
         <CustomerTable customers={customerItems} loading={loading} error={error} />
-        <div className="glass !rounded-[40px] p-1 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border-white overflow-hidden">
+        <div
+          className="surface-card !rounded-[40px] overflow-hidden"
+          style={{ boxShadow: "var(--shadow-card)" }}
+        >
           <CouponTable />
         </div>
       </div>
@@ -228,7 +236,7 @@ export default function CustomersPage() {
     <Suspense
       fallback={
         <PageWrapper>
-          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+          <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">กำลังโหลด…</p>
         </PageWrapper>
       }
     >

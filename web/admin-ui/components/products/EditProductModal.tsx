@@ -94,7 +94,7 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
   return (
     <Modal open={open} onClose={onClose} title="แก้ไขข้อมูลสินค้า">
       <div className="absolute top-0 right-0 -z-10 p-12 opacity-5 pointer-events-none">
-        <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#f47b2a]">
+        <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--primary)]">
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
         </svg>
@@ -106,26 +106,26 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
         )}
 
         {Number.isFinite(productId) && (
-          <p className="text-xs font-bold text-slate-400">รหัสสินค้า (product_id): {productId}</p>
+          <p className="text-xs font-bold text-[var(--text-muted)]">รหัสสินค้า (product_id): {productId}</p>
         )}
 
         <div className="space-y-4">
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">ชื่อสินค้า</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ชื่อสินค้า</label>
             <input
               type="text"
               required
-              className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155]"
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
 
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">ลิงก์รูปภาพ (URL)</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ลิงก์รูปภาพ (URL)</label>
             <input
               type="url"
-              className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155]"
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
               value={formData.image_url}
               onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
             />
@@ -133,9 +133,9 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
 
           <div className="grid grid-cols-2 gap-4">
             <div className="group space-y-1.5">
-              <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">หมวดหมู่</label>
+              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">หมวดหมู่</label>
               <select
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155] cursor-pointer"
+                className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)] cursor-pointer"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
@@ -145,13 +145,13 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
               </select>
             </div>
             <div className="group space-y-1.5">
-              <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">ราคาต่อชิ้น (฿)</label>
+              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ราคาต่อชิ้น (฿)</label>
               <input
                 type="number"
                 required
                 step="0.01"
                 min="0"
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155]"
+                className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
                 value={formData.unit_price}
                 onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
               />
@@ -159,10 +159,10 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
           </div>
 
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">รายละเอียด</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">รายละเอียด</label>
             <textarea
               rows={3}
-              className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155] resize-none"
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)] resize-none"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
@@ -173,14 +173,14 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-6 py-4 bg-slate-100 text-slate-500 rounded-[20px] text-[15px] font-bold hover:bg-slate-200 transition-all active:scale-95"
+            className="flex-1 px-6 py-4 bg-[var(--surface-2)] text-[var(--text)]0 rounded-[20px] text-[15px] font-bold hover:bg-[var(--border)] transition-all active:scale-95"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-[2] px-6 py-4 bg-gradient-to-r from-[#f47b2a] to-[#FB923C] text-white rounded-[20px] text-[15px] font-black shadow-[0_12px_30px_rgba(244,123,42,0.25)] disabled:opacity-60 transition-all flex items-center justify-center gap-2"
+            className="flex-[2] px-6 py-4 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-[20px] text-[15px] font-black shadow-[0_12px_30px_rgba(244,123,42,0.25)] disabled:opacity-60 transition-all flex items-center justify-center gap-2"
           >
             {submitting ? "กำลังบันทึก..." : "บันทึกการแก้ไข"}
           </button>

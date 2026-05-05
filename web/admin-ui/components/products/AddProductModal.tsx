@@ -71,7 +71,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
   return (
     <Modal open={open} onClose={onClose} title="เพิ่มสินค้าใหม่ในคลัง">
       <div className="absolute top-0 right-0 -z-10 p-12 opacity-5 pointer-events-none">
-        <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[#f47b2a]">
+        <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--primary)]">
           <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
         </svg>
       </div>
@@ -83,23 +83,23 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
 
         <div className="space-y-4">
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">ชื่อสินค้า</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ชื่อสินค้า</label>
             <input
               type="text"
               required
               placeholder="ชื่อสินค้า"
-              className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155]"
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
 
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">ลิงก์รูปภาพ (URL)</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ลิงก์รูปภาพ (URL)</label>
             <input
               type="url"
               placeholder="https://... หรือ /product/img/..."
-              className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155]"
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
               value={formData.image_url}
               onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
             />
@@ -107,9 +107,9 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
 
           <div className="grid grid-cols-2 gap-4">
             <div className="group space-y-1.5">
-              <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">หมวดหมู่</label>
+              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">หมวดหมู่</label>
               <select
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155] cursor-pointer"
+                className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)] cursor-pointer"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
@@ -119,14 +119,14 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
               </select>
             </div>
             <div className="group space-y-1.5">
-              <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">ราคาต่อชิ้น (฿)</label>
+              <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">ราคาต่อชิ้น (฿)</label>
               <input
                 type="number"
                 required
                 step="0.01"
                 min="0"
                 placeholder="0.00"
-                className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155]"
+                className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
                 value={formData.unit_price}
                 onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
               />
@@ -134,18 +134,18 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
           </div>
 
           <div className="group space-y-1.5">
-            <label className="text-[12px] font-black text-[#94A3B8] ml-1 uppercase tracking-[0.1em]">รายละเอียด</label>
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">รายละเอียด</label>
             <textarea
               placeholder="รายละเอียดสินค้า..."
               rows={3}
-              className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] outline-none focus:border-[#f47b2a] focus:bg-white transition-all text-[15px] font-semibold text-[#334155] resize-none"
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)] resize-none"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
           </div>
         </div>
 
-        <p className="text-xs text-slate-400 font-medium">
+        <p className="text-xs text-[var(--text-muted)] font-medium">
           สต็อกต่อตู้แก้ที่เมนูตู้จำหน่าย — API สินค้าไม่เก็บจำนวนคงเหลือรวม
         </p>
 
@@ -153,14 +153,14 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-6 py-4 bg-slate-100 text-slate-500 rounded-[20px] text-[15px] font-bold hover:bg-slate-200 transition-all active:scale-95"
+            className="flex-1 px-6 py-4 bg-[var(--surface-2)] text-[var(--text)]0 rounded-[20px] text-[15px] font-bold hover:bg-[var(--border)] transition-all active:scale-95"
           >
             ยกเลิก
           </button>
           <button
             type="submit"
             disabled={submitting}
-            className="flex-[2] px-6 py-4 bg-gradient-to-r from-[#f47b2a] to-[#FB923C] text-white rounded-[20px] text-[15px] font-black shadow-[0_12px_30px_rgba(244,123,42,0.25)] hover:shadow-[0_15px_40px_rgba(244,123,42,0.35)] disabled:opacity-60 transition-all flex items-center justify-center gap-2"
+            className="flex-[2] px-6 py-4 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] rounded-[20px] text-[15px] font-black shadow-[0_12px_30px_rgba(244,123,42,0.25)] hover:shadow-[0_15px_40px_rgba(244,123,42,0.35)] disabled:opacity-60 transition-all flex items-center justify-center gap-2"
           >
             {submitting ? "กำลังบันทึก..." : "ยืนยันการเพิ่มสินค้า"}
           </button>

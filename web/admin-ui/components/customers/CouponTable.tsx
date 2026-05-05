@@ -219,13 +219,13 @@ export default function CouponTable() {
     filters.status !== "all" || filters.type !== "all" || !!filters.expiryDate;
 
   return (
-    <div className="bg-white/40 backdrop-blur-3xl border border-white/60 rounded-[48px] overflow-hidden shadow-[0_32px_64px_rgba(0,0,0,0.04)] animate-in fade-in duration-700">
-      <div className="px-12 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 bg-gradient-to-b from-white/60 to-transparent">
+    <div className="rounded-[48px] overflow-hidden animate-in fade-in duration-700 surface-card" style={{ boxShadow: "var(--shadow-card)" }}>
+      <div className="px-12 py-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-8" style={{ background: "var(--surface-1)" }}>
         <div>
-          <h3 className="text-[28px] font-black text-[#334155] tracking-tight mb-2">คูปองส่วนลด</h3>
-          <p className="text-[#64748B] font-bold text-[15px] flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#f47b2a] animate-pulse"></span>
-            ข้อมูลจาก API <code className="text-xs font-mono bg-slate-100 px-1 rounded">/api/admin/coupons</code>
+          <h3 className="text-[28px] font-black text-[var(--text)] tracking-tight mb-2">คูปองส่วนลด</h3>
+          <p className="text-[var(--text-muted)] font-bold text-[15px] flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[var(--primary)] animate-pulse"></span>
+            ข้อมูลจาก API <code className="text-xs font-mono bg-[var(--surface-2)] px-1 rounded">/api/admin/coupons</code>
           </p>
         </div>
 
@@ -233,11 +233,11 @@ export default function CouponTable() {
           <button
             type="button"
             onClick={openCreateCoupon}
-            className="px-6 py-3 rounded-2xl bg-[#f47b2a] text-white text-sm font-black shadow-md hover:opacity-95 transition-opacity"
+            className="px-6 py-3 rounded-2xl bg-[var(--primary)] text-[var(--primary-contrast)] text-sm font-black shadow-md hover:opacity-95 transition-opacity"
           >
             สร้างคูปองใหม่
           </button>
-          <div className="flex bg-slate-100/60 p-1.5 rounded-[22px] border border-white shadow-inner backdrop-blur-sm">
+          <div className="flex bg-[var(--surface-2)]/60 p-1.5 rounded-[22px] border border-[var(--border)] shadow-inner backdrop-blur-sm">
             {tabs.map((tab) => (
               <button
                 key={tab}
@@ -245,8 +245,8 @@ export default function CouponTable() {
                 onClick={() => setActiveTab(tab)}
                 className={`px-6 sm:px-8 py-3 rounded-2xl text-[12px] sm:text-[13px] font-black tracking-[0.05em] uppercase transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${
                   activeTab === tab
-                    ? "bg-white text-[#f47b2a] shadow-[0_8px_16px_rgba(0,0,0,0.08)] scale-100 translate-y-[-1px]"
-                    : "text-[#94A3B8] hover:text-[#334155] hover:bg-white/40"
+                    ? "bg-[var(--surface-1)] text-[var(--primary)] shadow-[0_8px_16px_rgba(0,0,0,0.08)] scale-100 translate-y-[-1px]"
+                    : "text-[var(--text-muted)] hover:text-[var(--text)] hover:bg-[var(--surface-1)]/40"
                 }`}
               >
                 {tab}
@@ -257,17 +257,28 @@ export default function CouponTable() {
       </div>
 
       {error && (
-        <div className="mx-12 mb-4 px-4 py-3 rounded-xl bg-amber-50 text-amber-800 text-sm font-bold">{error}</div>
+        <div
+          className="mx-12 mb-4 px-4 py-3 rounded-xl text-sm font-bold border"
+          style={{ background: "var(--warn-bg)", color: "var(--text)", borderColor: "var(--border)" }}
+        >
+          {error}
+        </div>
       )}
 
-      <div className="px-12 py-6 border-y border-white/40 bg-white/10 flex items-center gap-4">
+      <div className="px-12 py-6 border-y flex items-center gap-4" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
         <div className="relative flex-1 group">
-          <i className="fi fi-rr-search absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors text-lg"></i>
+          <i className="fi fi-rr-search absolute left-5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors text-lg"></i>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="ค้นหารหัสคูปอง..."
-            className="w-full pl-14 pr-8 py-5 rounded-[24px] border border-white/60 bg-white/40 focus:bg-white focus:border-[#f47b2a] focus:ring-8 focus:ring-orange-500/5 outline-none transition-all duration-300 font-bold text-slate-700 placeholder:text-slate-400"
+            className="w-full pl-14 pr-8 py-5 rounded-[24px] border outline-none transition-all duration-300 font-bold placeholder:text-[var(--text-muted)]"
+            style={{
+              borderColor: "var(--input-border)",
+              background: "var(--input-bg)",
+              color: "var(--text)",
+              boxShadow: "none",
+            }}
           />
         </div>
 
@@ -277,8 +288,8 @@ export default function CouponTable() {
             onClick={() => setIsFilterOpen(true)}
             className={`w-14 h-14 rounded-[22px] border-2 flex items-center justify-center text-xl transition-all duration-300 ${
               hasActiveFilters
-                ? "bg-[#f47b2a] border-[#f47b2a] text-white shadow-lg shadow-orange-500/20"
-                : "bg-white border-slate-200 text-slate-400 hover:border-[#f47b2a] hover:text-[#f47b2a] shadow-sm"
+                ? "bg-[var(--primary)] border-[var(--primary)] text-[var(--primary-contrast)] shadow-lg "
+                : "bg-[var(--surface-1)] border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] shadow-sm"
             }`}
             aria-label="Advanced filter"
           >
@@ -288,7 +299,7 @@ export default function CouponTable() {
           <button
             type="button"
             onClick={() => load()}
-            className="px-8 py-5 bg-white border border-white rounded-[24px] shadow-sm flex items-center gap-3 text-[14px] font-black text-slate-600 hover:text-[#f47b2a] hover:border-[#f47b2a] hover:shadow-lg transition-all duration-300"
+            className="px-8 py-5 bg-[var(--surface-1)] border border-[var(--border)] rounded-[24px] shadow-sm flex items-center gap-3 text-[14px] font-black text-[var(--text)] hover:text-[var(--primary)] hover:border-[var(--primary)] hover:shadow-lg transition-all duration-300"
           >
             <i className="fi fi-rr-refresh"></i>
             รีเฟรช
@@ -296,29 +307,37 @@ export default function CouponTable() {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={{ background: "var(--surface-1)" }}>
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50/30 border-b border-white/40">
-              <th className="px-12 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">คูปอง</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Type</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">ส่วนลด</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">แลกแต้ม</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Utilization</th>
-              <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">หมดอายุ</th>
-              <th className="px-12 py-6 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Actions</th>
+            <tr className="bg-[var(--surface-2)]/30 border-b border-[var(--border)]/40">
+              <th className="px-12 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">คูปอง</th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">Type</th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">ส่วนลด</th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">แลกแต้ม</th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">Utilization</th>
+              <th className="px-6 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em]">หมดอายุ</th>
+              <th className="px-12 py-6 text-[11px] font-black text-[var(--text-muted)] uppercase tracking-[0.2em] text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/20">
+          <tbody className="divide-y" style={{ borderColor: "var(--border)" }}>
             {loading ? (
               <tr>
-                <td colSpan={7} className="px-12 py-16 text-center text-slate-400 font-bold">
+                <td
+                  colSpan={7}
+                  className="px-12 py-16 text-center font-bold"
+                  style={{ color: "var(--text-muted)", background: "var(--surface-1)" }}
+                >
                   กำลังโหลด…
                 </td>
               </tr>
             ) : filteredCoupons.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-12 py-16 text-center text-slate-400 font-bold">
+                <td
+                  colSpan={7}
+                  className="px-12 py-16 text-center font-bold"
+                  style={{ color: "var(--text-muted)", background: "var(--surface-1)" }}
+                >
                   ไม่มีคูปองในชุดนี้
                 </td>
               </tr>
@@ -326,52 +345,55 @@ export default function CouponTable() {
               filteredCoupons.map((coupon, index) => (
                 <tr
                   key={`${coupon.promotion_id}-${coupon.id}`}
-                  className="hover:bg-white/80 transition-all duration-500 group animate-in fade-in slide-in-from-left"
+                  className="hover:bg-[var(--surface-2)] transition-all duration-500 group animate-in fade-in slide-in-from-left"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <td className="px-12 py-8">
                     <div className="flex items-center gap-6">
-                      <div className="w-16 h-16 bg-gradient-to-br from-orange-50 to-orange-100 rounded-[22px] flex items-center justify-center text-3xl shadow-inner border border-white group-hover:scale-110 group-hover:rotate-[8deg] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]">
+                    <div
+                      className="w-16 h-16 rounded-[22px] flex items-center justify-center text-3xl shadow-inner border border-[var(--border)] group-hover:scale-110 group-hover:rotate-[8deg] transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+                      style={{ background: "var(--surface-2)" }}
+                    >
                         <span className="drop-shadow-sm">🎟️</span>
                       </div>
                       <div>
-                        <div className="text-[17px] font-black text-slate-800 mb-1 group-hover:text-[#f47b2a] transition-colors">{coupon.name}</div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-100/50 rounded-lg border border-slate-100">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest">{coupon.id}</span>
+                        <div className="text-[17px] font-black text-[var(--text)] mb-1 group-hover:text-[var(--primary)] transition-colors">{coupon.name}</div>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--surface-2)]/50 rounded-lg border border-[var(--border)]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[var(--text-muted)]"></span>
+                        <span className="text-[11px] font-black text-[var(--text)] uppercase tracking-widest">{coupon.id}</span>
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-8">
-                    <span className="text-[12px] font-black text-slate-500 bg-white px-4 py-2 rounded-xl border border-slate-100 shadow-sm uppercase tracking-wider">{coupon.type}</span>
+                    <span className="text-[12px] font-black text-[var(--text)] bg-[var(--surface-1)] px-4 py-2 rounded-xl border border-[var(--border)] shadow-sm uppercase tracking-wider">{coupon.type}</span>
                   </td>
                   <td className="px-6 py-8">
                     <div className="flex items-center gap-2">
-                      <span className="text-[20px] font-black text-[#f47b2a]">
+                      <span className="text-[20px] font-black text-[var(--primary)]">
                         {coupon.type === "PERCENT" ? `${coupon.discount_amount}%` : `฿${coupon.discount_amount}`}
                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-8">
-                    <span className="text-[15px] font-black text-slate-700">
+                    <span className="text-[15px] font-black text-[var(--text)]">
                       {coupon.points_cost > 0 ? `${coupon.points_cost.toLocaleString()} แต้ม` : "—"}
                     </span>
                   </td>
                   <td className="px-6 py-8 min-w-[200px]">
                     <div className="flex justify-between items-end mb-3">
                       <div className="flex items-baseline gap-1.5">
-                        <span className="text-[18px] font-black text-slate-800">{coupon.usage}</span>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Redeemed</span>
+                        <span className="text-[18px] font-black text-[var(--text)]">{coupon.usage}</span>
+                        <span className="text-[10px] font-black text-[var(--text-muted)] uppercase tracking-widest">Redeemed</span>
                       </div>
-                      <span className="text-[10px] font-black text-[#f47b2a] uppercase tracking-widest bg-orange-50 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-black text-[var(--primary)] uppercase tracking-widest px-2 py-0.5 rounded" style={{ background: "var(--warn-bg)" }}>
                         Cap: {coupon.maxUsage || "∞"}
                       </span>
                     </div>
-                    <div className="h-2.5 bg-slate-100/60 rounded-full overflow-hidden p-[2px] border border-white shadow-inner">
+                    <div className="h-2.5 bg-[var(--surface-2)]/60 rounded-full overflow-hidden p-[2px] border border-[var(--border)] shadow-inner">
                       <div
                         className={`h-full rounded-full transition-all duration-1000 ease-[cubic-bezier(0.34,1.56,0.64,1)] shadow-sm ${
-                          coupon.status === "inactive" ? "bg-slate-300" : "bg-gradient-to-r from-[#f47b2a] to-[#FF9E5C]"
+                          coupon.status === "inactive" ? "bg-[var(--border)]" : "bg-gradient-to-r from-[var(--primary)] to-[var(--primary)]"
                         }`}
                         style={{
                           width:
@@ -381,12 +403,12 @@ export default function CouponTable() {
                         }}
                       ></div>
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-2 font-bold">ยอดใช้งานยังไม่มีใน API</p>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-2 font-bold">ยอดใช้งานยังไม่มีใน API</p>
                   </td>
                   <td className="px-6 py-8">
                     <div className="flex flex-col gap-1">
-                      <div className="flex items-center gap-2 text-[13px] font-black text-slate-600">
-                        <i className="fi fi-rr-calendar-clock text-[#f47b2a] opacity-60"></i>
+                      <div className="flex items-center gap-2 text-[13px] font-black text-[var(--text)]">
+                        <i className="fi fi-rr-calendar-clock text-[var(--primary)] opacity-60"></i>
                         {coupon.expiry || "—"}
                       </div>
                     </div>
@@ -396,18 +418,26 @@ export default function CouponTable() {
                       <span
                         className={`text-[11px] font-black uppercase px-3 py-1 rounded-lg border ${
                           coupon.status === "active"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                            ? "bg-[var(--success-bg)]"
                             : coupon.status === "expired"
-                              ? "bg-slate-100 text-slate-500 border-slate-200"
-                              : "bg-amber-50 text-amber-800 border-amber-100"
+                              ? "bg-[var(--surface-2)] border-[var(--border)]"
+                              : "bg-[var(--warn-bg)] border-[var(--border)]"
                         }`}
+                        style={{
+                          color:
+                            coupon.status === "active"
+                              ? "var(--success)"
+                              : coupon.status === "expired"
+                                ? "var(--text-muted)"
+                                : "var(--warn)",
+                        }}
                       >
                         {coupon.status}
                       </span>
                       <button
                         type="button"
                         onClick={() => openEdit(coupon)}
-                        className="text-xs font-black px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[#f47b2a] hover:text-[#f47b2a] transition-colors"
+                        className="text-xs font-black px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-colors"
                       >
                         แก้ไข
                       </button>
@@ -420,36 +450,36 @@ export default function CouponTable() {
         </table>
       </div>
 
-      <div className="px-12 py-10 bg-slate-50/50 border-t border-white/40 flex justify-between items-center">
-        <p className="text-[13px] font-bold text-slate-400 uppercase tracking-widest">
+      <div className="px-12 py-10 border-t flex justify-between items-center" style={{ borderColor: "var(--border)", background: "var(--surface-2)" }}>
+        <p className="text-[13px] font-bold text-[var(--text-muted)] uppercase tracking-widest">
           แสดง {filteredCoupons.length} รายการ
         </p>
       </div>
 
       {editRow && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-[var(--overlay)]/50 backdrop-blur-sm">
           <div
             role="dialog"
             aria-modal="true"
-            className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-slate-100 max-h-[90vh] overflow-y-auto"
+            className="bg-[var(--surface-1)] rounded-3xl shadow-2xl max-w-md w-full p-8 border border-[var(--border)] max-h-[90vh] overflow-y-auto"
           >
-            <h4 className="text-xl font-black text-slate-800 mb-1">แก้ไขคูปอง</h4>
-            <p className="text-sm text-slate-500 font-bold mb-6">รหัส ประเภทส่วนลด แต้มที่ใช้แลก (0 = ไม่บังคับแลกแต้ม)</p>
+            <h4 className="text-xl font-black text-[var(--text)] mb-1">แก้ไขคูปอง</h4>
+            <p className="text-sm text-[var(--text)] font-bold mb-6">รหัส ประเภทส่วนลด แต้มที่ใช้แลก (0 = ไม่บังคับแลกแต้ม)</p>
             {formError && <div className="mb-4 text-sm font-bold text-rose-600">{formError}</div>}
             <div className="space-y-4">
               <label className="block">
-                <span className="text-xs font-black text-slate-500 uppercase">รหัสคูปอง</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">รหัสคูปอง</span>
                 <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-bold"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
                   value={form.code}
                   onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
                   disabled={saving}
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-black text-slate-500 uppercase">ประเภท</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">ประเภท</span>
                 <select
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-bold"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
                   value={form.type}
                   onChange={(e) =>
                     setForm((f) => ({ ...f, type: e.target.value as "fixed_amount" | "percent" }))
@@ -460,34 +490,34 @@ export default function CouponTable() {
                 </select>
               </label>
               <label className="block">
-                <span className="text-xs font-black text-slate-500 uppercase">
+                <span className="text-xs font-black text-[var(--text)] uppercase">
                   {form.type === "percent" ? "เปอร์เซ็นต์ส่วนลด" : "จำนวนเงินส่วนลด (บาท)"}
                 </span>
                 <input
                   type="number"
                   step="0.01"
                   min="0"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-bold"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
                   value={form.discount_amount}
                   onChange={(e) => setForm((f) => ({ ...f, discount_amount: e.target.value }))}
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-black text-slate-500 uppercase">แต้มที่ใช้แลก (points_cost)</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">แต้มที่ใช้แลก (points_cost)</span>
                 <input
                   type="number"
                   min="0"
                   step="1"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-bold"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
                   value={form.points_cost}
                   onChange={(e) => setForm((f) => ({ ...f, points_cost: e.target.value }))}
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-black text-slate-500 uppercase">หมดอายุ (เว้นว่าง = ไม่หมดอายุ)</span>
+                <span className="text-xs font-black text-[var(--text)] uppercase">หมดอายุ (เว้นว่าง = ไม่หมดอายุ)</span>
                 <input
                   type="datetime-local"
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-bold"
+                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
                   value={form.expire_local}
                   onChange={(e) => setForm((f) => ({ ...f, expire_local: e.target.value }))}
                 />
@@ -498,13 +528,13 @@ export default function CouponTable() {
                   checked={form.is_active}
                   onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
                 />
-                <span className="text-sm font-black text-slate-700">เปิดใช้งาน (active)</span>
+                <span className="text-sm font-black text-[var(--text)]">เปิดใช้งาน (active)</span>
               </label>
             </div>
             <div className="mt-8 flex justify-end gap-3">
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-600"
+                className="px-4 py-2 rounded-xl border border-[var(--border)] font-bold text-[var(--text)]"
                 onClick={closeEditModal}
                 disabled={saving}
               >
@@ -512,7 +542,7 @@ export default function CouponTable() {
               </button>
               <button
                 type="button"
-                className="px-4 py-2 rounded-xl bg-[#f47b2a] text-white font-black disabled:opacity-50"
+                className="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] font-black disabled:opacity-50"
                 disabled={saving}
                 onClick={submitEdit}
               >
@@ -526,19 +556,19 @@ export default function CouponTable() {
       {isFilterOpen && (
         <Portal>
           <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-200"
+            className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-[var(--overlay)]/60 backdrop-blur-md animate-in fade-in duration-200"
             onClick={() => setIsFilterOpen(false)}
           >
             <div
-              className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95 duration-300"
+              className="bg-[var(--surface-1)] w-full max-w-sm rounded-[32px] shadow-2xl p-8 animate-in zoom-in-95 duration-300"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-xl font-black text-slate-800">Advanced Filter</h3>
+                <h3 className="text-xl font-black text-[var(--text)]">Advanced Filter</h3>
                 <button
                   type="button"
                   onClick={() => setIsFilterOpen(false)}
-                  className="text-slate-400 hover:text-slate-600 transition-colors"
+                  className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors"
                 >
                   <i className="fi fi-rr-cross-small text-xl"></i>
                 </button>
@@ -546,7 +576,7 @@ export default function CouponTable() {
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                  <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
                     Status
                   </label>
                   <select
@@ -554,7 +584,7 @@ export default function CouponTable() {
                     onChange={(e) =>
                       setFilters((prev) => ({ ...prev, status: e.target.value as FilterState["status"] }))
                     }
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                    className="w-full px-4 py-3.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl outline-none focus:border-[var(--primary)] font-bold text-[var(--text)] transition-all"
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
@@ -564,7 +594,7 @@ export default function CouponTable() {
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                  <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
                     Coupon Type
                   </label>
                   <select
@@ -572,7 +602,7 @@ export default function CouponTable() {
                     onChange={(e) =>
                       setFilters((prev) => ({ ...prev, type: e.target.value as FilterState["type"] }))
                     }
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                    className="w-full px-4 py-3.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl outline-none focus:border-[var(--primary)] font-bold text-[var(--text)] transition-all"
                   >
                     <option value="all">All Types</option>
                     <option value="PERCENT">Percentage (%)</option>
@@ -581,14 +611,14 @@ export default function CouponTable() {
                 </div>
 
                 <div>
-                  <label className="block text-[12px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                  <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3">
                     Expiry Date
                   </label>
                   <input
                     type="date"
                     value={filters.expiryDate}
                     onChange={(e) => setFilters((prev) => ({ ...prev, expiryDate: e.target.value }))}
-                    className="w-full px-4 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:border-[#f47b2a] font-bold text-slate-700 transition-all"
+                    className="w-full px-4 py-3.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl outline-none focus:border-[var(--primary)] font-bold text-[var(--text)] transition-all"
                   />
                 </div>
               </div>
@@ -597,14 +627,15 @@ export default function CouponTable() {
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="flex-1 py-4 bg-slate-100 text-slate-500 font-black text-[14px] rounded-2xl hover:bg-slate-200 transition-all active:scale-95"
+                  className="flex-1 py-4 bg-[var(--surface-2)] text-[var(--text)] font-black text-[14px] rounded-2xl transition-all active:scale-95 hover:opacity-90"
                 >
                   Reset
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsFilterOpen(false)}
-                  className="flex-[2] py-4 bg-[#f47b2a] text-white font-black text-[14px] rounded-2xl shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 transition-all active:scale-95"
+                  className="flex-[2] py-4 bg-[var(--primary)] text-[var(--primary-contrast)] font-black text-[14px] rounded-2xl shadow-lg transition-all active:scale-95 hover:opacity-95"
+                  style={{ boxShadow: "var(--shadow-primary)" }}
                 >
                   Apply Filter
                 </button>

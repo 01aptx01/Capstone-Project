@@ -92,16 +92,16 @@ function ProductsPageClient() {
       {/* Header Section */}
       <div className="flex items-center justify-between animate-in opacity-0">
         <div>
-          <h1 className="text-[36px] font-black text-[#334155] mb-2 tracking-tight">
+          <h1 className="text-[36px] font-black text-[var(--text)] mb-2 tracking-tight">
             คลังสินค้าส่วนกลาง
           </h1>
-          <p className="text-[#64748B] text-[16px] font-medium">จัดการรายการสินค้า สต็อก และราคาทุกตู้จำหน่ายในระบบ</p>
+          <p className="text-[var(--text-muted)] text-[16px] font-medium">จัดการรายการสินค้า สต็อก และราคาทุกตู้จำหน่ายในระบบ</p>
         </div>
 
         <div className="flex items-center gap-4">
           <button 
             onClick={() => openExportModal(productSections, "คลังสินค้า (Inventory)")}
-            className="px-6 py-2.5 bg-white border border-slate-200 text-[#334155] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
+            className="px-6 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text)] rounded-xl font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex items-center gap-2 active:translate-y-0 active:scale-95"
           >
             <i className="fi fi-rr-download text-sm"></i>
             <span>Export รายงาน</span>
@@ -118,22 +118,22 @@ function ProductsPageClient() {
 
       {/* Filter Section */}
       <div className="vibrant-card !rounded-[32px] p-8 animate-in opacity-0 delay-100 shadow-xl shadow-orange-900/[0.02]">
-        <div className="flex items-center gap-3 mb-8 border-b border-slate-50 pb-5">
-          <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-[#f47b2a]">
+        <div className="flex items-center gap-3 mb-8 border-b border-[var(--border)] pb-5">
+          <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-[var(--primary)]">
             <i className="fi fi-rr-filter text-lg"></i>
           </div>
-          <h2 className="text-[18px] font-black text-[#334155]">ตัวกรองสินค้า</h2>
+          <h2 className="text-[18px] font-black text-[var(--text)]">ตัวกรองสินค้า</h2>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-end">
           <div className="space-y-3">
-            <label className="block text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.1em] ml-1">หมวดหมู่สินค้า</label>
+            <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.1em] ml-1">หมวดหมู่สินค้า</label>
             <div className="relative group">
-              <i className="fi fi-rr-apps absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors"></i>
+              <i className="fi fi-rr-apps absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors"></i>
               <select 
                 value={categoryOptions.includes(category) ? category : "All Categories"}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[#334155] outline-none appearance-none cursor-pointer hover:bg-slate-100 focus:bg-white focus:border-orange-100 transition-all shadow-inner"
+                className="w-full bg-[var(--surface-2)] border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[var(--text)] outline-none appearance-none cursor-pointer hover:bg-[var(--surface-2)] focus:bg-[var(--surface-1)] focus:border-orange-100 transition-all shadow-inner"
               >
                 {categoryOptions.map((opt) => (
                   <option key={opt} value={opt}>
@@ -141,48 +141,48 @@ function ProductsPageClient() {
                   </option>
                 ))}
               </select>
-              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
+              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]"></i>
             </div>
           </div>
           
           <div className="space-y-3">
-            <label className="block text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.1em] ml-1">สถานที่ติดตั้ง (ตู้)</label>
+            <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.1em] ml-1">สถานที่ติดตั้ง (ตู้)</label>
             <div className="relative group">
-              <i className="fi fi-rr-marker absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors"></i>
+              <i className="fi fi-rr-marker absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors"></i>
               <select 
                 value={machine}
                 onChange={(e) => setMachine(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[#334155] outline-none appearance-none cursor-pointer hover:bg-slate-100 focus:bg-white focus:border-orange-100 transition-all shadow-inner"
+                className="w-full bg-[var(--surface-2)] border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[var(--text)] outline-none appearance-none cursor-pointer hover:bg-[var(--surface-2)] focus:bg-[var(--surface-1)] focus:border-orange-100 transition-all shadow-inner"
               >
                 <option>All Machines</option>
                 <option>Machine 1</option>
                 <option>Machine 2</option>
               </select>
-              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
+              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]"></i>
             </div>
           </div>
 
           <div className="space-y-3">
-            <label className="block text-[12px] font-black text-[#94A3B8] uppercase tracking-[0.1em] ml-1">สถานะสต็อก</label>
+            <label className="block text-[12px] font-black text-[var(--text-muted)] uppercase tracking-[0.1em] ml-1">สถานะสต็อก</label>
             <div className="relative group">
-              <i className="fi fi-rr-box-open absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#f47b2a] transition-colors"></i>
+              <i className="fi fi-rr-box-open absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors"></i>
               <select 
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="w-full bg-slate-50 border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[#334155] outline-none appearance-none cursor-pointer hover:bg-slate-100 focus:bg-white focus:border-orange-100 transition-all shadow-inner"
+                className="w-full bg-[var(--surface-2)] border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[var(--text)] outline-none appearance-none cursor-pointer hover:bg-[var(--surface-2)] focus:bg-[var(--surface-1)] focus:border-orange-100 transition-all shadow-inner"
               >
                 <option>All Statuses</option>
                 <option value="in_stock">In Stock</option>
                 <option value="low_stock">Low Stock</option>
                 <option value="out_of_stock">Out of Stock</option>
               </select>
-              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]"></i>
+              <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]"></i>
             </div>
           </div>
 
           <button 
             onClick={handleClear}
-            className="h-[54px] bg-white border-2 border-slate-100 text-[#64748B] font-black text-[14px] rounded-[18px] hover:bg-slate-50 hover:border-slate-200 transition-all flex items-center justify-center gap-2 active:scale-95"
+            className="h-[54px] bg-[var(--surface-1)] border-2 border-[var(--border)] text-[var(--text-muted)] font-black text-[14px] rounded-[18px] hover:bg-[var(--surface-2)] hover:border-[var(--border)] transition-all flex items-center justify-center gap-2 active:scale-95"
           >
             <i className="fi fi-rr-refresh text-lg"></i>
             ล้างตัวกรอง
@@ -208,7 +208,7 @@ export default function ProductsPage() {
     <Suspense
       fallback={
         <PageWrapper>
-          <p className="px-4 py-16 text-center text-sm font-bold text-slate-400">กำลังโหลด…</p>
+          <p className="px-4 py-16 text-center text-sm font-bold text-[var(--text-muted)]">กำลังโหลด…</p>
         </PageWrapper>
       }
     >

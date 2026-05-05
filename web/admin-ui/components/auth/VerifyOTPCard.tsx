@@ -81,23 +81,23 @@ function VerifyOTPContent() {
   return (
     <AuthCardWrapper>
       {success && (
-        <div className="absolute inset-0 bg-white/90 backdrop-blur-md z-10 flex flex-col items-center justify-center animate-in fade-in duration-300">
+        <div className="absolute inset-0 bg-[var(--surface-1)]/90 backdrop-blur-md z-10 flex flex-col items-center justify-center animate-in fade-in duration-300">
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-500 mb-4 shadow-lg shadow-emerald-500/20">
             <i className="fi fi-rr-check text-4xl"></i>
           </div>
-          <h2 className="text-2xl font-black text-slate-800">Verified!</h2>
-          <p className="text-slate-500 font-medium">Redirecting to dashboard...</p>
+          <h2 className="text-2xl font-black text-[var(--text)]">Verified!</h2>
+          <p className="text-[var(--text)]0 font-medium">Redirecting to dashboard...</p>
         </div>
       )}
 
       <div className="flex flex-col items-center mb-8">
-        <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-6">
+        <div className="w-16 h-16 bg-[var(--surface-1)] rounded-2xl shadow-sm flex items-center justify-center mb-6">
           <Image src="/Logo_modpao.png" alt="logo" width={48} height={48} priority />
         </div>
-        <h1 className="text-2xl font-black text-slate-800 mb-2">OTP Verification</h1>
-        <p className="text-slate-500 text-[14px] text-center px-4">
+        <h1 className="text-2xl font-black text-[var(--text)] mb-2">OTP Verification</h1>
+        <p className="text-[var(--text)]0 text-[14px] text-center px-4">
           We've sent a 6-digit code to<br/>
-          <span className="font-bold text-slate-700">{phone}</span>
+          <span className="font-bold text-[var(--text)]">{phone}</span>
         </p>
       </div>
 
@@ -120,7 +120,7 @@ function VerifyOTPContent() {
               value={digit}
               onChange={(e) => handleChange(i, e.target.value)}
               onKeyDown={(e) => handleKeyDown(i, e)}
-              className="w-12 h-14 text-center text-2xl font-black text-slate-800 bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-[#f47b2a] outline-none transition-all focus:ring-4 focus:ring-orange-500/10"
+              className="w-12 h-14 text-center text-2xl font-black text-[var(--text)] bg-[var(--surface-2)] border-2 border-[var(--border)] rounded-xl focus:bg-[var(--surface-1)] focus:border-[var(--primary)] outline-none transition-all focus:ring-4 focus:ring-orange-500/10"
               maxLength={1}
               autoComplete="off"
             />
@@ -130,21 +130,21 @@ function VerifyOTPContent() {
         <button 
           type="submit" 
           disabled={loading || otp.join("").length < 6}
-          className="w-full py-3.5 bg-gradient-to-r from-[#FF6B00] to-[#FF9E00] text-white font-black rounded-xl shadow-[0_8px_20px_rgba(255,107,0,0.25)] hover:shadow-[0_10px_25px_rgba(255,107,0,0.35)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+          className="w-full py-3.5 bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] text-[var(--primary-contrast)] font-black rounded-xl shadow-[0_8px_20px_rgba(255,107,0,0.25)] hover:shadow-[0_10px_25px_rgba(255,107,0,0.35)] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
         >
           {loading ? "Verifying..." : "Verify Code"}
         </button>
       </form>
 
       <div className="mt-8 text-center">
-        <p className="text-[14px] font-medium text-slate-500">
+        <p className="text-[14px] font-medium text-[var(--text)]0">
           Didn't receive the code?{" "}
           {timer > 0 ? (
-            <span className="text-slate-400">Resend in <span className="font-bold text-slate-600">{timer}s</span></span>
+            <span className="text-[var(--text-muted)]">Resend in <span className="font-bold text-[var(--text)]">{timer}s</span></span>
           ) : (
             <button 
               onClick={handleResend}
-              className="font-bold text-[#f47b2a] hover:text-[#d35e11] transition-colors"
+              className="font-bold text-[var(--primary)] hover:text-[var(--primary)] transition-colors"
             >
               Resend Code
             </button>
@@ -157,7 +157,7 @@ function VerifyOTPContent() {
 
 export default function VerifyOTPCard() {
   return (
-    <Suspense fallback={<div className="animate-pulse w-[440px] h-[400px] bg-white/50 rounded-3xl mx-auto"></div>}>
+    <Suspense fallback={<div className="animate-pulse w-[440px] h-[400px] bg-[var(--surface-1)]/50 rounded-3xl mx-auto"></div>}>
       <VerifyOTPContent />
     </Suspense>
   );

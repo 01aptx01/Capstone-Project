@@ -133,10 +133,10 @@ export default function Home() {
     <PageWrapper>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-[28px] font-bold text-[#334155] mb-1">
+          <h1 className="text-[28px] font-bold text-[var(--text)] mb-1">
             แดชบอร์ดภาพรวม
           </h1>
-          <p className="text-[#64748B] text-[15px]">
+          <p className="text-[var(--text-muted)] text-[15px]">
             ภาพรวมข้อมูลการทำงานของตู้ทั้งหมด รายงานและสถิติวิเคราะห์ประสิทธิภาพการทำงานและแนวโน้มยอดขายเชิงลึก
           </p>
         </div>
@@ -146,14 +146,14 @@ export default function Home() {
             type="button"
             onClick={() => void load()}
             disabled={loading}
-            className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl font-bold text-sm text-[#334155] disabled:opacity-50"
+            className="px-4 py-2.5 bg-[var(--surface-1)] border border-[var(--border)] rounded-xl font-bold text-sm text-[var(--text)] disabled:opacity-50"
           >
             รีเฟรช
           </button>
           <button
             type="button"
             onClick={() => openExportModal(dashboardSections, "ภาพรวม Dashboard")}
-            className="flex items-center gap-2 bg-[#f47b2a] hover:bg-[#d35e11] text-white px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(244,123,42,0.15)] transition-all"
+            className="flex items-center gap-2 bg-[var(--primary)] hover:bg-[var(--primary)] text-[var(--primary-contrast)] px-5 py-2.5 rounded-xl font-bold text-[14px] shadow-[0_8px_20px_rgba(244,123,42,0.15)] transition-all"
           >
             <svg
               width="18"
@@ -181,7 +181,7 @@ export default function Home() {
       )}
 
       {loading && !stats && (
-        <div className="mb-6 text-slate-500 font-bold text-sm">กำลังโหลดข้อมูลแดชบอร์ด…</div>
+        <div className="mb-6 text-[var(--text)]0 font-bold text-sm">กำลังโหลดข้อมูลแดชบอร์ด…</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 items-stretch">
@@ -190,7 +190,7 @@ export default function Home() {
             title="ยอดขายวันนี้"
             value={stats?.salesTodayLabel ?? "—"}
             icon={<i className="fi fi-rr-stats"></i>}
-            accentColor="#3b82f6"
+            accentColor="var(--chart-series-1)"
             href="/sales"
           />
         </div>
@@ -199,7 +199,7 @@ export default function Home() {
             title="จำนวนคำสั่งซื้อ (วันนี้)"
             value={stats != null ? stats.ordersToday : "—"}
             icon={<i className="fi fi-rr-shopping-cart"></i>}
-            accentColor="#10b981"
+            accentColor="var(--success)"
             href="/orders"
           />
         </div>
@@ -209,7 +209,7 @@ export default function Home() {
             value={stats != null ? stats.machinesOnline : "—"}
             subValue={stats != null ? `/ ${stats.machinesTotal}` : undefined}
             icon={<i className="fi fi-rr-vending-machine"></i>}
-            accentColor="#f59e0b"
+            accentColor="var(--warn)"
             href="/machines"
           />
         </div>
@@ -218,7 +218,7 @@ export default function Home() {
             title="แจ้งเตือนสต็อกต่ำ"
             value={stats != null ? stats.lowStockCount : "—"}
             icon={<i className="fi fi-rr-warning"></i>}
-            accentColor="#ef4444"
+            accentColor="var(--danger)"
             href="/alerts"
           />
         </div>
