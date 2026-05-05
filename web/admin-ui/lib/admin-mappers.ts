@@ -129,6 +129,8 @@ export type UiMachineCard = {
   name: string;
   location: string;
   status?: string;
+  is_online?: boolean;
+  last_active?: string | null;
   image?: string;
 };
 
@@ -136,8 +138,10 @@ export function apiMachineToCard(m: ApiMachineSummary): UiMachineCard {
   return {
     id: m.machine_code,
     name: m.machine_code,
-    location: m.location || "—",
+    location: m.location ?? "",
     status: m.status,
+    is_online: m.is_online,
+    last_active: m.last_active ?? null,
     image: undefined,
   };
 }

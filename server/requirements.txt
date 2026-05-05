@@ -11,3 +11,4 @@ python-dotenv
 python-socketio
 eventlet
 pytz
+bcrypt

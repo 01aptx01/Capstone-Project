@@ -87,6 +87,17 @@ definitions:
       location: { type: string, x-nullable: true }
       status: { type: string }
       last_active: { type: string, x-nullable: true }
+      is_online: { type: boolean }
+
+  AdminMachineCreateResponse:
+    allOf:
+      - $ref: "#/definitions/AdminMachineSummary"
+      - type: object
+        required: [secret_token]
+        properties:
+          secret_token:
+            type: string
+            description: "One-time 32-char hex token; copy now — only returned on create"
 
   AdminCustomer:
     type: object
@@ -431,6 +442,20 @@ paths:
         "400":
           description: Validation error
 
+  /api/admin/products/categories:
+    get:
+      tags: [Admin]
+      summary: Distinct product categories in DB
+      responses:
+        "200":
+          description: Category codes used by at least one product
+          schema:
+            type: object
+            properties:
+              categories:
+                type: array
+                items: { type: string }
+
   /api/admin/products/{product_id}:
     put:
       tags: [Admin]
@@ -480,6 +505,12 @@ paths:
         - { name: page, in: query, type: integer }
         - { name: per_page, in: query, type: integer }
         - { name: status, in: query, type: string }
+        - {
+            name: q,
+            in: query,
+            type: string,
+            description: "Substring match on machine_code or location (case-insensitive)",
+          }
       responses:
         "200":
           description: Paginated machines
@@ -491,6 +522,32 @@ paths:
                   items:
                     type: array
                     items: { $ref: "#/definitions/AdminMachineSummary" }
+    post:
+      tags: [Admin]
+      summary: Create machine (returns one-time secret token)
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required: [machine_code]
+            properties:
+              machine_code: { type: string, maxLength: 20 }
+              location: { type: string, x-nullable: true }
+              status:
+                type: string
+                enum: [online, maintenance, offline]
+                default: online
+      responses:
+        "201":
+          description: Created; includes plaintext secret_token to copy once
+          schema:
+            $ref: "#/definitions/AdminMachineCreateResponse"
+        "400":
+          description: Bad request
+        "409":
+          description: machine_code already exists
 
   /api/admin/machines/{machine_code}:
     get:
@@ -506,6 +563,66 @@ paths:
           description: Machine + slots
         "404":
           description: Not found
+    put:
+      tags: [Admin]
+      summary: Update machine location and/or operational status
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            description: "At least one property required."
+            properties:
+              location: { type: string, x-nullable: true }
+              status:
+                type: string
+                enum: [online, maintenance, offline]
+      responses:
+        "200":
+          description: Machine + slots after update
+        "400":
+          description: Validation error
+        "404":
+          description: Not found
+
+  /api/admin/machines/{machine_code}/slots:
+    put:
+      tags: [Admin]
+      summary: Replace all inventory slots for a machine (full snapshot)
+      parameters:
+        - name: machine_code
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            type: object
+            required: [slots]
+            properties:
+              slots:
+                type: array
+                description: "Empty array clears all slots for the machine."
+                items:
+                  type: object
+                  required: [slot_number, product_id, quantity]
+                  properties:
+                    slot_number: { type: integer, minimum: 1, maximum: 24 }
+                    product_id: { type: integer }
+                    quantity: { type: integer, minimum: 0 }
+      responses:
+        "200":
+          description: Machine detail after update (same shape as GET machine)
+        "400":
+          description: Validation error (unknown product_id, duplicate slot_number, etc.)
+        "404":
+          description: Machine not found
 
   /api/admin/customers:
     get:
@@ -551,6 +668,12 @@ paths:
         - { name: per_page, in: query, type: integer }
         - { name: status, in: query, type: string }
         - { name: machine_code, in: query, type: string }
+        - {
+            name: q,
+            in: query,
+            type: string,
+            description: "Substring on machine_code, charge_id, customer phone; if numeric, also matches order_id",
+          }
       responses:
         "200":
           description: Paginated orders

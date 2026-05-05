@@ -1,7 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { exportToCSV, exportToPDF, ExportColumn } from "@/lib/utils/exportUtils";
+import {
+  exportToCSV,
+  exportToPDFSections,
+  type ExportColumn,
+  type ExportPDFSection,
+} from "@/lib/utils/exportUtils";
 import { ExportSection } from "@/lib/context/UIContext";
 
 interface ExportModalProps {
@@ -46,32 +51,6 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
     });
   };
 
-  const buildExportData = async () => {
-    const allData: Record<string, unknown>[] = [];
-    const allColumns: ExportColumn[] = [];
-
-    for (const sectionId of selectedSections) {
-      const section = sections.find(s => s.id === sectionId);
-      if (section) {
-        const data = await section.fetchData();
-        if (allData.length > 0) {
-          allData.push({ [section.columns[0].key]: "" });
-        }
-        if (selectedSections.length > 1) {
-          allData.push({ [section.columns[0].key]: `— ${section.label} —` });
-        }
-        allData.push(...data);
-        section.columns.forEach(col => {
-          if (!allColumns.find(c => c.key === col.key)) {
-            allColumns.push(col);
-          }
-        });
-      }
-    }
-
-    return { allData, allColumns };
-  };
-
   const handleExport = async () => {
     if (selectedSections.length === 0) {
       alert("กรุณาเลือกข้อมูลอย่างน้อย 1 อย่าง");
@@ -84,16 +63,56 @@ export default function ExportModal({ isOpen, onClose, sections, pageTitle }: Ex
 
     setIsExporting(true);
     try {
-      const { allData, allColumns } = await buildExportData();
-      const timestamp = new Date().toISOString().split('T')[0];
-      const safeTitle = pageTitle.replace(/\s+/g, '_').toLowerCase();
+      type Fetched = { section: (typeof sections)[number]; rows: Record<string, unknown>[] };
+      const fetched: Fetched[] = [];
+      for (const sectionId of selectedSections) {
+        const section = sections.find((s) => s.id === sectionId);
+        if (section) {
+          const rows = await section.fetchData();
+          fetched.push({ section, rows });
+        }
+      }
+
+      if (fetched.length === 0) {
+        alert("กรุณาเลือกข้อมูลอย่างน้อย 1 อย่าง");
+        return;
+      }
+
+      const allData: Record<string, unknown>[] = [];
+      const allColumns: ExportColumn[] = [];
+      for (const { section, rows } of fetched) {
+        if (allData.length > 0) {
+          allData.push({ [section.columns[0].key]: "" });
+        }
+        if (fetched.length > 1) {
+          allData.push({ [section.columns[0].key]: `— ${section.label} —` });
+        }
+        allData.push(...rows);
+        section.columns.forEach((col) => {
+          if (!allColumns.find((c) => c.key === col.key)) {
+            allColumns.push(col);
+          }
+        });
+      }
+
+      const timestamp = new Date().toISOString().split("T")[0];
+      const safeTitle = pageTitle.replace(/\s+/g, "_").toLowerCase();
       const filename = `${safeTitle}_${timestamp}`;
 
-      if (exportFormats.has('csv')) {
-        exportToCSV(allData, allColumns, filename);
+      if (exportFormats.has("csv")) {
+        if (allData.length === 0) {
+          alert("ไม่มีข้อมูลสำหรับ CSV");
+        } else {
+          exportToCSV(allData, allColumns, filename, { reportTitle: pageTitle });
+        }
       }
-      if (exportFormats.has('pdf')) {
-        await exportToPDF(allData, allColumns, pageTitle, filename);
+      if (exportFormats.has("pdf")) {
+        const pdfSections: ExportPDFSection[] = fetched.map(({ section, rows }) => ({
+          label: section.label,
+          columns: section.columns,
+          rows,
+        }));
+        await exportToPDFSections(pdfSections, pageTitle, filename);
       }
 
       onClose();
