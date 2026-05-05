@@ -6,7 +6,7 @@ info:
     Interactive docs (Flasgger) are also served by the server at `/apidocs` when the app is running.
 
     **Socket.IO (same host/port as HTTP, e.g. `http://localhost:8000`):**
-    - Machines: HMAC auth per `FLEET_SECRET` (see agent docs).
+    - Machines: bcrypt token auth (agent connects with auth JSON `{ "machine_id": "<code>", "token": "<secret>" }`).
     - Admin dashboard: join Socket.IO with auth JSON `{ "role": "admin" }` when `ADMIN_SOCKET_SECRET` is unset, or `{ "admin_token": "<secret>" }` when set. Server emits event **`dashboard_update`** to room `admin` after each machine event ingest (telemetry for live dashboards).
 
     **Docker Compose — default published ports on the host:**
@@ -210,7 +210,7 @@ paths:
             required: [payment_id, payment_type, amount, cart]
             properties:
               payment_id: { type: string }
-              payment_type: { type: string, enum: [token, source] }
+              payment_type: { type: string, enum: [token, source, truemoney] }
               amount: { type: number, description: "Amount in satang" }
               cart:
                 type: array

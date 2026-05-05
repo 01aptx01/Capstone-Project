@@ -13,7 +13,8 @@ from app.realtime.socketio_gateway import make_socketio_app
 
 # Configure logger
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# Ensure our startup banner always prints (some libs configure logging early)
+logging.basicConfig(level=logging.INFO, force=True, format="%(message)s")
 
 
 def _print_docker_service_urls() -> None:
@@ -25,23 +26,22 @@ def _print_docker_service_urls() -> None:
     ag = os.environ.get("DOCKER_URL_AGENT", "http://localhost:5000")
     db = os.environ.get("DOCKER_URL_DB", "mysql://localhost:3307")
     pub = os.environ.get("DOCKER_PUBLISHED_PORT_SERVER", "8000")
-    lines = [
-        "",
-        "=== vending-server (Flask + Socket.IO) ===",
-        f"  Host browser:  {s}",
-        f"  Local (in container):   http://127.0.0.1:{pub}",
-        f"  Network (listen):       http://0.0.0.0:{pub}",
-        "",
-        "=== Other services (from host) ===",
-        f"  machine-ui:    {mu}",
-        f"  admin-ui:      {au}",
-        f"  swagger-ui:    {sw}",
-        f"  agent (Pi):    {ag}",
-        f"  MySQL (db):    {db}",
-        "",
-    ]
-    for line in lines:
-        logger.info(line)
+    # Runtime config (avoid printing secrets)
+    db_host = os.environ.get("DB_HOST", "localhost")
+    db_name = os.environ.get("DB_NAME", "vending")
+    db_user = os.environ.get("DB_USER", "root")
+    cors = os.environ.get("CORS_ORIGINS", "")
+    dispatch_mode = os.environ.get("DISPATCH_MODE", "socket")
+    socketio_enabled = os.getenv("SOCKETIO_ENABLED", "1") != "0"
+    agent_url = os.environ.get("AGENT_URL", "")
+
+    logger.info("")
+    logger.info("=== vending-server (Flask + Socket.IO) ===")
+    logger.info("host.url=%s | listen=http://0.0.0.0:%s | local=http://127.0.0.1:%s", s, pub, pub)
+    logger.info("ws.enabled=%s | dispatch.mode=%s | agent.url=%s", str(socketio_enabled).lower(), dispatch_mode, agent_url or "<unset>")
+    logger.info("db=mysql://%s@%s/%s | cors.origins=%s", db_user, db_host, db_name, cors or "<unset>")
+    logger.info("ui.machine=%s | ui.admin=%s | ui.swagger=%s | agent.host=%s | db.host=%s", mu, au, sw, ag, db)
+    logger.info("")
 
 
 class ServerApp:

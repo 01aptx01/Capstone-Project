@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-blue?logo=docker)](https://www.docker.com/)
-[![Next.js](https://img.shields.io/badge/Frontend-Next.js%2014-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Frontend-Next.js%2016-black?logo=next.js)](https://nextjs.org/)
 [![Flask](https://img.shields.io/badge/Backend-Flask-lightgrey?logo=flask)](https://flask.palletsprojects.com/)
 [![Payment](https://img.shields.io/badge/Payment-Omise-blue)](https://www.omise.co/)
 
@@ -24,9 +24,10 @@ graph TD
 ```
 
 - **`machine-ui`**: A high-performance Next.js application designed for 10.1" touchscreens. Handles UI state, Omise tokenization, and real-time polling.
-- **`server`**: The central brain. Manages business logic, inventory verification, secure charge execution via Omise, and hardware coordination.
+- **`server`**: The central brain. Manages business logic, inventory verification, secure charge execution via Omise, and hardware coordination. Also hosts **Socket.IO** for real-time job events.
 - **`db`**: Persistent storage for products, pricing, machine layouts, and transaction logs.
-- **`hardware-agent`**: A lightweight service running on the Raspberry Pi 5 to handle GPIO signals for dispensing products.
+- **`hardware-agent`**: A lightweight service running on Raspberry Pi to handle GPIO/NFC/LED + connect to server via Socket.IO.
+- **`admin-ui`**: Next.js admin dashboard (inventory, machines, orders, alerts).
 
 ---
 
@@ -53,10 +54,19 @@ Run the following command to build and start all services:
 docker compose up --build
 ```
 
-- **Frontend**: [http://localhost:3000](http://localhost:3000)
-- **API Backend**: [http://localhost:8000](http://localhost:8000)
-- **API Documentation**: [http://localhost:8000/apidocs](http://localhost:8000/apidocs)
-- **Hardware Agent**: [http://localhost:5000](http://localhost:5000)
+- **machine-ui**: [http://localhost:3000](http://localhost:3000)
+- **admin-ui**: [http://localhost:3001](http://localhost:3001)
+- **API backend + Socket.IO**: [http://localhost:8000](http://localhost:8000)
+- **Flasgger (server)**: [http://localhost:8000/apidocs](http://localhost:8000/apidocs)
+- **Swagger UI (mounted `swagger.yaml`)**: [http://localhost:8081](http://localhost:8081)
+- **Hardware agent**: [http://localhost:5000](http://localhost:5000)
+
+### Log output (more structured)
+Each service prints a startup banner (URLs + key env). If you need even more detail, run:
+
+```bash
+docker compose up --build --no-log-prefix
+```
 
 ---
 
@@ -71,6 +81,8 @@ Standardized configuration for the production-ready stack:
 | `NEXT_PUBLIC_API_URL` | Backend API Endpoint | Frontend |
 | `AGENT_URL` | URL of the hardware agent | Backend |
 | `DB_HOST` / `DB_USER` ... | MySQL Database Connection | Backend |
+| `CORS_ORIGINS` | Comma-separated allowed origins (override for LAN/hardware) | Backend |
+| `SERVER_SOCKET_URL` | Socket.IO URL the agent connects to (override for LAN/hardware) | Hardware agent |
 
 ---
 
@@ -89,6 +101,8 @@ To test without physical cards or hardware:
 ## 📖 API Documentation
 
 The backend uses **Flasgger** to provide interactive OpenAPI/Swagger documentation. Navigate to `/apidocs` on the server to explore the endpoints.
+
+For a dedicated Swagger UI that renders `swagger.yaml`, open **Swagger UI** at `http://localhost:8081`.
 
 **Key Endpoints:**
 - `GET /api/health`: Comprehensive system health check.
