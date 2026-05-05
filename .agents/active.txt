@@ -1,2 +1,2 @@
-Agent: ws_client.py ใช้ MACHINE_ID/MACHINE_CODE + MACHINE_TOKEN ใน Socket.IO auth; ConnectionRefusedError → log คงที่แล้วหยุด retry; .env.example มี MACHINE_TOKEN แล้ว
-Next (ถ้าต้องการ): อัปเดตเอกสาร agent/README ถ้ามีอ้าง MACHINE_SECRET_KEY
+เพิ่ม how-to-run.md ที่ root — คู่มือรัน Docker, env, เพิ่มตู้, rebuild machine-ui/client, troubleshooting
+Next (ถ้าต้องการ): ลิงก์จาก README.md ไป how-to-run.md
