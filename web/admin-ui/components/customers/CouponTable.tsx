@@ -2,14 +2,14 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { listCoupons, updateCoupon } from "@/lib/admin-api";
+import { listCoupons } from "@/lib/admin-api";
 import { apiCouponToUiRow, type UiCouponRow } from "@/lib/admin-mappers";
 import { useUI } from "@/lib/context/UIContext";
 import { useLang } from "@/lib/i18n/lang";
+import CouponFormModal from "@/components/customers/CouponFormModal";
+import { ADMIN_COUPONS_REFRESH_EVENT } from "@/components/customers/coupon-constants";
 
 type CouponTabId = "all" | "active" | "expired";
-
-export const ADMIN_COUPONS_REFRESH_EVENT = "admin-coupons-refresh";
 
 function Portal({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -18,50 +18,6 @@ function Portal({ children }: { children: React.ReactNode }) {
   }, []);
   if (!mounted) return null;
   return createPortal(children, document.body);
-}
-
-function toDatetimeLocalValue(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function fromDatetimeLocalValue(local: string): string | null {
-  const s = local.trim();
-  if (!s) return null;
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
-}
-
-function parsePointsCost(raw: string): number | null {
-  const t = raw.trim();
-  if (t === "") return 0;
-  const n = Number.parseInt(t, 10);
-  if (!Number.isFinite(n) || n < 0) return null;
-  return n;
-}
-
-type CouponFormState = {
-  code: string;
-  type: "fixed_amount" | "percent";
-  discount_amount: string;
-  points_cost: string;
-  expire_local: string;
-  is_active: boolean;
-};
-
-function rowToForm(row: UiCouponRow): CouponFormState {
-  return {
-    code: row.id,
-    type: row.type === "PERCENT" ? "percent" : "fixed_amount",
-    discount_amount: String(row.discount_amount),
-    points_cost: String(row.points_cost ?? 0),
-    expire_local: toDatetimeLocalValue(row.expiry),
-    is_active: row.is_active,
-  };
 }
 
 type FilterState = {
@@ -86,16 +42,6 @@ export default function CouponTable() {
   const [error, setError] = useState<string | null>(null);
 
   const [editRow, setEditRow] = useState<UiCouponRow | null>(null);
-  const [form, setForm] = useState<CouponFormState>(() => ({
-    code: "",
-    type: "fixed_amount",
-    discount_amount: "",
-    points_cost: "0",
-    expire_local: "",
-    is_active: true,
-  }));
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(initialFilters);
@@ -128,53 +74,11 @@ export default function CouponTable() {
   }, [load]);
 
   const openEdit = (row: UiCouponRow) => {
-    setForm(rowToForm(row));
-    setFormError(null);
     setEditRow(row);
   };
 
   const closeEditModal = () => {
     setEditRow(null);
-    setFormError(null);
-    setSaving(false);
-  };
-
-  const submitEdit = async () => {
-    if (!editRow) return;
-    setFormError(null);
-    const code = form.code.trim();
-    if (!code) {
-      setFormError(t("coupon.error.codeRequired"));
-      return;
-    }
-    const da = Number(form.discount_amount);
-    if (!Number.isFinite(da) || da <= 0) {
-      setFormError(t("coupon.error.discountInvalid"));
-      return;
-    }
-    const pc = parsePointsCost(form.points_cost);
-    if (pc === null) {
-      setFormError(t("coupon.error.pointsInvalid"));
-      return;
-    }
-    const expireIso = fromDatetimeLocalValue(form.expire_local);
-    setSaving(true);
-    try {
-      await updateCoupon(editRow.promotion_id, {
-        code,
-        type: form.type,
-        discount_amount: da,
-        expire_date: expireIso,
-        is_active: form.is_active,
-        points_cost: pc,
-      });
-      window.dispatchEvent(new Event(ADMIN_COUPONS_REFRESH_EVENT));
-      closeEditModal();
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : t("coupon.error.saveFailed"));
-    } finally {
-      setSaving(false);
-    }
   };
 
   const tabItems = useMemo(
@@ -498,102 +402,12 @@ export default function CouponTable() {
         </p>
       </div>
 
-      {editRow && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-[var(--overlay)]/50 backdrop-blur-sm">
-          <div
-            role="dialog"
-            aria-modal="true"
-            className="bg-[var(--surface-1)] rounded-3xl shadow-2xl max-w-md w-full p-8 border border-[var(--border)] max-h-[90vh] overflow-y-auto"
-          >
-            <h4 className="text-xl font-black text-[var(--text)] mb-1">{t("coupon.editTitle")}</h4>
-            <p className="text-sm text-[var(--text)] font-bold mb-6">{t("coupon.editSubtitle")}</p>
-            {formError && <div className="mb-4 text-sm font-bold text-rose-600">{formError}</div>}
-            <div className="space-y-4">
-              <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.code")}</span>
-                <input
-                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
-                  value={form.code}
-                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-                  disabled={saving}
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.type")}</span>
-                <select
-                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
-                  value={form.type}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, type: e.target.value as "fixed_amount" | "percent" }))
-                  }
-                >
-                  <option value="fixed_amount">{t("coupon.option.fixed")}</option>
-                  <option value="percent">{t("coupon.option.percent")}</option>
-                </select>
-              </label>
-              <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">
-                  {form.type === "percent" ? t("coupon.label.discountPercent") : t("coupon.label.discountAmount")}
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
-                  value={form.discount_amount}
-                  onChange={(e) => setForm((f) => ({ ...f, discount_amount: e.target.value }))}
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.points")}</span>
-                <input
-                  type="number"
-                  min="0"
-                  step="1"
-                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
-                  value={form.points_cost}
-                  onChange={(e) => setForm((f) => ({ ...f, points_cost: e.target.value }))}
-                />
-              </label>
-              <label className="block">
-                <span className="text-xs font-black text-[var(--text)] uppercase">{t("coupon.label.expiry")}</span>
-                <input
-                  type="datetime-local"
-                  className="mt-1 w-full rounded-xl border border-[var(--border)] px-3 py-2 font-bold"
-                  value={form.expire_local}
-                  onChange={(e) => setForm((f) => ({ ...f, expire_local: e.target.value }))}
-                />
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.is_active}
-                  onChange={(e) => setForm((f) => ({ ...f, is_active: e.target.checked }))}
-                />
-                <span className="text-sm font-black text-[var(--text)]">{t("coupon.label.active")}</span>
-              </label>
-            </div>
-            <div className="mt-8 flex justify-end gap-3">
-              <button
-                type="button"
-                className="px-4 py-2 rounded-xl border border-[var(--border)] font-bold text-[var(--text)]"
-                onClick={closeEditModal}
-                disabled={saving}
-              >
-                {t("coupon.cancel")}
-              </button>
-              <button
-                type="button"
-                className="px-4 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] font-black disabled:opacity-50"
-                disabled={saving}
-                onClick={submitEdit}
-              >
-                {saving ? t("coupon.saving") : t("coupon.save")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CouponFormModal
+        open={editRow !== null}
+        onClose={closeEditModal}
+        mode="edit"
+        editRow={editRow}
+      />
 
       {isFilterOpen && (
         <Portal>

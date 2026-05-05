@@ -21,6 +21,7 @@ import {
   type UiDashboardStatCards,
 } from "@/lib/admin-mappers";
 import { useLang } from "@/lib/i18n/lang";
+import { AlertTriangle, ShoppingCart, Store, TrendingUp } from "lucide-react";
 
 const SALES_REPORT_DAYS = 30;
 
@@ -189,7 +190,7 @@ export default function Home() {
       )}
 
       {loading && !stats && (
-        <div className="mb-6 text-[var(--text)]0 font-bold text-sm">{t("page.dashboard.loading")}</div>
+        <div className="mb-6 text-[var(--text)] font-bold text-sm">{t("page.dashboard.loading")}</div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 items-stretch">
@@ -197,7 +198,9 @@ export default function Home() {
           <DashboardCard
             title={t("page.dashboard.card.salesToday")}
             value={stats?.salesTodayLabel ?? "—"}
-            icon={<i className="fi fi-rr-stats"></i>}
+            icon={
+              <TrendingUp className="size-7 shrink-0" strokeWidth={2.25} aria-hidden />
+            }
             accentColor="var(--chart-series-1)"
             href={href("/sales")}
           />
@@ -216,7 +219,7 @@ export default function Home() {
             title={t("page.dashboard.card.machinesReady")}
             value={stats != null ? stats.machinesOnline : "—"}
             subValue={stats != null ? `/ ${stats.machinesTotal}` : undefined}
-            icon={<i className="fi fi-rr-vending-machine"></i>}
+            icon={<Store className="size-7 shrink-0" strokeWidth={2.25} aria-hidden />}
             accentColor="var(--warn)"
             href={href("/machines")}
           />
@@ -225,7 +228,9 @@ export default function Home() {
           <DashboardCard
             title={t("page.dashboard.card.lowStock")}
             value={stats != null ? stats.lowStockCount : "—"}
-            icon={<i className="fi fi-rr-warning"></i>}
+            icon={
+              <AlertTriangle className="size-7 shrink-0" strokeWidth={2.25} aria-hidden />
+            }
             accentColor="var(--danger)"
             href={href("/alerts")}
           />
