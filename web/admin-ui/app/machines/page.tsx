@@ -4,6 +4,7 @@ import PageWrapper from "@/components/layout/PageWrapper";
 import MachineCard from "@/components/machines/MachineCard";
 import machinesData from "@/lib/mock/machines.json";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
+import { LayoutGrid, CheckCircle, PackageMinus, Bell } from "lucide-react";
 
 const machineSections: ExportSection[] = [
   {
@@ -47,14 +48,14 @@ export default function MachinesPage() {
       {/* Stats Summary - Quick Glance */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 animate-in opacity-0 delay-600">
         {[
-          { label: "ตู้ทั้งหมด", value: machinesData.length, icon: "fi-rr-vending-machine", color: "bg-blue-500", shadow: "shadow-blue-200" },
-          { label: "กำลังทำงาน", value: machinesData.filter(m => m.status === 'online').length || 4, icon: "fi-rr-check-circle", color: "bg-emerald-500", shadow: "shadow-emerald-200" },
-          { label: "สต็อกต่ำ", value: 2, icon: "fi-rr-box-open", color: "bg-amber-500", shadow: "shadow-amber-200" },
-          { label: "แจ้งเตือน", value: 0, icon: "fi-rr-bell", color: "bg-rose-500", shadow: "shadow-rose-200" },
+          { label: "ตู้ทั้งหมด", value: machinesData.length, icon: <LayoutGrid size={28} />, color: "bg-blue-500", shadow: "shadow-blue-200" },
+          { label: "กำลังทำงาน", value: machinesData.filter(m => m.status === 'online').length || 4, icon: <CheckCircle size={28} />, color: "bg-emerald-500", shadow: "shadow-emerald-200" },
+          { label: "สต็อกต่ำ", value: 2, icon: <PackageMinus size={28} />, color: "bg-amber-500", shadow: "shadow-amber-200" },
+          { label: "แจ้งเตือน", value: 0, icon: <Bell size={28} />, color: "bg-rose-500", shadow: "shadow-rose-200" },
         ].map((stat, i) => (
           <div key={i} className="vibrant-card p-6 flex items-center gap-5 hover:translate-y-[-4px] transition-transform duration-300">
-            <div className={`w-14 h-14 rounded-full ${stat.color} flex items-center justify-center text-xl text-white shadow-lg ${stat.shadow}`}>
-              <i className={`fi ${stat.icon}`}></i>
+            <div className={`w-14 h-14 rounded-full ${stat.color} flex items-center justify-center text-white shadow-lg ${stat.shadow}`}>
+              {stat.icon}
             </div>
             <div>
               <div className="text-slate-400 font-bold text-[12px] uppercase tracking-widest">{stat.label}</div>
