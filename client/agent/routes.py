@@ -115,10 +115,23 @@ class JobManager:
         expanded = self._expand_queue(job)
         if not expanded:
             return 0
-        # Match actual tick logic: max heating time + 3s for each item
-        times = [int(x.get("heating_time", 15)) for x in expanded]
-        max_heating = max(times)
-        return max_heating + 3 * len(expanded)
+
+        # Match machine-ui's timeline logic exactly:
+        # STEP1_DELAY(2) + lastWindowEnd + STEP4_HOLD(3) + FINAL_STEP_HOLD(3)
+        # where lastWindowEnd is calculated by buildDispenseSchedule (non-overlapping 2s windows)
+        
+        items = sorted(expanded, key=lambda x: int(x.get("heating_time", 15)))
+        next_available = 0
+        last_window_end = 0
+        
+        for it in items:
+            finish_time = int(it.get("heating_time", 15))
+            window_start = max(finish_time, next_available)
+            window_end = window_start + 2 # DISPENSE_WINDOW
+            last_window_end = window_end
+            next_available = window_end
+            
+        return 2 + last_window_end + 3 + 3
 
     def subscribe(self, job: Job) -> queue.Queue:
         q: queue.Queue = queue.Queue()
@@ -227,10 +240,9 @@ def _run_mock_job(job: Job) -> None:
             if slot_index not in active_slots:
                 active_slots.append(slot_index)
                 
-        # 2. Then proceed with the RGB steps
+        # 2. Phase 1: TRANSFER_TO_OVEN (STEP1_DELAY = 2s)
         job.state = "TRANSFER_TO_OVEN"
         machine.mark_step_active("TRANSFER_TO_OVEN")
-        machine.mark_step_complete("TRANSFER_TO_OVEN")
         job_manager.publish(
             job,
             _mk_event(
@@ -240,18 +252,19 @@ def _run_mock_job(job: Job) -> None:
                 payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
             ),
         )
-        # tick(5) # Removed 5s delay to match UI logic
+        tick(2) # Match STEP1_DELAY
+        machine.mark_step_complete("TRANSFER_TO_OVEN")
 
+        # 3. Phase 2: HEATING & DISPENSING
         elapsed_heating = 0
         for i, it, target_time in items_with_time:
             if job.done:
-                # Ensure lights turn off if cancelled
                 for slot in active_slots:
                     machine.set_slot_active(slot, False)
                 return
             
             job.current_item_index = i
-            # Step 1: Heat if needed (wait for this item to finish)
+            # Step A: HEATING
             time_to_heat = target_time - elapsed_heating
             if time_to_heat > 0:
                 job.state = "HEATING"
@@ -265,26 +278,11 @@ def _run_mock_job(job: Job) -> None:
                         payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
                     ),
                 )
-                job_manager.publish(
-                    job,
-                    _mk_event(
-                        job,
-                        event_type="item.state",
-                        state="HEATING",
-                        payload={
-                            "current_item_index": i,
-                            "product_id": it.get("product_id"),
-                            "name": it.get("name"),
-                            "heating_time": target_time,
-                            "remaining_seconds": job.remaining_seconds,
-                        },
-                    ),
-                )
                 tick(time_to_heat)
                 machine.mark_step_complete("HEATING")
                 elapsed_heating = target_time
 
-            # Step 2: Dispense this item
+            # Step B: DISPENSING (DISPENSE_WINDOW = 2s)
             job.state = "DISPENSING"
             machine.mark_step_active("DISPENSING")
             job_manager.publish(
@@ -296,15 +294,19 @@ def _run_mock_job(job: Job) -> None:
                     payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
                 ),
             )
-            slot_index = machine.resolve_slot_index(it.get("product_id", 1))
-            # Just simulate time, light is already ON from the beginning
-            tick(3)
+            tick(2) # Match DISPENSE_WINDOW
             machine.mark_step_complete("DISPENSING")
 
+        # 4. Phase 3: Post-Dispense (STEP4_HOLD = 3s)
+        # UI holds Step 3 for 3 seconds after last item
+        tick(3)
+
+        # 5. Phase 4: DONE (FINAL_STEP_HOLD = 3s)
         job.state = "DONE"
         job.remaining_seconds = 0
         job.done = True
         
+        machine.mark_step_active("DONE")
         job_manager.publish(
             job,
             _mk_event(
@@ -314,10 +316,10 @@ def _run_mock_job(job: Job) -> None:
                 payload={"remaining_seconds": 0, "current_item_index": job.current_item_index},
             ),
         )
-
-        machine.mark_step_active("DONE")
+        tick(3) # Match FINAL_STEP_HOLD
         machine.mark_step_complete("DONE")
         machine.step_leds.set_all(success=True)
+
         # Turn off all green slot lights
         for slot in active_slots:
             machine.set_slot_active(slot, False)
