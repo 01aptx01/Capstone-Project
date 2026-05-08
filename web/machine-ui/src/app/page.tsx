@@ -7,7 +7,9 @@ import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
 import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer, } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useJobSocket, AgentJobState } from "../hooks/useJobSocket";
+import { Suspense } from "react";
 
 type ModalType =
   | "none"
@@ -44,6 +46,8 @@ const testBtnStyle: React.CSSProperties = {
 
 const DEFAULT_MACHINE_CODE =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) || "MP1-001";
+const AGENT_BASE_URL = 
+  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_AGENT_BASE_URL) || "http://localhost:5000";
 
 function clampCartToCatalog(prev: CartItem[], catalog: Product[]): CartItem[] {
   const byId = new Map(catalog.map((p) => [p.id, p]));
@@ -60,7 +64,26 @@ function clampCartToCatalog(prev: CartItem[], catalog: Product[]): CartItem[] {
 }
 
 export default function VendingPage() {
-  const machineCode = DEFAULT_MACHINE_CODE;
+  return (
+    <Suspense fallback={<div className="bg-black min-h-screen text-white flex items-center justify-center">Loading Machine...</div>}>
+      <VendingContent />
+    </Suspense>
+  );
+}
+
+function VendingContent() {
+  const searchParams = useSearchParams();
+  const urlMachineCode = searchParams.get("machine_code") || searchParams.get("code");
+  const urlAgentUrl = searchParams.get("agent_url");
+
+  const [machineCode, setMachineCode] = useState(urlMachineCode || DEFAULT_MACHINE_CODE);
+  const [agentBaseUrl, setAgentBaseUrl] = useState(urlAgentUrl || AGENT_BASE_URL);
+
+  // Sync machine code if URL changes
+  useEffect(() => {
+    if (urlMachineCode) setMachineCode(urlMachineCode);
+    if (urlAgentUrl) setAgentBaseUrl(urlAgentUrl);
+  }, [urlMachineCode, urlAgentUrl]);
   // ==========================================
   // APPLICATION STATES
   // ==========================================
@@ -168,6 +191,7 @@ export default function VendingPage() {
     isConnected: isServerSocketConnected,
   } = useJobSocket({
     activeJobId: (isAfterPayment || activeModal === "processing") ? currentChargeId : null,
+    machineCode: machineCode,
   });
 
   // Sync socket-driven remaining time into local globalTimeLeft state
@@ -593,8 +617,8 @@ export default function VendingPage() {
       const pollNfc = async () => {
         if (isProcessingPayment || isNfcBlocked) return;
         try {
-          // ตรวจสอบสถานะการแตะบัตรจาก Agent (localhost:5000)
-          const res = await fetch("http://localhost:5000/nfc/status");
+          // ตรวจสอบสถานะการแตะบัตรจาก Agent
+          const res = await fetch(`${agentBaseUrl}/nfc/status`);
           if (res.ok) {
             const data = await res.json();
             if (data.status === "tapped") {
@@ -664,6 +688,7 @@ export default function VendingPage() {
           payment_id: paymentData.id,
           draft_id: currentChargeId?.startsWith("draft_") ? currentChargeId : undefined,
           coupon_code: appliedCoupon?.code,
+          return_uri: window.location.origin + "/payment-result",
         }),
       });
 

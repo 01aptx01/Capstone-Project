@@ -1,0 +1,6 @@
+flask
+flask-cors
+requests
+python-socketio
+python-dotenv
+websocket-client

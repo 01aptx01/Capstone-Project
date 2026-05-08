@@ -1,12 +1,10 @@
 # =============================================================================
-# Published URLs from host (default port mapping)
+# Published URLs from host (default port mapping) - SERVER ONLY
 # -----------------------------------------------------------------------------
 #   db (MySQL)       localhost:3307   -> container :3306
 #   server (API)     http://localhost:8000   (Flask + Socket.IO + /apidocs)
-#   client (agent)   http://localhost:5000
-#   machine-ui       http://localhost:3000
 #   admin-ui         http://localhost:3001
-#   swagger-ui       http://localhost:8081  (host; avoids Jenkins on 8080)
+#   swagger-ui       http://localhost:8081
 # =============================================================================
 
 services:
@@ -20,14 +18,15 @@ services:
       - |
         printf '\n'
         printf '=============================================================================\n'
-        printf ' Published URLs from host (default port mapping)\n'
+        printf ' Published URLs from host (default port mapping) - SERVER ONLY\n'
         printf '-----------------------------------------------------------------------------\n'
         printf ' db (MySQL)     localhost:3307  -> container :3306\n'
         printf ' server (API)   http://localhost:8000  (Flask + Socket.IO + /apidocs)\n'
-        printf ' client (agent) http://localhost:5000\n'
-        printf ' machine-ui     http://localhost:3000\n'
         printf ' admin-ui       http://localhost:3001\n'
-        printf ' swagger-ui     http://localhost:8081  (host; avoids Jenkins on 8080)\n'
+        printf ' machine-ui     http://localhost:3000  (Template for all machines)\n'
+        printf ' swagger-ui     http://localhost:8081\n'
+        printf '=============================================================================\n'
+        printf ' To start a machine, use: cd client && ./run-machine.ps1 <index>\n'
         printf '=============================================================================\n'
         printf '\n'
 
@@ -36,9 +35,9 @@ services:
     container_name: vending-db
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: vending
-      TZ: Asia/Bangkok
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=vending
+      - TZ=Asia/Bangkok
     volumes:
       - db_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -61,23 +60,10 @@ services:
     env_file:
       - .env
     environment:
-      - AGENT_URL=http://192.168.1.172:5000/dispense
-      - AGENT_BASE_URL=http://192.168.1.172:5000
       - SOCKETIO_ENABLED=1
-      - DISPATCH_MODE=http
+      - DISPATCH_MODE=socket
       - TZ=Asia/Bangkok
-      # Set comma-separated allowed origins for CORS.
-      # Override via .env when running on LAN / hardware.
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:8081,http://machine-ui:3000,http://admin-ui:3000,http://192.168.1.44:3000,http://192.168.1.172:3000}
-      - DOCKER_URL_SERVER=http://localhost:8000
-      - DOCKER_URL_MACHINE_UI=http://localhost:3000
-      - DOCKER_URL_ADMIN_UI=http://localhost:3001
-      - DOCKER_URL_SWAGGER=http://localhost:8081
-      - DOCKER_URL_AGENT=http://localhost:5000
-      - DOCKER_URL_DB=mysql://localhost:3307
-      - DOCKER_PUBLISHED_PORT_SERVER=8000
-      # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
-      # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003,http://localhost:8081,http://192.168.1.44:3000,http://192.168.1.44:3001}
     ports:
       - "8000:8000"
     healthcheck:
@@ -89,48 +75,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
-  client:
-    build: ./client/agent
-    container_name: vending-pi
-    privileged: true
-    ports:
-      - "5000:5000"
-    volumes:
-      - agent_data:/data
-      - /dev/gpiomem:/dev/gpiomem
-    environment:
-      - EVENT_SINK_MODE=socket
-      # Prefer docker service DNS in compose; override via .env for LAN / hardware.
-      - SERVER_SOCKET_URL=${SERVER_SOCKET_URL:-http://server:8000}
-      # Must match a row in `machines`; token from Admin → Create machine (plaintext once).
-      - MACHINE_ID=${MACHINE_ID:-MP1-001}
-      - MACHINE_CODE=${MACHINE_CODE:-}
-      - MACHINE_TOKEN=${MACHINE_TOKEN:-}
-      - AGENT_DB_PATH=/data/agent.db
-      - EVENT_SINK_URL=http://192.168.1.44:8000/api/machines/events
-      - TZ=Asia/Bangkok
-      - DOCKER_URL_AGENT=http://localhost:5000
-      - DOCKER_URL_SERVER=http://localhost:8000
-      - DOCKER_PUBLISHED_PORT_AGENT=5000
-
-  machine-ui:
-    build:
-      context: ./web/machine-ui
-      args:
-        - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
-        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-        - NEXT_PUBLIC_AGENT_BASE_URL=${NEXT_PUBLIC_AGENT_BASE_URL:-}
-        - NEXT_PUBLIC_MACHINE_CODE=${NEXT_PUBLIC_MACHINE_CODE:-MP1-001}
-    environment:
-      - TZ=Asia/Bangkok
-      - DOCKER_PUBLISHED_PORT=3000
-      - DOCKER_HOST_URL=http://localhost:3000
-    container_name: vending-machine-ui
-    ports:
-      - "3000:3000"
-    depends_on:
-      - server
 
   admin-ui:
     build:
@@ -144,6 +88,20 @@ services:
     container_name: vending-admin-ui
     ports:
       - "3001:3000"
+    depends_on:
+      - server
+
+  machine-ui:
+    build:
+      context: ./web/machine-ui
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
+    container_name: vending-machine-ui
+    environment:
+      - TZ=Asia/Bangkok
+    ports:
+      - "3000:3000"
     depends_on:
       - server
 
@@ -164,10 +122,8 @@ services:
       - |
         printf '\n=== vending-swagger-ui ===\n'
         printf '  Host browser:  http://localhost:8081\n'
-        printf '  Local (in container):   http://127.0.0.1:8080\n'
-        printf '  Network (listen):       http://0.0.0.0:8080\n\n'
         exec /docker-entrypoint.sh nginx -g 'daemon off;'
 
 volumes:
   db_data:
-  agent_data:
+

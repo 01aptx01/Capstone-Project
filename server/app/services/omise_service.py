@@ -16,7 +16,7 @@ class OmisePaymentService:
         omise.api_secret = self.api_secret
         self.return_uri = os.environ.get("RETURN_URI", "http://localhost:3000/payment-result")
 
-    def create_charge(self, amount: int, payment_type: str, payment_id: str, metadata: dict = None):
+    def create_charge(self, amount: int, payment_type: str, payment_id: str, metadata: dict = None, return_uri: str = None):
         try:
             amount_int = int(float(amount))
             logger.info(f"[Omise] Attempting to create charge: {amount_int} THB(satangs) via {payment_type}")
@@ -42,7 +42,7 @@ class OmisePaymentService:
             charge_data["card"] = payment_id
         elif payment_type in ["source", "promptpay"]:
             charge_data["source"] = payment_id
-            charge_data["return_uri"] = self.return_uri
+            charge_data["return_uri"] = return_uri or self.return_uri
             # ให้ PromptPay QR หมดอายุใน 5 นาที เพื่อไม่ให้ค้าง Pending ใน Dashboard
             expires_at = datetime.now(pytz.utc) + timedelta(minutes=5)
             charge_data["expires_at"] = expires_at.isoformat()

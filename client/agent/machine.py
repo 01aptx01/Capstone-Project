@@ -92,12 +92,19 @@ def _find_command(candidates: Iterable[str]) -> Optional[str]:
 
 
 def _default_ui_url() -> str:
-	return (
-		os.environ.get("MACHINE_UI_URL")
-		or os.environ.get("SERVER_MACHINE_UI_URL")
-		or os.environ.get("NEXT_PUBLIC_MACHINE_UI_URL")
-		or "http://localhost:3000"
-	)
+    base = (
+        os.environ.get("MACHINE_UI_URL")
+        or os.environ.get("SERVER_MACHINE_UI_URL")
+        or os.environ.get("NEXT_PUBLIC_MACHINE_UI_URL")
+        or "http://localhost:3000"
+    )
+    if "?" not in base:
+        code = os.environ.get("MACHINE_CODE") or os.environ.get("MACHINE_ID") or "MP1-001"
+        agent_port = os.environ.get("AGENT_PORT", "5000")
+        # Add query params so the remote UI knows who we are and how to talk to our local agent
+        sep = "&" if "?" in base else "?"
+        base += f"{sep}machine_code={code}&agent_url=http://localhost:{agent_port}"
+    return base
 
 
 def _default_browser_command() -> Optional[str]:

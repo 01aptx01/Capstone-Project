@@ -35,6 +35,8 @@ export interface JobSocketState {
 }
 
 export interface UseJobSocketOptions {
+  /** The machine identity to join the correct socket room */
+  machineCode: string;
   /** The charge_id / job_id to watch. Starts listening only when set. */
   activeJobId: string | null;
   /** Called when job is active so the hook can request the server to re-send pending jobs */
@@ -42,6 +44,7 @@ export interface UseJobSocketOptions {
 }
 
 export function useJobSocket({
+  machineCode,
   activeJobId,
   onConnect,
 }: UseJobSocketOptions): JobSocketState {
@@ -49,9 +52,6 @@ export function useJobSocket({
     (typeof process !== "undefined" &&
       process.env.NEXT_PUBLIC_SERVER_SOCKET_URL) ||
     "http://localhost:8000";
-  const machineCode =
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) ||
-    "MP1-001";
 
   const socketRef = useRef<Socket | null>(null);
 

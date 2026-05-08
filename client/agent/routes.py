@@ -456,6 +456,17 @@ def nfc_status():
         return jsonify({"status": "tapped"}), 200
     return jsonify({"status": "waiting"}), 200
 
+@routes.route("/api/config", methods=["GET"])
+def get_config():
+    """Returns machine configuration for the local UI."""
+    return {
+        "machine_id": os.environ.get("MACHINE_ID", "MP1-001"),
+        "machine_code": os.environ.get("MACHINE_CODE", "MP1-001"),
+        "server_url": os.environ.get("SERVER_URL", "http://localhost:8000"),
+        "server_socket_url": os.environ.get("SERVER_SOCKET_URL", "http://localhost:8000"),
+    }, 200
+
+
 @routes.route("/")
 def index():
     return {"status": "agent-online", "version": "1.0.0"}

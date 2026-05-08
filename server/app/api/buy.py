@@ -274,6 +274,7 @@ class BuyController:
         machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
         draft_id     = data.get("draft_id")
         coupon_code  = data.get("coupon_code") or data.get("couponCode")
+        return_uri   = data.get("return_uri")
 
         cart = self._normalize_cart(raw_cart)
 
@@ -323,7 +324,7 @@ class BuyController:
             f"[Checkout] Initiating Omise charge for {charge_amount_satang} satang via {payment_type}"
         )
         charge = self.payment_service.create_charge(
-            charge_amount_satang, payment_type, payment_id, metadata=metadata
+            charge_amount_satang, payment_type, payment_id, metadata=metadata, return_uri=return_uri
         )
 
         if not charge:

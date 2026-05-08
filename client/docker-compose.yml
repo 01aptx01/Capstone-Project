@@ -1,0 +1,37 @@
+services:
+  agent:
+    build: ./agent
+    container_name: vending-agent-${MACHINE_INDEX}
+    privileged: true
+    ports:
+      - "${PORT_AGENT}:5000"
+    volumes:
+      - agent_data_${MACHINE_INDEX}:/data
+      - /dev/gpiomem:/dev/gpiomem
+    environment:
+      - EVENT_SINK_MODE=socket
+      - SERVER_SOCKET_URL=${SERVER_SOCKET_URL}
+      - MACHINE_ID=${MACHINE_ID}
+      - MACHINE_CODE=${MACHINE_CODE}
+      - MACHINE_TOKEN=${MACHINE_TOKEN}
+      - AGENT_DB_PATH=/data/agent.db
+      - TZ=Asia/Bangkok
+    restart: unless-stopped
+
+  machine-ui:
+    build:
+      context: ../web/machine-ui
+      args:
+        - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
+        - NEXT_PUBLIC_API_URL=${SERVER_URL}
+        - NEXT_PUBLIC_MACHINE_CODE=${MACHINE_CODE}
+        - NEXT_PUBLIC_AGENT_BASE_URL=http://localhost:${PORT_AGENT}
+    container_name: vending-machine-ui-${MACHINE_INDEX}
+    environment:
+      - TZ=Asia/Bangkok
+    ports:
+      - "${PORT_UI}:3000"
+    restart: unless-stopped
+
+volumes:
+  agent_data_${MACHINE_INDEX}:
