@@ -7,13 +7,30 @@ param (
 # Paths
 $ROOT_DIR = (Get-Item -Path "$PSScriptRoot/.." ).FullName
 
+function Get-FreePort {
+    param([int]$StartPort)
+    $port = $StartPort
+    while ($true) {
+        $listener = $null
+        try {
+            $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Any, $port)
+            $listener.Start()
+            $listener.Stop()
+            return $port
+        } catch {
+            $port++
+        }
+    }
+}
+
 # 1. Configuration (HARDCODED FOR PC SIMULATION RELIABILITY)
 $SERVER_IP = "192.168.1.44"
 $SERVER_URL = "http://$SERVER_IP:8000"
 $SERVER_UI_URL = "http://$SERVER_IP:3000"
 
-# Calculate Ports
-$PORT_AGENT = 5000 + $Index
+# Calculate Ports Dynamically (Find first available starting from 5000 and 3000)
+$PORT_AGENT = Get-FreePort -StartPort 5000
+$PORT_UI = Get-FreePort -StartPort 3000
 
 # Determine Machine Identity
 $MACHINE_ID = "MP1-$(($Index).ToString('000'))"
@@ -24,14 +41,16 @@ Write-Host " Starting Vending Machine #$Index (PC Sim) " -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 Write-Host " Machine ID: $MACHINE_ID"
 Write-Host " Agent Port: $PORT_AGENT"
+Write-Host " UI Port:    $PORT_UI"
 Write-Host " Server API: $SERVER_URL"
 Write-Host " Server UI:  $SERVER_UI_URL"
 Write-Host "=========================================="
 
 # Paths
 $AGENT_DIR = Join-Path $PSScriptRoot "agent"
+$UI_DIR = Join-Path $ROOT_DIR "web\machine-ui"
 $VENV_DIR = Join-Path $ROOT_DIR ".venv"
-$PYTHON_EXE = Join-Path $VENV_DIR "Scripts/python.exe"
+$PYTHON_EXE = Join-Path $VENV_DIR "Scripts\python.exe"
 
 # 1. Auto-Setup Virtual Environment for Agent
 if (-not (Test-Path $VENV_DIR)) {
@@ -47,7 +66,11 @@ Write-Host "[*] Checking Agent dependencies (SIM mode)..." -ForegroundColor Gray
 $MACHINE_TOKEN = Read-Host "Enter MACHINE_TOKEN (from Admin UI)"
 
 # 2. Start Agent in a new window
-$UI_TARGET = "$SERVER_UI_URL/?machine_code=$MACHINE_CODE"
+if ($RemoteUI) {
+    $UI_TARGET = "$SERVER_UI_URL/?machine_code=$MACHINE_CODE"
+} else {
+    $UI_TARGET = "http://localhost:$PORT_UI/?machine_code=$MACHINE_CODE"
+}
 
 $AgentCommand = @"
 cd '$AGENT_DIR'
