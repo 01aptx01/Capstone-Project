@@ -5,6 +5,8 @@ CREATE DATABASE IF NOT EXISTS vending;
 USE vending;
 
 -- Drop order
+DROP TABLE IF EXISTS user_promotions;
+DROP TABLE IF EXISTS otp_sessions;
 DROP TABLE IF EXISTS admin_user_role;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS admin_users;
@@ -21,6 +23,7 @@ DROP TABLE IF EXISTS machines;
 CREATE TABLE users (
   user_id INT AUTO_INCREMENT PRIMARY KEY,
   phone_number VARCHAR(20) NOT NULL,
+  display_name VARCHAR(100) NULL,
   points INT NOT NULL DEFAULT 0,
   registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_use DATETIME NULL,
@@ -28,6 +31,16 @@ CREATE TABLE users (
   UNIQUE KEY uq_users_phone (phone_number),
   -- Composite index: covers WHERE status='active' AND last_use < X (user maintenance sweeper)
   KEY idx_users_status_lastuse (status, last_use)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE otp_sessions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  phone_number VARCHAR(15) NOT NULL,
+  code_hash VARCHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  verified_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_otp_phone_expires (phone_number, expires_at)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE promotions (
@@ -40,6 +53,22 @@ CREATE TABLE promotions (
   points_cost INT NOT NULL DEFAULT 0,
   max_uses INT NOT NULL DEFAULT 0 COMMENT '0 = unlimited redemptions',
   UNIQUE KEY uq_promotions_code (code)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE user_promotions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  promotion_id INT NOT NULL,
+  status ENUM('active','used','expired') NOT NULL DEFAULT 'active',
+  redeemed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_user_promotions_user (user_id),
+  KEY idx_user_promotions_promo (promotion_id),
+  CONSTRAINT fk_user_promotions_user
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_user_promotions_promotion
+    FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE machines (
@@ -228,9 +257,14 @@ INSERT INTO machine_slots (machine_code, slot_number, product_id, quantity) VALU
 ('MP1-001', 5, 5, 20),
 ('MP1-001', 6, 6, 20);
 
+-- Redeemable promotions (web-ui /redeem)
+INSERT INTO promotions (code, type, discount_amount, is_active, expire_date, points_cost, max_uses) VALUES
+('POINTS50', 'fixed_amount', 10.00, 1, DATE_ADD(NOW(), INTERVAL 1 YEAR), 50, 0),
+('POINTS100', 'percent', 15.00, 1, DATE_ADD(NOW(), INTERVAL 1 YEAR), 100, 0);
+
 -- Demo member (web-ui login / profile / redeem)
 INSERT INTO users (phone_number, points, last_use, status) VALUES
-('0812345678', 150, NOW(), 'active')
+('0631723422', 150, NOW(), 'active')
 ON DUPLICATE KEY UPDATE
   points = VALUES(points),
   last_use = VALUES(last_use),

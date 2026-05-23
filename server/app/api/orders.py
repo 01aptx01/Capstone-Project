@@ -3,7 +3,11 @@ orders.py — Customer order history and pickup (web-ui pre-order flow).
 """
 
 import logging
-from flask import Blueprint, jsonify, request
+from datetime import datetime
+
+from flask import Blueprint, g, jsonify, request
+
+from app.auth.member_auth import member_required, require_path_phone
 from app.db_config.db import get_db_cursor
 
 logger = logging.getLogger(__name__)
@@ -25,9 +29,14 @@ def _map_ui_status(db_status: str) -> str:
 
 
 @orders_api.route("/api/members/<phone>/orders", methods=["GET"])
+@member_required
 def member_orders(phone: str):
+    err = require_path_phone(phone)
+    if err:
+        return err
+
     if not _validate_phone(phone):
-        return jsonify({"orders": [], "message": "เบอร์โทรไม่ถูกต้อง"}), 400
+        return jsonify({"error": "invalid_phone", "message": "เบอร์โทรไม่ถูกต้อง", "orders": []}), 400
 
     try:
         with get_db_cursor() as (_, cur):
@@ -82,7 +91,7 @@ def member_orders(phone: str):
         return jsonify({"orders": orders}), 200
     except Exception as e:
         logger.error(f"[Orders] member_orders error for {phone}: {e}")
-        return jsonify({"orders": [], "message": "เกิดข้อผิดพลาด"}), 500
+        return jsonify({"error": "server_error", "message": "เกิดข้อผิดพลาด", "orders": []}), 500
 
 
 @orders_api.route("/api/promotions/redeemable", methods=["GET"])
@@ -125,21 +134,116 @@ def redeemable_promotions():
 
 
 @orders_api.route("/api/members/<phone>/redeem", methods=["POST"])
+@member_required
 def redeem_coupon(phone: str):
-    # TODO: deduct points and assign coupon to member wallet
-    _ = request.get_json(silent=True)
-    return jsonify(
-        {"status": "not_implemented", "message": "Redeem not implemented yet"}
-    ), 501
+    err = require_path_phone(phone)
+    if err:
+        return err
+
+    data = request.get_json(silent=True) or {}
+    promotion_id = data.get("promotion_id")
+    if not promotion_id:
+        return jsonify({"error": "invalid", "message": "ต้องระบุ promotion_id"}), 400
+
+    try:
+        promotion_id = int(promotion_id)
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid", "message": "promotion_id ไม่ถูกต้อง"}), 400
+
+    try:
+        with get_db_cursor() as (db, cur):
+            cur.execute(
+                "SELECT user_id, points FROM users WHERE phone_number = %s",
+                (phone,),
+            )
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"error": "not_found", "message": "ไม่พบสมาชิก"}), 404
+
+            cur.execute(
+                """
+                SELECT promotion_id, code, points_cost, is_active, expire_date, max_uses
+                FROM promotions WHERE promotion_id = %s
+                """,
+                (promotion_id,),
+            )
+            promo = cur.fetchone()
+            if not promo or not promo["is_active"]:
+                return jsonify({"error": "not_found", "message": "ไม่พบคูปอง"}), 404
+
+            if promo["expire_date"] and promo["expire_date"] < datetime.utcnow():
+                return jsonify({"error": "expired", "message": "คูปองหมดอายุ"}), 400
+
+            points_cost = int(promo["points_cost"] or 0)
+            if points_cost <= 0:
+                return jsonify({"error": "invalid", "message": "คูปองนี้แลกด้วยแต้มไม่ได้"}), 400
+
+            if user["points"] < points_cost:
+                return jsonify(
+                    {"error": "insufficient_points", "message": "แต้มไม่พอ"}
+                ), 400
+
+            if promo["max_uses"] and promo["max_uses"] > 0:
+                cur.execute(
+                    "SELECT COUNT(*) AS cnt FROM user_promotions WHERE promotion_id = %s",
+                    (promotion_id,),
+                )
+                total_redeemed = cur.fetchone()["cnt"]
+                if total_redeemed >= promo["max_uses"]:
+                    return jsonify(
+                        {"error": "sold_out", "message": "คูปองถูกแลกครบแล้ว"}
+                    ), 409
+
+            cur.execute(
+                """
+                SELECT id FROM user_promotions
+                WHERE user_id = %s AND promotion_id = %s AND status = 'active'
+                """,
+                (user["user_id"], promotion_id),
+            )
+            if cur.fetchone():
+                return jsonify(
+                    {"error": "already_owned", "message": "คุณมีคูปองนี้แล้ว"}
+                ), 409
+
+            new_points = user["points"] - points_cost
+            cur.execute(
+                "UPDATE users SET points = %s, last_use = NOW() WHERE user_id = %s",
+                (new_points, user["user_id"]),
+            )
+            cur.execute(
+                """
+                INSERT INTO user_promotions (user_id, promotion_id, status)
+                VALUES (%s, %s, 'active')
+                """,
+                (user["user_id"], promotion_id),
+            )
+            db.commit()
+
+        return jsonify(
+            {
+                "status": "ok",
+                "message": "แลกคูปองสำเร็จ",
+                "code": promo["code"],
+                "points_remaining": new_points,
+            }
+        ), 200
+    except Exception as e:
+        logger.error(f"[Orders] redeem error for {phone}: {e}")
+        return jsonify({"error": "server_error", "message": "แลกคูปองไม่สำเร็จ"}), 500
 
 
 @orders_api.route("/api/orders/<charge_id>/pickup", methods=["POST"])
+@member_required
 def pickup_order(charge_id: str):
     data = request.get_json(silent=True) or {}
-    phone = (data.get("phone_number") or "").strip()
+    phone = (data.get("phone_number") or g.member_phone or "").strip()
 
     if not _validate_phone(phone):
-        return jsonify({"status": "ERROR", "message": "เบอร์โทรไม่ถูกต้อง"}), 400
+        return jsonify({"error": "invalid_phone", "message": "เบอร์โทรไม่ถูกต้อง"}), 400
+
+    if phone != g.member_phone:
+        return jsonify({"error": "forbidden", "message": "ไม่มีสิทธิ์เข้าถึงออเดอร์นี้"}), 403
 
     try:
         with get_db_cursor() as (_, cur):
@@ -155,18 +259,18 @@ def pickup_order(charge_id: str):
             order = cur.fetchone()
 
         if not order:
-            return jsonify({"status": "ERROR", "message": "ไม่พบออเดอร์"}), 404
+            return jsonify({"error": "not_found", "message": "ไม่พบออเดอร์"}), 404
 
         if order["status"] != "ready_to_scan":
             return jsonify(
                 {
-                    "status": "ERROR",
+                    "error": "invalid_status",
                     "message": f"ออเดอร์ไม่พร้อมรับ (สถานะ: {order['status']})",
                 }
             ), 409
 
         if order["user_id"] and order["phone_number"] != phone:
-            return jsonify({"status": "ERROR", "message": "ออเดอร์ไม่ตรงกับบัญชี"}), 403
+            return jsonify({"error": "forbidden", "message": "ออเดอร์ไม่ตรงกับบัญชี"}), 403
 
         from app.api.buy import buy_controller
 
@@ -174,7 +278,7 @@ def pickup_order(charge_id: str):
             charge_id
         )
         if not details:
-            return jsonify({"status": "ERROR", "message": "ไม่พบรายการสินค้า"}), 404
+            return jsonify({"error": "not_found", "message": "ไม่พบรายการสินค้า"}), 404
 
         buy_controller.pending_orders[charge_id] = {
             "cart": details["cart"],
@@ -189,9 +293,9 @@ def pickup_order(charge_id: str):
                 {"status": "ok", "message": "กำลังจ่ายสินค้า กรุณารอรับที่ช่องรับ"}
             ), 200
         return jsonify(
-            {"status": "ERROR", "message": "ไม่สามารถจ่ายสินค้าได้ กรุณาติดต่อเจ้าหน้าที่"}
+            {"error": "dispense_failed", "message": "ไม่สามารถจ่ายสินค้าได้ กรุณาติดต่อเจ้าหน้าที่"}
         ), 500
 
     except Exception as e:
         logger.error(f"[Orders] pickup_order error for {charge_id}: {e}")
-        return jsonify({"status": "ERROR", "message": "เกิดข้อผิดพลาดในระบบ"}), 500
+        return jsonify({"error": "server_error", "message": "เกิดข้อผิดพลาดในระบบ"}), 500

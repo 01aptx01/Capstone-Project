@@ -12,6 +12,3 @@ export const FULFILLMENT_MODE = (
 
 export const OMISE_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY ?? "";
-
-export const AUTH_DEV_BYPASS =
-  process.env.NEXT_PUBLIC_AUTH_DEV_BYPASS === "true";

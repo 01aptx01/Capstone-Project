@@ -4,6 +4,7 @@ export interface MemberProfile {
   found: boolean;
   user_id?: number;
   phone_number?: string;
+  display_name?: string | null;
   points?: number;
   registered_at?: string;
   last_use?: string | null;
@@ -19,6 +20,13 @@ export interface EarnPointsResponse {
   message?: string;
 }
 
+export interface RedeemResponse {
+  status: string;
+  message: string;
+  code?: string;
+  points_remaining?: number;
+}
+
 export async function getMember(phone: string): Promise<MemberProfile> {
   try {
     return await apiFetch<MemberProfile>(
@@ -30,6 +38,23 @@ export async function getMember(phone: string): Promise<MemberProfile> {
     }
     throw e;
   }
+}
+
+export async function registerMember(displayName: string): Promise<MemberProfile> {
+  return apiFetch("/api/members/register", {
+    method: "POST",
+    body: JSON.stringify({ display_name: displayName }),
+  });
+}
+
+export async function updateMemberProfile(
+  phone: string,
+  displayName: string,
+): Promise<void> {
+  await apiFetch(`/api/members/${encodeURIComponent(phone)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ display_name: displayName }),
+  });
 }
 
 export async function earnPoints(payload: {
@@ -46,8 +71,8 @@ export async function earnPoints(payload: {
 export async function redeemCoupon(
   phone: string,
   promotionId: number,
-): Promise<void> {
-  await apiFetch(`/api/members/${encodeURIComponent(phone)}/redeem`, {
+): Promise<RedeemResponse> {
+  return apiFetch(`/api/members/${encodeURIComponent(phone)}/redeem`, {
     method: "POST",
     body: JSON.stringify({ promotion_id: promotionId }),
   });
