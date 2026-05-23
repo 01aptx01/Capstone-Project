@@ -227,3 +227,11 @@ INSERT INTO machine_slots (machine_code, slot_number, product_id, quantity) VALU
 ('MP1-001', 4, 4, 20),
 ('MP1-001', 5, 5, 20),
 ('MP1-001', 6, 6, 20);
+
+-- Demo member (web-ui login / profile / redeem)
+INSERT INTO users (phone_number, points, last_use, status) VALUES
+('0812345678', 150, NOW(), 'active')
+ON DUPLICATE KEY UPDATE
+  points = VALUES(points),
+  last_use = VALUES(last_use),
+  status = VALUES(status);

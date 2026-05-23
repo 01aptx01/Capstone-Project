@@ -12,6 +12,8 @@ from app.api.buy import buy_api
 from app.api.health import health_api
 from app.api.machine_events import machine_events_api
 from app.api.members import members_api
+from app.api.orders import orders_api
+from app.api.auth_otp import auth_otp_api
 from app.api.products import products_api
 from app.db_config.db import init_db
 from app.db_config.schema_repair import ensure_promotions_max_uses
@@ -68,6 +70,8 @@ def create_app() -> Flask:
     flask_app.register_blueprint(health_api)
     flask_app.register_blueprint(machine_events_api)
     flask_app.register_blueprint(members_api)
+    flask_app.register_blueprint(orders_api)
+    flask_app.register_blueprint(auth_otp_api)
 
     from app.api.admin import admin_bp
 

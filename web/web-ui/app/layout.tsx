@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
-import "./globals.css"; // นำเข้า CSS หลักตรงนี้ (ใช้ ./ เพราะอยู่โฟลเดอร์เดียวกัน)
+import Script from "next/script";
+import { UserProvider } from "@/context/UserContext";
+import "./globals.css";
 
 // ตั้งค่าฟอนต์ Noto Sans Thai (รองรับทั้งภาษาไทยและอังกฤษ)
 const notoSansThai = Noto_Sans_Thai({
@@ -23,7 +25,8 @@ export default function RootLayout({
     // นำ className ของฟอนต์มาใส่ที่แท็ก html เพื่อให้ใช้งานได้ทั้งเว็บ
     <html lang="th" className={notoSansThai.className}>
       <body className="min-h-screen antialiased flex flex-col bg-gray-50">
-        {children}
+        <Script src="https://cdn.omise.co/omise.js" strategy="afterInteractive" />
+        <UserProvider>{children}</UserProvider>
       </body>
     </html>
   );

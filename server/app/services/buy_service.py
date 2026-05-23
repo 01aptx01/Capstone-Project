@@ -223,6 +223,40 @@ class InventoryService:
             cur.close()
             db.close()
 
+    def get_order_details_by_charge_id(self, charge_id: str) -> dict | None:
+        """Return { machine_code, cart: [{product_id, quantity}] } for pickup/dispense."""
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT order_id, machine_code
+                FROM orders
+                WHERE charge_id = %s
+                """,
+                (charge_id,),
+            )
+            order = cur.fetchone()
+            if not order:
+                return None
+            cur.execute(
+                """
+                SELECT product_id, quantity
+                FROM order_items
+                WHERE order_id = %s
+                """,
+                (order["order_id"],),
+            )
+            items = cur.fetchall()
+            cart = [
+                {"product_id": int(it["product_id"]), "quantity": int(it["quantity"])}
+                for it in items
+            ]
+            return {"machine_code": order["machine_code"], "cart": cart}
+        finally:
+            cur.close()
+            db.close()
+
     def upgrade_draft_order(self, draft_id: str, real_charge_id: str, payment_method: str) -> bool:
         """เปลี่ยน Draft Order (ที่เพิ่งรอแตะบัตร) ให้มี charge_id จริงหลังจากชำระแล้ว"""
         db = self.get_db()
@@ -272,7 +306,7 @@ class InventoryService:
                     """
                     UPDATE orders
                     SET status = 'paid'
-                    WHERE charge_id = %s AND status = 'pending_payment'
+                    WHERE charge_id = %s AND status IN ('pending_payment', 'ready_to_scan')
                     """,
                     (charge_id,),
                 )
@@ -282,7 +316,7 @@ class InventoryService:
                         (charge_id,),
                     )
                     row = cur.fetchone()
-                    if row and row["status"] == "paid":
+                    if row and row["status"] in ("paid", "dispensing", "completed"):
                         logger.warning(
                             f"⚠️ [InventoryService] deduct_stock: charge {charge_id} already claimed "
                             f"(Double Dispense prevented)"
@@ -329,7 +363,7 @@ class InventoryService:
         """อัปเดต status ของออเดอร์ตาม Unified State Machine
         
         Valid statuses:
-          pending_payment | cancelled | payment_failed | paid |
+          pending_payment | cancelled | payment_failed | paid | ready_to_scan |
           dispensing | completed | dispense_failed | refunded
         """
         db = self.get_db()
