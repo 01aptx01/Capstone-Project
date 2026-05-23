@@ -1,15 +1,58 @@
+// app/(main)/layout.tsx
 "use client";
+
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { MobileHeader } from "@/components/layout/MobileHeader";
+import { DesktopHeader } from "@/components/layout/DesktopHeader";
+import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
+import { DrawerMenu } from "@/components/layout/DrawerMenu";
+import { CartProvider } from "@/context/CartContext"; 
+// 🚨 1. Import FloatingCart เข้ามา
+import { FloatingCart } from "@/components/layout/FloatingCart";
 
 export default function MainLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen flex flex-col">
-      {/* Content */}
-      <div className="flex-1">{children}</div>
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const pathname = usePathname() || "";
 
-    </div>
+  const getActiveMenu = () => {
+    if (pathname.includes("/redeem")) return "redeem";
+    if (pathname.includes("/history")) return "history";
+    if (pathname.includes("/profile")) return "profile";
+    return "home";
+  };
+
+  return (
+    <CartProvider>
+      <div className="flex flex-col w-full min-h-screen">
+        <div className="hidden md:block">
+          <DesktopHeader />
+        </div>
+
+        <MobileHeader
+          onMenuOpen={() => setDrawerOpen(!drawerOpen)}
+          isOpen={drawerOpen}
+        />
+
+        <div className="flex flex-1 overflow-hidden relative">
+          <div className="hidden md:block">
+            <DesktopSidebar active={getActiveMenu()} />
+          </div>
+
+          <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+            {children}
+          </main>
+        </div>
+
+        <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+
+        {/* 🚨 2. นำ FloatingCart มาวางไว้ล่างสุดของแอป (แต่ยังอยู่ข้างใน CartProvider) */}
+        <FloatingCart />
+      </div>
+    </CartProvider>
   );
 }

@@ -1,3 +1,5 @@
+// lib/constants.ts
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface MenuItem {
   id: number;
@@ -80,4 +82,77 @@ export const CATEGORIES: Category[] = [
   { key: "pork", label: "หมูสับ/หมูแดง" },
   { key: "veggie", label: "มังสวิรัติ" },
   { key: "sweet", label: "ไส้หวาน" },
+];
+
+// ─── Coupons ──────────────────────────────────────────────────────────────────
+// 🚨 ใช้ interface แบบสมบูรณ์ที่มีครบทุก properties 
+export interface Coupon {
+  id: number;
+  title: string;
+  description: string;
+  points: number;
+  colorBg: string; // คลาสสีของ Tailwind
+  discountValue: number; // มูลค่าส่วนลด (เพื่อให้ตะกร้ารู้ว่าลดกี่บาท)
+  expiry: string; // วันหมดอายุ
+}
+
+export const COUPONS: Coupon[] = [
+  {
+    id: 1,
+    title: "ส่วนลด 5 บาท",
+    description: "คูปองส่วนลด 5 บาท สำหรับการสั่งซื้อซาลาเปา",
+    points: 100,
+    colorBg: "bg-[#F5B041]", // สีเหลืองส้ม
+    discountValue: 5,
+    expiry: "หมดอายุ 4 พ.ค. 2026",
+  },
+  {
+    id: 2,
+    title: "ส่วนลด 10 บาท",
+    description: "คูปองส่วนลด 10 บาท สำหรับการสั่งซื้อซาลาเปา",
+    points: 180,
+    colorBg: "bg-[#FF8A33]", // สีส้ม
+    discountValue: 10,
+    expiry: "หมดอายุ 4 พ.ค. 2026",
+  },
+];
+export interface OrderHistory {
+  id: string;
+  orderNumber: string;
+  datetime: string;
+  items: string;
+  total: number;
+  status: "ready_to_scan" | "completed";
+} 
+
+// ─── Order History ────────────────────────────────────────────────────────────
+export interface OrderHistory {
+  id: string;
+  orderNumber: string;
+  datetime: string;
+  items: string;
+  total: number;
+  // 🚨 เหลือสถานะแค่ 2 แบบ
+  status: "ready_to_scan" | "completed";
+}
+
+export const ORDER_HISTORY: OrderHistory[] = [
+  // 1. สถานะ "พร้อมสแกน" (จ่ายเงินแล้ว รอไปรับของที่ตู้)
+  {
+    id: "1",
+    orderNumber: "1112", 
+    datetime: "2026-05-02 08:30",
+    items: "เปามันแกว x1, เปาหมูสับ x1",
+    total: 45,
+    status: "ready_to_scan", 
+  },
+  // 2. สถานะ "เสร็จสิ้น" (รับของที่ตู้ไปแล้ว)
+  {
+    id: "2",
+    orderNumber: "1111",
+    datetime: "2026-04-15 14:30",
+    items: "เปามดแดง x2",
+    total: 50,
+    status: "completed",
+  }
 ];
