@@ -6,7 +6,7 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
-  category: "all" | "pork" | "veggie";
+  category: "all" | "pork" | "veggie" | "sweet";
   image: string; // placeholder color
 }
 

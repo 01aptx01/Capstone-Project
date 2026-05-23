@@ -1,10 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { MenuItem } from "@/lib/constants";
 
 interface BaoImageProps {
-  item: MenuItem;
+  item: { name: string; image: string };
   className?: string;
 }
 
@@ -28,9 +27,26 @@ const BAO_IMAGES: Record<string, string> = {
  */
 export function BaoImage({ item, className = "" }: BaoImageProps) {
   const imagePath = BAO_IMAGES[item.name];
-  const fallbackColor = item.image; // hex color จาก constants
+  const fallbackColor = item.image;
 
-  // ถ้ามีรูป ใช้รูป; ไม่เท่า ใช้ gradient fallback
+  if (
+    item.image &&
+    (item.image.startsWith("http") || item.image.startsWith("/"))
+  ) {
+    return (
+      <div className={`relative w-full h-full overflow-hidden ${className}`}>
+        <Image
+          src={item.image}
+          alt={item.name}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 300px"
+          unoptimized
+        />
+      </div>
+    );
+  }
+
   if (imagePath) {
     return (
       <div className={`relative w-full h-full overflow-hidden ${className}`}>
