@@ -535,6 +535,22 @@ class BuyController:
 
     def mock_pay(self):
         """Development Bypass for Payment"""
+        import os
+
+        allow = os.environ.get("ALLOW_MOCK_PAY", "1").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        flask_env = os.environ.get("FLASK_ENV", "").strip().lower()
+        if flask_env == "production" or not allow:
+            return jsonify(
+                {
+                    "error": "forbidden",
+                    "message": "mock-pay is disabled in this environment",
+                }
+            ), 403
+
         data = request.get_json(silent=True)
         if not isinstance(data, dict):
             return jsonify({"status": "ERROR", "message": "Invalid JSON body"}), 400

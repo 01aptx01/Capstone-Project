@@ -8,7 +8,11 @@ import React, {
   useState,
 } from "react";
 import { getMember, type MemberProfile } from "@/lib/api/members";
-import { getPhoneFromCookie, saveSession, clearSession } from "@/lib/auth/session";
+import {
+  getPhoneFromCookie,
+  saveSession,
+  clearSession,
+} from "@/lib/auth/session";
 
 interface UserContextType {
   phone: string | null;
@@ -17,7 +21,7 @@ interface UserContextType {
   displayName: string;
   setDisplayName: (name: string) => void;
   loadMember: () => Promise<void>;
-  loginWithPhone: (phone: string, displayName?: string) => void;
+  loginWithPhone: (phone: string, accessToken: string, displayName?: string) => void;
   logout: () => void;
 }
 
@@ -26,7 +30,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [phone, setPhone] = useState<string | null>(null);
   const [profile, setProfile] = useState<MemberProfile | null>(null);
-  const [displayName, setDisplayName] = useState("มดเปา");
+  const [displayName, setDisplayName] = useState("สมาชิก");
   const [isLoading, setIsLoading] = useState(true);
 
   const loadMember = useCallback(async () => {
@@ -42,6 +46,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await getMember(stored);
       setProfile(data.found ? data : null);
+      if (data.found && data.display_name) {
+        setDisplayName(data.display_name);
+      }
     } catch {
       setProfile(null);
     } finally {
@@ -53,8 +60,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     void loadMember();
   }, [loadMember]);
 
-  const loginWithPhone = (nextPhone: string, name?: string) => {
-    saveSession(nextPhone);
+  const loginWithPhone = (
+    nextPhone: string,
+    accessToken: string,
+    name?: string,
+  ) => {
+    saveSession(nextPhone, accessToken);
     setPhone(nextPhone);
     if (name) setDisplayName(name);
     void loadMember();

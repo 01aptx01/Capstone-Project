@@ -8,7 +8,7 @@ import { redeemCoupon } from "@/lib/api/members";
 import { useUser } from "@/context/UserContext";
 
 export default function RedeemPage() {
-  const { phone, profile } = useUser();
+  const { phone, profile, loadMember } = useUser();
   const [coupons, setCoupons] = useState<RedeemableCoupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -32,12 +32,12 @@ export default function RedeemPage() {
     if (!phone) return;
     setMessage(null);
     try {
-      await redeemCoupon(phone, promotionId);
+      const res = await redeemCoupon(phone, promotionId);
+      setMessage(res.message || "แลกคูปองสำเร็จ");
+      await loadMember();
     } catch (err) {
       setMessage(
-        err instanceof Error
-          ? err.message
-          : "ระบบแลกคูปองยังไม่พร้อม (501)",
+        err instanceof Error ? err.message : "แลกคูปองไม่สำเร็จ",
       );
     }
   };
