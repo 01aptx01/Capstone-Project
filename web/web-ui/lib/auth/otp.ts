@@ -1,25 +1,31 @@
 import { apiFetch } from "@/lib/api/client";
 
-export async function sendOtp(_phone: string): Promise<void> {
-  // TODO: integrate SMS provider
-  try {
-    await apiFetch("/api/auth/otp/send", {
-      method: "POST",
-      body: JSON.stringify({ phone_number: _phone }),
-    });
-  } catch {
-    // Stub endpoint may return 501 — ignore until implemented
-  }
+export interface SendOtpResponse {
+  status: string;
+  expires_in: number;
+  delivery?: string;
 }
 
-export async function verifyOtp(_phone: string, _code: string): Promise<void> {
-  // TODO: verify OTP code
-  try {
-    await apiFetch("/api/auth/otp/verify", {
-      method: "POST",
-      body: JSON.stringify({ phone_number: _phone, code: _code }),
-    });
-  } catch {
-    // Stub endpoint may return 501 — ignore until implemented
-  }
+export interface VerifyOtpResponse {
+  status: string;
+  access_token: string;
+  token_type: string;
+  phone_number: string;
+}
+
+export async function sendOtp(phone: string): Promise<SendOtpResponse> {
+  return apiFetch<SendOtpResponse>("/api/auth/otp/send", {
+    method: "POST",
+    body: JSON.stringify({ phone_number: phone }),
+  });
+}
+
+export async function verifyOtp(
+  phone: string,
+  code: string,
+): Promise<VerifyOtpResponse> {
+  return apiFetch<VerifyOtpResponse>("/api/auth/otp/verify", {
+    method: "POST",
+    body: JSON.stringify({ phone_number: phone, code }),
+  });
 }

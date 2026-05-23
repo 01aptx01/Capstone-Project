@@ -1,4 +1,5 @@
 import { API_URL } from "@/lib/config";
+import { getTokenFromCookie } from "@/lib/auth/session";
 
 export class ApiError extends Error {
   constructor(
@@ -16,12 +17,18 @@ export async function apiFetch<T>(
   init?: RequestInit,
 ): Promise<T> {
   const url = path.startsWith("http") ? path : `${API_URL}${path}`;
+  const token = typeof document !== "undefined" ? getTokenFromCookie() : null;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
   const res = await fetch(url, {
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
   });
 
   const text = await res.text();

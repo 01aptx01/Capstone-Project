@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { EditProfileModal } from "@/components/Ui/EditProfileModal";
 import { useUser } from "@/context/UserContext";
+import { updateMemberProfile } from "@/lib/api/members";
 import { clearSession } from "@/lib/auth/session";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { phone, profile, displayName, setDisplayName, isLoading, logout } =
+  const { phone, profile, displayName, setDisplayName, isLoading, logout, loadMember } =
     useUser();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [avatar, setAvatar] = useState("👧");
@@ -39,11 +40,19 @@ export default function ProfilePage() {
     },
   ];
 
-  const handleSaveProfile = (
+  const handleSaveProfile = async (
     newName: string,
     newAvatar: string,
     _file: File | null,
   ) => {
+    if (phone) {
+      try {
+        await updateMemberProfile(phone, newName);
+        await loadMember();
+      } catch {
+        /* keep local name on API failure */
+      }
+    }
     setDisplayName(newName);
     setAvatar(newAvatar);
     setIsEditModalOpen(false);
