@@ -1,17 +1,19 @@
-// app/(auth)/login/page.tsx
 "use client";
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { sendOtp, verifyOtp } from "@/lib/auth/otp";
+import { AUTH_DEV_BYPASS } from "@/lib/config";
+import { getMember } from "@/lib/api/members";
+import { useUser } from "@/context/UserContext";
 
-// ฟังก์ชันเซ็ต cookie อย่างง่าย
-function saveToken(token: string) {
-  // กำหนดอายุ 7 วัน (604800 วินาที)
-  document.cookie = `token=${token}; path=/; max-age=604800; SameSite=Lax`;
+function normalizePhone(raw: string): string {
+  return raw.replace(/\D/g, "").slice(0, 10);
 }
 
 export default function LoginPage() {
   const router = useRouter();
+  const { loginWithPhone } = useUser();
 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -21,35 +23,71 @@ export default function LoginPage() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
   
   const [step, setStep] = useState(1);
-  
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const otpRefs = [
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null),
   ];
 
-  const handleAction = (e: React.FormEvent) => {
+  const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
-    if (step === 1 && phoneNumber) {
-      setStep(2);
-    } else if (step === 2) {
+    if (step === 1) {
+      const phone = normalizePhone(phoneNumber);
+      if (phone.length !== 10) {
+        setFormError("กรุณากรอกเบอร์โทร 10 หลัก");
+        return;
+      }
+      setPhoneNumber(phone);
+      setIsSubmitting(true);
+      try {
+        await sendOtp(phone);
+        setStep(2);
+      } catch {
+        setFormError("ส่ง OTP ไม่สำเร็จ");
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    if (step === 2) {
       const otpString = otp.join("");
-      if (otpString.length === 6) {
-        
-        // 🚨 [จำลองเงื่อนไข] ถ้าเบอร์ลงท้ายด้วย 9 ถือว่าเป็นผู้ใช้เก่า -> เข้า Home ทันที
-        if (phoneNumber.endsWith("9")) {
-          saveToken("mock-token-existing-user");
+      if (otpString.length !== 6) return;
+
+      const phone = normalizePhone(phoneNumber);
+      setIsSubmitting(true);
+      try {
+        if (!AUTH_DEV_BYPASS) {
+          await verifyOtp(phone, otpString);
+        }
+
+        const member = await getMember(phone);
+        if (member.found) {
+          loginWithPhone(phone);
+          router.push("/home");
+        } else if (AUTH_DEV_BYPASS) {
+          loginWithPhone(phone);
           router.push("/home");
         } else {
-          // นอกนั้นถือว่าเป็นผู้ใช้ใหม่ -> ไปหน้าสร้างโปรไฟล์ (Step 3)
           setStep(3);
         }
+      } catch (err) {
+        setFormError(
+          err instanceof Error ? err.message : "ยืนยัน OTP ไม่สำเร็จ",
+        );
+      } finally {
+        setIsSubmitting(false);
       }
-    } else if (step === 3 && displayName) {
-      // 🚨 บันทึกโปรไฟล์ (จำลอง) แล้วเข้า Home
-      saveToken("mock-token-new-user");
-      // ในอนาคตคุณสามารถส่ง displayName และ profileImage ไปเซฟที่ Backend ได้ตรงนี้
+      return;
+    }
+
+    if (step === 3 && displayName) {
+      const phone = normalizePhone(phoneNumber);
+      loginWithPhone(phone, displayName);
       router.push("/home");
     }
   };
@@ -103,8 +141,10 @@ export default function LoginPage() {
             <h1 className="text-3xl font-extrabold text-[#2F4858] tracking-widest uppercase">MOD PAO</h1>
           </div>
 
-          <form className="flex-1 flex flex-col" onSubmit={handleAction}>
-            
+          <form className="flex-1 flex flex-col" onSubmit={(e) => void handleAction(e)}>
+            {formError && (
+              <p className="text-red-500 text-sm font-bold text-center mb-4">{formError}</p>
+            )}
             {/* STEP 1: เบอร์โทร */}
             {step === 1 && (
               <div className="flex flex-col flex-1 animate-fade-in">
@@ -123,8 +163,8 @@ export default function LoginPage() {
                   />
                 </div>
                 <div className="mt-auto md:mt-4">
-                  <button type="submit" className="w-full bg-[#FF8A33] text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(255,138,51,0.3)] hover:bg-orange-500 active:scale-[0.98] transition-all">
-                    ขอรหัส OTP
+                  <button type="submit" disabled={isSubmitting} className="w-full bg-[#FF8A33] text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(255,138,51,0.3)] hover:bg-orange-500 active:scale-[0.98] transition-all disabled:opacity-60">
+                    {isSubmitting ? "กำลังส่ง..." : "ขอรหัส OTP"}
                   </button>
                 </div>
               </div>
@@ -150,8 +190,8 @@ export default function LoginPage() {
                   </button>
                 </div>
                 <div className="mt-auto md:mt-4 flex flex-col gap-4 items-center">
-                  <button type="submit" disabled={otp.join("").length !== 6} className="w-full bg-[#FF8A33] disabled:bg-gray-300 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(255,138,51,0.3)] hover:bg-orange-500 active:scale-[0.98] transition-all">
-                    ยืนยันเข้าสู่ระบบ
+                  <button type="submit" disabled={otp.join("").length !== 6 || isSubmitting} className="w-full bg-[#FF8A33] disabled:bg-gray-300 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(255,138,51,0.3)] hover:bg-orange-500 active:scale-[0.98] transition-all">
+                    {isSubmitting ? "กำลังตรวจสอบ..." : "ยืนยันเข้าสู่ระบบ"}
                   </button>
                   <button type="button" className="text-sm font-bold text-[#A0AABF] hover:text-gray-600 underline underline-offset-4 decoration-2 decoration-gray-300">
                     ส่งรหัสใหม่อีกครั้ง
