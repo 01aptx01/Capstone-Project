@@ -9,18 +9,7 @@ import "./globals.css";
 import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer, } from "lucide-react";
 import { useJobSocket, AgentJobState } from "../hooks/useJobSocket";
 
-type ModalType =
-  | "none"
-  | "info"
-  | "usage"
-  | "numpad"
-  | "contact"
-  | "coupon"
-  | "payment"
-  | "processing"
-  | "points_result"
-  | "limit_warning"
-  | "stock_limit_warning";
+type ModalType = | "none" | "info" | "usage" | "numpad" | "contact" | "coupon" | "payment" | "processing" | "points_result" | "limit_warning" | "stock_limit_warning";
 type PaymentMethod = "promptpay" | "truemoney" | "card";
 const PROCESS_STEPS = [
   "กำลังนำเข้าเตาอุ่น",
@@ -543,9 +532,9 @@ export default function VendingPage() {
   // NFC Reader Listener (จำลองการพิมพ์จากเครื่องอ่าน NFC) สำหรับบัตรเครดิตต่างๆ
   useEffect(() => {
     if (
-      activeModal === "payment" && 
-      selectedPaymentMethod !== null && 
-      selectedPaymentMethod !== "promptpay" && 
+      activeModal === "payment" &&
+      selectedPaymentMethod !== null &&
+      selectedPaymentMethod !== "promptpay" &&
       paymentStep === 2
     ) {
       let nfcBuffer = "";
@@ -568,7 +557,7 @@ export default function VendingPage() {
             setIsNfcBlocked(true);
             if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
             nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
-            
+
             simulateNfcTap("visa");
             nfcBuffer = "";
           }
@@ -585,9 +574,9 @@ export default function VendingPage() {
   // Polling สำหรับ Hardware NFC Tap (จาก Python Agent / MFRC522)
   useEffect(() => {
     if (
-      activeModal === "payment" && 
-      selectedPaymentMethod !== null && 
-      selectedPaymentMethod !== "promptpay" && 
+      activeModal === "payment" &&
+      selectedPaymentMethod !== null &&
+      selectedPaymentMethod !== "promptpay" &&
       paymentStep === 2
     ) {
       const pollNfc = async () => {
