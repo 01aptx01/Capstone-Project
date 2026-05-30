@@ -12,8 +12,8 @@ function socketBaseUrl(): string {
 
 /**
  * Singleton Socket.IO client for admin dashboard.
- * Auth: when server sets ADMIN_SOCKET_SECRET, send auth.admin_token matching that value
- * (often stored in localStorage as `admin_token`). Otherwise dev mode accepts { role: "admin" }.
+ * Auth: ส่ง JWT ของ admin (จาก localStorage `admin_token`) ไปทาง auth.admin_token
+ * ฝั่ง server จะ decode + ตรวจ JWT ก่อนให้เข้าห้อง admin (ดู _verify_admin_auth)
  */
 export function getAdminSocket(): Socket {
   if (socket?.connected) return socket;
@@ -21,7 +21,8 @@ export function getAdminSocket(): Socket {
   const url = socketBaseUrl();
   const token =
     typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
-  const auth = token ? { admin_token: token } : { role: "admin" as const };
+  // ส่ง JWT เสมอ (ถ้าไม่มี token จะถูก server ปฏิเสธ — ถูกต้องเพราะต้อง login ก่อน)
+  const auth = { admin_token: token || "" };
 
   socket = io(url, {
     path: "/socket.io/",
