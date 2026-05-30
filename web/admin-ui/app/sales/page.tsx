@@ -2,6 +2,7 @@
 
 import PageWrapper from "@/components/layout/PageWrapper";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
+import { useRouter } from "next/navigation";
 import ReportCard from "@/components/dashboard/ReportCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -13,6 +14,7 @@ import { useLang } from "@/lib/i18n/lang";
 export default function SalesPage() {
   const { openExportModal } = useUI();
   const { t } = useLang();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -185,13 +187,23 @@ export default function SalesPage() {
     <PageWrapper>
       {/* ── Header ── */}
       <div className="flex items-center justify-between animate-in opacity-0">
-        <div>
-          <h1 className="text-[36px] font-black text-[var(--text)] mb-2 tracking-tight">
-            {t("page.sales.title")}
-          </h1>
-          <p className="text-[var(--text-muted)] text-[16px] font-medium">
-            {t("page.sales.subtitle")}
-          </p>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="w-10 h-10 rounded-xl bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] hover:bg-[var(--surface-1)] hover:text-[var(--text)] hover:border-[var(--primary)]/30 transition-all active:scale-95 shrink-0"
+            aria-label="ย้อนกลับ"
+          >
+            <i className="fi fi-rr-arrow-small-left text-xl"></i>
+          </button>
+          <div>
+            <h1 className="text-[36px] font-black text-[var(--text)] mb-2 tracking-tight">
+              {t("page.sales.title")}
+            </h1>
+            <p className="text-[var(--text-muted)] text-[16px] font-medium">
+              {t("page.sales.subtitle")}
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
@@ -317,11 +329,10 @@ export default function SalesPage() {
                   t("page.sales.col.machine"),
                   t("page.sales.col.amount"),
                   t("page.sales.col.status"),
-                  t("page.sales.col.details"),
                 ].map((h) => (
                   <th
                     key={h}
-                    className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap last:text-right"
+                    className="px-8 py-5 text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest text-left whitespace-nowrap"
                   >
                     {h}
                   </th>
@@ -331,7 +342,7 @@ export default function SalesPage() {
             <tbody className="divide-y divide-[var(--border)]">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="p-0">
+                  <td colSpan={5} className="p-0">
                     <div className="min-h-[320px]">
                       <LoadingSpinner />
                     </div>
@@ -339,7 +350,7 @@ export default function SalesPage() {
                 </tr>
               ) : filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-16 text-center">
+                  <td colSpan={5} className="px-8 py-16 text-center">
                     <p className="text-lg font-black text-[var(--text)]">
                       {t("page.orders.empty")}
                     </p>
@@ -379,11 +390,6 @@ export default function SalesPage() {
                       </span>
                     </td>
                     <td className="px-8 py-5">{getStatusBadge(o.status)}</td>
-                    <td className="px-8 py-5 text-right">
-                      <button className="w-10 h-10 rounded-xl bg-[var(--surface-1)] border border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-orange-200 transition-all shadow-sm ml-auto">
-                        <i className="fi fi-rr-arrow-right text-lg"></i>
-                      </button>
-                    </td>
                   </tr>
                 ))
               )}
