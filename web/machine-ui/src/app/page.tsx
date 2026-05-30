@@ -1,1105 +1,164 @@
 "use client";
-import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import ProductCard, { Product } from "../components/ProductCard";
-import CartSidebar, { CartItem } from "../components/CartSidebar";
-import CouponModal, { type AppliedCoupon } from "../components/CouponModal";
+import React, { useState, useRef } from "react";
 import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
-import { BanknoteArrowUp, Check, CreditCard, Nfc, PackageOpen, PhoneCall, ScanLine, Smartphone, SquareDashedMousePointer, } from "lucide-react";
-import { useJobSocket, AgentJobState } from "../hooks/useJobSocket";
 
-type ModalType = | "none" | "info" | "usage" | "numpad" | "contact" | "coupon" | "payment" | "processing" | "points_result" | "limit_warning" | "stock_limit_warning";
-type PaymentMethod = "promptpay" | "truemoney" | "card";
-const PROCESS_STEPS = [
-  "กำลังนำเข้าเตาอุ่น",
-  "กำลังอุ่น",
-  "กำลังเสิร์ฟ",
-  "พร้อมทาน",
-];
+// ==========================================
+// Types & Constants
+// ==========================================
+import type { ModalType } from "../types";
+import { DEFAULT_MACHINE_CODE, NUMPAD_COUNTDOWN_SECONDS } from "../constants";
 
-// สไตล์ปุ่ม Test เพื่อลดความซ้ำซ้อนใน JSX
-const testBtnStyle: React.CSSProperties = {
-  padding: "10px",
-  background: "#22c55e",
-  color: "white",
-  borderRadius: "12px",
-  width: "100%",
-  fontWeight: "bold",
-  fontSize: "18px",
-  border: "none",
-  cursor: "pointer",
-};
+// ==========================================
+// Existing Components
+// ==========================================
+import ProductCard from "../components/ProductCard";
+import CartSidebar from "../components/CartSidebar";
+import CouponModal from "../components/CouponModal";
 
-const DEFAULT_MACHINE_CODE =
-  (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) || "MP1-001";
+// ==========================================
+// Modal Components
+// ==========================================
+import InfoModal from "../components/modals/InfoModal";
+import UsageModal from "../components/modals/UsageModal";
+import NumpadModal from "../components/modals/NumpadModal";
+import PointsResultModal from "../components/modals/PointsResultModal";
+import ContactModal from "../components/modals/ContactModal";
+import LimitWarningModal from "../components/modals/LimitWarningModal";
+import PaymentModal from "../components/modals/PaymentModal";
+import ProcessingModal from "../components/modals/ProcessingModal";
 
-function clampCartToCatalog(prev: CartItem[], catalog: Product[]): CartItem[] {
-  const byId = new Map(catalog.map((p) => [p.id, p]));
-  const next: CartItem[] = [];
-  for (const item of prev) {
-    const fresh = byId.get(item.id);
-    if (!fresh || fresh.stock <= 0) continue;
-    const qty = Math.min(item.qty, fresh.stock);
-    if (qty > 0) {
-      next.push({ ...item, ...fresh, qty });
-    }
-  }
-  return next;
-}
+// ==========================================
+// Custom Hooks
+// ==========================================
+import { useJobSocket } from "../hooks/useJobSocket";
+import { useCart } from "../hooks/useCart";
+import { useCoupon } from "../hooks/useCoupon";
+import { usePayment } from "../hooks/usePayment";
+import { useHeatingProcess } from "../hooks/useHeatingProcess";
+import { useMember } from "../hooks/useMember";
 
 export default function VendingPage() {
   const machineCode = DEFAULT_MACHINE_CODE;
+
   // ==========================================
-  // APPLICATION STATES
+  // PAGE-LEVEL STATE (cross-cutting concerns)
   // ==========================================
-  const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
   const [activeModal, setActiveModal] = useState<ModalType>("none");
-  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
-  const [phoneNumber, setPhoneNumber] = useState("");
-
-  // -- Payment States --
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
-  const [isOmiseLoaded, setIsOmiseLoaded] = useState(false); // เช็คว่า Omise โหลดเสร็จหรือยัง
-  const [realQrCode, setRealQrCode] = useState<string | null>(null); // เก็บ QR Code จริงจาก Backend
-  // Card network detection is intentionally omitted — Omise token/charge handles brand internally.
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเก็บรอบการดึงสถานะจ่ายเงิน
-  const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const currentChargeIdRef = useRef<string | null>(null); // เก็บค่าล่าสุดไว้ใช้ใน setInterval/setTimeout
-  const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
-  const nfcBlockTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const [isNfcBlocked, setIsNfcBlocked] = useState(false);
-
-  // -- Agent Job (Hardware) States --
-  // These are now driven by the useJobSocket hook below (Socket.IO → Server)
-  // instead of EventSource → local Agent SSE endpoint.
-
-  // -- Flow & Queue States --
   const [isAfterPayment, setIsAfterPayment] = useState(false);
-  /** เริ่มนับเวลา/สเต็ปอุ่นแล้วระหว่างหน้าสะสมแต้ม (ไม่ต้องรอปิด numpad) */
-  const heatingTimelineStartedRef = useRef(false);
-  const [queue, setQueue] = useState<Product[]>([]);
-  const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมด
-  const [isInitialStep1Delay, setIsInitialStep1Delay] = useState(false); // ช่วง 2-3 วินาทีแรก (Step 1 hold)
-
-  // -- Timers States --
-  const [paymentCountdown, setPaymentCountdown] = useState<number>(180);
-  const [pointsCountdown, setPointsCountdown] = useState<number>(10);
-  const [numpadCountdown, setNumpadCountdown] = useState<number>(60);
-
-  // -- Member / Points States --
-  const [memberPoints, setMemberPoints] = useState<number | null>(null);
-  const [earnedPoints, setEarnedPoints] = useState<number>(0);
-  const [isNewMember, setIsNewMember] = useState<boolean>(false);
-  const [isMemberLoading, setIsMemberLoading] = useState<boolean>(false);
-  const [memberError, setMemberError] = useState<string | null>(null);
   const [stockLimitMessage, setStockLimitMessage] = useState("");
   const totalPriceRef = useRef<number>(0);
 
-  const attemptClosePaymentModal = () => {
-    if (paymentStep === 2) {
-      setIsCancelPaymentConfirmOpen(true);
-      return;
-    }
-    cancelAndClosePaymentModal();
-  };
-
-  const confirmCancelPayment = async () => {
-    setIsCancelPaymentConfirmOpen(false);
-    await cancelAndClosePaymentModal();
-  };
-
-  const cancelAndClosePaymentModal = async () => {
-    const chargeIdToCancel = currentChargeIdRef.current;
-    if (chargeIdToCancel) {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        await fetch(`${apiUrl}/api/buy/cancel`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ charge_id: chargeIdToCancel }),
-        });
-        console.log(`[Frontend] Auto-Cancelled order for charge: ${chargeIdToCancel}`);
-      } catch (err) {
-        console.error("[Frontend] Cancel API error:", err);
-      }
-    }
-    closePaymentModal();
-  };
-
-  const dismissCancelPaymentConfirm = () => {
-    setIsCancelPaymentConfirmOpen(false);
-  };
-
-  useEffect(() => {
-    if (activeModal !== "payment" || paymentStep === 1) {
-      setIsCancelPaymentConfirmOpen(false);
-    }
-  }, [activeModal, paymentStep]);
-
-  // Sync state to ref for timers
-  useEffect(() => {
-    currentChargeIdRef.current = currentChargeId;
-  }, [currentChargeId]);
+  // Ref for deferred payment success handler (breaks circular hook dependencies)
+  const paymentSuccessHandlerRef = useRef<() => void>(() => {});
 
   // ==========================================
-  // SOCKET.IO JOB STATE (replaces local Agent SSE)
+  // HOOKS
   // ==========================================
-  // Connect to Server Socket.IO and listen for job_event_broadcast events
-  // in the machine's room — no direct connection to the local agent needed.
+  const {
+    products, cart, setCart, isLoadingProducts,
+    fetchProducts, handleAddToCart, handleIncrease, handleDecrease, handleRemove,
+    stockById, totalPrice, totalHeatingTime,
+  } = useCart({
+    machineCode,
+    onCartLimitReached: () => setActiveModal("limit_warning"),
+    onStockLimitReached: (msg) => {
+      setStockLimitMessage(msg);
+      setActiveModal("stock_limit_warning");
+    },
+  });
+
+  const { appliedCoupon, setAppliedCoupon, payableTotal } = useCoupon(cart, machineCode, totalPrice);
+
+  const payment = usePayment({
+    activeModal,
+    setActiveModal,
+    cart,
+    payableTotal,
+    appliedCoupon,
+    machineCode,
+    onPaymentSuccess: () => paymentSuccessHandlerRef.current(),
+  });
+
   const {
     agentJobState,
     agentCurrentItemIndex,
     globalTimeLeft: socketGlobalTimeLeft,
-    isConnected: isServerSocketConnected,
   } = useJobSocket({
-    activeJobId: (isAfterPayment || activeModal === "processing") ? currentChargeId : null,
+    activeJobId: (isAfterPayment || activeModal === "processing") ? payment.currentChargeId : null,
   });
 
-  // Sync socket-driven remaining time into local globalTimeLeft state
-  // (fallback local timer still runs if socket has no data yet)
-  useEffect(() => {
-    if ((isAfterPayment || activeModal === "processing") && agentJobState) {
-      setGlobalTimeLeft(socketGlobalTimeLeft);
-    }
-  }, [socketGlobalTimeLeft, activeModal, isAfterPayment, agentJobState]);
+  const heating = useHeatingProcess({
+    activeModal,
+    setActiveModal,
+    isAfterPayment,
+    setIsAfterPayment,
+    agentJobState,
+    agentCurrentItemIndex,
+    socketGlobalTimeLeft,
+    fetchProducts,
+  });
+
+  const member = useMember({
+    activeModal,
+    setActiveModal,
+    isAfterPayment,
+    currentChargeId: payment.currentChargeId,
+    totalPriceRef,
+    onStartHeating: heating.startHeatingProcess,
+  });
 
   // ==========================================
-  // DERIVED DATA (คำนวณค่าจาก State อัตโนมัติ)
+  // PAYMENT SUCCESS ORCHESTRATOR
   // ==========================================
-  // ==========================================
-  // DISPENSE TIMELINE — pre-calculate non-overlapping 2s windows per item
-  // ==========================================
-  const STEP1_DELAY = 2; // seconds for initial Step 1 hold
-  const DISPENSE_WINDOW = 2; // seconds each item gets for its "serving" label
-  const STEP4_HOLD = 3; // seconds to hold the Step 3 (กำลังเสิร์ฟ) state
-  const FINAL_STEP_HOLD = 3; // seconds to hold Step 4 (พร้อมทาน) state before completing
-  /** บวก 3 วินาทีต่อ 1 ประเภทเวลาอุ่น (ค่า heatingTime ที่ไม่ซ้ำในรถเข็น) */
-  const SECONDS_PER_HEATING_TIME_TYPE = 3;
-
-  /**
-   * เวลารอประมาณในรถเข็น: เวลาอุ่นมากที่สุด + (3 × จำนวนประเภทเวลาอุ่น)
-   * แยกจาก calculateTotalProcessTime ที่ใช้ timeline หลังชำระเงิน
-   */
-  const estimateApproxWaitSeconds = (q: Product[]): number => {
-    if (q.length === 0) return 0;
-    const times = q.map((p) => p.heatingTime);
-    return Math.max(...times) + SECONDS_PER_HEATING_TIME_TYPE * new Set(times).size;
-  };
-
-  /**
-   * Build a schedule array: for each item in the sorted queue,
-   * assign a non-overlapping 2s dispense window.
-   * Items are sorted by heatingTime ascending.
-   * If two items finish at the same time, their windows are queued sequentially.
-   */
-  const buildDispenseSchedule = (q: Product[]) => {
-    const schedule: { itemIndex: number; startTime: number; endTime: number }[] = [];
-    let nextAvailable = 0; // earliest time a new window can start
-    for (let i = 0; i < q.length; i++) {
-      const finishTime = q[i].heatingTime;
-      const windowStart = Math.max(finishTime, nextAvailable);
-      const windowEnd = windowStart + DISPENSE_WINDOW;
-      schedule.push({ itemIndex: i, startTime: windowStart, endTime: windowEnd });
-      nextAvailable = windowEnd;
-    }
-    return schedule;
-  };
-
-  const dispenseSchedule = useMemo(() => buildDispenseSchedule(queue), [queue]);
-
-  const calculateTotalProcessTime = (q: Product[]) => {
-    if (q.length === 0) return 0;
-    const schedule = buildDispenseSchedule(q);
-    // The last dispense window end marks when all items have been shown
-    const lastWindowEnd = schedule.length > 0 ? schedule[schedule.length - 1].endTime : 0;
-    // Total = Step1 delay + all dispense windows done + Step4 hold + Final Step hold
-    return STEP1_DELAY + lastWindowEnd + STEP4_HOLD + FINAL_STEP_HOLD;
-  };
-
-  const totalHeatingTime = estimateApproxWaitSeconds(
-    cart.flatMap((item) => Array.from({ length: item.qty }, () => item))
-  );
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
-
-  const cartSignature = useMemo(
-    () =>
-      cart
-        .map((item) => `${item.id}:${item.qty}`)
-        .sort()
-        .join("|"),
-    [cart],
-  );
-
-  /** ล้างคูปองเมื่อตะกร้าว่าง; เมื่อมีสินค้าและมีคูปอง — คำนวณยอดใหม่กับตะกร้าปัจจุบัน (ไม่ล้างเพราะแค่เพิ่มของ) */
-  useEffect(() => {
-    if (cart.length === 0) {
-      setAppliedCoupon(null);
-      return;
-    }
-    if (!appliedCoupon?.code) return;
-
-    const code = appliedCoupon.code;
-    let cancelled = false;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const payloadCart = cart.map((item) => ({ product_id: item.id, quantity: item.qty }));
-
-    void (async () => {
-      try {
-        const res = await fetch(`${apiUrl}/api/buy/validate-coupon`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            code,
-            machine_code: machineCode,
-            cart: payloadCart,
-          }),
-        });
-        const data = await res.json();
-        if (cancelled) return;
-        if (!data.valid) {
-          setAppliedCoupon(null);
-          return;
-        }
-        setAppliedCoupon((prev) => {
-          if (!prev || prev.code !== code) return prev;
-          return {
-            ...prev,
-            subtotal_thb: data.subtotal_thb,
-            discount_thb: data.discount_thb,
-            final_thb: data.final_thb,
-            label_th: data.label_th,
-            points_cost: data.points_cost ?? prev.points_cost,
-          };
-        });
-      } catch {
-        if (!cancelled) setAppliedCoupon(null);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cartSignature, cart.length, appliedCoupon?.code, machineCode]);
-
-  const payableTotal = useMemo(() => {
-    if (appliedCoupon && cart.length > 0) return appliedCoupon.final_thb;
-    return totalPrice;
-  }, [appliedCoupon, cart.length, totalPrice]);
-
-  const totalProcessTime = calculateTotalProcessTime(queue);
-
-  // Check if this is a multi-flavor order (more than 1 unique heatingTime across items)
-  const isMultiFlavor = useMemo(() => {
-    if (queue.length <= 1) return false;
-    const uniqueTimes = new Set(queue.map((it) => it.heatingTime));
-    return uniqueTimes.size > 1;
-  }, [queue]);
-
-  // ฟังก์ชันหาว่าตอนนี้อยู่สเต็ปไหนของการอุ่น (Fallback UI)
-  const getProcessStatus = (): { step: number; itemIndex: number; isDispensingItem: boolean } => {
-    if (queue.length === 0) return { step: 0, itemIndex: 0, isDispensingItem: false };
-    if (globalTimeLeft <= 0) return { step: 4, itemIndex: queue.length - 1, isDispensingItem: false };
-    if (globalTimeLeft > totalProcessTime) return { step: 0, itemIndex: 0, isDispensingItem: false };
-
-    const elapsedTime = totalProcessTime - globalTimeLeft;
-    const N = queue.length;
-
-    // Phase 1: Initial 2-second hold on Step 1 (กำลังนำเข้าเตาอุ่น)
-    if (elapsedTime < STEP1_DELAY) {
-      return { step: 0, itemIndex: 0, isDispensingItem: false };
-    }
-
-    const heatingElapsed = elapsedTime - STEP1_DELAY;
-    const lastWindow = dispenseSchedule[N - 1];
-
-    // Phase 4: Hold at Step 4 (พร้อมทาน) for FINAL_STEP_HOLD seconds
-    if (heatingElapsed >= lastWindow.endTime + STEP4_HOLD) {
-      return { step: 3, itemIndex: N - 1, isDispensingItem: false };
-    }
-
-    // Phase 3: All dispense windows done → hold Step 3 for STEP4_HOLD seconds
-    if (heatingElapsed >= lastWindow.endTime) {
-      return { step: 2, itemIndex: N - 1, isDispensingItem: true };
-    }
-
-    // Phase 2.b: Check the final item’s window — transition to step 2 (Step 3)
-    if (heatingElapsed >= lastWindow.startTime && heatingElapsed < lastWindow.endTime) {
-      return { step: 2, itemIndex: N - 1, isDispensingItem: true };
-    }
-
-    // Phase 2.a: Heating — find if any non-final item is in its scheduled window
-    for (let i = 0; i < N - 1; i++) {
-      const win = dispenseSchedule[i];
-      if (heatingElapsed >= win.startTime && heatingElapsed < win.endTime) {
-        return { step: 1, itemIndex: i, isDispensingItem: true };
-      }
-    }
-
-    // Between windows or before first window: heating, no label
-    return { step: 1, itemIndex: 0, isDispensingItem: false };
-  };
-
-  const mapAgentStateToStep = (state: AgentJobState): number => {
-    if (state === "TRANSFER_TO_OVEN") return 0;
-    if (state === "HEATING") return 1;
-    if (state === "DISPENSING") return 2;
-    return 3; // DONE / ERROR
-  };
-
-  const fallbackStatus = getProcessStatus();
-  const currentStep = agentJobState ? mapAgentStateToStep(agentJobState) : fallbackStatus.step;
-  const currentItemIndex = agentJobState ? agentCurrentItemIndex : fallbackStatus.itemIndex;
-  const isDispensingItem = agentJobState ? (agentJobState === "DISPENSING") : fallbackStatus.isDispensingItem;
-
-  const isProcessCompleted = agentJobState
-    ? agentJobState === "DONE" || agentJobState === "ERROR"
-    : currentStep === 4;
-  const isProcessSuccess = agentJobState ? agentJobState === "DONE" : currentStep >= 3;
-
-  // เช็คว่าลูกแรกอุ่นเสร็จและเริ่มเสิร์ฟหรือยัง
-  const hasStartedServing = queue.length > 0 && ((totalProcessTime - globalTimeLeft) - STEP1_DELAY >= queue[0].heatingTime);
-
-  // Progress line width: extend to Step3 zone when multi-flavor serving has started
-  const progressLineWidth = isMultiFlavor && currentStep === 1 && hasStartedServing
-    ? "50%"
-    : `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
-
-  const fetchProducts = useCallback(
-    async (options?: { silent?: boolean }) => {
-      const silent = options?.silent ?? false;
-      if (!silent) setIsLoadingProducts(true);
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        const response = await fetch(
-          `${apiUrl}/api/products?machine_code=${encodeURIComponent(machineCode)}`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch products");
-
-        const data = await response.json();
-        const mappedProducts: Product[] = data.map((p: any) => ({
-          id: p.product_id,
-          name: p.name,
-          desc: p.description,
-          price: p.price,
-          heatingTime: p.heating_time,
-          image: p.image_url,
-          category: p.category,
-          stock: Number(p.stock) || 0,
-        }));
-
-        // Mock Data (ถอด API ออกชั่วคราว)
-        // const mappedProducts: Product[] = [
-        //   {
-        //     id: 1,
-        //     name: "Product 1",
-        //     desc: "Description for Product 1",
-        //     price: 100,
-        //     heatingTime: 10,
-        //     image: "/payment/Visa-logo.png",
-        //     category: "meat",
-        //     stock: 10,
-        //   },
-        //   {
-        //     id: 2,
-        //     name: "Product 2",
-        //     desc: "Description for Product 2",
-        //     price: 200,
-        //     heatingTime: 15,
-        //     image: "/payment/UnionPay-logo.png",
-        //     category: "sweet",
-        //     stock: 5,
-        //   },
-        // ];
-
-        setProducts(mappedProducts);
-        setCart((prev) => clampCartToCatalog(prev, mappedProducts));
-      } catch (err) {
-        console.error("Error fetching products:", err);
-      } finally {
-        if (!silent) setIsLoadingProducts(false);
-      }
-    },
-    [machineCode],
-  );
-
-  useEffect(() => {
-    void fetchProducts({ silent: false });
-  }, [fetchProducts]);
-
-  const stockById = useMemo(
-    () => Object.fromEntries(products.map((p) => [p.id, p.stock])) as Record<number, number>,
-    [products],
-  );
-
-  const exitPostPaymentLoyalty = () => {
-    setIsAfterPayment(false);
-  };
-
-  /** เริ่ม state การอุ่น (เวลา + step) โดยไม่สลับ modal — ใช้คู่กับหน้า numpad หลังจ่ายเงิน */
-  const beginHeatingTimelineOnly = (q: Product[]) => {
-    if (!agentJobState) {
-      const totalProcessTime = calculateTotalProcessTime(q);
-      if (!heatingTimelineStartedRef.current) {
-        setGlobalTimeLeft(totalProcessTime);
-        heatingTimelineStartedRef.current = true;
-      }
-    }
-    setIsInitialStep1Delay(true);
-  };
-
-  const handleProcessingCompleteClose = () => {
-    heatingTimelineStartedRef.current = false;
-    setActiveModal("none");
-    void fetchProducts({ silent: true });
-  };
-
-  // ==========================================
-  // TIMERS (useEffect)
-  // ==========================================
-  // Timer: นับถอยหลังการชำระเงิน
-  useEffect(() => {
-    if (activeModal !== "payment") return;
-    const timer = setInterval(() => {
-      setPaymentCountdown((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [activeModal]);
-
-  useEffect(() => {
-    if (activeModal === "payment" && paymentCountdown === 0) {
-      cancelAndClosePaymentModal();
-    }
-  }, [activeModal, paymentCountdown]);
-
-  // Timer: นับถอยหลังการโชว์คะแนนสะสม
-  useEffect(() => {
-    if (activeModal !== "points_result") return;
-    const timer = setInterval(() => {
-      setPointsCountdown((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [activeModal]);
-
-  useEffect(() => {
-    if (activeModal === "points_result" && pointsCountdown === 0) {
-      if (isAfterPayment) {
-        startHeatingProcess();
-      } else {
-        setActiveModal("none");
-      }
-    }
-  }, [activeModal, pointsCountdown, isAfterPayment]);
-
-  // Timer: นับถอยหลังหน้ารับเบอร์โทร (Numpad)
-  useEffect(() => {
-    if (activeModal !== "numpad") return;
-    const timer = setInterval(() => {
-      setNumpadCountdown((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [activeModal]);
-
-  useEffect(() => {
-    if (activeModal === "numpad" && numpadCountdown === 0) {
-      if (isAfterPayment) {
-        startHeatingProcess();
-      } else {
-        setActiveModal("none");
-      }
-    }
-  }, [activeModal, numpadCountdown, isAfterPayment]);
-
-  // Timer: นับถอยหลังระบบอุ่น — ทำงานทั้งตอนหน้าสะสมแต้ม (หลังจ่าย) และหน้า processing
-  const localHeatCountdownActive =
-    !agentJobState &&
-    (activeModal === "processing" ||
-      (activeModal === "numpad" && isAfterPayment) ||
-      (activeModal === "points_result" && isAfterPayment));
-
-  useEffect(() => {
-    if (!localHeatCountdownActive) return;
-    const interval = setInterval(() => {
-      setGlobalTimeLeft((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [localHeatCountdownActive, agentJobState]);
-
-  // NFC Reader Listener (จำลองการพิมพ์จากเครื่องอ่าน NFC) สำหรับบัตรเครดิตต่างๆ
-  useEffect(() => {
-    if (
-      activeModal === "payment" &&
-      selectedPaymentMethod !== null &&
-      selectedPaymentMethod !== "promptpay" &&
-      paymentStep === 2
-    ) {
-      let nfcBuffer = "";
-      let lastKeyTime = Date.now();
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (isProcessingPayment || isNfcBlocked) return;
-
-        const now = Date.now();
-        // ถ้าทิ้งช่วงกดเกิน 100ms ให้เริ่มนับใหม่ (เครื่องอ่านจะพิมพ์เร็วมาก)
-        if (now - lastKeyTime > 100) {
-          nfcBuffer = "";
-        }
-        lastKeyTime = now;
-
-        if (e.key === "Enter") {
-          if (nfcBuffer.length > 3) { // ถือว่าเป็น NFC tap
-            e.preventDefault();
-            // บล็อก NFC 5 วินาที กันผู้ใช้แปะซ้ำรัวๆ (แก้ error 500)
-            setIsNfcBlocked(true);
-            if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
-            nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
-
-            simulateNfcTap("visa");
-            nfcBuffer = "";
-          }
-        } else if (e.key.length === 1) {
-          nfcBuffer += e.key;
-        }
-      };
-
-      window.addEventListener("keydown", handleKeyDown);
-      return () => window.removeEventListener("keydown", handleKeyDown);
-    }
-  }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
-
-  // Polling สำหรับ Hardware NFC Tap (จาก Python Agent / MFRC522)
-  useEffect(() => {
-    if (
-      activeModal === "payment" &&
-      selectedPaymentMethod !== null &&
-      selectedPaymentMethod !== "promptpay" &&
-      paymentStep === 2
-    ) {
-      const pollNfc = async () => {
-        if (isProcessingPayment || isNfcBlocked) return;
-        try {
-          // ตรวจสอบสถานะการแตะบัตรจาก Agent (localhost:5000)
-          const res = await fetch("http://localhost:5000/nfc/status");
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status === "tapped") {
-              console.log("[Frontend] Hardware NFC Tap detected via Agent!");
-              simulateNfcTap("visa");
-            }
-          }
-        } catch (e) {
-          // ถ้า Agent ไม่ได้รันอยู่ หรือมีปัญหาการเชื่อมต่อ ให้เงียบไว้
-        }
-      };
-
-      const interval = setInterval(pollNfc, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
-
-
-  // ==========================================
-  // PAYMENT API LOGIC
-  // ==========================================
-  const handlePaymentSuccess = () => {
-    // ล้าง Interval ของการ Polling
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-
-    // ตั้งค่าคิวและตะกร้า
+  // Wire up the payment success handler now that all hooks are initialized
+  paymentSuccessHandlerRef.current = () => {
+    // Build sorted queue from cart
     const flatQueue = cart.flatMap((item) => Array(item.qty).fill(item));
-    flatQueue.sort((a, b) => a.heatingTime - b.heatingTime);
+    flatQueue.sort((a: any, b: any) => a.heatingTime - b.heatingTime);
 
+    // Save paid total for loyalty points calculation
     const paidTotal = appliedCoupon ? appliedCoupon.final_thb : totalPrice;
     totalPriceRef.current = paidTotal;
-    setQueue(flatQueue);
+
+    // Set queue and clear cart/coupon
+    heating.setQueue(flatQueue);
     setCart([]);
     setAppliedCoupon(null);
-    setRealQrCode(null);
 
+    // Transition to post-payment flow
     setIsAfterPayment(true);
-    setPhoneNumber("");
-    setNumpadCountdown(60);
-    beginHeatingTimelineOnly(flatQueue);
+    member.setPhoneNumber("");
+    member.setNumpadCountdown(NUMPAD_COUNTDOWN_SECONDS);
+    heating.beginHeatingTimelineOnly(flatQueue);
     setActiveModal("numpad");
   };
 
-  const processPayment = async (paymentData: { type: "token" | "source" | "truemoney"; id: string; amount: number; }) => {
-    if (isProcessingPayment) return;
-    setIsProcessingPayment(true);
-    const controller = new AbortController();
-    const timeoutMs = 60000;
-    const startedAt = Date.now();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      console.log("[Frontend] Initiating processPayment:", paymentData);
-      const response = await fetch(`${apiUrl}/api/buy/checkout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: controller.signal,
-        body: JSON.stringify({
-          machine_code: machineCode,
-          cart: cart.map((item) => ({ product_id: item.id, quantity: item.qty })),
-          amount: paymentData.amount,
-          payment_type: paymentData.type,
-          payment_id: paymentData.id,
-          draft_id: currentChargeId?.startsWith("draft_") ? currentChargeId : undefined,
-          coupon_code: appliedCoupon?.code,
-        }),
-      });
-
-      console.log("[Frontend] Backend response status:", response.status, {
-        elapsedMs: Date.now() - startedAt,
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[Frontend] Backend error text:", errorText);
-        throw new Error(
-          `Payment failed: ${response.status} ${response.statusText} - ${errorText}`,
-        );
-      }
-
-      const result = await response.json();
-      console.log("[Frontend] Backend result:", result);
-
-      if (result?.charge_id) {
-        setCurrentChargeId(result.charge_id);
-      }
-
-      if ((paymentData.type === "source" || paymentData.type === "truemoney") && result.qr_code) {
-        setRealQrCode(result.qr_code);
-        setPaymentStep(2);
-        pollPaymentStatus(result.charge_id);
-      } else {
-        handlePaymentSuccess();
-      }
-    } catch (err: any) {
-      console.error("[Frontend] CRITICAL: Payment Process Failed", {
-        message: err.message,
-        name: err.name,
-        elapsedMs: Date.now() - startedAt,
-      });
-
-      if (err.name === "AbortError") {
-        alert(
-          `ระบบเชื่อมต่อล่าช้า กรุณาลองใหม่อีกครั้ง (Timeout ${Math.round(timeoutMs / 1000)}s)`,
-        );
-      } else {
-        alert(`เกิดข้อผิดพลาด: ${err.message}`);
-      }
-
-      // Safeguard: Reset to home screen to prevent freeze
-      setTimeout(() => {
-        cancelAndClosePaymentModal();
-      }, 3000);
-    } finally {
-      clearTimeout(timeoutId);
-      setIsProcessingPayment(false);
-    }
-  };
-
-  const pollPaymentStatus = (chargeId: string) => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    /** ถี่ขึ้นเพื่อรู้ผลเร็วหลังสแกน TrueMoney / PromptPay (ยังอยู่ใน ~2 นาที) */
-    const PAYMENT_POLL_INTERVAL_MS = 1000;
-    const MAX_ATTEMPTS = 120;
-
-    console.log(`[Frontend] Starting poll for charge: ${chargeId}`);
-
-    let attempts = 0;
-    let inFlight = false;
-    let stopped = false;
-
-    const stopPolling = () => {
-      stopped = true;
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
-    };
-
-    const tick = async () => {
-      if (stopped || inFlight) return;
-      inFlight = true;
-      attempts++;
-      if (attempts > MAX_ATTEMPTS) {
-        console.warn(`[Frontend] Poll timeout after ${MAX_ATTEMPTS} attempts — auto-cancelling`);
-        stopPolling();
-        await cancelAndClosePaymentModal();
-        inFlight = false;
-        return;
-      }
-
-      try {
-        const res = await fetch(`${apiUrl}/api/buy/status/${chargeId}`);
-        if (res.ok) {
-          const data = await res.json();
-          const st = String(data.status ?? "").toLowerCase();
-          console.log(`[Frontend] Poll result for ${chargeId} [${attempts}/${MAX_ATTEMPTS}]:`, data.status);
-          if (st === "paid" || st === "dispensing" || st === "completed") {
-            console.log("[Frontend] Payment confirmed via polling!");
-            stopPolling();
-            handlePaymentSuccess();
-            return;
-          }
-          if (
-            st === "dispense_failed" ||
-            st === "refunded" ||
-            st === "cancelled" ||
-            st === "canceled" ||
-            st === "payment_failed" ||
-            st === "failed"
-          ) {
-            stopPolling();
-            alert("การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่หรือลองใหม่");
-            await cancelAndClosePaymentModal();
-            return;
-          }
-        } else {
-          console.error(`[Frontend] Poll failed with status: ${res.status}`);
-        }
-      } catch (e) {
-        console.error("[Frontend] Polling exception:", e);
-      } finally {
-        inFlight = false;
-      }
-    };
-
-    void tick();
-    pollingIntervalRef.current = setInterval(() => void tick(), PAYMENT_POLL_INTERVAL_MS);
-  };
-
-  // --- ฟังก์ชันสร้าง QR Code ---
-  const handleDirectPromptPay = async () => {
-    if (!(window as any).Omise) {
-      alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
-      return;
-    }
-
-    const Omise = (window as any).Omise;
-    Omise.setPublicKey(process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY);
-
-    // Create Source ID for PromptPay
-    Omise.createSource(
-      "promptpay",
-      {
-        amount: Math.round(payableTotal * 100),
-        currency: "THB",
-      },
-      async (statusCode: number, response: any) => {
-        if (statusCode !== 200) {
-          console.error("Omise Source Error:", response);
-          alert("ไม่สามารถสร้างรายการ PromptPay ได้");
-          return;
-        }
-
-        const sourceId = response.id;
-
-        // Send sourceId to Backend
-        setPaymentStep(2);
-        processPayment({ type: "source", id: sourceId, amount: Math.round(payableTotal * 100) });
-      },
-    );
-  };
-
-  const handleDirectTrueMoney = async () => {
-    setPaymentStep(2);
-    setRealQrCode(null);
-    processPayment({ type: "truemoney", id: "", amount: Math.round(payableTotal * 100) });
-  };
-
-  const handleProceedToTap = async () => {
-    setPaymentCountdown(180);
-    setPaymentStep(2);
-
-    // สร้าง Draft Order ใน Database เพื่อให้มีสถานะ "รอจ่าย" โผล่ขึ้นมาในระบบ
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      const response = await fetch(`${apiUrl}/api/buy/create-draft`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          machine_code: machineCode,
-          cart: cart.map((item) => ({ product_id: item.id, quantity: item.qty })),
-          amount: Math.round(payableTotal * 100),
-          payment_method: "credit_card",
-          coupon_code: appliedCoupon?.code,
-        }),
-      });
-      const data = await response.json();
-      if (data.charge_id) {
-        setCurrentChargeId(data.charge_id);
-      }
-    } catch (err) {
-      console.error("[Frontend] Error creating draft order:", err);
-    }
-  };
-
   // ==========================================
-  // EVENT HANDLERS
+  // MODAL OPEN HANDLERS
   // ==========================================
-  // Cart Actions
-  const MAX_CART_ITEMS = 4;
-
-  const handleAddToCart = useCallback((product: Product) => {
-    if (product.stock <= 0) return;
-    setCart((prevCart) => {
-      const totalItems = prevCart.reduce((sum, item) => sum + item.qty, 0);
-      const existingItem = prevCart.find((item) => item.id === product.id);
-      if (existingItem) {
-        if (existingItem.qty >= product.stock) {
-          queueMicrotask(() => {
-            setStockLimitMessage(`สินค้านี้เหลือสูงสุด ${product.stock} ชิ้น`);
-            setActiveModal("stock_limit_warning");
-          });
-          return prevCart;
-        }
-        if (totalItems >= MAX_CART_ITEMS) {
-          queueMicrotask(() => setActiveModal("limit_warning"));
-          return prevCart;
-        }
-        return prevCart.map((item) =>
-          item.id === product.id ? { ...item, qty: item.qty + 1 } : item,
-        );
-      }
-      if (totalItems >= MAX_CART_ITEMS) {
-        queueMicrotask(() => setActiveModal("limit_warning"));
-        return prevCart;
-      }
-      return [...prevCart, { ...product, qty: 1 }];
-    });
-  }, []);
-
-  const handleIncrease = useCallback((productId: number) => {
-    setCart((prevCart) => {
-      const sku = products.find((p) => p.id === productId);
-      const cap = sku?.stock ?? 0;
-      const line = prevCart.find((item) => item.id === productId);
-      if (!line) return prevCart;
-      if (line.qty >= cap) {
-        queueMicrotask(() => {
-          setStockLimitMessage(`สินค้านี้เหลือสูงสุด ${cap} ชิ้น`);
-          setActiveModal("stock_limit_warning");
-        });
-        return prevCart;
-      }
-      const totalItems = prevCart.reduce((sum, item) => sum + item.qty, 0);
-      if (totalItems >= MAX_CART_ITEMS) {
-        queueMicrotask(() => setActiveModal("limit_warning"));
-        return prevCart;
-      }
-      return prevCart.map((item) =>
-        item.id === productId ? { ...item, qty: item.qty + 1 } : item,
-      );
-    });
-  }, [products]);
-  const handleDecrease = (productId: number) => {
-    setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.id === productId
-          ? { ...item, qty: Math.max(1, item.qty - 1) }
-          : item,
-      ),
-    );
-  };
-  const handleRemove = (productId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.id !== productId));
-  };
-
-  // Modal Actions
-  const handleCheckout = () => {
-    heatingTimelineStartedRef.current = false;
-    setSelectedPaymentMethod(null);
-    setPaymentStep(1);
-    setRealQrCode(null);
-    setCurrentChargeId(null);
-
-    // ตั้งเวลาและเปิด Modal
-    setPaymentCountdown(180);
-    setActiveModal("payment");
-  };
   const handleOpenNumpad = () => {
     setIsAfterPayment(false);
-    setNumpadCountdown(60);
+    member.handleOpenNumpad();
     setActiveModal("numpad");
-    setPhoneNumber("");
-  };
-  const closePaymentModal = () => {
-    setActiveModal("none");
-    setSelectedPaymentMethod(null);
-    setPaymentStep(1);
-    setRealQrCode(null);
-    setCurrentChargeId(null);
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
   };
 
-  // Phone Handlers
-  const handleNumberClick = (num: string) => {
-    if (phoneNumber.length < 10) setPhoneNumber((prev) => prev + num);
-  };
-  const handleDeleteClick = () => setPhoneNumber((prev) => prev.slice(0, -1));
-
-  const handleConfirmPhone = async () => {
-    if (phoneNumber.length !== 10) {
-      alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
-      return;
-    }
-
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    setIsMemberLoading(true);
-    setMemberError(null);
-
-    if (isAfterPayment) {
-      try {
-        const res = await fetch(`${apiUrl}/api/members/earn`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            phone_number: phoneNumber,
-            total_price: totalPriceRef.current,
-            charge_id: currentChargeId,
-          }),
-        });
-        const data = await res.json();
-        setEarnedPoints(data.points_earned ?? 0);
-        setMemberPoints(data.total_points ?? 0);
-        setIsNewMember(data.is_new_member ?? false);
-        setPointsCountdown(10);
-        setActiveModal("points_result");
-      } catch (err) {
-        console.error("Earn points error:", err);
-        startHeatingProcess();
-      } finally {
-        setIsMemberLoading(false);
-      }
-    } else {
-      try {
-        const res = await fetch(`${apiUrl}/api/members/${phoneNumber}`);
-        if (res.status === 404) {
-          setMemberError("ไม่พบข้อมูลสมาชิก กรุณาลงทะเบียนหลังจากซื้อสินค้า");
-          setMemberPoints(null);
-          setEarnedPoints(0);
-          setIsNewMember(false);
-          setPointsCountdown(10);
-          setActiveModal("points_result");
-        } else if (res.ok) {
-          const data = await res.json();
-          setMemberPoints(data.points);
-          setEarnedPoints(0);
-          setIsNewMember(false);
-          setMemberError(null);
-          setPointsCountdown(10);
-          setActiveModal("points_result");
-        } else {
-          alert("เกิดข้อผิดพลาดในการตรวจสอบข้อมูล");
-        }
-      } catch (err) {
-        console.error("Lookup error:", err);
-        alert("ไม่สามารถเชื่อมต่อกับระบบได้");
-      } finally {
-        setIsMemberLoading(false);
-      }
-    }
+  const handleCheckout = () => {
+    heating.heatingTimelineStartedRef.current = false;
+    payment.handleCheckout();
   };
 
-  const displayFormattedPhone = () => {
-    if (!phoneNumber) return "xxx-xxxxxxx";
-    if (phoneNumber.length > 3) return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
-    return phoneNumber;
-  };
-
-  // Flow Actions
-  const simulatePromptPaySuccess = async () => {
-    if (!currentChargeId) return;
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-      await fetch(`${apiUrl}/api/buy/mock-pay`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ charge_id: currentChargeId }),
-      });
-    } catch (err) {
-      console.error("Mock Pay Error:", err);
-      handlePaymentSuccess();
-    }
-  };
-  type TestCardBrand = "visa" | "mastercard" | "unionpay";
-
-  const TEST_CARDS: Record<TestCardBrand, { name: string; number: string }> = {
-    visa: { name: "Test Visa Machine", number: "4242424242424242" },
-    mastercard: { name: "Test Mastercard Machine", number: "5555555555554444" },
-    unionpay: { name: "Test UnionPay Machine", number: "6250947000000006" },
-  };
-
-  // --- 💡 ฟังก์ชันจำลองการแตะบัตรที่เครื่องอ่าน NFC ---
-  const simulateNfcTap = async (brand: TestCardBrand) => {
-    if (!(window as any).Omise) {
-      alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
-      return;
-    }
-
-    const Omise = (window as any).Omise;
-    Omise.setPublicKey(process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY);
-
-    console.log(`[Frontend] Simulating Card Tap (${brand}): Generating Omise Token...`);
-
-    const cardData = {
-      name: TEST_CARDS[brand].name,
-      number: TEST_CARDS[brand].number,
-      expiration_month: 12,
-      expiration_year: 2029,
-      security_code: "123",
-    };
-
-    Omise.createToken("card", cardData, async (statusCode: number, response: any) => {
-      if (statusCode === 200) {
-        console.log("[Frontend] Test Token Generated:", response.id);
-        // Step 2: Send token to Backend for real charge execution
-        processPayment({ type: "token", id: response.id, amount: Math.round(payableTotal * 100) });
-      } else {
-        console.error("[Frontend] Omise Tokenization Failed:", response);
-        alert(`Tokenization Error: ${response.message || "Unknown error"}`);
-
-        // Reset UI on failure
-        setTimeout(() => {
-          cancelAndClosePaymentModal();
-        }, 2000);
-      }
-    });
-  };
-
-  const startHeatingProcess = () => {
-    if (!heatingTimelineStartedRef.current) {
-      beginHeatingTimelineOnly(queue);
-    }
-    setActiveModal("processing");
-    exitPostPaymentLoyalty();
-  };
-
+  // ==========================================
+  // RENDER
+  // ==========================================
   return (
     <div className="vending-app">
       <Script
         src="https://cdn.omise.co/omise.js"
-        onLoad={() => setIsOmiseLoaded(true)}
+        onLoad={() => payment.setIsOmiseLoaded(true)}
       />
+
       {/* --- ฝั่งซ้าย: โซนเลือกสินค้า --- */}
       <div className="main-content">
         <div className="header">
@@ -1168,14 +227,13 @@ export default function VendingPage() {
           onClick={
             activeModal === "payment"
               ? () => {
-                if (paymentStep === 1) {
-                  cancelAndClosePaymentModal();
+                  if (payment.paymentStep === 1) {
+                    payment.cancelAndClosePaymentModal();
+                  }
                 }
-              }
               : () => setActiveModal("none")
           }
         >
-          {/* Modal 1: เมนู Info */}
           {activeModal === "coupon" && (
             <CouponModal
               open
@@ -1187,884 +245,103 @@ export default function VendingPage() {
           )}
 
           {activeModal === "info" && (
-            <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="modal-close-btn"
-                onClick={() => setActiveModal("none")}
-              >
-                &times;
-              </button>
-              <button
-                className="modal-action-btn"
-                onClick={() => setActiveModal("usage")}
-              >
-                วิธีการใช้งาน
-              </button>
-              <button className="modal-action-btn" onClick={handleOpenNumpad}>
-                ตรวจสอบคะแนน
-              </button>
-              <button
-                className="modal-action-btn"
-                onClick={() => setActiveModal("contact")}
-              >
-                รายงานปัญหา
-              </button>
-            </div>
+            <InfoModal
+              onClose={() => setActiveModal("none")}
+              onOpenUsage={() => setActiveModal("usage")}
+              onOpenNumpad={handleOpenNumpad}
+              onOpenContact={() => setActiveModal("contact")}
+            />
           )}
 
-          {/* Modal 2: วิธีการใช้งาน */}
           {activeModal === "usage" && (
-            <div
-              className="usage-modal-box"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="modal-close-btn"
-                onClick={() => setActiveModal("none")}
-              >
-                &times;
-              </button>
-              {/* หัวข้อ */}
-              <div className="modal-title">วิธีการใช้งาน</div>
-              <div className="usage-list">
-                <div className="usage-item">
-                  <span className="usage-number">1.</span>
-                  <div className="usage-icon-placeholder">
-                    <SquareDashedMousePointer />
-                  </div>
-                  <span className="usage-text">เลือกสินค้าที่ต้องการ</span>
-                </div>
-                <div className="usage-item">
-                  <span className="usage-number">2.</span>
-                  <div className="usage-icon-placeholder">
-                    <CreditCard />
-                  </div>
-                  <span className="usage-text">เลือกช่องทางการชำระเงิน</span>
-                </div>
-                <div className="usage-item">
-                  <span className="usage-number">3.</span>
-                  <div className="usage-icon-placeholder">
-                    <BanknoteArrowUp />
-                  </div>
-                  <span className="usage-text">ชำระเงินตามจำนวน</span>
-                </div>
-                <div className="usage-item">
-                  <span className="usage-number">4.</span>
-                  <div className="usage-icon-placeholder">
-                    <PackageOpen />
-                  </div>
-                  <span className="usage-text">รับสินค้า</span>
-                </div>
-              </div>
-            </div>
+            <UsageModal onClose={() => setActiveModal("none")} />
           )}
 
-          {/* Modal 3: Numpad (กรอกเบอร์โทร / สะสมแต้มหลังจ่าย) */}
           {activeModal === "numpad" && (
-            <div
-              className="numpad-modal-box"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="timeout-close-btn"
-                onClick={
-                  isAfterPayment
-                    ? startHeatingProcess
-                    : () => setActiveModal("none")
-                }
-              >
-                <span>{numpadCountdown}</span>
-                <span className="points-close-icon">&times;</span>
-              </button>
-              <div className="numpad-title">
-                {isAfterPayment
-                  ? "กรุณากรอกเบอร์เพื่อสะสมแต้ม"
-                  : "โปรดกรอกหมายเลขโทรศัพท์"}
-              </div>
-              <div
-                className="phone-display"
-                style={{ opacity: phoneNumber ? 1 : 0.6 }}
-              >
-                {displayFormattedPhone()}
-              </div>
-              <div className="numpad-grid">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                  <button
-                    key={num}
-                    className="numpad-btn"
-                    onClick={() => handleNumberClick(num.toString())}
-                  >
-                    {num}
-                  </button>
-                ))}
-                <button
-                  className="numpad-btn action"
-                  onClick={handleDeleteClick}
-                >
-                  DEL
-                </button>
-                <button
-                  className="numpad-btn"
-                  onClick={() => handleNumberClick("0")}
-                >
-                  0
-                </button>
-                <button
-                  className="numpad-btn action"
-                  onClick={handleConfirmPhone}
-                  disabled={isMemberLoading}
-                >
-                  {isMemberLoading ? "..." : "OK"}
-                </button>
-              </div>
-              {isAfterPayment && (
-                <button
-                  className="modal-back-btn"
-                  onClick={startHeatingProcess}
-                  style={{ textDecoration: "underline", marginTop: "10px" }}
-                >
-                  ไม่สะสมแต้ม ข้ามไปยังขั้นตอนการอุ่น
-                </button>
-              )}
-            </div>
+            <NumpadModal
+              isAfterPayment={isAfterPayment}
+              phoneNumber={member.phoneNumber}
+              numpadCountdown={member.numpadCountdown}
+              isMemberLoading={member.isMemberLoading}
+              formattedPhone={member.formattedPhone}
+              onClose={() => setActiveModal("none")}
+              onStartHeating={heating.startHeatingProcess}
+              onNumberClick={member.handleNumberClick}
+              onDeleteClick={member.handleDeleteClick}
+              onConfirmPhone={member.handleConfirmPhone}
+            />
           )}
 
-          {/* Modal 4: Points Result (แสดงคะแนนสะสม) */}
           {activeModal === "points_result" && (
-            <div
-              className="points-modal-box"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="timeout-close-btn"
-                onClick={
-                  isAfterPayment
-                    ? startHeatingProcess
-                    : () => setActiveModal("none")
-                }
-              >
-                <span>{pointsCountdown}</span>
-                <span className="points-close-icon">&times;</span>
-              </button>
-
-              {memberError ? (
-                <>
-                  <div className="points-title" style={{ color: "#ef4444" }}>❌ ไม่พบสมาชิก</div>
-                  <div className="points-disclaimer" style={{ marginTop: "16px", fontSize: "16px" }}>
-                    {memberError}
-                  </div>
-                </>
-              ) : (
-                <>
-                  {isNewMember && (
-                    <div style={{
-                      background: "linear-gradient(135deg, #f89025, #f59e0b)",
-                      color: "white", borderRadius: "20px", padding: "6px 18px",
-                      fontSize: "14px", fontWeight: "bold", marginBottom: "8px",
-                    }}>
-                      ✨ ยินดีต้อนรับสมาชิกใหม่!
-                    </div>
-                  )}
-                  <div className="points-title">
-                    {isAfterPayment ? "ได้รับแต้ม" : "คะแนนสะสมปัจจุบัน"}
-                  </div>
-                  {isAfterPayment && earnedPoints > 0 && (
-                    <div style={{ color: "#22c55e", fontSize: "22px", fontWeight: "bold", marginBottom: "4px" }}>
-                      +{earnedPoints} แต้ม
-                    </div>
-                  )}
-                  <div className="points-value">{memberPoints ?? 0}</div>
-                  <div className="points-unit">คะแนน</div>
-                  <div className="points-disclaimer">
-                    <strong>*คะแนนสามารถนำไปแลกเป็นส่วนลดหรือโปรโมชั่น*</strong>
-                    <br />
-                    ได้ทางเว็บไซต์ MODPAO.com
-                  </div>
-                </>
-              )}
-            </div>
+            <PointsResultModal
+              isAfterPayment={isAfterPayment}
+              memberError={member.memberError}
+              isNewMember={member.isNewMember}
+              earnedPoints={member.earnedPoints}
+              memberPoints={member.memberPoints}
+              pointsCountdown={member.pointsCountdown}
+              onClose={() => setActiveModal("none")}
+              onStartHeating={heating.startHeatingProcess}
+            />
           )}
 
-          {/* Modal 5: Report (รายงานปัญหา) */}
           {activeModal === "contact" && (
-            <div
-              className="report-modal-box"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="modal-close-btn"
-                onClick={() => setActiveModal("none")}
-              >
-                &times;
-              </button>
-              <div className="report-title">ติดต่อเจ้าหน้าที่</div>
-              {/* เบอร์โทรศัพท์ */}
-              <div className="report-phone">
-                <PhoneCall />
-                02-123-4567
-              </div>
-              <div className="report-divider">หรือ</div>
-              {/* โซน LINE สำหรับสแกนแจ้งปัญหา */}
-              <div className="line-report-section">
-                <div className="qr-placeholder">
-                  {/* จำลอง QR Code ด้วย Icon Line และภาพตัวอย่าง */}
-                  <div style={{ textAlign: "center" }}>
-                    <div
-                      style={{
-                        color: "#22c55e",
-                        fontSize: "24px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      LINE
-                    </div>
-                    <div style={{ fontSize: "10px" }}>SCAN ME</div>
-                  </div>
-                </div>
-                <div className="line-id-text">ID: @MOD.PAO</div>
-                <div className="scan-text">
-                  สแกนเพื่อติดต่อเจ้าหน้าที่โดยตรง
-                </div>
-              </div>
-            </div>
+            <ContactModal onClose={() => setActiveModal("none")} />
           )}
 
-          {/* Modal 6 : Payment (ชำระเงิน) */}
-          {/* --- Modal: แจ้งเตือนจำนวนสินค้าสูงสุด --- */}
           {activeModal === "limit_warning" && (
-            <div className="modal-overlay" onClick={() => setActiveModal("none")}>
-              <div
-                className="points-modal-box"
-                style={{
-                  maxWidth: "400px",
-                  padding: "40px 20px",
-                  textAlign: "center",
-                  background: "white",
-                  borderRadius: "32px",
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div style={{
-                  width: "80px",
-                  height: "80px",
-                  background: "#fee2e2",
-                  borderRadius: "50%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  margin: "0 auto 24px"
-                }}>
-                  <PackageOpen size={40} color="#ef4444" />
-                </div>
-
-                <h2 style={{
-                  fontSize: "24px",
-                  fontWeight: "800",
-                  color: "#1f2937",
-                  marginBottom: "12px"
-                }}>
-                  ตะกร้าเต็มแล้ว!
-                </h2>
-
-                <p style={{
-                  fontSize: "18px",
-                  color: "#6b7280",
-                  lineHeight: "1.6",
-                  marginBottom: "32px"
-                }}>
-                  ขออภัยครับ 1 คำสั่งซื้อสามารถซื้อสินค้าได้สูงสุด {MAX_CART_ITEMS} ชิ้นเท่านั้น
-                </p>
-
-                <button
-                  onClick={() => setActiveModal("none")}
-                  style={{
-                    width: "100%",
-                    padding: "16px",
-                    background: "linear-gradient(135deg, #f89025, #f59e0b)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "16px",
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    boxShadow: "0 10px 15px -3px rgba(245, 158, 11, 0.3)"
-                  }}
-                >
-                  ตกลง
-                </button>
-              </div>
-            </div>
+            <LimitWarningModal
+              type="cart_full"
+              onClose={() => setActiveModal("none")}
+            />
           )}
 
           {activeModal === "stock_limit_warning" && (
-            <div className="modal-overlay" onClick={() => setActiveModal("none")}>
-              <div
-                className="points-modal-box"
-                style={{
-                  maxWidth: "400px",
-                  padding: "40px 20px",
-                  textAlign: "center",
-                  background: "white",
-                  borderRadius: "32px",
-                  boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div
-                  style={{
-                    width: "80px",
-                    height: "80px",
-                    background: "#fef3c7",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 24px",
-                  }}
-                >
-                  <PackageOpen size={40} color="#d97706" />
-                </div>
-                <h2
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: "800",
-                    color: "#1f2937",
-                    marginBottom: "12px",
-                  }}
-                >
-                  จำนวนสินค้าไม่พอ
-                </h2>
-                <p
-                  style={{
-                    fontSize: "18px",
-                    color: "#6b7280",
-                    lineHeight: "1.6",
-                    marginBottom: "32px",
-                  }}
-                >
-                  {stockLimitMessage || "ไม่สามารถเพิ่มเกินจำนวนที่มีในตู้ได้"}
-                </p>
-                <button
-                  onClick={() => setActiveModal("none")}
-                  style={{
-                    width: "100%",
-                    padding: "16px",
-                    background: "linear-gradient(135deg, #f89025, #f59e0b)",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "16px",
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                    boxShadow: "0 10px 15px -3px rgba(245, 158, 11, 0.3)",
-                  }}
-                >
-                  ตกลง
-                </button>
-              </div>
-            </div>
+            <LimitWarningModal
+              type="stock_limit"
+              message={stockLimitMessage}
+              onClose={() => setActiveModal("none")}
+            />
           )}
 
           {activeModal === "payment" && (
-            <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="timeout-close-btn danger"
-                onClick={() => {
-                  attemptClosePaymentModal();
-                }}
-              >
-                <span>{paymentCountdown}</span>
-                <span style={{ fontSize: "28px", lineHeight: 1 }}>&times;</span>
-              </button>
-              <div className="payment-wrapper">
-                {/* --- Step 0: เลือกช่องทางชำระเงิน --- */}
-                {selectedPaymentMethod === null && (
-                  <>
-                    <div className="modal-title">โปรดเลือกวิธีการชำระเงิน</div>
-                    <div className="modal-payment">
-                      <div className="modal-payment-column">
-                        <button
-                          className="modal-action-payment-btn"
-                          onClick={() => {
-                            setSelectedPaymentMethod("promptpay");
-                          }}
-                          disabled={!isOmiseLoaded}
-                        >
-                          <Image
-                            className="payment-logo"
-                            src="/payment/PromptPay-logo.png"
-                            alt="PromptPay"
-                            width={150}
-                            height={85}
-                            priority
-                          />
-                        </button>
-                        <button
-                          className="modal-action-payment-btn"
-                          onClick={() => {
-                            setSelectedPaymentMethod("truemoney");
-                          }}
-                          disabled={!isOmiseLoaded}
-                        >
-                          <Image
-                            src="/payment/Truemoney-logo.png"
-                            alt="Truemoney"
-                            width={145}
-                            height={40}
-                            priority
-                          />
-                        </button>
-                      </div>
-                      <div>
-                        <button
-                          className="modal-action-payment-btn modal-action-payment-card-btn"
-                          onClick={() => {
-                            setSelectedPaymentMethod("card");
-                          }}
-                          disabled={!isOmiseLoaded}
-                        >
-                          <div className="card-btn-content">
-                            <div className="card-btn-info">
-                              <div className="card-btn-title">Tap to Pay</div>
-                              <div className="card-btn-subtitle">NFC / Credit Card</div>
-                            </div>
-                            <div className="card-btn-icons">
-                              <Nfc size={32} strokeWidth={1.5} />
-                              <CreditCard size={32} strokeWidth={1.5} />
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-
-                {/* --- Flow A: PromptPay --- */}
-                {selectedPaymentMethod === "promptpay" && (
-                  <>
-                    <div className="payment-title">ชำระเงินด้วย PromptPay</div>
-                    {/* Step 1: แนะนำ */}
-                    {paymentStep === 1 && (
-                      <>
-                        <div className="payment-instruction-list">
-                          <p>
-                            <Smartphone size={20} color="#f89025" /> 1.
-                            เปิดแอปพลิเคชันธนาคารของคุณ
-                          </p>
-                          <p>
-                            <ScanLine size={20} color="#f89025" /> 2. เลือกเมนู
-                            "สแกน QR Code"
-                          </p>
-                          <p>
-                            <BanknoteArrowUp size={20} color="#f89025" /> 3.
-                            สแกนเพื่อชำระเงินในหน้าถัดไป
-                          </p>
-                        </div>
-                        <button
-                          className="modal-confirm-btn"
-                          onClick={() => {
-                            setPaymentCountdown(180);
-                            handleDirectPromptPay();
-                          }}
-                        >
-                          รับทราบ และแสดง QR Code
-                        </button>
-                      </>
-                    )}
-                    {/* Step 2: แสดง QR Code เปล่าๆ */}
-                    {paymentStep === 2 && (
-                      <>
-                        {realQrCode ? (
-                          <img
-                            src={realQrCode}
-                            alt="PromptPay QR"
-                            width={200}
-                            height={200}
-                            style={{ borderRadius: "12px" }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: 200,
-                              height: 200,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              background: "#f1f5f9",
-                              borderRadius: "12px",
-                              color: "#64748b",
-                            }}
-                          >
-                            กำลังสร้าง QR Code...
-                          </div>
-                        )}
-                        <button
-                          style={testBtnStyle}
-                          onClick={simulatePromptPaySuccess}
-                        >
-                          [Test] จำลองโอนเงินสำเร็จ
-                        </button>
-                      </>
-                    )}
-                  </>
-                )}
-                {/* --- Flow B: Tap to Pay (NFC / Credit Card) --- */}
-                {selectedPaymentMethod === "card" && (
-                  <>
-                    <div className="payment-title">
-                      ชำระเงินด้วย Credit / Debit Card
-                    </div>
-                    {/* Step 1: แนะนำ */}
-                    {paymentStep === 1 && (
-                      <>
-                        <div className="payment-instruction-list">
-                          <p>
-                            <CreditCard size={20} color="#f89025" /> 1.
-                            เตรียมบัตรของคุณให้พร้อม
-                          </p>
-                          <p>
-                            <Nfc size={20} color="#f89025" /> 2.
-                            แตะบัตรที่เครื่องรับชำระเงินด้านล่างหน้าจอ
-                          </p>
-                          <p>
-                            <BanknoteArrowUp size={20} color="#f89025" /> 3.
-                            รอสัญญาณเสียงเพื่อเสร็จสิ้นรายการ
-                          </p>
-                        </div>
-                        <div className="supported-cards-row">
-                          <Image src="/payment/Visa-logo.png" alt="Visa" width={40} height={24} />
-                          <Image src="/payment/Mastercard-logo.png" alt="Mastercard" width={40} height={24} />
-                          <Image src="/payment/UnionPay-logo.png" alt="UnionPay" width={40} height={24} />
-                        </div>
-                        <button className="modal-confirm-btn" onClick={handleProceedToTap}>
-                          ดำเนินการแตะบัตร / จ่ายด้วย NFC
-                        </button>
-                      </>
-                    )}
-
-                    {/* Step 2: แอนิเมชันรอแตะบัตร */}
-                    {paymentStep === 2 && (
-                      <>
-                        <div className="nfc-pulse-container">
-                          <div className="nfc-icon-wrapper">
-                            <Nfc size={64} strokeWidth={1.5} />
-                          </div>
-                        </div>
-                        <h3 style={{ color: "#f89025", marginBottom: "5px" }}>
-                          กำลังรอการแตะบัตร...
-                        </h3>
-                        <p style={{ color: "#64748b", fontSize: "14px" }}>
-                          กรุณานำบัตรมาแตะที่เครื่องอ่านด้านล่าง
-                        </p>
-                        {/* กดเพื่อจำลองการแตะบัตร NFC */}
-                        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
-                          <button
-                            style={{ ...testBtnStyle, width: "120px", opacity: (isProcessingPayment || isNfcBlocked) ? 0.5 : 1 }}
-                            onClick={() => {
-                              if (isProcessingPayment || isNfcBlocked) return;
-                              setIsNfcBlocked(true);
-                              if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
-                              nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
-                              simulateNfcTap("visa");
-                            }}
-                            disabled={isProcessingPayment || isNfcBlocked}
-                          >
-                            Visa
-                          </button>
-                          <button
-                            style={{ ...testBtnStyle, width: "120px", opacity: (isProcessingPayment || isNfcBlocked) ? 0.5 : 1 }}
-                            onClick={() => {
-                              if (isProcessingPayment || isNfcBlocked) return;
-                              setIsNfcBlocked(true);
-                              if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
-                              nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
-                              simulateNfcTap("mastercard");
-                            }}
-                            disabled={isProcessingPayment || isNfcBlocked}
-                          >
-                            Mastercard
-                          </button>
-                          <button
-                            style={{ ...testBtnStyle, width: "120px", opacity: (isProcessingPayment || isNfcBlocked) ? 0.5 : 1 }}
-                            onClick={() => {
-                              if (isProcessingPayment || isNfcBlocked) return;
-                              setIsNfcBlocked(true);
-                              if (nfcBlockTimerRef.current) clearTimeout(nfcBlockTimerRef.current);
-                              nfcBlockTimerRef.current = setTimeout(() => setIsNfcBlocked(false), 5000);
-                              simulateNfcTap("unionpay");
-                            }}
-                            disabled={isProcessingPayment || isNfcBlocked}
-                          >
-                            UnionPay
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* --- Flow C: TrueMoney (QR) --- */}
-                {selectedPaymentMethod === "truemoney" && (
-                  <>
-                    <div className="payment-title">ชำระเงินด้วย TrueMoney</div>
-                    {paymentStep === 1 && (
-                      <>
-                        <div className="payment-instruction-list">
-                          <p>
-                            <Smartphone size={20} color="#f89025" /> 1. เปิดแอป TrueMoney Wallet
-                          </p>
-                          <p>
-                            <ScanLine size={20} color="#f89025" /> 2. เลือกเมนูสแกนจ่าย
-                          </p>
-                          <p>
-                            <BanknoteArrowUp size={20} color="#f89025" /> 3. สแกน QR ในหน้าถัดไป
-                          </p>
-                        </div>
-                        <button
-                          className="modal-confirm-btn"
-                          onClick={() => {
-                            setPaymentCountdown(180);
-                            handleDirectTrueMoney();
-                          }}
-                        >
-                          รับทราบ และแสดง QR Code
-                        </button>
-                      </>
-                    )}
-                    {paymentStep === 2 && (
-                      <>
-                        {realQrCode ? (
-                          <img
-                            src={realQrCode}
-                            alt="TrueMoney QR"
-                            width={200}
-                            height={200}
-                            style={{ borderRadius: "12px" }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: 200,
-                              height: 200,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              background: "#f1f5f9",
-                              borderRadius: "12px",
-                              color: "#64748b",
-                            }}
-                          >
-                            กำลังสร้าง QR Code...
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* ปุ่มย้อนกลับ */}
-                {selectedPaymentMethod !== null && paymentStep === 1 && (
-                  <button
-                    className="modal-back-btn"
-                    onClick={() => {
-                      setSelectedPaymentMethod(null);
-                    }}
-                  >
-                    เปลี่ยนช่องทางการชำระเงิน
-                  </button>
-                )}
-              </div>
-            </div>
+            <PaymentModal
+              selectedPaymentMethod={payment.selectedPaymentMethod}
+              paymentStep={payment.paymentStep}
+              paymentCountdown={payment.paymentCountdown}
+              isOmiseLoaded={payment.isOmiseLoaded}
+              realQrCode={payment.realQrCode}
+              isProcessingPayment={payment.isProcessingPayment}
+              isNfcBlocked={payment.isNfcBlocked}
+              isCancelPaymentConfirmOpen={payment.isCancelPaymentConfirmOpen}
+              onAttemptClose={payment.attemptClosePaymentModal}
+              onSelectMethod={payment.setSelectedPaymentMethod}
+              onDirectPromptPay={payment.handleDirectPromptPay}
+              onDirectTrueMoney={payment.handleDirectTrueMoney}
+              onProceedToTap={payment.handleProceedToTap}
+              onSimulateNfcTap={payment.handleSimulateNfcTap}
+              onSimulatePromptPaySuccess={payment.simulatePromptPaySuccess}
+              onDismissCancelConfirm={payment.dismissCancelPaymentConfirm}
+              onConfirmCancel={payment.confirmCancelPayment}
+              onChangeMethod={() => payment.setSelectedPaymentMethod(null)}
+              setPaymentCountdown={payment.setPaymentCountdown}
+            />
           )}
 
-          {/* PaymentConfirmOpenModal */}
-          {activeModal === "payment" && isCancelPaymentConfirmOpen && (
-            <div
-              className="confirm-overlay"
-              onClick={(e) => {
-                e.stopPropagation();
-                dismissCancelPaymentConfirm();
-              }}
-            >
-              <div
-                className="confirm-modal-box"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="confirm-title">ยืนยันการยกเลิก</div>
-                <div className="confirm-desc">
-                  ต้องการยกเลิกการชำระเงินและกลับไปหน้าเลือกสินค้าใช่หรือไม่?
-                </div>
-                <div className="confirm-actions">
-                  <button
-                    className="confirm-btn modal-action-btn"
-                    onClick={dismissCancelPaymentConfirm}
-                  >
-                    กลับไปชำระเงิน
-                  </button>
-                  <button
-                    className="confirm-btn danger"
-                    onClick={confirmCancelPayment}
-                  >
-                    ยกเลิกการชำระเงิน
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Modal 7: Processing (หน้าจอรอรับสินค้า) */}
           {activeModal === "processing" && (
-            <div
-              className="processing-modal-box"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* ส่วนหัว */}
-              <div
-                className={`processing-header ${isProcessSuccess ? "success-theme" : ""}`}
-              >
-                <div className="processing-title">
-                  {isProcessSuccess
-                    ? "ทานให้อร่อยนะครับ!"
-                    : "กรุณารอสักครู่..."}
-                </div>
-                <div className="processing-subtitle">
-                  {isProcessSuccess
-                    ? "🎉 สินค้าของคุณพร้อมแล้ว!"
-                    : PROCESS_STEPS[currentStep]}
-                </div>
-              </div>
-
-              {/* ส่วนกลาง */}
-              <div className="processing-center-area">
-                {currentStep < 3 && (
-                  <div className="countdown-timer">
-                    {globalTimeLeft >= 60 ? (
-                      <>
-                        {Math.floor(globalTimeLeft / 60)}:
-                        {String(globalTimeLeft % 60).padStart(2, "0")}
-                        <span className="countdown-label">นาทีที่เหลือ</span>
-                      </>
-                    ) : (
-                      <>
-                        {globalTimeLeft}
-                        <span className="countdown-label">วินาทีที่เหลือ</span>
-                      </>
-                    )}
-
-                    {/* แสดงบอกสถานะคิว */}
-                    {(currentStep === 1 || currentStep === 2) && queue.length > 0 && isDispensingItem && (
-                      <div
-                        key={`status-${currentItemIndex}`}
-                        className="current-queue-status"
-                        style={{ animation: "fadeSwitch 0.4s ease-out forwards" }}
-                      >
-                        ♨️ กำลังเสิร์ฟ: {queue[currentItemIndex]?.name}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                  }}
-                >
-                  <div
-                    className={`bun-illustration ${currentStep === 3 ? "ready" : ""}`}
-                  >
-                    {currentStep === 3 ? (
-                      <Image
-                        src="/Pao.png"
-                        alt="Completed Bun"
-                        width={190}
-                        height={190}
-                      />
-                    ) : (
-                      <>
-                        <span className="bun-smoke">♨️</span>
-                        <Image
-                          src="/Pao.png"
-                          alt="Heating Bun"
-                          width={160}
-                          height={160}
-                        />
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* ส่วนล่าง */}
-              <div
-                className={`processing-bottom-area ${isProcessSuccess ? "success-theme" : ""}`}
-              >
-                {!isProcessCompleted ? (
-                  <div className="stepper-container">
-                    {/* ส่วนของเส้นความคืบหน้า */}
-                    <div
-                      className="stepper-progress-line"
-                      style={{
-                        width: progressLineWidth,
-                        transition: "width 0.5s ease-in-out" // เพิ่ม Animation ให้ลื่นไหล
-                      }}
-                    ></div>
-
-                    {PROCESS_STEPS.map((stepName, index) => {
-                      let isActive = index === currentStep;
-                      let isCompleted = index < currentStep;
-
-                      // 1. Multi-flavor + heating + serving started → Step2 & Step3 both active/white
-                      if (currentStep === 1 && isMultiFlavor && hasStartedServing) {
-                        if (index === 1 || index === 2) {
-                          isActive = true;
-                          isCompleted = false;
-                        }
-                      }
-
-                      // 2. Final bun serving (currentStep === 2) → Step2 gets checkmark
-                      if (currentStep === 2 && index === 1) {
-                        isActive = false;
-                        isCompleted = true;
-                      }
-
-                      // 3. Step 4 ready (currentStep === 3) → Steps 1-3 all get checkmarks
-                      if (currentStep === 3) {
-                        if (index < 3) {
-                          isActive = false;
-                          isCompleted = true;
-                        } else {
-                          isActive = true;
-                          isCompleted = false;
-                        }
-                      }
-
-                      return (
-                        <div
-                          key={index}
-                          className={`step-item ${isActive ? "active" : ""} ${isCompleted ? "completed" : ""}`}
-                        >
-                          <div className="step-circle">
-                            {isCompleted ? <Check size={24} strokeWidth={3} /> : index + 1}
-                          </div>
-                          <div className="step-label">{stepName}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <button
-                    className="modal-confirm-btn"
-                    style={{ fontSize: "24px", padding: "15px 50px" }}
-                    onClick={handleProcessingCompleteClose}
-                  >
-                    หยิบสินค้าเรียบร้อยแล้ว
-                  </button>
-                )}
-              </div>
-            </div>
+            <ProcessingModal
+              queue={heating.queue}
+              currentStep={heating.currentStep}
+              currentItemIndex={heating.currentItemIndex}
+              isDispensingItem={heating.isDispensingItem}
+              globalTimeLeft={heating.globalTimeLeft}
+              isProcessCompleted={heating.isProcessCompleted}
+              isProcessSuccess={heating.isProcessSuccess}
+              isMultiFlavor={heating.isMultiFlavor}
+              hasStartedServing={heating.hasStartedServing}
+              progressLineWidth={heating.progressLineWidth}
+              onComplete={heating.handleProcessingCompleteClose}
+            />
           )}
         </div>
       )}
