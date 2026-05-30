@@ -17,4 +17,3 @@ printf 'ws.url=%s | db.local=%s\n' "${SOCKET_URL:-<unset>}" "$DB_PATH"
 printf 'machine.id=%s | sink.mode=%s | sink.url=%s\n\n' "${MACHINE_ID:-<unset>}" "$EVENT_SINK_MODE" "$EVENT_SINK_URL"
 
 exec python agent.py
-
