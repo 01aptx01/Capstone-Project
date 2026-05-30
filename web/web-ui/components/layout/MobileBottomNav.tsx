@@ -2,24 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  IconHome,
-  IconRedeem,
-  IconHistory,
-  IconProfile,
-} from "@/components/icons";
 import { cn } from "@/lib/utils";
-
-const tabs = [
-  { key: "home", href: "/home", label: "หน้าแรก", icon: IconHome },
-  { key: "redeem", href: "/redeem", label: "แลกคูปอง", icon: IconRedeem },
-  { key: "history", href: "/history", label: "ประวัติ", icon: IconHistory },
-  { key: "profile", href: "/profile", label: "โปรไฟล์", icon: IconProfile },
-] as const;
-
-function isTabActive(pathname: string, href: string) {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+import { PRIMARY_NAV, isNavActive } from "@/lib/navigation";
 
 const HIDE_NAV_PATHS = ["/checkout", "/payment"];
 
@@ -37,15 +21,17 @@ export function MobileBottomNav() {
       aria-label="เมนูหลัก"
     >
       <ul className="flex items-stretch justify-around h-[var(--bottom-nav-height)] max-w-lg mx-auto">
-        {tabs.map((tab) => {
-          const active = isTabActive(pathname, tab.href);
+        {PRIMARY_NAV.map((tab) => {
+          const active = isNavActive(pathname, tab.href);
           const Icon = tab.icon;
           return (
             <li key={tab.key} className="flex-1">
               <Link
                 href={tab.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex flex-col items-center justify-center gap-0.5 h-full text-[10px] font-semibold transition-colors touch-target",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 focus-visible:ring-inset",
                   active ? "text-brand" : "text-muted",
                 )}
               >

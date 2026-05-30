@@ -41,6 +41,8 @@
 
   /* Layout */
   --header-height: 4rem;
+  --sidebar-width: 16.5rem;
+  --topbar-height: 3.5rem;
   --bottom-nav-height: 4.25rem;
   --cart-inset: 5.5rem;
   --safe-bottom: env(safe-area-inset-bottom, 0px);

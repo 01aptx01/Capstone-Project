@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { validateCoupon, type AppliedCoupon } from "@/lib/api/buy";
 import { MACHINE_CODE } from "@/lib/config";
 import { useCart } from "@/context/CartContext";
@@ -17,15 +17,25 @@ export function CouponModal({
   onApply,
   currentCode,
 }: CouponModalProps) {
+  return (
+    <CouponModalBody
+      key={currentCode ?? ""}
+      onClose={onClose}
+      onApply={onApply}
+      currentCode={currentCode}
+    />
+  );
+}
+
+function CouponModalBody({
+  onClose,
+  onApply,
+  currentCode,
+}: CouponModalProps) {
   const { cartItems } = useCart();
   const [code, setCode] = useState(currentCode ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setCode(currentCode ?? "");
-    setError(null);
-  }, [currentCode]);
 
   const handleApply = async () => {
     const trimmed = code.trim().toUpperCase();
