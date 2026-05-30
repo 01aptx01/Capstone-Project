@@ -75,11 +75,33 @@ ADMIN_ROOM = "admin"
 
 
 def _verify_admin_auth(auth: Optional[Dict[str, Any]]) -> bool:
-    """Admin dashboard Socket.IO clients join ADMIN_ROOM when auth passes."""
+    """Admin dashboard Socket.IO clients join ADMIN_ROOM when auth passes.
+
+    ลำดับการตรวจ (ปลอดภัย):
+      1) JWT admin ที่ถูกต้องใน auth.token หรือ auth.admin_token (วิธีหลัก)
+      2) ADMIN_SOCKET_SECRET ที่ตรงกัน (ทางเลือกสำหรับ client ที่ไม่ใช่ browser)
+    ไม่มี fallback แบบ role=="admin" อีกต่อไป (ไม่ปลอดภัย)
+    """
+    if not isinstance(auth, dict):
+        return False
+
+    # 1) JWT (admin-ui ส่ง Bearer JWT มาทาง admin_token)
+    raw = auth.get("token") or auth.get("admin_token")
+    if raw:
+        try:
+            from app.api.admin.security import decode_access_token
+
+            decode_access_token(str(raw))
+            return True
+        except Exception:
+            pass  # ไม่ใช่ JWT ที่ถูกต้อง → ลองวิธีถัดไป
+
+    # 2) shared secret (ออปชัน)
     admin_secret = os.environ.get("ADMIN_SOCKET_SECRET")
-    if not admin_secret:
-        return isinstance(auth, dict) and auth.get("role") == "admin"
-    return isinstance(auth, dict) and auth.get("admin_token") == admin_secret
+    if admin_secret and auth.get("admin_token") == admin_secret:
+        return True
+
+    return False
 
 
 def emit_dashboard_update(payload: Dict[str, Any]) -> None:
