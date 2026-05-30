@@ -2,16 +2,36 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { MenuCard } from "@/components/cards/MenuCard";
-import { CATEGORIES, COLORS, type MenuItem } from "@/lib/constants";
+import { CATEGORIES, type MenuItem } from "@/lib/constants";
 import { fetchProducts } from "@/lib/api/products";
 import { MACHINE_CODE } from "@/lib/config";
+import { Chip, EmptyState, Skeleton } from "@/components/Ui";
 
 function mapCategory(raw: string): MenuItem["category"] {
   const c = (raw || "").toLowerCase();
   if (c.includes("sweet") || c.includes("dessert")) return "sweet";
-  if (c.includes("vegg") || c.includes("tofu") || c.includes("bean")) return "veggie";
-  if (c.includes("pork") || c.includes("meat") || c.includes("chicken")) return "pork";
+  if (c.includes("vegg") || c.includes("tofu") || c.includes("bean"))
+    return "veggie";
+  if (c.includes("pork") || c.includes("meat") || c.includes("chicken"))
+    return "pork";
   return "pork";
+}
+
+function MenuSkeletonGrid() {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="rounded-card border border-border overflow-hidden">
+          <Skeleton className="h-44 w-full rounded-none" />
+          <div className="p-4 space-y-2">
+            <Skeleton className="h-5 w-2/3" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-8 w-1/2 mt-2" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function HomePage() {
@@ -66,18 +86,15 @@ export default function HomePage() {
   );
 
   return (
-    <div className="pb-40">
-      <div className="px-5 md:px-10 pt-6 pb-4">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 leading-snug">
+    <div className="pb-8 md:pb-10">
+      <div className="page-container pt-6 pb-2">
+        <h1 className="font-display text-2xl md:text-3xl font-bold text-foreground leading-snug">
           เลือกไส้ที่ใช่
-          <span style={{ color: COLORS.accent }}> สำหรับคุณ</span>
+          <span className="text-brand"> สำหรับคุณ</span>
         </h1>
 
-        <p
-          className="text-sm mt-1 flex items-center gap-1.5"
-          style={{ color: COLORS.gray }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+        <p className="text-sm mt-1 flex items-center gap-1.5 text-muted">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
             <circle
               cx="12"
               cy="12"
@@ -94,49 +111,44 @@ export default function HomePage() {
           </svg>
           จองล่วงหน้าตอนนี้ แล้วไปรับของร้อนๆ ที่ตู้ใกล้บ้าน
         </p>
+      </div>
 
-        <div className="flex gap-2 mt-5 flex-wrap">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCategory(cat.key as typeof activeCategory)}
-              className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200"
-              style={
-                activeCategory === cat.key
-                  ? { backgroundColor: COLORS.accent, color: "white" }
-                  : {
-                      backgroundColor: "white",
-                      color: COLORS.grayDark,
-                      border: "1px solid #F3F4F6",
-                    }
-              }
-            >
-              {cat.label}
-            </button>
-          ))}
+      <div className="sticky top-[var(--header-height)] md:top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/80 md:border-0 md:static md:bg-transparent md:backdrop-blur-none">
+        <div className="page-container py-3">
+          <div className="chip-scroll flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+            {CATEGORIES.map((cat) => (
+              <Chip
+                key={cat.key}
+                active={activeCategory === cat.key}
+                onClick={() =>
+                  setActiveCategory(cat.key as typeof activeCategory)
+                }
+              >
+                {cat.label}
+              </Chip>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="px-5 md:px-10">
-        {isLoading && (
-          <div className="text-center py-20 text-gray-400">กำลังโหลดเมนู...</div>
-        )}
+      <div className="page-container">
+        {isLoading && <MenuSkeletonGrid />}
         {loadError && (
-          <div className="text-center py-20 text-red-500">{loadError}</div>
+          <EmptyState
+            title="โหลดเมนูไม่สำเร็จ"
+            description={loadError}
+            icon={<span className="text-4xl">⚠️</span>}
+          />
         )}
-        {!isLoading && !loadError && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {!isLoading && !loadError && filtered.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 animate-fade-in">
             {filtered.map((item) => (
               <MenuCard key={item.id} item={item} />
             ))}
           </div>
         )}
-
         {!isLoading && !loadError && filtered.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <p className="text-4xl mb-3">🥟</p>
-            <p>ไม่มีเมนูในหมวดนี้</p>
-          </div>
+          <EmptyState title="ไม่มีเมนูในหมวดนี้" />
         )}
       </div>
     </div>
