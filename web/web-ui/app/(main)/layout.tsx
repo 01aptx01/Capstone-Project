@@ -1,4 +1,3 @@
-// app/(main)/layout.tsx
 "use client";
 
 import { useState } from "react";
@@ -7,9 +6,10 @@ import { MobileHeader } from "@/components/layout/MobileHeader";
 import { DesktopHeader } from "@/components/layout/DesktopHeader";
 import { DesktopSidebar } from "@/components/layout/DesktopSidebar";
 import { DrawerMenu } from "@/components/layout/DrawerMenu";
-import { CartProvider } from "@/context/CartContext"; 
-// 🚨 1. Import FloatingCart เข้ามา
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { CartProvider } from "@/context/CartContext";
 import { FloatingCart } from "@/components/layout/FloatingCart";
+import { DevNetworkGuard } from "@/components/layout/DevNetworkGuard";
 
 export default function MainLayout({
   children,
@@ -26,9 +26,13 @@ export default function MainLayout({
     return "home";
   };
 
+  const compactMainChrome =
+    pathname.startsWith("/checkout") || pathname.startsWith("/payment");
+
   return (
     <CartProvider>
-      <div className="flex flex-col w-full min-h-screen">
+      <div className="flex flex-col w-full min-h-screen bg-background">
+        <DevNetworkGuard />
         <div className="hidden md:block">
           <DesktopHeader />
         </div>
@@ -43,14 +47,17 @@ export default function MainLayout({
             <DesktopSidebar active={getActiveMenu()} />
           </div>
 
-          <main className="flex-1 flex flex-col min-w-0 h-full overflow-y-auto">
+          <main
+            className={`flex-1 flex flex-col min-w-0 h-full overflow-y-auto ${
+              compactMainChrome ? "pb-6 md:pb-10" : "main-with-mobile-chrome"
+            }`}
+          >
             {children}
           </main>
         </div>
 
         <DrawerMenu open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-
-        {/* 🚨 2. นำ FloatingCart มาวางไว้ล่างสุดของแอป (แต่ยังอยู่ข้างใน CartProvider) */}
+        <MobileBottomNav />
         <FloatingCart />
       </div>
     </CartProvider>
