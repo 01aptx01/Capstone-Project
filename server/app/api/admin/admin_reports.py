@@ -11,6 +11,10 @@ from app.api.admin.decorators import admin_required
 from app.extensions import db
 from app.models import Order
 
+# สถานะที่ถือว่า "เงินเข้าจริง" — ใช้คิดยอดขาย/รายได้ (กราฟแนวโน้มยอดขาย)
+# นับ paid + dispensing + completed (ไม่นับ refunded/cancelled/failed)
+SALE_STATUSES = ("paid", "dispensing", "completed")
+
 
 def _to_float(v) -> float:
     if v is None:
@@ -35,7 +39,7 @@ def admin_sales_report():
             func.coalesce(func.sum(Order.total_price), 0).label("revenue"),
             func.count(Order.order_id).label("count"),
         )
-        .where(Order.status == "completed")
+        .where(Order.status.in_(SALE_STATUSES))
         .where(func.date(Order.created_at) >= since)
         .group_by(func.date(Order.created_at))
         .order_by(func.date(Order.created_at))
