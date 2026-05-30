@@ -3,35 +3,36 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { isAxiosError } from "axios";
 import AuthCardWrapper from "./AuthCardWrapper";
+import { adminLogin } from "@/lib/auth";
 
 export default function LoginCard() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    // Simulate auth check
-    setTimeout(() => {
+    try {
+      await adminLogin(email.trim(), password);
+      router.replace("/");
+    } catch (err) {
+      const msg = isAxiosError(err)
+        ? String((err.response?.data as { error?: string })?.error || "อีเมลหรือรหัสผ่านไม่ถูกต้อง")
+        : "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่";
+      setError(msg);
+    } finally {
       setLoading(false);
-      // Mock logic: if email is an 'invited' email, redirect to register
-      if (email.includes("invite") || email.includes("newhire") || email.includes("register")) {
-        router.push(`/register?email=${encodeURIComponent(email)}`);
-      } else {
-        router.push("/");
-      }
-    }, 800);
+    }
   };
 
   const handleGoogleLogin = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/");
-    }, 800);
+    setError("ยังไม่รองรับการเข้าสู่ระบบด้วย Google");
   };
 
   return (
@@ -43,6 +44,13 @@ export default function LoginCard() {
         <h1 className="text-2xl font-black text-[var(--text)]">Welcome Back</h1>
         <p className="text-[var(--text)]0 text-sm mt-1">Sign in to MOD PAO Admin</p>
       </div>
+
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-600 px-4 py-3 rounded-xl text-[13px] font-bold mb-5 flex items-center gap-2 animate-in slide-in-from-top-2">
+          <i className="fi fi-rr-exclamation"></i>
+          {error}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
