@@ -9,11 +9,9 @@ export interface CartItem extends Product {
 
 interface Props {
   cart: CartItem[];
-  /** Current catalog stock by product_id (from GET /api/products) */
-  stockById: Record<number, number>;
-  totalPrice: number;
-  /** Amount to charge after coupon (same as totalPrice when no coupon) */
-  payableTotal: number;
+  stockById: Record<number, number>; // สินค้าในสต็อก ดึงจาก API (/api/products)
+  totalPrice: number; // ราคารวม
+  payableTotal: number; // ราคาหลังใช้คูปอง
   appliedCoupon: AppliedCoupon | null;
   totalHeatingTime: number;
   onCheckout: () => void;
