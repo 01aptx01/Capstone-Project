@@ -1,5 +1,4 @@
-// tailwind.config.ts
-import type { Config } from "tailwindcss"
+import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: [
@@ -9,25 +8,45 @@ const config: Config = {
   theme: {
     extend: {
       screens: {
-        'md': '900px',    // เปลี่ยนจาก 768px เป็น 900px (Desktop จะเริ่มโชว์ที่ 900px)
-        'lg': '1100px',   // ปรับค่าอื่นๆ ได้ตามต้องการ
+        md: "900px",
+        lg: "1100px",
       },
       colors: {
-        primary: {
-          DEFAULT: "#FF6B00",
-          light: "#FF8C33",
-          dark: "#CC5500",
-          primary: "#FF8235",     // Orange header
-          accent: "#F97316",      // Orange accent
-          bg: "#FFF3E8",          // Light orange bg
-          gray: "rgba(71,71,71,0.62)",
-          grayDark: "rgba(71,71,71,0.7)",
-          white: "#FFFFFF"
+        brand: {
+          DEFAULT: "var(--brand)",
+          hover: "var(--brand-hover)",
+          light: "var(--brand-light)",
+          muted: "var(--brand-muted)",
         },
+        background: "var(--background)",
+        surface: "var(--surface)",
+        foreground: "var(--foreground)",
+        muted: "var(--muted-foreground)",
+        subtle: "var(--subtle-foreground)",
+        border: "var(--border)",
+        destructive: "var(--destructive)",
+        success: "var(--success)",
+        info: "var(--info)",
+      },
+      borderRadius: {
+        card: "var(--radius-card)",
+      },
+      boxShadow: {
+        brand: "var(--shadow-brand)",
+      },
+      fontFamily: {
+        sans: ["var(--font-noto)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: [
+          "var(--font-prompt)",
+          "var(--font-noto)",
+          "ui-sans-serif",
+          "system-ui",
+          "sans-serif",
+        ],
       },
     },
   },
   plugins: [],
-}
+};
 
-export default config
+export default config;

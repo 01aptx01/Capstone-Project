@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { useUser } from "@/context/UserContext";
@@ -8,6 +8,8 @@ import { checkout, getPaymentStatus, mockPay } from "@/lib/api/buy";
 import { earnPoints } from "@/lib/api/members";
 import { createPromptPaySource } from "@/lib/payment/omise";
 import { FULFILLMENT_MODE, MACHINE_CODE } from "@/lib/config";
+import { Alert, Button, PageHeader } from "@/components/Ui";
+import { ModalSheet } from "@/components/Ui/ModalSheet";
 
 const PAID_STATUSES = new Set([
   "paid",
@@ -179,9 +181,7 @@ export default function PaymentPage() {
 
   if (orderStatus !== "pending") return null;
 
-  const displayOrderId = chargeId
-    ? chargeId.slice(-8)
-    : "...";
+  const displayOrderId = chargeId ? chargeId.slice(-8) : "...";
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)
@@ -227,36 +227,27 @@ export default function PaymentPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 pb-[180px]">
-      <div className="flex items-center gap-4 p-5 bg-white shadow-sm z-10 shrink-0">
-        <button
-          onClick={() => router.push("/home")}
-          className="text-gray-600 hover:bg-gray-100 p-1.5 rounded-full"
-        >
-          ←
-        </button>
-        <h1 className="text-lg font-bold text-gray-800">ชำระเงิน</h1>
-      </div>
+    <div className="flex flex-col min-h-screen bg-background pb-48 md:pb-32">
+      <div className="page-container pt-5 max-w-md mx-auto w-full">
+        <PageHeader
+          title="ชำระเงิน"
+          onBack={() => router.push("/home")}
+        />
 
-      <div className="px-5 pt-6 w-full max-w-md mx-auto flex-1 overflow-y-auto">
-        <div className="text-center mb-4">
-          <span className="font-bold text-gray-500 text-sm">
-            หมายเลขคำสั่งซื้อ: {displayOrderId}
-          </span>
-        </div>
+        <p className="text-center text-sm font-bold text-muted mb-4">
+          หมายเลขคำสั่งซื้อ: {displayOrderId}
+        </p>
 
         {(initError || isInitiating) && (
           <div className="mb-4 text-center text-sm">
-            {isInitiating && (
-              <p className="text-gray-500">กำลังสร้าง QR Code...</p>
-            )}
-            {initError && <p className="text-red-500 font-bold">{initError}</p>}
+            {isInitiating && <p className="text-muted">กำลังสร้าง QR Code...</p>}
+            {initError && <Alert variant="error">{initError}</Alert>}
           </div>
         )}
 
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 flex flex-col overflow-hidden mb-6">
+        <div className="bg-surface rounded-card shadow-sm border border-border flex flex-col overflow-hidden mb-6">
           <div className="p-6 flex flex-col items-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-50/50 border border-blue-100 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-sky-50 border border-sky-100 rounded-full mb-6">
               <span className="font-bold text-[#003D6A] text-xs">
                 {paymentMethod === "promptpay"
                   ? "Thai QR PromptPay"
@@ -272,8 +263,8 @@ export default function PaymentPage() {
                   className="w-full h-full object-contain rounded-xl"
                 />
               ) : (
-                <div className="w-full h-full bg-gray-100 rounded-xl flex items-center justify-center">
-                  <span className="font-bold text-gray-300 text-sm">
+                <div className="w-full h-full bg-background rounded-xl flex items-center justify-center border border-border">
+                  <span className="font-bold text-muted text-sm">
                     {isInitiating ? "..." : "QR Code"}
                   </span>
                 </div>
@@ -281,76 +272,73 @@ export default function PaymentPage() {
             </div>
           </div>
 
-          <div className="p-6 flex flex-col items-center border-t border-dashed border-gray-100">
-            <p className="text-gray-500 font-bold text-sm mb-1">ยอดที่ต้องชำระ</p>
+          <div className="p-6 flex flex-col items-center border-t border-dashed border-border">
+            <p className="text-muted font-bold text-sm mb-1">ยอดที่ต้องชำระ</p>
             <div className="flex items-baseline gap-1.5 mb-4">
-              <span className="text-4xl font-extrabold text-[#FF8A33]">
+              <span className="text-4xl font-extrabold text-brand">
                 {payableTotal}
               </span>
-              <span className="text-xl font-bold text-[#FF8A33]">฿</span>
+              <span className="text-xl font-bold text-brand">฿</span>
             </div>
-            <span className="text-2xl font-extrabold text-[#EF4444] tracking-wider">
+            <span className="text-2xl font-extrabold text-destructive tracking-wider">
               {formatTime(timeLeft)}
             </span>
           </div>
         </div>
 
         {process.env.NODE_ENV === "development" && chargeId && (
-          <button
+          <Button
+            variant="secondary"
+            fullWidth
+            className="mb-3 bg-success/10 text-success border-success/30"
             onClick={() => void handleMockPay()}
-            className="w-full mb-3 py-2 bg-green-500 text-white rounded-xl text-sm font-bold"
           >
             [Dev] จำลองชำระเงินสำเร็จ
-          </button>
+          </Button>
         )}
       </div>
 
-      <div className="fixed bottom-0 left-0 w-full bg-white px-5 pt-5 pb-8 rounded-t-3xl shadow-[0_-15px_40px_rgba(0,0,0,0.06)] z-50 border-t border-gray-100">
-        <div className="max-w-md mx-auto w-full flex flex-col gap-3">
-          {checkError && (
-            <p className="text-red-500 text-sm text-center font-bold">{checkError}</p>
-          )}
-          <button
+      <div
+        className="fixed left-0 w-full bg-surface px-5 pt-5 rounded-t-3xl shadow-[0_-15px_40px_rgba(0,0,0,0.06)] z-40 border-t border-border max-w-md mx-auto right-0"
+        style={{
+          bottom: "calc(var(--safe-bottom) + 0.5rem)",
+        }}
+      >
+        <div className="w-full flex flex-col gap-3">
+          {checkError && <Alert variant="error">{checkError}</Alert>}
+          <Button
+            fullWidth
+            loading={isChecking}
+            disabled={!chargeId}
             onClick={() => void handleVerifyPayment()}
-            disabled={!chargeId || isChecking}
-            className="w-full py-3.5 bg-[#FF8A33] text-white rounded-xl font-bold disabled:opacity-50"
           >
             ยืนยันการชำระเงิน
-          </button>
-          <button
-            onClick={() => setShowCancelModal(true)}
-            className="w-full py-3.5 bg-gray-50 text-gray-500 rounded-xl font-bold"
-          >
+          </Button>
+          <Button variant="secondary" fullWidth onClick={() => setShowCancelModal(true)}>
             ยกเลิกทำรายการ
-          </button>
+          </Button>
         </div>
       </div>
 
-      {showCancelModal && (
-        <div className="fixed inset-0 z-[200] bg-black/60 flex items-center justify-center p-5">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full text-center">
-            <h3 className="text-xl font-bold mb-4">ยกเลิกรายการ?</h3>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowCancelModal(false)}
-                className="flex-1 py-3 bg-gray-100 rounded-xl font-bold"
-              >
-                ปิด
-              </button>
-              <button
-                onClick={() => void handleConfirmCancel()}
-                className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold"
-              >
-                ยืนยัน
-              </button>
-            </div>
+      <ModalSheet open={showCancelModal} onClose={() => setShowCancelModal(false)}>
+        <div className="px-6 pb-6 text-center">
+          <h3 className="font-display text-xl font-bold text-foreground mb-4">
+            ยกเลิกรายการ?
+          </h3>
+          <div className="flex gap-3">
+            <Button variant="secondary" fullWidth onClick={() => setShowCancelModal(false)}>
+              ปิด
+            </Button>
+            <Button variant="danger" fullWidth onClick={() => void handleConfirmCancel()}>
+              ยืนยัน
+            </Button>
           </div>
         </div>
-      )}
+      </ModalSheet>
 
       {isChecking && (
-        <div className="fixed inset-0 z-[200] bg-black/60 flex flex-col items-center justify-center">
-          <div className="w-16 h-16 border-4 border-gray-200 border-t-[#FF8A33] rounded-full animate-spin mb-4" />
+        <div className="fixed inset-0 z-[var(--z-toast)] bg-black/60 flex flex-col items-center justify-center">
+          <div className="w-16 h-16 border-4 border-border border-t-brand rounded-full animate-spin mb-4" />
           <p className="text-white font-bold">กำลังตรวจสอบ...</p>
         </div>
       )}

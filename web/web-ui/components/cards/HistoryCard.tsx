@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import { useState } from "react";
 import type { MemberOrder } from "@/lib/api/orders";
 import { QRScannerModal } from "@/components/Ui/QRScannerModal";
+import { Button, Card } from "@/components/Ui";
+import { cn } from "@/lib/utils";
 
 interface HistoryCardProps {
   order: MemberOrder;
@@ -17,13 +19,18 @@ export function HistoryCard({ order, onPickupComplete }: HistoryCardProps) {
       case "ready_to_scan":
         return {
           label: "พร้อมสแกน",
-          color: "text-[#10B981]",
-          bg: "bg-emerald-50",
+          className: "text-success bg-green-50",
         };
       case "completed":
-        return { label: "เสร็จสิ้น", color: "text-gray-500", bg: "bg-gray-100" };
+        return {
+          label: "เสร็จสิ้น",
+          className: "text-muted bg-background",
+        };
       default:
-        return { label: "-", color: "text-gray-500", bg: "bg-gray-100" };
+        return {
+          label: "-",
+          className: "text-muted bg-background",
+        };
     }
   };
 
@@ -31,39 +38,43 @@ export function HistoryCard({ order, onPickupComplete }: HistoryCardProps) {
 
   return (
     <>
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col gap-3">
-        <div className="flex justify-between items-center border-b border-gray-50 pb-3">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-gray-800 text-sm">
+      <Card className="flex flex-col gap-3 p-5">
+        <div className="flex justify-between items-center border-b border-border pb-3 gap-2">
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-foreground text-sm truncate">
               ออเดอร์ #{order.orderNumber}
             </span>
-            <span className="text-xs text-gray-400 font-medium">
+            <span className="text-xs text-muted font-medium">
               {order.datetime}
             </span>
           </div>
-          <div
-            className={`px-2.5 py-1 rounded-md text-xs font-bold ${statusInfo.bg} ${statusInfo.color}`}
+          <span
+            className={cn(
+              "px-2.5 py-1 rounded-md text-xs font-bold shrink-0",
+              statusInfo.className,
+            )}
           >
             {statusInfo.label}
-          </div>
+          </span>
         </div>
 
-        <div className="flex justify-between items-end">
-          <div className="flex flex-col gap-1">
-            <span className="text-gray-600 text-sm">{order.items}</span>
-            <span className="font-extrabold text-gray-800">{order.total} ฿</span>
+        <div className="flex justify-between items-end gap-3">
+          <div className="flex flex-col gap-1 min-w-0">
+            <span className="text-muted text-sm truncate">{order.items}</span>
+            <span className="font-extrabold text-foreground">{order.total} ฿</span>
           </div>
 
           {order.status === "ready_to_scan" && (
-            <button
+            <Button
+              size="sm"
+              className="rounded-full shrink-0"
               onClick={() => setShowQRScanner(true)}
-              className="px-5 py-2 bg-[#FF8A33] hover:bg-orange-600 text-white text-sm font-bold rounded-full shadow-sm transition-colors"
             >
               สแกนแลกรับ
-            </button>
+            </Button>
           )}
         </div>
-      </div>
+      </Card>
 
       {showQRScanner && (
         <QRScannerModal

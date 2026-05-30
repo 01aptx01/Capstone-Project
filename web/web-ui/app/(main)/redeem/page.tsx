@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CouponCard } from "@/components/cards/CouponCard";
 import { fetchRedeemableCoupons, type RedeemableCoupon } from "@/lib/api/promotions";
 import { redeemCoupon } from "@/lib/api/members";
 import { useUser } from "@/context/UserContext";
+import { Alert, Button, Card, EmptyState, Skeleton } from "@/components/Ui";
 
 export default function RedeemPage() {
   const { phone, profile, loadMember } = useUser();
@@ -43,46 +44,46 @@ export default function RedeemPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-gray-50 pb-10">
-      <div className="px-5 md:px-10 pt-6 max-w-5xl mx-auto">
+    <div className="flex-1 overflow-y-auto pb-6">
+      <div className="page-container pt-6 max-w-5xl">
         <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <div className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
-            <span className="text-gray-600 font-bold mb-1">คะแนนของคุณ</span>
+          <Card className="flex-1 flex flex-col items-center justify-center p-6">
+            <span className="text-muted font-bold mb-1">คะแนนของคุณ</span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-5xl font-extrabold text-[#FF8A33]">
-                {points}
-              </span>
-              <span className="text-sm font-bold text-gray-400 uppercase">
-                Points
-              </span>
+              <span className="text-5xl font-extrabold text-brand">{points}</span>
+              <span className="text-sm font-bold text-muted uppercase">Points</span>
             </div>
-          </div>
+          </Card>
 
           <Link
             href="/coupons"
-            className="flex-1 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex md:flex-col items-center justify-between md:justify-center hover:bg-orange-50 transition-colors"
+            className="flex-1 bg-surface p-6 rounded-card shadow-sm border border-border flex md:flex-col items-center justify-between md:justify-center hover:bg-brand-muted transition-colors touch-target"
           >
-            <span className="text-gray-800 font-bold">คูปองที่สามารถใช้ได้</span>
-            <span className="text-2xl font-extrabold text-[#FF8A33]">
+            <span className="text-foreground font-bold">คูปองที่สามารถใช้ได้</span>
+            <span className="text-2xl font-extrabold text-brand">
               ใส่โค้ดตอนชำระ
             </span>
           </Link>
         </div>
 
         {message && (
-          <p className="text-center text-sm font-bold text-amber-600 mb-4">
+          <Alert variant="info" className="mb-4">
             {message}
-          </p>
+          </Alert>
         )}
 
-        <div className="text-center md:text-left mb-6">
-          <h2 className="text-lg md:text-xl font-bold text-gray-800">
-            เลือกคูปองที่ต้องการแลก
-          </h2>
-        </div>
+        <h2 className="font-display text-lg md:text-xl font-bold text-foreground mb-6 text-center md:text-left">
+          เลือกคูปองที่ต้องการแลก
+        </h2>
 
         {isLoading ? (
-          <p className="text-center text-gray-400 py-10">กำลังโหลด...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <Skeleton key={i} className="h-64 w-full rounded-card" />
+            ))}
+          </div>
+        ) : coupons.length === 0 ? (
+          <EmptyState title="ยังไม่มีคูปองให้แลก" />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {coupons.map((coupon) => (
@@ -93,25 +94,20 @@ export default function RedeemPage() {
                     title: coupon.title,
                     description: coupon.description,
                     points: coupon.points_cost,
-                    colorBg: "bg-[#FF8A33]",
+                    colorBg: "bg-brand",
                     discountValue: coupon.discount_amount,
                     expiry: coupon.expiry ?? "ไม่มีวันหมดอายุ",
                   }}
                 />
-                <button
-                  onClick={() => void handleRedeem(coupon.promotion_id)}
+                <Button
+                  fullWidth
                   disabled={points < coupon.points_cost}
-                  className="w-full py-3 bg-[#FF8A33] disabled:bg-gray-300 text-white rounded-xl font-bold"
+                  onClick={() => void handleRedeem(coupon.promotion_id)}
                 >
                   แลกรับ ({coupon.points_cost} แต้ม)
-                </button>
+                </Button>
               </div>
             ))}
-            {coupons.length === 0 && (
-              <p className="text-gray-400 col-span-2 text-center py-10">
-                ยังไม่มีคูปองให้แลก
-              </p>
-            )}
           </div>
         )}
       </div>

@@ -15,14 +15,15 @@ export interface Category {
   label: string;
 }
 
-// ─── Colors ───────────────────────────────────────────────────────────────────
+// ─── Design tokens (prefer Tailwind: bg-brand, text-muted, bg-brand-muted) ───
+/** @deprecated Use Tailwind semantic classes instead of inline styles */
 export const COLORS = {
-  primary: "#FF8235",     // Orange header
-  accent: "#F97316",      // Orange accent
-  bg: "#FFF3E8",          // Light orange bg
-  gray: "rgba(71,71,71,0.62)",
-  grayDark: "rgba(71,71,71,0.7)",
-};
+  primary: "var(--brand-light)",
+  accent: "var(--brand)",
+  bg: "var(--brand-muted)",
+  gray: "var(--muted-foreground)",
+  grayDark: "var(--subtle-foreground)",
+} as const;
 
 // ─── Menu Items ───────────────────────────────────────────────────────────────
 export const MENU_ITEMS: MenuItem[] = [

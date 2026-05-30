@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Thai } from "next/font/google";
+import { Noto_Sans_Thai, Prompt } from "next/font/google";
 import Script from "next/script";
 import { UserProvider } from "@/context/UserContext";
 import "./globals.css";
 
-// ตั้งค่าฟอนต์ Noto Sans Thai (รองรับทั้งภาษาไทยและอังกฤษ)
 const notoSansThai = Noto_Sans_Thai({
   subsets: ["latin", "thai"],
   weight: ["300", "400", "500", "600", "700"],
   display: "swap",
+  variable: "--font-noto",
+});
+
+const prompt = Prompt({
+  subsets: ["latin", "thai"],
+  weight: ["500", "600", "700"],
+  display: "swap",
+  variable: "--font-prompt",
 });
 
 export const metadata: Metadata = {
@@ -22,9 +29,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // นำ className ของฟอนต์มาใส่ที่แท็ก html เพื่อให้ใช้งานได้ทั้งเว็บ
-    <html lang="th" className={notoSansThai.className}>
-      <body className="min-h-screen antialiased flex flex-col bg-gray-50">
+    <html
+      lang="th"
+      className={`${notoSansThai.variable} ${prompt.variable} ${notoSansThai.className}`}
+    >
+      <body className="min-h-screen antialiased flex flex-col bg-background text-foreground font-sans">
         <Script src="https://cdn.omise.co/omise.js" strategy="afterInteractive" />
         <UserProvider>{children}</UserProvider>
       </body>

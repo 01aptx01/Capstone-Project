@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { sendOtp, verifyOtp } from "@/lib/auth/otp";
 import { getMember, registerMember } from "@/lib/api/members";
 import { useUser } from "@/context/UserContext";
 import { saveSession } from "@/lib/auth/session";
+import { Alert, Button, Input, OtpInput } from "@/components/Ui";
 
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 10);
@@ -24,17 +25,9 @@ export default function LoginPage() {
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [devHint, setDevHint] = useState<string | null>(null);
   const [resendSeconds, setResendSeconds] = useState(0);
   const [pendingToken, setPendingToken] = useState<string | null>(null);
-
-  const otpRefs = [
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-    useRef<HTMLInputElement>(null),
-  ];
 
   useEffect(() => {
     if (resendSeconds <= 0) return;
@@ -46,12 +39,13 @@ export default function LoginPage() {
 
   const requestOtp = useCallback(async (phone: string) => {
     setFormError(null);
+    setDevHint(null);
     setIsSubmitting(true);
     try {
       const res = await sendOtp(phone);
       setResendSeconds(RESEND_COOLDOWN_SEC);
-      if (res.delivery === "console") {
-        setFormError(
+      if (res.delivery === "console" || res.delivery === "dev") {
+        setDevHint(
           "โหมดทดสอบ: ดูรหัส OTP ใน log ของ server (ยังไม่ได้ตั้งค่า Twilio)",
         );
       }
@@ -143,23 +137,6 @@ export default function LoginPage() {
     await requestOtp(phone);
   };
 
-  const handleOtpChange = (index: number, value: string) => {
-    if (value.length > 1) return;
-    const newOtp = [...otp];
-    newOtp[index] = value.replace(/\D/g, "");
-    setOtp(newOtp);
-    if (value !== "" && index < 5) otpRefs[index + 1].current?.focus();
-  };
-
-  const handleOtpKeyDown = (
-    index: number,
-    e: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (e.key === "Backspace" && otp[index] === "" && index > 0) {
-      otpRefs[index - 1].current?.focus();
-    }
-  };
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -168,18 +145,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col relative font-sans">
+    <div className="min-h-screen bg-background flex flex-col relative">
       <div
-        className="absolute top-0 left-0 w-full h-[45vh] bg-cover bg-center bg-no-repeat"
+        className="absolute top-0 left-0 w-full h-[42vh] bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/BG.png')" }}
       >
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[2px]" />
       </div>
 
-      <div className="relative flex-1 flex flex-col items-center justify-end md:justify-center pt-[30vh] z-10 w-full max-w-lg mx-auto">
-        <div className="w-full bg-white rounded-t-[40px] md:rounded-[40px] shadow-2xl pt-24 px-6 pb-8 md:pb-12 relative flex flex-col min-h-[60vh] md:min-h-0">
-          <div className="absolute -top-[65px] left-1/2 -translate-x-1/2 w-[130px] h-[130px] bg-white rounded-full p-2 shadow-sm border-[4px] border-[#F2F2F2]">
-            <div className="w-full h-full bg-[#FF8A33] rounded-full flex items-center justify-center p-1 overflow-hidden">
+      <div className="relative flex-1 flex flex-col items-center justify-end md:justify-center pt-[28vh] z-10 w-full max-w-lg mx-auto px-4 pb-6 md:pb-0">
+        <div className="w-full bg-surface rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-lg pt-24 px-6 pb-8 md:pb-12 relative flex flex-col min-h-[58vh] md:min-h-0 border border-border/50">
+          <div className="absolute -top-[65px] left-1/2 -translate-x-1/2 w-[130px] h-[130px] bg-surface rounded-full p-2 shadow-sm border-4 border-border">
+            <div className="w-full h-full bg-brand rounded-full flex items-center justify-center p-1 overflow-hidden">
               <img
                 src="/MODPAO.svg"
                 alt="MOD PAO Logo"
@@ -189,100 +166,81 @@ export default function LoginPage() {
           </div>
 
           <div className="text-center mb-8 mt-4">
-            <h1 className="text-3xl font-extrabold text-[#2F4858] tracking-widest uppercase">
+            <h1 className="font-display text-3xl font-bold text-foreground tracking-wide">
               MOD PAO
             </h1>
-            <p className="text-xs text-gray-400 mt-2">
-              ทดสอบ: 0631723422 (สมาชิกมีในระบบ)
+            <p className="text-xs text-muted mt-2">
+              จองซาลาเปาร้อนๆ จากตู้ใกล้บ้าน
             </p>
           </div>
 
           <form
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col gap-4"
             onSubmit={(e) => void handleAction(e)}
           >
-            {formError && (
-              <p className="text-red-500 text-sm font-bold text-center mb-4">
-                {formError}
-              </p>
-            )}
+            {formError && <Alert variant="error">{formError}</Alert>}
+            {devHint && step === 2 && <Alert variant="info">{devHint}</Alert>}
 
             {step === 1 && (
-              <div className="flex flex-col flex-1 animate-fade-in">
-                <div className="mb-8">
-                  <label
-                    htmlFor="phone"
-                    className="block text-sm font-bold text-[#5C6D8A] mb-2 text-center md:text-left"
-                  >
-                    เบอร์โทรศัพท์ (Phone Number)
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="063-xxx-xxxx"
-                    className="w-full px-5 py-4 rounded-xl border-2 border-gray-100 focus:outline-none focus:border-[#FF8A33] transition-colors text-center text-lg font-bold text-gray-700 placeholder:text-gray-300 placeholder:font-medium shadow-sm"
-                    required
-                  />
-                </div>
-                <div className="mt-auto md:mt-4">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full bg-[#FF8A33] text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(255,138,51,0.3)] hover:bg-orange-500 active:scale-[0.98] transition-all disabled:opacity-60"
-                  >
-                    {isSubmitting ? "กำลังส่ง..." : "ขอรหัส OTP"}
-                  </button>
-                </div>
+              <div className="flex flex-col flex-1 animate-fade-in gap-6">
+                <Input
+                  id="phone"
+                  type="tel"
+                  label="เบอร์โทรศัพท์"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="063-xxx-xxxx"
+                  center
+                  required
+                />
+                <Button
+                  type="submit"
+                  size="lg"
+                  fullWidth
+                  loading={isSubmitting}
+                >
+                  ขอรหัส OTP
+                </Button>
               </div>
             )}
 
             {step === 2 && (
-              <div className="flex flex-col flex-1 animate-fade-in">
-                <div className="mb-8 text-center">
-                  <p className="font-bold text-[#5C6D8A] mb-1">
+              <div className="flex flex-col flex-1 animate-fade-in gap-6">
+                <div className="text-center">
+                  <p className="font-bold text-subtle mb-1">
                     กรอกรหัส OTP 6 หลัก
                   </p>
-                  <p className="text-xs text-gray-400 mb-6">
+                  <p className="text-xs text-muted mb-6">
                     รหัสถูกส่งไปยังเบอร์ {phoneNumber}
                   </p>
-                  <div className="flex justify-center gap-2 md:gap-3 mb-6">
-                    {otp.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={otpRefs[index]}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(index, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                        className="w-12 h-14 md:w-14 md:h-16 text-center text-2xl font-bold text-gray-800 border-2 border-gray-100 rounded-xl focus:outline-none focus:border-[#FF8A33] shadow-sm transition-colors"
-                      />
-                    ))}
-                  </div>
+                  <OtpInput
+                    value={otp}
+                    onChange={setOtp}
+                    disabled={isSubmitting}
+                  />
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="text-sm font-bold text-[#FF8A33] hover:text-orange-500 transition-colors"
+                    className="mt-6 text-sm font-bold text-brand hover:text-brand-hover transition-colors touch-target"
                   >
                     เปลี่ยนเบอร์โทรศัพท์
                   </button>
                 </div>
-                <div className="mt-auto md:mt-4 flex flex-col gap-4 items-center">
-                  <button
+                <div className="flex flex-col gap-3">
+                  <Button
                     type="submit"
-                    disabled={otp.join("").length !== 6 || isSubmitting}
-                    className="w-full bg-[#FF8A33] disabled:bg-gray-300 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(255,138,51,0.3)] hover:bg-orange-500 active:scale-[0.98] transition-all"
+                    size="lg"
+                    fullWidth
+                    loading={isSubmitting}
+                    disabled={otp.join("").length !== 6}
                   >
-                    {isSubmitting ? "กำลังตรวจสอบ..." : "ยืนยันเข้าสู่ระบบ"}
-                  </button>
+                    ยืนยันเข้าสู่ระบบ
+                  </Button>
                   <button
                     type="button"
                     disabled={resendSeconds > 0 || isSubmitting}
                     onClick={() => void handleResend()}
-                    className="text-sm font-bold text-[#A0AABF] hover:text-gray-600 underline underline-offset-4 decoration-2 decoration-gray-300 disabled:opacity-50"
+                    className="text-sm font-semibold text-muted hover:text-foreground underline underline-offset-4 disabled:opacity-50 touch-target py-2"
                   >
                     {resendSeconds > 0
                       ? `ส่งรหัสใหม่ (${resendSeconds}s)`
@@ -293,16 +251,16 @@ export default function LoginPage() {
             )}
 
             {step === 3 && (
-              <div className="flex flex-col flex-1 animate-fade-in">
-                <div className="mb-8 flex flex-col items-center">
-                  <p className="font-bold text-[#2F4858] text-lg mb-1">
+              <div className="flex flex-col flex-1 animate-fade-in gap-6">
+                <div className="flex flex-col items-center">
+                  <p className="font-display font-bold text-lg text-foreground mb-1">
                     ยินดีต้อนรับผู้ใช้ใหม่
                   </p>
-                  <p className="text-xs text-gray-400 mb-6">
+                  <p className="text-xs text-muted mb-6 text-center">
                     ตั้งค่าโปรไฟล์ของคุณเพื่อเริ่มใช้งาน
                   </p>
                   <div className="relative w-28 h-28 mb-6">
-                    <div className="w-full h-full rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 overflow-hidden relative group">
+                    <div className="w-full h-full rounded-full border-2 border-dashed border-border flex items-center justify-center bg-background overflow-hidden relative">
                       {profileImage ? (
                         <img
                           src={profileImage}
@@ -311,10 +269,11 @@ export default function LoginPage() {
                         />
                       ) : (
                         <svg
-                          className="text-gray-400 w-10 h-10"
+                          className="text-muted w-10 h-10"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
+                          aria-hidden
                         >
                           <path
                             strokeLinecap="round"
@@ -329,43 +288,36 @@ export default function LoginPage() {
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        aria-label="อัปโหลดรูปโปรไฟล์"
                       />
                     </div>
                   </div>
-                  <div className="w-full">
-                    <label
-                      htmlFor="name"
-                      className="block text-sm font-bold text-[#5C6D8A] mb-2 text-center md:text-left"
-                    >
-                      ชื่อแสดงผล (Display Name)
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      placeholder="ใส่ชื่อของคุณ"
-                      className="w-full px-5 py-4 rounded-xl border-2 border-gray-100 focus:outline-none focus:border-[#FF8A33] transition-colors text-center text-lg font-bold text-gray-700 placeholder:text-gray-300 placeholder:font-medium shadow-sm"
-                      required
-                    />
-                  </div>
+                  <Input
+                    id="name"
+                    label="ชื่อแสดงผล"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="ใส่ชื่อของคุณ"
+                    center
+                    required
+                  />
                 </div>
-                <div className="mt-auto md:mt-4">
-                  <button
-                    type="submit"
-                    disabled={!displayName || isSubmitting}
-                    className="w-full bg-[#FF8A33] disabled:bg-gray-300 disabled:shadow-none text-white py-4 rounded-2xl font-bold text-lg shadow-[0_8px_20px_rgba(255,138,51,0.3)] hover:bg-orange-500 active:scale-[0.98] transition-all"
-                  >
-                    {isSubmitting ? "กำลังสร้างบัญชี..." : "เริ่มต้นใช้งานเลย"}
-                  </button>
-                </div>
+                <Button
+                  type="submit"
+                  size="lg"
+                  fullWidth
+                  loading={isSubmitting}
+                  disabled={!displayName}
+                >
+                  เริ่มต้นใช้งานเลย
+                </Button>
               </div>
             )}
           </form>
 
-          <div className="mt-12 md:mt-8 pt-6 border-t border-gray-100 text-center">
-            <span className="text-xs font-bold text-[#A0AABF]">
-              Term of use
+          <div className="mt-10 pt-6 border-t border-border text-center">
+            <span className="text-xs font-semibold text-muted">
+              Terms of use
             </span>
           </div>
         </div>

@@ -1,15 +1,26 @@
 "use client";
 
-import Link from "next/link"; // นำเข้า Link จาก Next.js
-import { IconHome, IconRedeem, IconHistory, IconProfile, IconLogout } from "@/components/icons";
-import { COLORS } from "@/lib/constants";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  IconHome,
+  IconRedeem,
+  IconHistory,
+  IconProfile,
+  IconLogout,
+} from "@/components/icons";
+import { cn } from "@/lib/utils";
+import { clearSession } from "@/lib/auth/session";
+import { useUser } from "@/context/UserContext";
 
 interface DesktopSidebarProps {
   active: string;
 }
 
 export function DesktopSidebar({ active }: DesktopSidebarProps) {
-  // เพิ่ม href สำหรับกำหนด path ที่จะไปเมื่อกดเมนู
+  const router = useRouter();
+  const { logout } = useUser();
+
   const items = [
     { key: "home", href: "/home", label: "หน้าแรก", icon: <IconHome /> },
     { key: "redeem", href: "/redeem", label: "แลกรางวัล", icon: <IconRedeem /> },
@@ -17,10 +28,16 @@ export function DesktopSidebar({ active }: DesktopSidebarProps) {
     { key: "profile", href: "/profile", label: "ข้อมูลโปรไฟล์", icon: <IconProfile /> },
   ];
 
+  const handleLogout = () => {
+    clearSession();
+    logout();
+    router.push("/login");
+  };
+
   return (
-    <aside className="hidden md:flex flex-col w-60 bg-white border-r border-gray-100 min-h-screen pt-6 pb-10 sticky top-0">
+    <aside className="hidden md:flex flex-col w-60 bg-surface border-r border-border min-h-screen pt-6 pb-10 sticky top-0">
       <div className="px-5 mb-8">
-        <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: COLORS.gray }}>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted">
           เมนูหลัก
         </p>
       </div>
@@ -28,26 +45,30 @@ export function DesktopSidebar({ active }: DesktopSidebarProps) {
         {items.map((item) => {
           const isActive = item.key === active;
           return (
-            // เปลี่ยนจาก button เป็น Link และใส่ href
             <Link
               key={item.key}
               href={item.href}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all"
-              style={
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all",
                 isActive
-                  ? { backgroundColor: COLORS.bg, color: COLORS.accent }
-                  : { color: COLORS.grayDark }
-              }
+                  ? "bg-brand-muted text-brand"
+                  : "text-muted hover:bg-background",
+              )}
             >
-              <span style={{ color: isActive ? COLORS.accent : COLORS.gray }}>{item.icon}</span>
+              <span className={isActive ? "text-brand" : "text-muted"}>
+                {item.icon}
+              </span>
               {item.label}
             </Link>
           );
         })}
       </nav>
       <div className="px-3">
-        {/* ปุ่มออกจากระบบยังคงเป็น button เพราะมักจะใช้ผูกกับฟังก์ชัน onClick เพื่อลบ session */}
-        <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors" style={{ color: "#FF5A5A" }}>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-destructive hover:bg-red-50 transition-colors touch-target"
+        >
           <IconLogout />
           ออกจากระบบ
         </button>
