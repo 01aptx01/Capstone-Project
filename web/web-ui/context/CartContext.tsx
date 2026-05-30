@@ -102,7 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setAppliedCoupon(null);
   };
 
-  const cancelOrder = async () => {
+  const cancelOrder = useCallback(async () => {
     if (chargeId) {
       try {
         await cancelPayment(chargeId);
@@ -116,7 +116,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setQrCode(null);
     setTimeLeft(1800);
     clearCart();
-  };
+  }, [chargeId]);
 
   const completeOrder = () => {
     setOrderStatus("completed");
@@ -128,15 +128,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (orderStatus === "pending" && timeLeft > 0) {
-      timer = setTimeout(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (orderStatus === "pending" && timeLeft <= 0) {
-      setShowTimeoutModal(true);
-      void cancelOrder();
-    }
+    if (orderStatus !== "pending") return;
+
+    const timer = setTimeout(() => {
+      if (timeLeft <= 1) {
+        setShowTimeoutModal(true);
+        void cancelOrder();
+        return;
+      }
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
     return () => clearTimeout(timer);
-  }, [orderStatus, timeLeft]);
+  }, [orderStatus, timeLeft, cancelOrder]);
 
   const addToCart = useCallback(
     (

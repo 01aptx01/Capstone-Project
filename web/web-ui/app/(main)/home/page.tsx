@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { MenuCard } from "@/components/cards/MenuCard";
 import { CATEGORIES, type MenuItem } from "@/lib/constants";
 import { fetchProducts } from "@/lib/api/products";
@@ -35,6 +36,31 @@ function MenuSkeletonGrid() {
 }
 
 export default function HomePage() {
+  return (
+    <Suspense fallback={<HomePageFallback />}>
+      <HomePageContent />
+    </Suspense>
+  );
+}
+
+function HomePageFallback() {
+  return (
+    <div className="pb-8 md:pb-10">
+      <div className="page-container pt-6 pb-2">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="mt-2 h-4 w-80" />
+      </div>
+      <div className="page-container">
+        <MenuSkeletonGrid />
+      </div>
+    </div>
+  );
+}
+
+function HomePageContent() {
+  const searchParams = useSearchParams();
+  const searchQuery = (searchParams?.get("q") ?? "").trim().toLowerCase();
+
   const [activeCategory, setActiveCategory] = useState<
     "all" | "pork" | "veggie" | "sweet"
   >("all");
@@ -77,13 +103,22 @@ export default function HomePage() {
     };
   }, []);
 
-  const filtered = useMemo(
-    () =>
+  const filtered = useMemo(() => {
+    let items =
       activeCategory === "all"
         ? menuItems
-        : menuItems.filter((m) => m.category === activeCategory),
-    [activeCategory, menuItems],
-  );
+        : menuItems.filter((m) => m.category === activeCategory);
+
+    if (searchQuery) {
+      items = items.filter(
+        (m) =>
+          m.name.toLowerCase().includes(searchQuery) ||
+          m.description.toLowerCase().includes(searchQuery),
+      );
+    }
+
+    return items;
+  }, [activeCategory, menuItems, searchQuery]);
 
   return (
     <div className="pb-8 md:pb-10">
@@ -113,7 +148,7 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className="sticky top-[var(--header-height)] md:top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border/80 md:border-0 md:static md:bg-transparent md:backdrop-blur-none">
+      <div className="sticky top-[var(--header-height)] md:top-[var(--topbar-height)] z-30 bg-background/95 backdrop-blur-sm border-b border-border/80 md:border-0 md:bg-transparent md:backdrop-blur-none">
         <div className="page-container py-3">
           <div className="chip-scroll flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {CATEGORIES.map((cat) => (
@@ -148,7 +183,18 @@ export default function HomePage() {
           </div>
         )}
         {!isLoading && !loadError && filtered.length === 0 && (
-          <EmptyState title="ไม่มีเมนูในหมวดนี้" />
+          <EmptyState
+            title={
+              searchQuery
+                ? "ไม่พบเมนูที่ค้นหา"
+                : "ไม่มีเมนูในหมวดนี้"
+            }
+            description={
+              searchQuery
+                ? `ไม่พบผลลัพธ์สำหรับ "${searchParams?.get("q") ?? ""}"`
+                : undefined
+            }
+          />
         )}
       </div>
     </div>

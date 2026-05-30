@@ -59,7 +59,27 @@ export function IconProfile({ size = 22 }: { size?: number }) {
 export function IconLogout() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M16 17l5-5-5-5M21 12H9M13 3H5a2 2 0 00-2 2v14a2 2 0 002 2h8" stroke="#F97316" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 17l5-5-5-5M21 12H9M13 3H5a2 2 0 00-2 2v14a2 2 0 002 2h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconCoupons({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9 6v12M15 6v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="2 3" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconHelp({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9.5 9a2.5 2.5 0 014.5 1.5c0 2-2.5 2-2.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="0.75" fill="currentColor" />
     </svg>
   );
 }
