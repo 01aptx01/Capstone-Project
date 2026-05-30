@@ -45,11 +45,12 @@
 | `client`         | vending-pi             | Hardware agent (จำลอง Pi ใน Docker)                                                      |
 | `machine-ui`     | vending-machine-ui     | Next.js หน้าจอลูกค้าที่ตู้                                                               |
 | `admin-ui`       | vending-admin-ui       | Next.js แดชบอร์ดแอดมิน                                                                   |
+| `web-ui`         | vending-web-ui         | Next.js แอปสมาชิก (OTP, แต้ม, redeem)                                                    |
 | `swagger-ui`     | vending-swagger-ui     | Swagger UI จาก [swagger.yaml](swagger.yaml)                                              |
 | `compose-banner` | vending-compose-banner | พิมพ์ตาราง URL ตอน start                                                                 |
 
 
-**ไม่อยู่ใน Compose (รันแยก):** `web/web-ui` — แอปสมาชิก (OTP, แต้ม, redeem)
+**รันแยก (hot reload):** `web/web-ui` — ใช้ `npm run dev` ตาม [§14](#14-สถานการณ์-h--พัฒนา-web-ui-สมาชิก) แทน container
 
 ---
 
@@ -110,6 +111,8 @@ Compose อ่าน `${VAR}` จาก **root `.env`** ตอน parse compose;
 | `NEXT_PUBLIC_API_URL`           | build machine-ui     | URL ที่ **browser บน host** เรียก API (มัก `http://localhost:8000`) |
 | `NEXT_PUBLIC_SERVER_SOCKET_URL` | machine-ui browser   | มัก `http://localhost:8000`                                         |
 | `NEXT_PUBLIC_ADMIN_API_URL`     | build admin-ui       | มัก `http://localhost:8000`                                         |
+| `JWT_SECRET`                    | web-ui runtime       | ต้องตรงกับ server — middleware ตรวจ JWT สมาชิก                       |
+| `NEXT_PUBLIC_FULFILLMENT_MODE`  | build web-ui         | `immediate` (default) หรือ `pickup`                                 |
 
 
 ### 3.4 ค่าใน `.env` vs ค่าบังคับใน `docker-compose.yml`
@@ -172,6 +175,7 @@ docker compose up --build --no-log-prefix
 | ------------------------- | -------------------------------------------------------------- |
 | machine-ui (ลูกค้าที่ตู้) | [http://localhost:3000](http://localhost:3000)                 |
 | admin-ui                  | [http://localhost:3001](http://localhost:3001)                 |
+| web-ui (สมาชิก)           | [http://localhost:3002](http://localhost:3002)                 |
 | API + Socket.IO           | [http://localhost:8000](http://localhost:8000)                 |
 | Flasgger                  | [http://localhost:8000/apidocs](http://localhost:8000/apidocs) |
 | Hardware agent            | [http://localhost:5000](http://localhost:5000)                 |
@@ -188,7 +192,8 @@ docker compose up --build --no-log-prefix
 1. [http://localhost:8000/health](http://localhost:8000/health) — JSON OK
 2. [http://localhost:3000](http://localhost:3000) — machine-ui
 3. [http://localhost:3001](http://localhost:3001) — admin-ui
-4. (ถ้ามี token ตู้) `docker logs vending-pi` — ควรเห็น `✅ [WS] connected` หรือ `[SocketIO] machine connected: <code>` ที่ฝั่ง server
+4. [http://localhost:3002](http://localhost:3002) — web-ui (สมาชิก)
+5. (ถ้ามี token ตู้) `docker logs vending-pi` — ควรเห็น `✅ [WS] connected` หรือ `[SocketIO] machine connected: <code>` ที่ฝั่ง server
 
 **ตรวจ agent + Socket.IO สำเร็จ:**
 
@@ -283,7 +288,7 @@ docker compose up --build
 docker compose up -d db server
 
 # Frontend
-docker compose up -d machine-ui admin-ui
+docker compose up -d machine-ui admin-ui web-ui
 
 # Agent (หลังตั้ง MACHINE_ID / MACHINE_TOKEN)
 docker compose up -d --build client
@@ -399,13 +404,26 @@ npx next dev -p 3001
 
 ## 14. สถานการณ์ H — พัฒนา web-ui สมาชิก
 
+### 14.1 Docker (production build ใน Compose)
+
+รวมใน `docker compose up --build` — เปิด [http://localhost:3002](http://localhost:3002)
+
+- Build args ฝัง `NEXT_PUBLIC_*` ตอน build (เปลี่ยนแล้ว rebuild: `docker compose build --no-cache web-ui`)
+- Runtime: `JWT_SECRET` ใน root `.env` ต้องตรงกับ server (middleware ตรวจ JWT)
+
+```bash
+docker compose up -d --build web-ui
+```
+
+### 14.2 Local dev (hot reload)
+
 ```bash
 docker compose up -d db server
 cd web/web-ui
 npm install
 ```
 
-`.env.local` — ชี้ `NEXT_PUBLIC_API_URL=http://localhost:8000`
+`.env.local` — ชี้ `NEXT_PUBLIC_API_URL=http://localhost:8000` และ `JWT_SECRET` ให้ตรง server
 
 ```bash
 npm run dev
@@ -414,7 +432,7 @@ npm run dev
 - OTP: ไม่ตั้ง Twilio → OTP โผล่ที่ **console ของ server**
 - Dev: `AUTH_DEV_BYPASS=1` ใน root `.env` (server) รับ OTP 6 หลักใดๆ — **ห้ามใช้ production**
 
-Serve build ผ่าน server: mount `web/web-ui/build` ใน compose แล้วเปิด [http://localhost:8000/](http://localhost:8000/)
+Serve build ผ่าน server (legacy): mount `web/web-ui/build` ใน compose แล้วเปิด [http://localhost:8000/](http://localhost:8000/)
 
 ---
 
@@ -481,7 +499,7 @@ curl -X POST http://localhost:5000/jobs/start \
 
 ## 17. สถานการณ์ K — เปลี่ยนพอร์ต / หลายเครื่อง
 
-ถ้าพอร์ต `8000`, `3000`, `3001`, `5000`, `3307`, `8081` ถูกใช้:
+ถ้าพอร์ต `8000`, `3000`, `3001`, `3002`, `5000`, `3307`, `8081` ถูกใช้:
 
 1. แก้ **ซ้าย** ของ mapping ใน [docker-compose.yml](docker-compose.yml) เช่น `"8001:8000"`
 2. อัปเดต `.env`:
@@ -491,7 +509,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8001
 NEXT_PUBLIC_ADMIN_API_URL=http://localhost:8001
 ```
 
-1. **Rebuild** `machine-ui` และ `admin-ui`
+1. **Rebuild** `machine-ui`, `admin-ui`, และ `web-ui`
 
 ---
 
@@ -521,7 +539,9 @@ curl -X POST http://localhost:8000/api/buy/mock-pay \
 | --------------------------------------- | -------------------------------------------------------------------- |
 | `MACHINE_ID` / `MACHINE_TOKEN`          | แก้ root `.env` → `docker compose up -d --build client`              |
 | `NEXT_PUBLIC_MACHINE_CODE`              | แก้ `.env` → **rebuild** `machine-ui`                                |
-| Omise keys / `NEXT_PUBLIC_API_URL`      | rebuild `machine-ui` (และ admin-ui ถ้าเกี่ยว)                        |
+| Omise keys / `NEXT_PUBLIC_API_URL`      | rebuild `machine-ui`, `admin-ui`, `web-ui` (ถ้าเกี่ยว)             |
+| `JWT_SECRET`                            | แก้ root `.env` → restart `web-ui` (runtime, ไม่ต้อง rebuild)      |
+| `NEXT_PUBLIC_FULFILLMENT_MODE`          | rebuild `web-ui`                                                     |
 | `DISPATCH_MODE` / `AGENT_URL` ใน Docker | แก้ compose หรือ override ใน `server.environment` → restart `server` |
 
 
@@ -606,6 +626,7 @@ docker compose down -v
 | [server/app/api/admin/admin_machines.py](server/app/api/admin/admin_machines.py)   | สร้างตู้ + token             |
 | [client/agent/ws_client.py](client/agent/ws_client.py)                             | agent Socket client          |
 | [web/machine-ui/Dockerfile](web/machine-ui/Dockerfile)                             | build-time `NEXT_PUBLIC_`*   |
+| [web/web-ui/Dockerfile](web/web-ui/Dockerfile)                                     | build-time `NEXT_PUBLIC_*` + runtime `JWT_SECRET` |
 | [README2.md](README2.md)                                                           | ภาพรวมโปรเจกต์ + สถาปัตยกรรม |
 | [README.md](README.md)                                                             | สรุปสั้น                     |
 

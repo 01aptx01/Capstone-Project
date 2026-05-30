@@ -63,6 +63,13 @@ def create_app() -> Flask:
 
     allowed_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
     CORS(flask_app, origins=allowed_origins)
+    flask_app.config.setdefault(
+        "SWAGGER",
+        {
+            "openapi": "3.0.3",
+            "uiversion": 3,
+        },
+    )
     Swagger(flask_app, template_file=_SWAGGER_FILE)
 
     flask_app.register_blueprint(buy_api)

@@ -6,6 +6,7 @@ import React, {
   useContext,
   useEffect,
   useState,
+  startTransition,
 } from "react";
 import { getMember, type MemberProfile } from "@/lib/api/members";
 import {
@@ -57,7 +58,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void loadMember();
+    startTransition(() => {
+      void loadMember();
+    });
   }, [loadMember]);
 
   const loginWithPhone = (

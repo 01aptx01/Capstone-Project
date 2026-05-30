@@ -10,8 +10,12 @@ export function FloatingCart() {
   const router = useRouter();
   const pathname = usePathname();
 
-  if (pathname !== "/home") return null;
-  if (cartCount === 0 && orderStatus !== "pending") return null;
+  const isHome = pathname === "/home";
+  const isPending = orderStatus === "pending";
+
+  if (!isPending) {
+    if (!isHome || cartCount === 0) return null;
+  }
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60)

@@ -6,6 +6,7 @@
 #   client (agent)   http://localhost:5000
 #   machine-ui       http://localhost:3000
 #   admin-ui         http://localhost:3001
+#   web-ui           http://localhost:3002
 #   swagger-ui       http://localhost:8081  (host; avoids Jenkins on 8080)
 # =============================================================================
 
@@ -27,6 +28,7 @@ services:
         printf ' client (agent) http://localhost:5000\n'
         printf ' machine-ui     http://localhost:3000\n'
         printf ' admin-ui       http://localhost:3001\n'
+        printf ' web-ui         http://localhost:3002\n'
         printf ' swagger-ui     http://localhost:8081  (host; avoids Jenkins on 8080)\n'
         printf '=============================================================================\n'
         printf '\n'
@@ -68,10 +70,11 @@ services:
       - TZ=Asia/Bangkok
       # Set comma-separated allowed origins for CORS.
       # Override via .env when running on LAN / hardware.
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://machine-ui:3000,http://admin-ui:3000,http://192.168.1.44:3000,http://192.168.1.172:3000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://machine-ui:3000,http://admin-ui:3000,http://web-ui:3000,http://192.168.1.44:3000,http://192.168.1.172:3000}
       - DOCKER_URL_SERVER=http://localhost:8000
       - DOCKER_URL_MACHINE_UI=http://localhost:3000
       - DOCKER_URL_ADMIN_UI=http://localhost:3001
+      - DOCKER_URL_WEB_UI=http://localhost:3002
       - DOCKER_URL_SWAGGER=http://localhost:8081
       - DOCKER_URL_AGENT=http://localhost:5000
       - DOCKER_URL_DB=mysql://localhost:3307
@@ -144,6 +147,26 @@ services:
     container_name: vending-admin-ui
     ports:
       - "3001:3000"
+    depends_on:
+      - server
+
+  web-ui:
+    build:
+      context: ./web/web-ui
+      args:
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        - NEXT_PUBLIC_MACHINE_CODE=${NEXT_PUBLIC_MACHINE_CODE:-MP1-001}
+        - NEXT_PUBLIC_FULFILLMENT_MODE=${NEXT_PUBLIC_FULFILLMENT_MODE:-immediate}
+        - NEXT_PUBLIC_OMISE_PUBLIC_KEY=${NEXT_PUBLIC_OMISE_PUBLIC_KEY}
+    environment:
+      - TZ=Asia/Bangkok
+      - DOCKER_PUBLISHED_PORT=3002
+      - DOCKER_HOST_URL=http://localhost:3002
+      # Middleware JWT verification — must match server JWT_SECRET
+      - JWT_SECRET=${JWT_SECRET}
+    container_name: vending-web-ui
+    ports:
+      - "3002:3000"
     depends_on:
       - server
 
