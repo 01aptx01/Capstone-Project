@@ -1,44 +1,35 @@
 /**
- * useJobSocket — React hook that connects machine-ui to the central Server via Socket.IO
- * instead of polling the local Agent's SSE endpoint directly.
+ * useJobSocket
+ * — React Hook ที่เชื่อมต่อระหว่าง MachineUI กับ Server ผ่าน Socket.IO
  *
- * The hook:
- *  1. Connects to SERVER_SOCKET_URL (env: NEXT_PUBLIC_SERVER_SOCKET_URL)
- *  2. Joins room = machine_code (NEXT_PUBLIC_MACHINE_CODE, default "MP1-001")
- *  3. Listens for `job.start` and `job.state` / `job.progress` events
- *  4. Exposes agentJobState, agentCurrentItemIndex, globalTimeLeft, and connection status
- *
- * This replaces the old EventSource approach that required the local agent to be reachable.
+ * หน้าที่ของ Hook:
+ *  1. เชื่อมต่อไปยัง Server (SERVER_SOCKET_URL)
+ *  2. เข้าร่วมห้องสื่อสารตามรหัสตู้นั้นๆ (machine_code)
+ *  3. รอรับสัญญาณเหตุการณ์ `job.start` และ `job_event_broadcast` (สำหรับข้อมูลการประมวลผล)
+ *  4. นำข้อมูลสถานะตู้จริง, ลำดับคิว, และเวลาคงเหลือ มาอัปเดต UI แบบเรียลไทม์
  */
 
 "use client";
-
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 
 export type AgentJobState =
-  | "TRANSFER_TO_OVEN"
-  | "HEATING"
-  | "DISPENSING"
-  | "DONE"
-  | "ERROR";
+  | "TRANSFER_TO_OVEN" // กำลังย้ายของเข้าเตาอุ่น
+  | "HEATING"          // กำลังอุ่นร้อนด้วยเตาไมโครเวฟ
+  | "DISPENSING"       // กำลังลำเลียงเสิร์ฟทางช่องรับสินค้า
+  | "DONE"             // เสร็จสิ้นกระบวนการทั้งหมด
+  | "ERROR";           // เกิดข้อผิดพลาดของระบบแมคคานิกส์ตู้
 
 export interface JobSocketState {
-  /** Current machine job state as reported by the agent → server */
-  agentJobState: AgentJobState | null;
-  /** Index of the item currently being processed */
-  agentCurrentItemIndex: number;
-  /** Remaining seconds (live from agent events) */
-  globalTimeLeft: number;
-  /** Whether the Socket.IO connection to server is established */
-  isConnected: boolean;
+  agentJobState: AgentJobState | null; // สถานะปัจจุบันของตู้
+  agentCurrentItemIndex: number; // ชิ้นที่กำลังทำอยู่ (เริ่มที่ 0)
+  globalTimeLeft: number; // วินาทีคงเหลือจริงที่ส่งจากเซ็นเซอร์เครื่อง
+  isConnected: boolean; // สถานะการต่อเชื่อมของ Socket.IO
 }
 
 export interface UseJobSocketOptions {
-  /** The charge_id / job_id to watch. Starts listening only when set. */
-  activeJobId: string | null;
-  /** Called when job is active so the hook can request the server to re-send pending jobs */
-  onConnect?: () => void;
+  activeJobId: string | null; // รหัสบิลชำระเงินที่ต้องการดู (เริ่มดึง socket เมื่อค่านี้ไม่เป็น null)
+  onConnect?: () => void; // ฟังก์ชันเสริมที่จะรันเมื่อเชื่อมต่อเชื่อมสำเร็จ
 }
 
 export function useJobSocket({
@@ -46,22 +37,19 @@ export function useJobSocket({
   onConnect,
 }: UseJobSocketOptions): JobSocketState {
   const serverUrl =
-    (typeof process !== "undefined" &&
-      process.env.NEXT_PUBLIC_SERVER_SOCKET_URL) ||
-    "http://localhost:8000";
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_SERVER_SOCKET_URL) || "http://localhost:8000";
   const machineCode =
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) ||
-    "MP1-001";
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) || "MP1-001";
 
   const socketRef = useRef<Socket | null>(null);
 
+  // --- STATES ---
   const [isConnected, setIsConnected] = useState(false);
-  const [agentJobState, setAgentJobState] = useState<AgentJobState | null>(
-    null
-  );
+  const [agentJobState, setAgentJobState] = useState<AgentJobState | null>(null);
   const [agentCurrentItemIndex, setAgentCurrentItemIndex] = useState(0);
   const [globalTimeLeft, setGlobalTimeLeft] = useState(0);
 
+  // ฟังก์ชันรีเซ็ตค่าสถานะเมื่อเริ่มงานใหม่
   const resetJobState = useCallback(() => {
     setAgentJobState(null);
     setAgentCurrentItemIndex(0);
@@ -69,15 +57,14 @@ export function useJobSocket({
   }, []);
 
   useEffect(() => {
-    // Create (or reuse) singleton socket
+    // สร้างตัวแปร Singleton สำหรับ Socket.IO ถ้ายังไม่เคยมี
     if (!socketRef.current) {
       socketRef.current = io(serverUrl, {
-        transports: ["websocket"],
+        transports: ["websocket"], // บังคับการส่งแบบ WebSocket เพื่อความเร็วและความสม่ำเสมอ
         auth: {
-          // No HMAC needed from browser client — browser listens only, machines authenticate
-          machine_code: machineCode,
+          machine_code: machineCode, // ส่งรหัสตู้เพื่อให้เซิร์ฟเวอร์รู้ว่าเป็นตู้ไหน
         },
-        reconnection: true,
+        reconnection: true, // เปิดระบบเชื่อมต่อใหม่อัตโนมัติเมื่อหลุด
         reconnectionAttempts: Infinity,
         reconnectionDelay: 2000,
         reconnectionDelayMax: 10000,
@@ -86,35 +73,22 @@ export function useJobSocket({
 
     const socket = socketRef.current;
 
+    // เกิดขึ้นเมื่อต่อ Server สำเร็จ -> แจ้ง Server ว่าตู้พร้อมทำงาน และเข้าร่วมห้องตามรหัสตู้
     const onConnectEvt = () => {
       setIsConnected(true);
-      // Join the machine's room
       socket.emit("machine_ready", { machine_code: machineCode });
       onConnect?.();
     };
 
     const onDisconnect = () => setIsConnected(false);
 
-    /**
-     * job.start: emitted by server when a new job is dispatched to this machine.
-     * We just note its arrival — actual state changes come via machine_event.
-     */
-    const onJobStart = (data: { job_id?: string; [key: string]: unknown }) => {
-      if (activeJobId && data?.job_id !== activeJobId) return;
-      // Reset so the processing screen reflects fresh state
+    // สัญญาณ 'job.start': ได้รับเมื่อ Server สั่งเริ่มงานส่งไปที่ตู้
+    const onJobStart = (data: { job_id?: string;[key: string]: unknown }) => {
+      if (activeJobId && data?.job_id !== activeJobId) return; // กรองเฉพาะบิลของเรา
       resetJobState();
     };
 
-    /**
-     * job_event_broadcast: server broadcasts machine events to the machine's room
-     * so that the browser UI receives real-time job progress without polling the agent.
-     *
-     * Expected shape (same as machine_event payload from agent → server):
-     * {
-     *   job_id, machine_code, event_type, state, seq,
-     *   payload: { remaining_seconds, current_item_index, ... }
-     * }
-     */
+    // สัญญาณ 'job_event_broadcast': Server จะทำการกระจายข้อมูลอัปเดตสดๆ
     const onJobEventBroadcast = (data: {
       job_id?: string;
       state?: AgentJobState;
@@ -125,7 +99,6 @@ export function useJobSocket({
         current_item_index?: number;
       };
     }) => {
-      // Only process events for the active job
       if (!activeJobId || data?.job_id !== activeJobId) return;
 
       const state = data?.state as AgentJobState | undefined;
@@ -140,16 +113,18 @@ export function useJobSocket({
       }
     };
 
+    // สมัครรับข้อมูลจาก event ต่างๆ
     socket.on("connect", onConnectEvt);
     socket.on("disconnect", onDisconnect);
     socket.on("job.start", onJobStart);
     socket.on("job_event_broadcast", onJobEventBroadcast);
 
-    // If already connected when the hook re-runs (e.g. activeJobId changed), sync state
+    // เช็คกรณีถ้า socket มีการเชื่อมต่อค้างไว้อยู่แล้ว ให้เซ็ตเป็นเชื่อมต่อทันที
     if (socket.connected) {
       setIsConnected(true);
     }
 
+    // Cleanup: เคลียร์ Listener ออกเมื่อเลิกใช้ Hook หรือ Component ถูกปลดออก
     return () => {
       socket.off("connect", onConnectEvt);
       socket.off("disconnect", onDisconnect);
@@ -158,7 +133,7 @@ export function useJobSocket({
     };
   }, [serverUrl, machineCode, activeJobId, onConnect, resetJobState]);
 
-  // Reset job state when a new job starts
+  // รีเซ็ตสถานะการแสดงผลเมื่อเคลียร์หรือไม่มีบิลงานที่ต้องดูแล้ว
   useEffect(() => {
     if (!activeJobId) resetJobState();
   }, [activeJobId, resetJobState]);

@@ -4,22 +4,16 @@ import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
 
-// ==========================================
 // Types & Constants
-// ==========================================
 import type { ModalType } from "../types";
 import { DEFAULT_MACHINE_CODE, NUMPAD_COUNTDOWN_SECONDS } from "../constants";
 
-// ==========================================
-// Existing Components
-// ==========================================
+// Components
 import ProductCard from "../components/ProductCard";
 import CartSidebar from "../components/CartSidebar";
 import CouponModal from "../components/CouponModal";
 
-// ==========================================
 // Modal Components
-// ==========================================
 import InfoModal from "../components/modals/InfoModal";
 import UsageModal from "../components/modals/UsageModal";
 import NumpadModal from "../components/modals/NumpadModal";
@@ -29,9 +23,7 @@ import LimitWarningModal from "../components/modals/LimitWarningModal";
 import PaymentModal from "../components/modals/PaymentModal";
 import ProcessingModal from "../components/modals/ProcessingModal";
 
-// ==========================================
 // Custom Hooks
-// ==========================================
 import { useJobSocket } from "../hooks/useJobSocket";
 import { useCart } from "../hooks/useCart";
 import { useCoupon } from "../hooks/useCoupon";
@@ -42,20 +34,16 @@ import { useMember } from "../hooks/useMember";
 export default function VendingPage() {
   const machineCode = DEFAULT_MACHINE_CODE;
 
-  // ==========================================
-  // PAGE-LEVEL STATE (cross-cutting concerns)
-  // ==========================================
+  // PAGE-LEVEL STATE
   const [activeModal, setActiveModal] = useState<ModalType>("none");
   const [isAfterPayment, setIsAfterPayment] = useState(false);
   const [stockLimitMessage, setStockLimitMessage] = useState("");
   const totalPriceRef = useRef<number>(0);
 
-  // Ref for deferred payment success handler (breaks circular hook dependencies)
-  const paymentSuccessHandlerRef = useRef<() => void>(() => {});
+  // Ref for deferred payment success handler
+  const paymentSuccessHandlerRef = useRef<() => void>(() => { });
 
-  // ==========================================
-  // HOOKS
-  // ==========================================
+  // ----- HOOKS -----
   const {
     products, cart, setCart, isLoadingProducts,
     fetchProducts, handleAddToCart, handleIncrease, handleDecrease, handleRemove,
@@ -108,17 +96,13 @@ export default function VendingPage() {
     totalPriceRef,
     onStartHeating: heating.startHeatingProcess,
   });
+  // ----- END HOOKS -----
 
-  // ==========================================
-  // PAYMENT SUCCESS ORCHESTRATOR
-  // ==========================================
-  // Wire up the payment success handler now that all hooks are initialized
+  // ----- PAYMENT SUCCESS ORCHESTRATOR -----
   paymentSuccessHandlerRef.current = () => {
-    // Build sorted queue from cart
     const flatQueue = cart.flatMap((item) => Array(item.qty).fill(item));
     flatQueue.sort((a: any, b: any) => a.heatingTime - b.heatingTime);
 
-    // Save paid total for loyalty points calculation
     const paidTotal = appliedCoupon ? appliedCoupon.final_thb : totalPrice;
     totalPriceRef.current = paidTotal;
 
@@ -135,9 +119,7 @@ export default function VendingPage() {
     setActiveModal("numpad");
   };
 
-  // ==========================================
-  // MODAL OPEN HANDLERS
-  // ==========================================
+  // ----- MODAL OPEN HANDLERS -----
   const handleOpenNumpad = () => {
     setIsAfterPayment(false);
     member.handleOpenNumpad();
@@ -149,9 +131,7 @@ export default function VendingPage() {
     payment.handleCheckout();
   };
 
-  // ==========================================
-  // RENDER
-  // ==========================================
+  // ----- RENDER -----
   return (
     <div className="vending-app">
       <Script
@@ -220,20 +200,22 @@ export default function VendingPage() {
         onRemoveCoupon={() => setAppliedCoupon(null)}
       />
 
-      {/* --- OVERLAY & MODALS --- */}
-      {activeModal !== "none" && (
-        <div
-          className="modal-overlay"
-          onClick={
-            activeModal === "payment"
-              ? () => {
-                  if (payment.paymentStep === 1) {
-                    payment.cancelAndClosePaymentModal();
-                  }
-                }
-              : () => setActiveModal("none")
-          }
-        >
+       {/* --- OVERLAY & MODALS --- */}
+       {activeModal !== "none" && (
+         <div
+           className="modal-overlay"
+           onClick={
+             activeModal === "payment"
+               ? () => {
+                 if (payment.paymentStep === 1) {
+                   payment.cancelAndClosePaymentModal();
+                 }
+               }
+               : (activeModal === "numpad" || activeModal === "points_result" || activeModal === "processing")
+                 ? undefined // ห้ามคลิกพื้นหลังสีดำเพื่อกดออกเด็ดขาด ป้องกัน Flow ชำระเงิน/อุ่นอาหารล่ม
+                 : () => setActiveModal("none")
+           }
+         >
           {activeModal === "coupon" && (
             <CouponModal
               open

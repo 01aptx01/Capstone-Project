@@ -15,12 +15,11 @@ export interface Product {
 
 interface Props extends Product {
     onAdd: () => void;
-    /** false when at per-SKU stock cap or cart full (4 items total) */
     canAdd?: boolean;
 }
 
+// ProductCard Component
 export default function ProductCard({ name, desc, price, heatingTime, image, category, stock, onAdd, canAdd = true }: Props) {
-    // Map category to a readable Thai label
     const categoryLabel =
         category === 'sweet' ? 'ของหวาน' :
             category === 'meat' ? 'เนื้อสัตว์' :
@@ -28,6 +27,7 @@ export default function ProductCard({ name, desc, price, heatingTime, image, cat
 
     return (
         <div className="product-card">
+            {/* รูปภาพ */}
             <div className="product-image">
                 <Image
                     src={image}
@@ -35,7 +35,7 @@ export default function ProductCard({ name, desc, price, heatingTime, image, cat
                     width={110}
                     height={110}
                     style={{ objectFit: 'cover' }}
-                    priority
+                    priority // โหลดรูปภาพด้วยความสำคัญสูงสุด (LCP Optimization)
                 />
                 {categoryLabel && (
                     <div className={`category-badge category-${category || 'meat'}`}>
@@ -43,19 +43,24 @@ export default function ProductCard({ name, desc, price, heatingTime, image, cat
                     </div>
                 )}
             </div>
+
+            {/* ชื่อสินค้า และ รายละเอียด */}
             <div className="product-title">{name}</div>
             <div className="product-desc">{desc}</div>
+
+            {/* ระยะเวลาอุ่นร้อน */}
             <div className="heating-info">
                 <Timer size={14} /> อุ่น {heatingTime} วินาที
             </div>
+
+            {/* ราคาสินค้า */}
             {stock > 0 ? (
                 <div className="product-price">{price} <span>฿</span></div>
             ) : (
                 <div className="product-price" style={{ color: '#94a3b8', fontSize: 18 }}>สินค้าหมด</div>
             )}
-            {/* {stock > 0 && stock <= 5 && (
-                <div className="low-stock-text">เหลือ {stock} ชิ้น</div>
-            )}*/}
+
+            {/* ปุ่มกดสั่งซื้อ */}
             <button
                 className="add-btn"
                 onClick={stock > 0 && canAdd ? onAdd : () => { }}

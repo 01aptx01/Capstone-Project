@@ -95,7 +95,7 @@ export default function PaymentModal({
                       src="/payment/Truemoney-logo.png"
                       alt="Truemoney"
                       width={145}
-                      height={40}
+                      height={30}
                       priority
                     />
                   </button>
