@@ -7,7 +7,6 @@ classDiagram
     class BuyController {
         -OmisePaymentService payment_service
         -InventoryService inventory_service
-        -HardwareAgentService hardware_agent
         -dict order_statuses
         -dict pending_orders
         +checkout()
@@ -46,9 +45,7 @@ classDiagram
     }
 
     class HardwareAgentService {
-        +start_job()
-        +notify_dispense()
-        -_send_request()
+        +ping_health()
     }
 
     class InventoryService {
@@ -62,15 +59,22 @@ classDiagram
         +get_order_totals_by_charge_id()
     }
 
+    class SocketIOGateway {
+        +emit_job_start()
+        +is_machine_agent_online()
+        +dispatch_pending_jobs()
+    }
+
     class InsufficientStockError
     class AlreadyClaimedError
 
     BuyController --> OmisePaymentService
     BuyController --> InventoryService
-    BuyController --> HardwareAgentService
+    BuyController --> SocketIOGateway : job.start after checkout
+    BuyController --> HardwareAgentService : health only
     InventoryService ..> InsufficientStockError : raises
     InventoryService ..> AlreadyClaimedError : raises
 
     ProductController --> ProductService
 
-    note for BuyController "DISPATCH_MODE:\nhttp → HardwareAgentService\nelse → emit_job_start (Socket.IO)"
+    note for BuyController "_execute_dispense:\ndeduct_stock → emit_job_start\n(Pi offline → warn, replay on reconnect)"

@@ -2,12 +2,15 @@ swagger: "2.0"
 info:
   title: Smart Vending System API
   description: |
-    Flask backend for smart vending: catalog, Omise checkout, machine events, members, and admin CRUD under `/api/admin`.
+    Flask backend for smart vending: catalog, Omise checkout, members, and admin CRUD under `/api/admin`.
     Interactive docs (Flasgger) are also served by the server at `/apidocs` when the app is running.
 
     **Socket.IO (same host/port as HTTP, e.g. `http://localhost:8000`):**
-    - Machines: bcrypt token auth (agent connects with auth JSON `{ "machine_id": "<code>", "token": "<secret>" }`).
-    - Admin dashboard: join Socket.IO with auth JSON `{ "role": "admin" }` when `ADMIN_SOCKET_SECRET` is unset, or `{ "admin_token": "<secret>" }` when set. Server emits event **`dashboard_update`** to room `admin` after each machine event ingest (telemetry for live dashboards).
+    - **Pi agent:** auth `{ "machine_code": "<code>", "token": "<secret>" }` (bcrypt on server). Server emits **`job.start`** to room `machine_code` after checkout; agent replies via **`machine_event`** RPC (persisted + **`job_event_broadcast`** to kiosk).
+    - **Kiosk (machine-ui):** auth `{ "role": "kiosk", "kiosk_secret": "<KIOSK_SOCKET_SECRET>" }` — required in production. Listens for **`job_event_broadcast`**.
+    - **Admin dashboard:** `{ "role": "admin" }` when `ADMIN_SOCKET_SECRET` is unset, or `{ "admin_token": "<secret>" }` when set. Receives **`dashboard_update`** on machine events.
+
+  Checkout dispatches hardware jobs **only** via Socket.IO (`emit_job_start`). There is no HTTP `/dispense` or `POST /api/machines/events`. Manual agent test: `POST http://localhost:5000/jobs/start`.
 
     **Docker Compose — default published ports on the host:**
     | Service | Host URL |
@@ -36,7 +39,7 @@ tags:
   - name: Members
     description: Member lookup and points (machine UI)
   - name: Machines
-    description: Agent → server event ingestion
+    description: Hardware agent (Socket.IO only; no REST event ingest)
   - name: Admin
     description: Admin dashboard API (`/api/admin/*`). Auth is a placeholder (`@admin_required` passes through).
 
@@ -282,7 +285,7 @@ paths:
   /api/buy/mock-pay:
     post:
       tags: [Payments]
-      summary: Force paid + dispense (development)
+      summary: Force paid + Socket job.start (development)
       parameters:
         - in: body
           name: body
@@ -360,31 +363,6 @@ paths:
           description: Invalid body
         "429":
           description: Rate limited
-
-  /api/machines/events:
-    post:
-      tags: [Machines]
-      summary: Ingest machine job event (agent)
-      parameters:
-        - in: body
-          name: body
-          required: true
-          schema:
-            type: object
-            required: [machine_code, job_id, event_type, seq]
-            properties:
-              machine_code: { type: string }
-              job_id: { type: string }
-              event_type: { type: string }
-              state: { type: string }
-              seq: { type: integer }
-              order_charge_id: { type: string }
-              payload: { type: object }
-      responses:
-        "200":
-          description: Stored
-        "400":
-          description: Validation error
 
   /api/admin/users:
     get:

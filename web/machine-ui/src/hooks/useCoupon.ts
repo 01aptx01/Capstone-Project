@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import type { CartItem, AppliedCoupon } from "../types";
+import { getPublicApiUrl } from "../constants";
 
 // useCoupon Hook
 // - จัดการการใช้คูปองส่วนลด คะแนน และราคาสุทธิที่ต้องจ่าย
@@ -32,7 +33,7 @@ export function useCoupon(cart: CartItem[], machineCode: string, totalPrice: num
 
     const code = appliedCoupon.code;
     let cancelled = false; // ตัวแปรสำหรับยกเลิก API call ตัวเดิมหากมีอันใหม่แทรกเข้ามาก่อนส่งเสร็จ (Race Conditions)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiUrl = getPublicApiUrl();
     
     // แปลงตะกร้าสินค้าไปเป็นรูปแบบ payload
     const payloadCart = cart.map((item) => ({ product_id: item.id, quantity: item.qty }));

@@ -649,6 +649,7 @@ class MachineController:
 		self.mark_error(f"step failed: {step_name}")
 
 	def run_full_flow(self, items: list[dict[str, Any]]) -> bool:
+		"""Legacy NFC + LED demo path. Production jobs use hardware_runner via Socket job.start."""
 		try:
 			if not self.wait_for_nfc_payment(timeout=180):
 				self.mark_error("NFC payment timeout")
