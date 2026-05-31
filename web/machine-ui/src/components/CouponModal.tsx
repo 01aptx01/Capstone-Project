@@ -140,9 +140,6 @@ export default function CouponModal({
           <div className="coupon-preview-card coupon-preview-card--simple">
             <div className="coupon-preview-code">{preview.code}</div>
             <p className="coupon-preview-label">{preview.label_th}</p>
-            {preview.points_cost > 0 && (
-              <p className="coupon-preview-points">แลกแต้มที่กำหนด: {preview.points_cost} แต้ม</p>
-            )}
           </div>
           <p className="coupon-confirm-question">ยืนยันใช้คูปองนี้หรือไม่?</p>
           <div className="coupon-modal-actions">
