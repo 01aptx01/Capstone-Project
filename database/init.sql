@@ -208,7 +208,7 @@ CREATE TABLE transactions (
 -- =====================
 
 -- Machine
-INSERT INTO machines (machine_code, location, status) VALUES ('MP1-001', 'KMUTT', 'online');
+INSERT INTO machines (machine_code, secret_token_hash, location, status) VALUES ('MP1-001', '001', 'KMUTT', 'online');
 
 -- Products
 INSERT INTO products (name, description, price, heating_time, image_url, category) VALUES
