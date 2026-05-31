@@ -191,6 +191,11 @@ def _get_order_items(order_id: int) -> list[dict]:
         db.close()
 
 
+def is_machine_agent_online(machine_code: str) -> bool:
+    """True when the Pi agent has an authenticated Socket.IO session in the machine room."""
+    return bool(machine_code) and machine_code in _online_machines
+
+
 def emit_job_start(machine_code: str, *, job_id: str, order_charge_id: str, items: list[dict]) -> bool:
     try:
         sio.emit(

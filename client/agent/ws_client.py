@@ -18,9 +18,6 @@ logger = logging.getLogger(__name__)
 def _server_url() -> Optional[str]:
     return _server_url_from_env()
 
-def _machine_id_from_env() -> str:
-    return _machine_code_from_env()
-
 def _machine_token_from_env() -> str:
     return _machine_token_from_env()
 
@@ -99,7 +96,7 @@ class AgentSocketClient:
             logger.warning("⚠️ [WS] SERVER_SOCKET_URL not set; websocket disabled")
             return
 
-        machine_code = _machine_id_from_env()
+        machine_code = _machine_code_from_env()
         token = _machine_token_from_env()
         if not machine_code or not token:
             logger.warning(
@@ -157,12 +154,12 @@ _client: Optional[AgentSocketClient] = None
 def get_ws_client_status() -> Dict[str, Any]:
     global _client
     if _client is None:
-        return {"connected": False, "machine_code": _machine_id_from_env() or None}
+        return {"connected": False, "machine_code": _machine_code_from_env() or None}
     with _client._lock:
         connected = _client._connected
     return {
         "connected": connected,
-        "machine_code": _client._machine_code or _machine_id_from_env() or None,
+        "machine_code": _client._machine_code or _machine_code_from_env() or None,
         "server_url": _server_url(),
     }
 

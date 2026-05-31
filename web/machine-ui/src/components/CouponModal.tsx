@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { getPublicApiUrl } from "../constants";
 
 export type AppliedCoupon = {
   code: string; // รหัสคูปอง
@@ -47,7 +48,7 @@ export default function CouponModal({
 
   if (!open) return null;
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+  const apiUrl = getPublicApiUrl();
 
   // ฟังก์ชันส่งรหัสที่ลูกค้าพิมพ์ไปตรวจสอบความถูกต้องกับ API Backend
   const handleCheck = async () => {

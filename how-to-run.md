@@ -147,6 +147,21 @@ Internal-only hostname **`server`** is reachable from other containers (e.g. age
 3. **Admin UI:** open [http://localhost:3001](http://localhost:3001).
 4. **Database:** optional — connect with any MySQL client to `127.0.0.1:3307` using credentials from `.env` / compose.
 
+### 6.1 End-to-end purchase checklist (Socket-only flow)
+
+Use this after [.env](.env) matches [.env.example](.env.example) and you completed Section 7:
+
+| Step | Check |
+|------|--------|
+| 1 | Admin → create machine → copy `machine_code` + `secret_token` into root `.env` (`MACHINE_CODE`, `MACHINE_TOKEN`) |
+| 2 | `KIOSK_SOCKET_SECRET` = `NEXT_PUBLIC_KIOSK_SOCKET_SECRET`; `NEXT_PUBLIC_MACHINE_CODE` matches `MACHINE_CODE` |
+| 3 | `docker compose up --build` — server starts (non-empty `KIOSK_SOCKET_SECRET`) |
+| 4 | `docker logs vending-pi` shows WebSocket connected (not auth retry loop) |
+| 5 | Browser [machine-ui](http://localhost:3000) — devtools console: no kiosk secret / Socket auth errors |
+| 6 | Add slot inventory for your `machine_code` in Admin if not using seeded `MP1-001` slots |
+| 7 | Purchase (card or mock-pay) — server log: `job.start` emitted; if Pi was offline, warning then replay on reconnect |
+| 8 | UI advances via **`job_event_broadcast`** (not only 60s fallback countdown) |
+
 ---
 
 ## 7. Adding a new machine (“ตู้”) end-to-end

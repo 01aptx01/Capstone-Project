@@ -6,7 +6,7 @@ import hashlib
 from flask import Blueprint, request, jsonify
 from app.services.omise_service import OmisePaymentService
 from app.services.buy_service import InventoryService, AlreadyClaimedError, InsufficientStockError
-from app.realtime.socketio_gateway import emit_job_start
+from app.realtime.socketio_gateway import emit_job_start, is_machine_agent_online
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -150,13 +150,24 @@ class BuyController:
             return False
 
         # Step 2: สั่งงานผ่าน Socket.IO (Pi ต้องเชื่อมต่อ server; ถ้าหลุดจะ replay ตอน reconnect)
+        if not is_machine_agent_online(machine_code):
+            logger.warning(
+                "[Dispense] Pi agent offline for %s — job.start queued until reconnect (charge %s)",
+                machine_code,
+                charge_id,
+            )
         try:
-            emit_job_start(
+            dispatched = emit_job_start(
                 machine_code,
                 job_id=str(charge_id),
                 order_charge_id=str(charge_id),
                 items=cart,
             )
+            if not dispatched:
+                logger.error(f"[Dispense] emit job.start returned false for {charge_id}")
+                self.inventory_service.update_order_status(charge_id, "dispense_failed")
+                self._trigger_refund(charge_id)
+                return False
         except Exception as exc:
             logger.error(f"[Dispense] emit job.start failed for {charge_id}: {exc}")
             self.inventory_service.update_order_status(charge_id, "dispense_failed")
