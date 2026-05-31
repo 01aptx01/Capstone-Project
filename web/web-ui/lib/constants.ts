@@ -7,75 +7,13 @@ export interface MenuItem {
   description: string;
   price: number;
   category: "all" | "pork" | "veggie" | "sweet";
-  image: string; // placeholder color
+  image: string; // placeholder color or image_url
 }
 
 export interface Category {
   key: "all" | "pork" | "veggie" | "sweet";
   label: string;
 }
-
-// ─── Design tokens (prefer Tailwind: bg-brand, text-muted, bg-brand-muted) ───
-/** @deprecated Use Tailwind semantic classes instead of inline styles */
-export const COLORS = {
-  primary: "var(--brand-light)",
-  accent: "var(--brand)",
-  bg: "var(--brand-muted)",
-  gray: "var(--muted-foreground)",
-  grayDark: "var(--subtle-foreground)",
-} as const;
-
-// ─── Menu Items ───────────────────────────────────────────────────────────────
-export const MENU_ITEMS: MenuItem[] = [
-  {
-    id: 1,
-    name: "เปามดแดง",
-    description: "ไส้หมูแดงเข้มข้น หวานกำลังดี",
-    price: 25,
-    category: "pork",
-    image: "#D4A574",
-  },
-  {
-    id: 2,
-    name: "เปาหมูสับ",
-    description: "ไส้หมูสับนุ่มละมุน รสชาติกลมกล่อม",
-    price: 25,
-    category: "pork",
-    image: "#C4956A",
-  },
-  {
-    id: 3,
-    name: "เปาบัวแดง",
-    description: "ไส้บัวแดงหอมหวาน ทำจากถั่วแท้",
-    price: 22,
-    category: "veggie",
-    image: "#E8C4A0",
-  },
-  {
-    id: 4,
-    name: "เปาเต้าหู้",
-    description: "ไส้เต้าหู้ผัดซอส ทางเลือกเพื่อสุขภาพ",
-    price: 22,
-    category: "veggie",
-    image: "#F0D9B5",
-  },
-  {
-    id: 5,
-    name: "เปาไก่เห็ด",
-    description: "ไส้ไก่ผัดเห็ดหอม กลมกล่อมอร่อย",
-    price: 25,
-    category: "pork",
-    image: "#BFA080",
-  },
-  {
-    id: 6,
-    name: "เปามันแกว",
-    description: "ไส้มันแกวกรุบกรอบ สดชื่น",
-    price: 20,
-    category: "veggie",
-    image: "#E5D4C0",
-  },
-];
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 export const CATEGORIES: Category[] = [
@@ -85,38 +23,18 @@ export const CATEGORIES: Category[] = [
   { key: "sweet", label: "ไส้หวาน" },
 ];
 
-// ─── Coupons ──────────────────────────────────────────────────────────────────
-// 🚨 ใช้ interface แบบสมบูรณ์ที่มีครบทุก properties 
+// ─── Coupon type (used by CouponCard component) ───────────────────────────────
 export interface Coupon {
   id: number;
   title: string;
   description: string;
   points: number;
-  colorBg: string; // คลาสสีของ Tailwind
-  discountValue: number; // มูลค่าส่วนลด (เพื่อให้ตะกร้ารู้ว่าลดกี่บาท)
-  expiry: string; // วันหมดอายุ
+  colorBg: string;
+  discountValue: number;
+  expiry: string;
 }
 
-export const COUPONS: Coupon[] = [
-  {
-    id: 1,
-    title: "ส่วนลด 5 บาท",
-    description: "คูปองส่วนลด 5 บาท สำหรับการสั่งซื้อซาลาเปา",
-    points: 100,
-    colorBg: "bg-[#F5B041]", // สีเหลืองส้ม
-    discountValue: 5,
-    expiry: "หมดอายุ 4 พ.ค. 2026",
-  },
-  {
-    id: 2,
-    title: "ส่วนลด 10 บาท",
-    description: "คูปองส่วนลด 10 บาท สำหรับการสั่งซื้อซาลาเปา",
-    points: 180,
-    colorBg: "bg-[#FF8A33]", // สีส้ม
-    discountValue: 10,
-    expiry: "หมดอายุ 4 พ.ค. 2026",
-  },
-];
+// ─── Order History type ───────────────────────────────────────────────────────
 export interface OrderHistory {
   id: string;
   orderNumber: string;
@@ -124,36 +42,4 @@ export interface OrderHistory {
   items: string;
   total: number;
   status: "ready_to_scan" | "completed";
-} 
-
-// ─── Order History ────────────────────────────────────────────────────────────
-export interface OrderHistory {
-  id: string;
-  orderNumber: string;
-  datetime: string;
-  items: string;
-  total: number;
-  // 🚨 เหลือสถานะแค่ 2 แบบ
-  status: "ready_to_scan" | "completed";
 }
-
-export const ORDER_HISTORY: OrderHistory[] = [
-  // 1. สถานะ "พร้อมสแกน" (จ่ายเงินแล้ว รอไปรับของที่ตู้)
-  {
-    id: "1",
-    orderNumber: "1112", 
-    datetime: "2026-05-02 08:30",
-    items: "เปามันแกว x1, เปาหมูสับ x1",
-    total: 45,
-    status: "ready_to_scan", 
-  },
-  // 2. สถานะ "เสร็จสิ้น" (รับของที่ตู้ไปแล้ว)
-  {
-    id: "2",
-    orderNumber: "1111",
-    datetime: "2026-04-15 14:30",
-    items: "เปามดแดง x2",
-    total: 50,
-    status: "completed",
-  }
-];

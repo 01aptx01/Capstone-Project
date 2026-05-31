@@ -5,14 +5,8 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PRIMARY_NAV, isNavActive } from "@/lib/navigation";
 
-const HIDE_NAV_PATHS = ["/checkout", "/payment"];
-
 export function MobileBottomNav() {
   const pathname = usePathname() || "";
-
-  if (HIDE_NAV_PATHS.some((p) => pathname.startsWith(p))) {
-    return null;
-  }
 
   return (
     <nav

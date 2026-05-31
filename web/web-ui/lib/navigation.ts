@@ -42,8 +42,6 @@ const PAGE_TITLES: Record<string, string> = {
   "/profile": "โปรไฟล์",
   "/coupons": "คูปองของฉัน",
   "/help": "ศูนย์ช่วยเหลือ",
-  "/checkout": "ชำระเงิน",
-  "/payment": "ชำระเงิน",
 };
 
 export function matchNavKey(pathname: string): NavKey {
