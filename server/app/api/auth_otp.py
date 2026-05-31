@@ -52,6 +52,7 @@ def verify_otp_route():
             }
         ), 200
     except OtpError as e:
+        logger.error(f"[auth_otp] OTP verification failed for {phone}: {e.code} - {e.message}")
         return jsonify({"error": e.code, "message": e.message}), e.status
     except Exception as e:
         logger.exception("[auth_otp] verify failed")
