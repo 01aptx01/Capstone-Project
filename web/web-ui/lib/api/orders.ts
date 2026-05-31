@@ -10,9 +10,23 @@ export interface MemberOrder {
   status: "ready_to_scan" | "completed";
 }
 
+export interface UserCoupon {
+  id: string;
+  promotion_id: number;
+  code: string;
+  title: string;
+  description: string;
+  discount_amount: number;
+  type: string;
+  status: "active" | "used" | "expired";
+  expiry: string | null;
+  redeemed_at: string;
+}
+
 export async function fetchMemberOrders(
   phone: string,
 ): Promise<MemberOrder[]> {
+
   const data = await apiFetch<{ orders: MemberOrder[] }>(
     `/api/members/${encodeURIComponent(phone)}/orders`,
   );
@@ -27,4 +41,13 @@ export async function pickupOrder(
     method: "POST",
     body: JSON.stringify({ phone_number: phone }),
   });
+}
+
+export async function fetchMemberCoupons(
+  phone: string,
+): Promise<UserCoupon[]> {
+  const data = await apiFetch<{ coupons: UserCoupon[] }>(
+    `/api/members/${encodeURIComponent(phone)}/coupons`,
+  );
+  return data.coupons ?? [];
 }

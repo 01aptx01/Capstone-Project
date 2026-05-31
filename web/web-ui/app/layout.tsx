@@ -19,8 +19,8 @@ const prompt = Prompt({
 });
 
 export const metadata: Metadata = {
-  title: "MOD PAO - สั่งซื้อซาลาเปาล่วงหน้า",
-  description: "จองซาลาเปาร้อนๆ จากตู้มดเปาใกล้บ้านคุณ",
+  title: "MOD PAO - ระบบสมาชิกและสะสมคะแนน",
+  description: "เช็กคะแนน แลกรับคูปอง และดูเมนูสินค้าตู้น้ำอัจฉริยะมดเปา",
 };
 
 export default function RootLayout({

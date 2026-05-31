@@ -10,11 +10,8 @@ import { Chip, EmptyState, Skeleton } from "@/components/Ui";
 
 function mapCategory(raw: string): MenuItem["category"] {
   const c = (raw || "").toLowerCase();
-  if (c.includes("sweet") || c.includes("dessert")) return "sweet";
-  if (c.includes("vegg") || c.includes("tofu") || c.includes("bean"))
-    return "veggie";
-  if (c.includes("pork") || c.includes("meat") || c.includes("chicken"))
-    return "pork";
+  if (c.includes("sweet")) return "sweet";
+  if (c.includes("vegetarian")) return "veggie";
   return "pork";
 }
 
@@ -144,7 +141,7 @@ function HomePageContent() {
               strokeLinecap="round"
             />
           </svg>
-          จองล่วงหน้าตอนนี้ แล้วไปรับของร้อนๆ ที่ตู้ใกล้บ้าน
+          ดูรายการเมนูแสนอร่อยของ MOD PAO ได้ง่ายๆ และนำคูปองไปสแกนเพื่อรับส่วนลดสุดพิเศษที่ตู้ใกล้บ้านคุณ
         </p>
       </div>
 
