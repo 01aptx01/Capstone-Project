@@ -146,8 +146,34 @@ class ServerApp:
 
         socketio_enabled = os.getenv("SOCKETIO_ENABLED", "1") != "0"
         if socketio_enabled:
+            # Custom WSGI middleware to guarantee CORS headers on ALL requests (including preflights intercepted early)
+            class CorsMiddleware:
+                def __init__(self, wsgi_app):
+                    self.wsgi_app = wsgi_app
+                def __call__(self, environ, start_response):
+                    if environ.get('REQUEST_METHOD') == 'OPTIONS':
+                        start_response('200 OK', [
+                            ('Access-Control-Allow-Origin', '*'),
+                            ('Access-Control-Allow-Headers', 'Content-Type,Authorization'),
+                            ('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS'),
+                            ('Content-Length', '0')
+                        ])
+                        return [b'']
+                    
+                    def custom_start_response(status, headers, exc_info=None):
+                        headers_dict = {k.lower(): v for k, v in headers}
+                        if 'access-control-allow-origin' not in headers_dict:
+                            headers.append(('Access-Control-Allow-Origin', '*'))
+                        if 'access-control-allow-headers' not in headers_dict:
+                            headers.append(('Access-Control-Allow-Headers', 'Content-Type,Authorization'))
+                        if 'access-control-allow-methods' not in headers_dict:
+                            headers.append(('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS'))
+                        return start_response(status, headers, exc_info)
+                    return self.wsgi_app(environ, custom_start_response)
+
+            wrapped_wsgi = CorsMiddleware(self.wsgi_app)
             listener = eventlet.listen((self.host, self.port))
-            eventlet.wsgi.server(listener, self.wsgi_app)
+            eventlet.wsgi.server(listener, wrapped_wsgi)
         else:
             self.app.run(host=self.host, port=self.port)
 
