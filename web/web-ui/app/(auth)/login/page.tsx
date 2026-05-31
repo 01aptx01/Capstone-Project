@@ -51,6 +51,7 @@ export default function LoginPage() {
       }
       setStep(2);
     } catch (err) {
+      console.error("🔴 [requestOtp] Error requesting OTP:", err);
       setFormError(
         err instanceof Error ? err.message : "ส่ง OTP ไม่สำเร็จ",
       );
@@ -170,7 +171,7 @@ export default function LoginPage() {
               MOD PAO
             </h1>
             <p className="text-xs text-muted mt-2">
-              จองซาลาเปาร้อนๆ จากตู้ใกล้บ้าน
+              เช็กคะแนนสะสม แลกรับคูปองส่วนลด และดูเมนูสินค้าตู้น้ำอัจฉริยะมดเปา
             </p>
           </div>
 

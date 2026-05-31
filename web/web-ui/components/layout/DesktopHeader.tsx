@@ -3,7 +3,6 @@
 import { useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CartNavButton } from "@/components/layout/CartNavButton";
 import { DesktopSearchInput } from "@/components/layout/DesktopSearchInput";
 import { getPageTitle } from "@/lib/navigation";
 
@@ -37,12 +36,10 @@ export function DesktopHeader() {
       </div>
 
       <DesktopSearchInput
-        key={urlQuery}
         initialQuery={urlQuery}
         onSubmit={submitSearch}
       />
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <CartNavButton />
         <Link
           href="/profile"
           aria-label="โปรไฟล์"

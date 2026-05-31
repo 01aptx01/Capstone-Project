@@ -18,3 +18,6 @@ export async function fetchProducts(
     `/api/products?machine_code=${encodeURIComponent(machineCode)}`,
   );
 }
+export async function fetchProductDetail(productId: number): Promise<ApiProduct> {
+  return apiFetch<ApiProduct>(`/api/products/${productId}`);
+}

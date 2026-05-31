@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { IconSearch } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
@@ -15,11 +15,9 @@ export function DesktopSearchInput({
 }: DesktopSearchInputProps) {
   const [searchValue, setSearchValue] = useState(initialQuery);
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      onSubmit(searchValue);
-    }
-  };
+  useEffect(() => {
+    setSearchValue(initialQuery);
+  }, [initialQuery]);
 
   return (
     <div className="relative mx-auto hidden w-full max-w-md lg:block">
@@ -29,9 +27,11 @@ export function DesktopSearchInput({
       <input
         type="search"
         value={searchValue}
-        onChange={(e) => setSearchValue(e.target.value)}
-        onKeyDown={handleSearchKeyDown}
-        onBlur={() => onSubmit(searchValue)}
+        onChange={(e) => {
+          const val = e.target.value;
+          setSearchValue(val);
+          onSubmit(val);
+        }}
         placeholder="ค้นหาไส้ซาลาเปา..."
         aria-label="ค้นหาเมนู"
         className={cn(
