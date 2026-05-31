@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { HistoryCard } from "@/components/cards/HistoryCard";
 import { fetchMemberOrders, type MemberOrder } from "@/lib/api/orders";
 import { useUser } from "@/context/UserContext";
@@ -11,12 +11,6 @@ export default function HistoryPage() {
   const [orders, setOrders] = useState<MemberOrder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  const reloadOrders = useCallback(() => {
-    setRefreshKey((k) => k + 1);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,7 +45,7 @@ export default function HistoryPage() {
     return () => {
       cancelled = true;
     };
-  }, [phone, refreshKey]);
+  }, [phone]);
 
   return (
     <div className="flex flex-col">
@@ -77,7 +71,6 @@ export default function HistoryPage() {
             <HistoryCard
               key={order.id}
               order={order}
-              onPickupComplete={reloadOrders}
             />
           ))}
         {!isLoading && !error && orders.length === 0 && (

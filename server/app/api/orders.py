@@ -50,7 +50,7 @@ def member_orders(phone: str):
 
             cur.execute(
                 """
-                SELECT o.order_id, o.charge_id, o.total_price, o.status, o.created_at
+                SELECT o.order_id, o.machine_code, o.charge_id, o.total_price, o.status, o.created_at
                 FROM orders o
                 WHERE o.user_id = %s
                 ORDER BY o.created_at DESC
@@ -79,12 +79,13 @@ def member_orders(phone: str):
                 orders.append(
                     {
                         "id": str(row["order_id"]),
+                        "machine_code": row["machine_code"],
                         "orderNumber": charge[-8:] if len(charge) >= 8 else charge,
                         "charge_id": charge,
                         "datetime": str(row["created_at"]),
                         "items": items_text or "-",
                         "total": float(row["total_price"]),
-                        "status": _map_ui_status(row["status"]),
+                        "status": row["status"],
                     }
                 )
 
