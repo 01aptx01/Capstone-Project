@@ -36,6 +36,7 @@ function mapToMyCoupon(coupon: UserCoupon): MyCoupon {
 
   return {
     id: coupon.id,
+    code: coupon.code,
     title: coupon.title,
     description: coupon.description,
     expiry: expiryLabel,
