@@ -47,9 +47,4 @@ def phone_to_e164(phone_th: str) -> str:
 
 
 def get_sms_service() -> SmsService:
-    sid = os.environ.get("TWILIO_ACCOUNT_SID", "").strip()
-    token = os.environ.get("TWILIO_AUTH_TOKEN", "").strip()
-    from_num = os.environ.get("TWILIO_FROM_NUMBER", "").strip()
-    if sid and token and from_num:
-        return TwilioSmsService(sid, token, from_num)
     return ConsoleSmsService()

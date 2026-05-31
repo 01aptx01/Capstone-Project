@@ -233,6 +233,77 @@ def redeem_coupon(phone: str):
         return jsonify({"error": "server_error", "message": "แลกคูปองไม่สำเร็จ"}), 500
 
 
+@orders_api.route("/api/members/<phone>/coupons", methods=["GET"])
+@member_required
+def member_coupons(phone: str):
+    """ดึงรายการคูปองที่ user แลกไว้แล้ว (rate limited: ผ่าน @member_required)"""
+    err = require_path_phone(phone)
+    if err:
+        return err
+
+    if not _validate_phone(phone):
+        return jsonify({"error": "invalid_phone", "message": "เบอร์โทรไม่ถูกต้อง", "coupons": []}), 400
+
+    try:
+        with get_db_cursor() as (_, cur):
+            cur.execute(
+                "SELECT user_id FROM users WHERE phone_number = %s",
+                (phone,),
+            )
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"coupons": []}), 200
+
+            cur.execute(
+                """
+                SELECT
+                    up.id,
+                    up.promotion_id,
+                    up.status,
+                    up.redeemed_at,
+                    p.code,
+                    p.type,
+                    p.discount_amount,
+                    p.points_cost,
+                    p.expire_date,
+                    p.is_active
+                FROM user_promotions up
+                JOIN promotions p ON p.promotion_id = up.promotion_id
+                WHERE up.user_id = %s
+                ORDER BY up.redeemed_at DESC
+                """,
+                (user["user_id"],),
+            )
+            rows = cur.fetchall()
+
+        coupons = []
+        for row in rows:
+            disc = float(row["discount_amount"])
+            if (row["type"] or "").lower() == "percent":
+                title = f"ส่วนลด {disc:g}%"
+            else:
+                title = f"ส่วนลด {disc:g} บาท"
+
+            coupons.append({
+                "id": str(row["id"]),
+                "promotion_id": row["promotion_id"],
+                "code": row["code"],
+                "title": title,
+                "description": f"ส่วนลด {disc:g} {'%' if (row['type'] or '').lower() == 'percent' else 'บาท'}",
+                "discount_amount": disc,
+                "type": row["type"],
+                "status": row["status"],
+                "expiry": str(row["expire_date"]) if row["expire_date"] else None,
+                "redeemed_at": str(row["redeemed_at"]),
+            })
+
+        return jsonify({"coupons": coupons}), 200
+
+    except Exception as e:
+        logger.error(f"[Orders] member_coupons error for {phone}: {e}")
+        return jsonify({"error": "server_error", "message": "เกิดข้อผิดพลาด", "coupons": []}), 500
+
+
 @orders_api.route("/api/orders/<charge_id>/pickup", methods=["POST"])
 @member_required
 def pickup_order(charge_id: str):
