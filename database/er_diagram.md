@@ -44,6 +44,7 @@ erDiagram
         int user_id FK "USERS"
         int promotion_id FK "PROMOTIONS"
         enum status "active used expired"
+        varchar code "Unique รหัสคูปองเฉพาะตัว (Nullable)"
         datetime redeemed_at "วันเวลาที่แลก"
     }
 
@@ -85,6 +86,7 @@ erDiagram
         varchar machine_code FK "MACHINES"
         int user_id FK "USERS (Nullable)"
         int promotion_id FK "PROMOTIONS (Nullable)"
+        int user_promotion_id FK "USER_PROMOTIONS (Nullable)"
         varchar charge_id "Unique รหัส Omise"
         decimal total_price "ยอดจ่ายจริง"
         enum payment_method "cash qr_code credit_card"
@@ -167,6 +169,7 @@ erDiagram
     USERS ||--o{ ORDERS : "placed"
     MACHINES ||--o{ ORDERS : "processed_at"
     PROMOTIONS ||--o{ ORDERS : "applied_to"
+    USER_PROMOTIONS ||--o{ ORDERS : "applied_to"
     
     %% --- ข้อมูลย่อยของออเดอร์และการชำระเงิน ---
     ORDERS ||--|{ ORDER_ITEMS : "contains"
@@ -191,7 +194,7 @@ erDiagram
    - สินค้าในตาราง `products` จะนำไปจับคู่กับตู้และช่องจ่ายสินค้าผ่านตาราง `machine_slots`
 
 3. **Ordering & Payment System (ระบบสั่งซื้อและชำระเงิน)**
-   - `orders` (รายการสั่งซื้อ) จะผูกเข้ากับ `machines` ว่าสั่งจากตู้ไหน, ผูกกับ `users` (ถ้าเป็นสมาชิกที่ล็อกอิน), และผูกกับ `promotions` (ถ้าใช้คูปองส่วนลด)
+   - `orders` (รายการสั่งซื้อ) จะผูกเข้ากับ `machines` ว่าสั่งจากตู้ไหน, ผูกกับ `users` (ถ้าเป็นสมาชิกที่ล็อกอิน), และผูกกับ `promotions` (ถ้าใช้คูปองส่วนลดทั่วไป) หรือ `user_promotions` (คูปองที่สมาชิกได้แลกมาใช้งานผ่าน `user_promotion_id`)
    - 1 ออเดอร์ใน `orders` สามารถประกอบด้วยสินค้าหลายชิ้นใน `order_items` (1-to-Many)
    - ตาราง `transactions` ใช้สำหรับบันทึกผลการทำธุรกรรมทางการเงินและค่าธรรมเนียมผ่าน Gateway (เช่น Omise) ร่วมกับ `orders`
 
