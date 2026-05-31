@@ -1,6 +1,9 @@
 // components/cards/MyCouponCard.tsx
 "use client";
 import React from "react";
+import { useUser } from "@/context/UserContext";
+import { generateCouponCode } from "@/lib/api/orders";
+
 export type MyCouponStatus = "active" | "used" | "expired";
 
 export interface MyCoupon {
@@ -20,7 +23,44 @@ interface MyCouponCardProps {
 }
 
 export function MyCouponCard({ coupon }: MyCouponCardProps) {
+  const { phone } = useUser();
   const [showCode, setShowCode] = React.useState(false);
+  const [couponCode, setCouponCode] = React.useState(coupon.code);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  const handleShowCode = async () => {
+    if (showCode) {
+      setShowCode(false);
+      return;
+    }
+
+    if (couponCode) {
+      setShowCode(true);
+      return;
+    }
+
+    if (!phone) {
+      setError("กรุณาเข้าสู่ระบบ");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await generateCouponCode(phone, coupon.id);
+      if (res && res.code) {
+        setCouponCode(res.code);
+        setShowCode(true);
+      } else {
+        setError("ไม่สามารถสร้างรหัสได้");
+      }
+    } catch {
+      setError("เกิดข้อผิดพลาดในการเชื่อมต่อ");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusConfig = () => {
     switch (coupon.status) {
@@ -101,10 +141,10 @@ export function MyCouponCard({ coupon }: MyCouponCardProps) {
           <div className="flex flex-col gap-1.5 mb-4">
             <span className="text-[10px] text-muted font-bold uppercase tracking-wider">รหัสคูปอง (สำหรับกรอกที่ตู้)</span>
             <div className="flex items-center gap-2 max-w-max">
-              {showCode ? (
+              {showCode && couponCode ? (
                 <>
                   <span className="px-3 py-1 bg-brand/5 border border-brand/20 rounded-md font-mono text-base font-bold text-brand tracking-wider select-all animate-fade-in">
-                    {coupon.code}
+                    {couponCode}
                   </span>
                   <button
                     onClick={() => setShowCode(false)}
@@ -121,16 +161,18 @@ export function MyCouponCard({ coupon }: MyCouponCardProps) {
                     ••••••••
                   </span>
                   <button
-                    onClick={() => setShowCode(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all border bg-brand/5 hover:bg-brand/10 border-brand/20 text-brand"
+                    onClick={handleShowCode}
+                    disabled={loading || coupon.status !== "active"}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all border bg-brand/5 hover:bg-brand/10 border-brand/20 text-brand disabled:opacity-50 animate-fade-in"
                     title="แสดงรหัสคูปอง"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    <span>แสดงรหัส</span>
+                    <span>{loading ? "กำลังสร้าง..." : "แสดงรหัส"}</span>
                   </button>
                 </>
               )}
             </div>
+            {error && <p className="text-red-500 text-xs mt-1 font-semibold">{error}</p>}
           </div>
 
           <div className="flex justify-between items-end gap-2 border-t border-gray-50 pt-3 border-dashed">

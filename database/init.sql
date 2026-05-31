@@ -60,7 +60,9 @@ CREATE TABLE user_promotions (
   user_id INT NOT NULL,
   promotion_id INT NOT NULL,
   status ENUM('active','used','expired') NOT NULL DEFAULT 'active',
+  code VARCHAR(50) NULL,
   redeemed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_user_promotions_code (code),
   KEY idx_user_promotions_user (user_id),
   KEY idx_user_promotions_promo (promotion_id),
   CONSTRAINT fk_user_promotions_user
@@ -113,6 +115,7 @@ CREATE TABLE orders (
   machine_code VARCHAR(20) NOT NULL,
   user_id INT NULL,
   promotion_id INT NULL,
+  user_promotion_id INT NULL,
   charge_id VARCHAR(64) NULL,
   total_price DECIMAL(10,2) NOT NULL,
   payment_method ENUM('cash','qr_code','credit_card') NOT NULL,
@@ -132,6 +135,7 @@ CREATE TABLE orders (
   KEY idx_orders_machine (machine_code),
   KEY idx_orders_user (user_id),
   KEY idx_orders_promo (promotion_id),
+  KEY idx_orders_user_promo (user_promotion_id),
   -- Composite: covers background sweeper (WHERE status='pending_payment' AND created_at < X)
   KEY idx_orders_status_created (status, created_at),
   -- Composite: covers dispatch_pending_jobs (WHERE machine_code=X AND status='paid')
@@ -144,6 +148,9 @@ CREATE TABLE orders (
     ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_orders_promotion
     FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_orders_user_promotion
+    FOREIGN KEY (user_promotion_id) REFERENCES user_promotions(id)
     ON UPDATE CASCADE ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

@@ -143,6 +143,7 @@ class InventoryService:
         payment_method: str,
         total_price: float,
         promotion_id: int | None = None,
+        user_promotion_id: int | None = None, # ADDED
     ) -> bool:
         db = self.get_db()
         cur = db.cursor(dictionary=True)
@@ -155,22 +156,13 @@ class InventoryService:
                 db.rollback()
                 return False
 
-            if promotion_id is not None:
-                cur.execute(
-                    """
-                    INSERT INTO orders (machine_code, charge_id, total_price, payment_method, status, promotion_id)
-                    VALUES (%s, %s, %s, %s, 'pending_payment', %s)
-                    """,
-                    (machine_code, charge_id, total_price, payment_method, promotion_id),
-                )
-            else:
-                cur.execute(
-                    """
-                    INSERT INTO orders (machine_code, charge_id, total_price, payment_method, status)
-                    VALUES (%s, %s, %s, %s, 'pending_payment')
-                    """,
-                    (machine_code, charge_id, total_price, payment_method),
-                )
+            cur.execute(
+                """
+                INSERT INTO orders (machine_code, charge_id, total_price, payment_method, status, promotion_id, user_promotion_id)
+                VALUES (%s, %s, %s, %s, 'pending_payment', %s, %s)
+                """,
+                (machine_code, charge_id, total_price, payment_method, promotion_id, user_promotion_id),
+            )
             order_id = cur.lastrowid
 
             for item in cart_items:
@@ -378,6 +370,19 @@ class InventoryService:
                 """,
                 (status, charge_id),
             )
+            
+            # If successfully paid or being dispensed/completed, mark the user's specific coupon as 'used'!
+            if status in ("paid", "dispensing", "completed", "ready_to_scan"):
+                cur.execute(
+                    """
+                    UPDATE user_promotions up
+                    JOIN orders o ON o.user_promotion_id = up.id
+                    SET up.status = 'used'
+                    WHERE o.charge_id = %s AND up.status = 'active'
+                    """,
+                    (charge_id,),
+                )
+                
             db.commit()
             logger.info(f"✅ [InventoryService] Order {charge_id} → status='{status}'")
         except Exception as e:
