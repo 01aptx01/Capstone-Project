@@ -101,6 +101,20 @@ def get_pending(limit: int = 100) -> List[Dict[str, Any]]:
             conn.close()
 
 
+def count_pending() -> int:
+    init_db()
+    with _DB_LOCK:
+        conn = _connect()
+        try:
+            cur = conn.execute(
+                "SELECT COUNT(*) FROM event_outbox WHERE sent_at IS NULL"
+            )
+            row = cur.fetchone()
+            return int(row[0]) if row else 0
+        finally:
+            conn.close()
+
+
 def mark_sent(job_id: str, seq: int) -> None:
     init_db()
     with _DB_LOCK:

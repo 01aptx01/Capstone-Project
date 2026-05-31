@@ -8,7 +8,6 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-import requests
 from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from ws_outbox import enqueue_event
@@ -160,9 +159,6 @@ class JobManager:
         self._forward_event(job, event)
 
     def _forward_event(self, job: Job, event: Dict[str, Any]) -> None:
-        sink_mode = (os.environ.get("EVENT_SINK_MODE") or "socket").lower()
-        sink_url = os.environ.get("EVENT_SINK_URL")
-
         payload = {
             "machine_code": job.machine_code,
             "job_id": job.job_id,
@@ -172,21 +168,7 @@ class JobManager:
             "seq": event.get("seq"),
             "payload": event.get("payload"),
         }
-
-        # Always persist locally first (offline-first)
         enqueue_event(payload)
-
-        # Optional legacy HTTP sink (kept for compatibility)
-        if sink_mode != "http" or not sink_url:
-            return
-
-        def _send():
-            try:
-                requests.post(sink_url, json=payload, timeout=2)
-            except Exception:
-                return
-
-        threading.Thread(target=_send, daemon=True).start()
 
 
 job_manager = JobManager()
@@ -206,157 +188,10 @@ def _mk_event(job: Job, *, event_type: str, state: Optional[str] = None, payload
 
 
 def _run_mock_job(job: Job) -> None:
-    """Mock hardware flow. Replace sleeps with sensor/actuator logic in production."""
-    try:
-        expanded = job_manager._expand_queue(job)
-        # Sort items by heating time ascending, keeping track of original indices
-        items_with_time = [(i, it, int(it.get("heating_time", 15))) for i, it in enumerate(expanded)]
-        items_with_time.sort(key=lambda x: x[2])
+    """Run dispense job via hardware_runner (mock sensors by default)."""
+    from hardware_runner import run_hardware_job
 
-        def tick(seconds: int):
-            for _ in range(seconds):
-                if job.done:
-                    return
-                job.remaining_seconds = max(0, int(job.remaining_seconds) - 1)
-                job_manager.publish(
-                    job,
-                    _mk_event(
-                        job,
-                        event_type="job.progress",
-                        state=job.state,
-                        payload={
-                            "current_item_index": job.current_item_index,
-                            "remaining_seconds": job.remaining_seconds,
-                        },
-                    ),
-                )
-                time.sleep(1)
-
-        # 1. Turn on GREEN slot lights FIRST for all items
-        active_slots = []
-        for i, it, target_time in items_with_time:
-            slot_index = machine.resolve_slot_index(it.get("product_id", 1))
-            machine.set_slot_active(slot_index, True)
-            if slot_index not in active_slots:
-                active_slots.append(slot_index)
-                
-        # 2. Phase 1: TRANSFER_TO_OVEN (STEP1_DELAY = 2s)
-        job.state = "TRANSFER_TO_OVEN"
-        machine.mark_step_active("TRANSFER_TO_OVEN")
-        job_manager.publish(
-            job,
-            _mk_event(
-                job,
-                event_type="job.state",
-                state=job.state,
-                payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
-            ),
-        )
-        tick(2) # Match STEP1_DELAY
-        machine.mark_step_complete("TRANSFER_TO_OVEN")
-
-        # 3. Phase 2: HEATING & DISPENSING
-        elapsed_heating = 0
-        for i, it, target_time in items_with_time:
-            if job.done:
-                for slot in active_slots:
-                    machine.set_slot_active(slot, False)
-                return
-            
-            job.current_item_index = i
-            # Step A: HEATING
-            time_to_heat = target_time - elapsed_heating
-            if time_to_heat > 0:
-                job.state = "HEATING"
-                machine.mark_step_active("HEATING")
-                job_manager.publish(
-                    job,
-                    _mk_event(
-                        job,
-                        event_type="job.state",
-                        state=job.state,
-                        payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
-                    ),
-                )
-                tick(time_to_heat)
-                machine.mark_step_complete("HEATING")
-                elapsed_heating = target_time
-
-            # Step B: DISPENSING (DISPENSE_WINDOW = 2s)
-            job.state = "DISPENSING"
-            machine.mark_step_active("DISPENSING")
-            job_manager.publish(
-                job,
-                _mk_event(
-                    job,
-                    event_type="job.state",
-                    state=job.state,
-                    payload={"remaining_seconds": job.remaining_seconds, "current_item_index": job.current_item_index},
-                ),
-            )
-            tick(2) # Match DISPENSE_WINDOW
-            machine.mark_step_complete("DISPENSING")
-
-        # 4. Phase 3: Post-Dispense (STEP4_HOLD = 3s)
-        # UI holds Step 3 for 3 seconds after last item
-        tick(3)
-
-        # 5. Phase 4: DONE (FINAL_STEP_HOLD = 3s)
-        job.state = "DONE"
-        job.remaining_seconds = 0
-        job.done = True
-        
-        machine.mark_step_active("DONE")
-        job_manager.publish(
-            job,
-            _mk_event(
-                job,
-                event_type="job.state",
-                state=job.state,
-                payload={"remaining_seconds": 0, "current_item_index": job.current_item_index},
-            ),
-        )
-        tick(3) # Match FINAL_STEP_HOLD
-        machine.mark_step_complete("DONE")
-        machine.step_leds.set_all(success=True)
-
-        # Turn off all green slot lights
-        for slot in active_slots:
-            machine.set_slot_active(slot, False)
-            
-        time.sleep(2.0)
-        machine.step_leds.set_standby()
-
-    except Exception as e:
-        job.state = "ERROR"
-        job.error_message = str(e)
-        job.done = True
-        machine.mark_error(str(e))
-        job_manager.publish(
-            job,
-            _mk_event(
-                job,
-                event_type="job.state",
-                state=job.state,
-                payload={"error": job.error_message, "remaining_seconds": job.remaining_seconds},
-            ),
-        )
-
-@routes.route("/dispense", methods=["POST"])
-def dispense():
-    data = request.get_json(silent=True) or {}
-    machine_code = data.get("machine_code") or data.get("machine_id")
-    items = data.get("items", [])
-
-    if not machine_code:
-        return {"status": "error", "message": "machine_code is required"}, 400
-
-    logger.info(f"[Agent] Received legacy dispense request for machine {machine_code}")
-    logger.info(f"[Agent] Items to dispense: {items}")
-
-    # Legacy behavior: treat as instant OK
-    return {"status": "success", "message": "All items dispensed"}, 200
-
+    run_hardware_job(job, job_manager, mk_event=_mk_event)
 
 @routes.route("/jobs/start", methods=["POST"])
 def start_job():
@@ -364,7 +199,7 @@ def start_job():
     if not isinstance(data, dict):
         return {"status": "error", "message": "Invalid JSON body"}, 400
 
-    machine_code = data.get("machine_code") or data.get("machine_id")
+    machine_code = data.get("machine_code")
     items = data.get("items") or []
     job_id = data.get("job_id")
     order_charge_id = data.get("order_charge_id")
@@ -455,6 +290,32 @@ def nfc_status():
         machine.nfc.reset()
         return jsonify({"status": "tapped"}), 200
     return jsonify({"status": "waiting"}), 200
+
+@routes.route("/health", methods=["GET"])
+def health():
+    from ws_client import get_ws_client_status
+    from ws_outbox import count_pending
+
+    gpio_mode = "virtual"
+    try:
+        from gpiozero import LED  # type: ignore
+
+        if LED is not None:
+            gpio_mode = "gpiozero"
+    except Exception:
+        pass
+
+    return jsonify(
+        {
+            "status": "ok",
+            "machine_code": machine.config.machine_code,
+            "ws": get_ws_client_status(),
+            "outbox_pending": count_pending(),
+            "gpio_mode": gpio_mode,
+            "nfc_auto_approve": machine.config.nfc_auto_approve,
+        }
+    )
+
 
 @routes.route("/")
 def index():

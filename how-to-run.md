@@ -82,16 +82,18 @@ You will set these in **Section 7**. Summary:
 
 | Variable | Used by | Purpose |
 |----------|---------|---------|
-| `MACHINE_ID` | `client` service | Must equal `machines.machine_code` in MySQL |
+| `MACHINE_CODE` | `client` service | Must equal `machines.machine_code` in MySQL |
 | `MACHINE_TOKEN` | `client` service | Plaintext token returned once from Admin “Create machine”; server stores bcrypt hash |
-| `MACHINE_CODE` | Optional alias for agent | Compose passes it; agent prefers `MACHINE_ID` then `MACHINE_CODE` ([client/agent/ws_client.py](client/agent/ws_client.py)) |
-| `NEXT_PUBLIC_MACHINE_CODE` | **machine-ui image build** | Which Socket.IO room / machine the browser UI uses; baked in at **build** time ([web/machine-ui/Dockerfile](web/machine-ui/Dockerfile)) |
+| `NEXT_PUBLIC_MACHINE_CODE` | **machine-ui image build** | Socket.IO room for the kiosk UI; baked at **build** time |
+| `KIOSK_SOCKET_SECRET` | **server** | Required — locks kiosk Socket.IO connections |
+| `NEXT_PUBLIC_KIOSK_SOCKET_SECRET` | **machine-ui build** | Must match `KIOSK_SOCKET_SECRET` exactly |
 
 Other useful entries (see [.env.example](.env.example)):
 
-- `SERVER_SOCKET_URL=http://server:8000` — correct **inside** Docker for the agent.
-- `NEXT_PUBLIC_API_URL=http://localhost:8000` — URL the **host browser** uses to reach the API from machine-ui.
-- `NEXT_PUBLIC_SERVER_SOCKET_URL` — Socket.IO URL for the browser (often `http://localhost:8000`).
+- `SERVER_SOCKET_URL=http://server:8000` — agent → server Socket.IO (inside Docker).
+- `NEXT_PUBLIC_API_URL=http://localhost:8000` — REST API from the host browser.
+- `NEXT_PUBLIC_SERVER_SOCKET_URL` — optional; defaults to `NEXT_PUBLIC_API_URL`.
+- Dispense after payment uses **Socket.IO only** (`job.start`); manual test: `POST http://localhost:5000/jobs/start`.
 
 ---
 
@@ -173,11 +175,9 @@ Ensure `docker compose up --build` is running and services are healthy (Section 
 In the **root** `.env` set:
 
 ```env
-MACHINE_ID=DEMO-01
+MACHINE_CODE=DEMO-01
 MACHINE_TOKEN=<paste secret_token from Admin>
 ```
-
-Optional: `MACHINE_CODE=` can stay empty if `MACHINE_ID` is set.
 
 Apply changes by rebuilding/restarting the agent:
 
@@ -190,15 +190,15 @@ Or restart the full stack.
 **Expected behavior:**
 
 - On success, agent logs should indicate a WebSocket / Socket.IO connection to the server.
-- On bad credentials, [client/agent/ws_client.py](client/agent/ws_client.py) logs  
-  `Authentication failed: Invalid Machine ID or Token`  
-  and **stops retrying** (thread exits that loop).
+- On bad credentials, agent logs authentication failure and **retries every 30s** until `MACHINE_TOKEN` is fixed.
 
-### Step 4 — Point machine-ui at the same `machine_code`
+### Step 4 — Kiosk secret + machine-ui `machine_code`
 
-In the **root** `.env`:
+In the **root** `.env` (generate once: `openssl rand -hex 32`):
 
 ```env
+KIOSK_SOCKET_SECRET=<your-secret>
+NEXT_PUBLIC_KIOSK_SOCKET_SECRET=<same-value>
 NEXT_PUBLIC_MACHINE_CODE=DEMO-01
 ```
 
@@ -231,7 +231,7 @@ The seed in [database/init.sql](database/init.sql) only pre-fills slots for **`M
   - **Create a new machine** with a **different** `machine_code` (e.g. `DEMO-01`) and use that machine’s token; **or**
   - Manually update the database (advanced, not documented here).
 
-Default Compose / Dockerfile defaults use **`MP1-001`** for `NEXT_PUBLIC_MACHINE_CODE` and `MACHINE_ID` so URLs and seed data align **except** the seeded row still has **no token** until you align policy (new machine vs DB update).
+Default Compose uses **`MP1-001`** for `MACHINE_CODE` / `NEXT_PUBLIC_MACHINE_CODE` and a dev `KIOSK_SOCKET_SECRET` default — change both secrets in production. Seeded `MP1-001` has **no token** until you create a machine in Admin or update the DB.
 
 ---
 
@@ -239,8 +239,8 @@ Default Compose / Dockerfile defaults use **`MP1-001`** for `NEXT_PUBLIC_MACHINE
 
 | Change | Action |
 |--------|--------|
-| `MACHINE_ID` / `MACHINE_TOKEN` | Edit root `.env`, then `docker compose up -d --build client` |
-| `NEXT_PUBLIC_MACHINE_CODE` | Edit root `.env`, then **rebuild** `machine-ui` (Section 7 Step 4) |
+| `MACHINE_CODE` / `MACHINE_TOKEN` | Edit root `.env`, then `docker compose up -d --build client` |
+| `NEXT_PUBLIC_MACHINE_CODE` / kiosk secrets | Edit root `.env`, then **rebuild** `machine-ui` (Section 7 Step 4) |
 | Omise or API URL build args | Rebuild affected frontend images |
 
 ---
@@ -271,7 +271,8 @@ If `8000`, `3000`, `3001`, `5000`, `3307`, or `8081` is taken, either stop the c
 
 ### Agent never connects / “websocket disabled”
 
-- Confirm root `.env` has **`MACHINE_ID` (or `MACHINE_CODE`) and `MACHINE_TOKEN`** both non-empty ([client/agent/ws_client.py](client/agent/ws_client.py)).
+- Confirm root `.env` has **`MACHINE_CODE` and `MACHINE_TOKEN`** non-empty.
+- Confirm **`KIOSK_SOCKET_SECRET`** and **`NEXT_PUBLIC_KIOSK_SOCKET_SECRET`** match, then rebuild `machine-ui`.
 - Confirm `SERVER_SOCKET_URL` for the agent inside Docker is **`http://server:8000`** (already set in [docker-compose.yml](docker-compose.yml)).
 
 ### Admin API returns errors

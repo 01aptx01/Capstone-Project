@@ -12,10 +12,12 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 try:
-    from dotenv import load_dotenv
-    load_dotenv()
+	from dotenv import load_dotenv
+	load_dotenv()
 except ImportError:
-    pass
+	pass
+
+from env_config import machine_code as env_machine_code
 
 logger = logging.getLogger(__name__)
 
@@ -92,12 +94,7 @@ def _find_command(candidates: Iterable[str]) -> Optional[str]:
 
 
 def _default_ui_url() -> str:
-	return (
-		os.environ.get("MACHINE_UI_URL")
-		or os.environ.get("SERVER_MACHINE_UI_URL")
-		or os.environ.get("NEXT_PUBLIC_MACHINE_UI_URL")
-		or "http://localhost:3000"
-	)
+	return os.environ.get("MACHINE_UI_URL") or "http://localhost:3000"
 
 
 def _default_browser_command() -> Optional[str]:
@@ -122,7 +119,7 @@ def _sound_directory() -> Path:
 
 @dataclass
 class MachineConfig:
-	machine_code: str = field(default_factory=lambda: os.environ.get("MACHINE_CODE") or os.environ.get("MACHINE_ID") or "MP1-001")
+	machine_code: str = field(default_factory=env_machine_code)
 	machine_ui_url: str = field(default_factory=_default_ui_url)
 	browser_command: Optional[str] = field(default_factory=_default_browser_command)
 	slot_led_pins: list[int] = field(default_factory=lambda: _split_ints(os.environ.get("GREEN_LED_PINS")) or DEFAULT_GREEN_LED_PINS.copy())

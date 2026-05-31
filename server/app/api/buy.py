@@ -6,17 +6,15 @@ import hashlib
 from flask import Blueprint, request, jsonify
 from app.services.omise_service import OmisePaymentService
 from app.services.buy_service import InventoryService, AlreadyClaimedError, InsufficientStockError
-from app.services.hardware_service import HardwareAgentService
 from app.realtime.socketio_gateway import emit_job_start
 
 # Configure logger
 logger = logging.getLogger(__name__)
 
 class BuyController:
-    def __init__(self, payment_service: OmisePaymentService, inventory_service: InventoryService, hardware_agent: HardwareAgentService):
+    def __init__(self, payment_service: OmisePaymentService, inventory_service: InventoryService):
         self.payment_service = payment_service
         self.inventory_service = inventory_service
-        self.hardware_agent = hardware_agent
 
         # IN-MEMORY: ใช้เก็บ charge → status สำหรับ Frontend polling (ไม่ใช่ source of truth)
         # Source of truth อยู่ที่ DB column `orders.status`
@@ -115,7 +113,7 @@ class BuyController:
             if 'cart' in metadata:
                 order = {
                     "cart": json.loads(metadata['cart']),
-                    "machine_code": metadata.get('machine_code') or metadata.get('machine_id', 'MP1-001')
+                    "machine_code": metadata.get('machine_code') or metadata.get('machine_id') or 'MP1-001'
                 }
                 logger.info(f"[Dispense] Recovered order from Omise metadata for charge: {charge_id}")
 
@@ -123,7 +121,7 @@ class BuyController:
             logger.warning(f"[Dispense] No pending order found for charge_id: {charge_id}")
             return False
 
-        cart = order["cart"]
+        cart = self.inventory_service.enrich_cart_items(order["cart"])
         machine_code = order["machine_code"]
 
         logger.info(f"[Dispense] Starting dispense for charge {charge_id}. Cart: {cart}")
@@ -151,22 +149,19 @@ class BuyController:
             logger.error(f"[Dispense] Stock deduction returned False for charge_id: {charge_id}")
             return False
 
-        # Step 2: Dispatch to hardware
-        dispatch_mode = (os.environ.get("DISPATCH_MODE") or "socket").lower()
-        if dispatch_mode == "http":
-            agent_ok = self.hardware_agent.notify_dispense(machine_code, cart, charge_id=charge_id)
-            if not agent_ok:
-                logger.error(f"[Dispense] Hardware agent notification failed for charge_id: {charge_id}")
-                self.inventory_service.update_order_status(charge_id, "dispense_failed")
-                self._trigger_refund(charge_id)
-        else:
-            # Socket.IO dispatch — สถานะจะถูกอัปเดตตาม event จากเครื่อง
+        # Step 2: สั่งงานผ่าน Socket.IO (Pi ต้องเชื่อมต่อ server; ถ้าหลุดจะ replay ตอน reconnect)
+        try:
             emit_job_start(
                 machine_code,
                 job_id=str(charge_id),
                 order_charge_id=str(charge_id),
                 items=cart,
             )
+        except Exception as exc:
+            logger.error(f"[Dispense] emit job.start failed for {charge_id}: {exc}")
+            self.inventory_service.update_order_status(charge_id, "dispense_failed")
+            self._trigger_refund(charge_id)
+            return False
 
         # Clean up in-memory order
         self.pending_orders.pop(charge_id, None)
@@ -565,7 +560,6 @@ class BuyController:
 # =============================================
 payment_service   = OmisePaymentService()
 inventory_service = InventoryService()
-hardware_agent    = HardwareAgentService()
 
-buy_controller = BuyController(payment_service, inventory_service, hardware_agent)
+buy_controller = BuyController(payment_service, inventory_service)
 buy_api = buy_controller.blueprint

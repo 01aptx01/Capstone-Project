@@ -72,6 +72,29 @@ sio = socketio.Server(
 )
 
 ADMIN_ROOM = "admin"
+_kiosk_sids: set = set()
+
+
+def _kiosk_socket_secret() -> str:
+    return (os.environ.get("KIOSK_SOCKET_SECRET") or "").strip()
+
+
+def _verify_kiosk_auth(auth: Dict[str, Any]) -> Tuple[bool, str]:
+    """Browser machine-ui: join machine room for job_event_broadcast only (no is_online)."""
+    if auth.get("role") != "kiosk":
+        return False, "role must be kiosk"
+    machine_code = auth.get("machine_code")
+    if not machine_code:
+        return False, "machine_code required"
+    machine_code = str(machine_code).strip()
+    if not machine_code:
+        return False, "machine_code required"
+    expected = _kiosk_socket_secret()
+    if not expected:
+        return False, "KIOSK_SOCKET_SECRET not configured on server"
+    if auth.get("kiosk_secret") != expected:
+        return False, "invalid kiosk_secret"
+    return True, machine_code
 
 
 def _verify_admin_auth(auth: Optional[Dict[str, Any]]) -> bool:
@@ -378,18 +401,29 @@ def connect(sid, environ, auth):
         logger.info(f"[SocketIO] admin dashboard connected (sid={sid})")
         return
 
+    # MachineUI kiosk (browser) — listen-only; does not mark machine online
+    if isinstance(auth, dict) and auth.get("role") == "kiosk":
+        ok, result = _verify_kiosk_auth(auth)
+        if not ok:
+            raise ConnectionRefusedError(result)
+        machine_code = result
+        sio.enter_room(sid, machine_code)
+        _kiosk_sids.add(sid)
+        logger.info(f"[SocketIO] kiosk UI connected: {machine_code} (sid={sid})")
+        return
+
     if not isinstance(auth, dict):
         raise ConnectionRefusedError("missing auth")
 
-    machine_id = auth.get("machine_id") or auth.get("machine_code")
+    machine_code = auth.get("machine_code")
     raw_token = auth.get("token")
-    if machine_id is None or raw_token is None:
-        raise ConnectionRefusedError("machine_id and token required in auth")
+    if machine_code is None or raw_token is None:
+        raise ConnectionRefusedError("machine_code and token required in auth")
 
-    machine_code = str(machine_id).strip()
+    machine_code = str(machine_code).strip()
     token_str = str(raw_token)
     if not machine_code or not token_str:
-        raise ConnectionRefusedError("machine_id and token required in auth")
+        raise ConnectionRefusedError("machine_code and token required in auth")
 
     ok, reason = _verify_machine_token_auth(machine_code, token_str)
     if not ok:
@@ -405,6 +439,7 @@ def connect(sid, environ, auth):
 
 @sio.event
 def disconnect(sid):
+    _kiosk_sids.discard(sid)
     machine_code = None
     for mc, stored_sid in list(_online_machines.items()):
         if stored_sid == sid:
@@ -432,10 +467,12 @@ def machine_event(sid, data):
 
 @sio.event
 def machine_ready(sid, data):
-    # Agent can call this after reconnect to request resend of pending jobs
+    # Only the hardware agent should trigger pending job replay (not kiosk UI)
+    if sid in _kiosk_sids:
+        return {"ok": True, "sent": 0, "skipped": "kiosk"}
     machine_code = None
     if isinstance(data, dict):
-        machine_code = data.get("machine_code") or data.get("machine_id")
+        machine_code = data.get("machine_code")
 
     if not machine_code:
         return {"ok": False, "error": "machine_code required"}

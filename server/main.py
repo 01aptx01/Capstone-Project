@@ -31,14 +31,15 @@ def _print_docker_service_urls() -> None:
     db_name = os.environ.get("DB_NAME", "vending")
     db_user = os.environ.get("DB_USER", "root")
     cors = os.environ.get("CORS_ORIGINS", "")
-    dispatch_mode = os.environ.get("DISPATCH_MODE", "socket")
     socketio_enabled = os.getenv("SOCKETIO_ENABLED", "1") != "0"
-    agent_url = os.environ.get("AGENT_URL", "")
+    from app.services.hardware_service import HardwareAgentService
+    agent_url = HardwareAgentService.agent_base_url()
+    kiosk_lock = bool((os.environ.get("KIOSK_SOCKET_SECRET") or "").strip())
 
     logger.info("")
     logger.info("=== vending-server (Flask + Socket.IO) ===")
     logger.info("host.url=%s | listen=http://0.0.0.0:%s | local=http://127.0.0.1:%s", s, pub, pub)
-    logger.info("ws.enabled=%s | dispatch.mode=%s | agent.url=%s", str(socketio_enabled).lower(), dispatch_mode, agent_url or "<unset>")
+    logger.info("ws.enabled=%s | dispatch=socket | agent.health=%s | kiosk.secret=%s", str(socketio_enabled).lower(), agent_url or "<unset>", str(kiosk_lock).lower())
     logger.info("db=mysql://%s@%s/%s | cors.origins=%s", db_user, db_host, db_name, cors or "<unset>")
     logger.info("ui.machine=%s | ui.admin=%s | ui.swagger=%s | agent.host=%s | db.host=%s", mu, au, sw, ag, db)
     logger.info("")
@@ -51,7 +52,7 @@ class ServerApp:
         self.app = create_app()
         self._verify_environment()
 
-        # Wrap Flask with Socket.IO gateway (Rooms by MACHINE_ID)
+        # Wrap Flask with Socket.IO gateway (rooms by machine_code)
         self.wsgi_app = make_socketio_app(self.app)
 
     def _verify_environment(self):

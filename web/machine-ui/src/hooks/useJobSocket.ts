@@ -12,6 +12,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
+import { DEFAULT_MACHINE_CODE, getKioskSocketSecret, getPublicSocketUrl } from "../constants";
 
 export type AgentJobState =
   | "TRANSFER_TO_OVEN" // กำลังย้ายของเข้าเตาอุ่น
@@ -36,10 +37,9 @@ export function useJobSocket({
   activeJobId,
   onConnect,
 }: UseJobSocketOptions): JobSocketState {
-  const serverUrl =
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_SERVER_SOCKET_URL) || "http://localhost:8000";
-  const machineCode =
-    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) || "MP1-001";
+  const serverUrl = getPublicSocketUrl();
+  const machineCode = DEFAULT_MACHINE_CODE;
+  const kioskSecret = getKioskSocketSecret();
 
   const socketRef = useRef<Socket | null>(null);
 
@@ -57,12 +57,21 @@ export function useJobSocket({
   }, []);
 
   useEffect(() => {
+    if (!kioskSecret) {
+      console.error(
+        "[useJobSocket] NEXT_PUBLIC_KIOSK_SOCKET_SECRET is required (must match server KIOSK_SOCKET_SECRET)",
+      );
+      return;
+    }
+
     // สร้างตัวแปร Singleton สำหรับ Socket.IO ถ้ายังไม่เคยมี
     if (!socketRef.current) {
       socketRef.current = io(serverUrl, {
         transports: ["websocket"], // บังคับการส่งแบบ WebSocket เพื่อความเร็วและความสม่ำเสมอ
         auth: {
-          machine_code: machineCode, // ส่งรหัสตู้เพื่อให้เซิร์ฟเวอร์รู้ว่าเป็นตู้ไหน
+          role: "kiosk",
+          machine_code: machineCode,
+          kiosk_secret: kioskSecret,
         },
         reconnection: true, // เปิดระบบเชื่อมต่อใหม่อัตโนมัติเมื่อหลุด
         reconnectionAttempts: Infinity,
@@ -76,7 +85,6 @@ export function useJobSocket({
     // เกิดขึ้นเมื่อต่อ Server สำเร็จ -> แจ้ง Server ว่าตู้พร้อมทำงาน และเข้าร่วมห้องตามรหัสตู้
     const onConnectEvt = () => {
       setIsConnected(true);
-      socket.emit("machine_ready", { machine_code: machineCode });
       onConnect?.();
     };
 
@@ -131,7 +139,7 @@ export function useJobSocket({
       socket.off("job.start", onJobStart);
       socket.off("job_event_broadcast", onJobEventBroadcast);
     };
-  }, [serverUrl, machineCode, activeJobId, onConnect, resetJobState]);
+  }, [serverUrl, machineCode, kioskSecret, activeJobId, onConnect, resetJobState]);
 
   // รีเซ็ตสถานะการแสดงผลเมื่อเคลียร์หรือไม่มีบิลงานที่ต้องดูแล้ว
   useEffect(() => {
