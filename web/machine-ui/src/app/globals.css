@@ -532,6 +532,7 @@ body {
     padding: 10px 12px;
     border-radius: 10px;
     margin-bottom: 12px;
+    text-align: center;
 }
 
 .coupon-modal-actions {
@@ -542,24 +543,37 @@ body {
 
 .coupon-modal-btn {
     flex: 1;
-    padding: 12px 14px;
-    border-radius: 12px;
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 18px;
+    padding: 12px;
+    border-radius: 40px;
+    width: auto;
     border: none;
     cursor: pointer;
     font-family: inherit;
+    font-weight: 600;
+    transition: all 0.1s ease-in-out;
+}
+
+.coupon-modal-btn:active {
+    transform: scale(0.95);
 }
 
 .coupon-modal-btn.primary {
-    background: linear-gradient(180deg, #f89025, #f47b2a);
+    background-color: #f89025;
     color: white;
-    box-shadow: 0 4px 12px rgba(244, 123, 42, 0.35);
+}
+
+.coupon-modal-btn.primary:hover:not(:disabled) {
+    background-color: #e57c15;
 }
 
 .coupon-modal-btn.secondary {
-    background: #f1f5f9;
-    color: #475569;
+    background-color: #e2e2e2;
+    color: #444;
+}
+
+.coupon-modal-btn.secondary:hover:not(:disabled) {
+    background-color: #d0d0d0;
 }
 
 .coupon-modal-btn:disabled {
