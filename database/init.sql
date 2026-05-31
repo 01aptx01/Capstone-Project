@@ -288,4 +288,9 @@ VALUES ('MP1-001', @demo_user_id, 'chrg_test_00000002', 32.00, 'credit_card', 'c
 
 SET @order2_id = LAST_INSERT_ID();
 INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES
-(@order2_id, 1, 1, 32.00); -- เปาหมูแดง
+(@order2_id, 1, 1, 32.00); -- เปาหมูแดง
+
+-- Seed one active coupon for the demo user
+SET @promo_id = (SELECT promotion_id FROM promotions WHERE code = 'POINTS50' LIMIT 1);
+INSERT INTO user_promotions (user_id, promotion_id, status)
+VALUES (@demo_user_id, @promo_id, 'active');
