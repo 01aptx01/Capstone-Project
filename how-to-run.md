@@ -16,8 +16,9 @@ This guide walks you through running the full stack with **Docker Compose**, con
 8. [Important notes about seeded data `MP1-001`](#8-important-notes-about-seeded-data-mp1-001)
 9. [Changing machine code after the first build](#9-changing-machine-code-after-the-first-build)
 10. [Stopping and cleaning up](#10-stopping-and-cleaning-up)
-11. [Troubleshooting](#11-troubleshooting)
-12. [Reference files](#12-reference-files)
+11. [Raspberry Pi agent only](#11-raspberry-pi-agent-only-hardware-on-the-board)
+12. [Troubleshooting](#12-troubleshooting)
+13. [Reference files](#13-reference-files)
 
 ---
 
@@ -161,6 +162,7 @@ Use this after [.env](.env) matches [.env.example](.env.example) and you complet
 | 6 | Add slot inventory for your `machine_code` in Admin if not using seeded `MP1-001` slots |
 | 7 | Purchase (card or mock-pay) — server log: `job.start` emitted; if Pi was offline, warning then replay on reconnect |
 | 8 | UI advances via **`job_event_broadcast`** (not only 60s fallback countdown) |
+| 9 | Pi agent: Section 11 checklist — Admin Socket online + `machine_job_events` after purchase |
 
 ---
 
@@ -240,13 +242,10 @@ The seed in [database/init.sql](database/init.sql) only pre-fills slots for **`M
 
 ## 8. Important notes about seeded data `MP1-001`
 
-- `init.sql` inserts `MP1-001` into `machines` **without** `secret_token_hash`.
+- Fresh DB from [database/init.sql](database/init.sql) stores a **bcrypt** hash for dev plaintext token **`dev-machine-token`** (set `MACHINE_TOKEN=dev-machine-token` on Pi or Docker `client`).
+- Older volumes may still have invalid hash `'001'` — Pi Socket auth will fail until you **recreate the machine in Admin**, run `docker compose down -v` for a fresh DB, or update `secret_token_hash` manually.
 - You **cannot** create another machine with the same `machine_code` via Admin (duplicate / 409).
-- Therefore, for **Socket.IO token auth**, the practical paths are:
-  - **Create a new machine** with a **different** `machine_code` (e.g. `DEMO-01`) and use that machine’s token; **or**
-  - Manually update the database (advanced, not documented here).
-
-Default Compose uses **`MP1-001`** for `MACHINE_CODE` / `NEXT_PUBLIC_MACHINE_CODE` and a dev `KIOSK_SOCKET_SECRET` default — change both secrets in production. Seeded `MP1-001` has **no token** until you create a machine in Admin or update the DB.
+- Default Compose uses **`MP1-001`** for `MACHINE_CODE` / `NEXT_PUBLIC_MACHINE_CODE` and a dev `KIOSK_SOCKET_SECRET` default — change both secrets in production.
 
 ---
 
@@ -278,7 +277,55 @@ Use `-v` only when you intentionally want a fresh database; the next `up` will r
 
 ---
 
-## 11. Troubleshooting
+## 11. Raspberry Pi agent only (hardware on the board)
+
+Use this when the **browser** opens Machine UI on the Pi (or another PC) but **`python agent.py` runs on the Pi** — not the Docker `client` service.
+
+### 11.1 Which `.env` file?
+
+| File | Used by |
+|------|---------|
+| Root [`.env`](.env) | Docker Compose (`server`, optional `client` container) |
+| [`client/agent/.env`](client/agent/.env) | Pi when you run `python agent.py` locally |
+
+Compose does **not** load `client/agent/.env` for the Pi process. Copy from [`client/agent/.env.example`](client/agent/.env.example).
+
+### 11.2 Required variables on the Pi
+
+```env
+MACHINE_CODE=MP1-001
+MACHINE_TOKEN=<plaintext secret from Admin — once>
+SERVER_SOCKET_URL=http://<IP-of-PC-running-docker-server>:8000
+```
+
+- **`SERVER_SOCKET_URL` must not be `http://server:8000`** on the Pi (that hostname only works inside Docker).
+- **`MACHINE_TOKEN`** must match the bcrypt hash stored in MySQL (`machines.secret_token_hash`). The seed value `001` in old databases is **invalid** — create the machine in Admin or use dev token below.
+
+### 11.3 Admin “Socket connected” vs kiosk UI
+
+| Indicator | Meaning |
+|-----------|---------|
+| Admin `machines.is_online` | **Pi agent** authenticated to Socket.IO (`machine_code` + `token`) |
+| Machine UI “internet reconnect” banner | **Kiosk** Socket to server (`KIOSK_SOCKET_SECRET`) — can be OK while Pi is offline |
+| Machine UI “connecting to hardware…” banner | Pi agent presence (`machine_presence` event) — added in current stack |
+
+No rows in `machine_job_events` until the Pi receives `job.start` and sends `machine_event`.
+
+### 11.4 Verify Pi agent (in order)
+
+1. On the Pi: `curl http://127.0.0.1:5000/health` → JSON with `machine_code` and `ws.connected`.
+2. Agent logs: `✅ [WS] connected to server` — not `Authentication failed` every 30s.
+3. On the PC: `docker logs vending-server 2>&1 | findstr "machine connected"` → `machine connected: MP1-001`.
+4. Admin → Machines → Socket shows **connected**.
+5. After a test purchase: MySQL table `machine_job_events` has new rows.
+
+### 11.5 Dev token (fresh DB from fixed `init.sql`)
+
+For local dev only, seed machine `MP1-001` can use plaintext token **`dev-machine-token`** (see [database/init.sql](database/init.sql)). Set the same value in root `.env` / Pi `client/agent/.env` as `MACHINE_TOKEN=dev-machine-token`.
+
+---
+
+## 12. Troubleshooting
 
 ### Port already in use
 
@@ -286,9 +333,10 @@ If `8000`, `3000`, `3001`, `5000`, `3307`, or `8081` is taken, either stop the c
 
 ### Agent never connects / “websocket disabled”
 
-- Confirm root `.env` has **`MACHINE_CODE` and `MACHINE_TOKEN`** non-empty.
+- **Docker `client` container:** root `.env` needs **`MACHINE_CODE` and `MACHINE_TOKEN`**; `SERVER_SOCKET_URL=http://server:8000`.
+- **Pi `python agent.py`:** use [`client/agent/.env`](client/agent/.env) with **`SERVER_SOCKET_URL=http://<PC-LAN-IP>:8000`** and token from Admin (see Section 11).
+- If logs show **Authentication failed**: token does not match `secret_token_hash` in DB (re-create machine in Admin or use dev token from Section 11.5).
 - Confirm **`KIOSK_SOCKET_SECRET`** and **`NEXT_PUBLIC_KIOSK_SOCKET_SECRET`** match, then rebuild `machine-ui`.
-- Confirm `SERVER_SOCKET_URL` for the agent inside Docker is **`http://server:8000`** (already set in [docker-compose.yml](docker-compose.yml)).
 
 ### Admin API returns errors
 
@@ -308,7 +356,7 @@ If `8000`, `3000`, `3001`, `5000`, `3307`, or `8081` is taken, either stop the c
 
 ---
 
-## 12. Reference files
+## 13. Reference files
 
 | File | Why it matters |
 |------|----------------|

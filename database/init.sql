@@ -207,8 +207,13 @@ CREATE TABLE transactions (
 -- SEED DATA
 -- =====================
 
--- Machine
-INSERT INTO machines (machine_code, secret_token_hash, location, status) VALUES ('MP1-001', '001', 'KMUTT', 'online');
+-- Machine (dev token plaintext: dev-machine-token — bcrypt hash below; production: create via Admin)
+INSERT INTO machines (machine_code, secret_token_hash, location, status) VALUES (
+  'MP1-001',
+  '$2b$10$W0G.2otS8YZDbRVFSeuSgOcqxw.8d4KypWoqRzYieAREZnz/OrtSq',
+  'KMUTT',
+  'online'
+);
 
 -- Products
 INSERT INTO products (name, description, price, heating_time, image_url, category) VALUES
