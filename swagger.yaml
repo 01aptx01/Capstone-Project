@@ -115,6 +115,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Product'
+  /api/products/{product_id}:
+    get:
+      tags:
+      - Inventory
+      summary: Get product details by ID
+      parameters:
+      - name: product_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProduct'
+        '404':
+          description: Product not found
   /api/buy/checkout:
     post:
       tags:
@@ -1224,6 +1244,61 @@ paths:
       responses:
         '200':
           description: orders array (may be empty)
+        '400':
+          description: invalid_phone
+        '401':
+          description: Unauthorized
+        '403':
+          description: Phone mismatch with token
+  /api/members/{phone}/coupons:
+    get:
+      tags:
+      - Orders
+      summary: List coupons owned by member (web-ui)
+      security: *id001
+      parameters:
+      - name: phone
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: coupons array
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  coupons:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        promotion_id:
+                          type: integer
+                        code:
+                          type: string
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        discount_amount:
+                          type: number
+                        type:
+                          type: string
+                        status:
+                          type: string
+                        expiry:
+                          type: string
+                          nullable: true
+                        redeemed_at:
+                          type: string
+                        quantity:
+                          type: integer
+                          nullable: true
         '400':
           description: invalid_phone
         '401':
