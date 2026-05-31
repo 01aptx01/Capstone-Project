@@ -273,6 +273,7 @@ def member_coupons(phone: str):
                     up.promotion_id,
                     up.status,
                     up.redeemed_at,
+                    up.code AS user_coupon_code,
                     p.code,
                     p.type,
                     p.discount_amount,
@@ -293,10 +294,8 @@ def member_coupons(phone: str):
         coupons = []
         for row in rows:
             disc = float(row["discount_amount"])
-            if (row["type"] or "").lower() == "percent":
-                title = f"ส่วนลด {disc:g}%"
-            else:
-                title = f"ส่วนลด {disc:g} บาท"
+            # ใช้ p.code (ชื่อคูปอง) เป็น title โดยมี fallback เผื่อไม่มีชื่อ
+            title = row["code"] or (f"ส่วนลด {disc:g}%" if (row["type"] or "").lower() == "percent" else f"ส่วนลด {disc:g} บาท")
 
             # คำนวณจำนวนคงเหลือ: max_uses - จำนวนที่แลกไปแล้วทั้งหมด
             max_uses = row.get("max_uses")
@@ -309,7 +308,7 @@ def member_coupons(phone: str):
             coupons.append({
                 "id": str(row["id"]),
                 "promotion_id": row["promotion_id"],
-                "code": row["code"],
+                "code": row["user_coupon_code"],  # คืนค่ารหัสเฉพาะตัวของผู้ใช้
                 "title": title,
                 "description": f"ส่วนลด {disc:g} {'%' if (row['type'] or '').lower() == 'percent' else 'บาท'}",
                 "discount_amount": disc,
@@ -325,6 +324,67 @@ def member_coupons(phone: str):
     except Exception as e:
         logger.error(f"[Orders] member_coupons error for {phone}: {e}")
         return jsonify({"error": "server_error", "message": "เกิดข้อผิดพลาด", "coupons": []}), 500
+
+
+@orders_api.route("/api/members/<phone>/coupons/<int:user_promo_id>/reveal", methods=["POST"])
+@member_required
+def reveal_coupon_code(phone: str, user_promo_id: int):
+    """เจเนอเรตรหัสคูปองสุ่มตัวเลขแบบไม่ซ้ำขึ้นมาใหม่สำหรับคูปองรายบุคคลของผู้ใช้รายนี้"""
+    err = require_path_phone(phone)
+    if err:
+        return err
+
+    if not _validate_phone(phone):
+        return jsonify({"error": "invalid_phone", "message": "เบอร์โทรไม่ถูกต้อง"}), 400
+
+    try:
+        with get_db_cursor() as (db, cur):
+            cur.execute(
+                "SELECT user_id FROM users WHERE phone_number = %s",
+                (phone,),
+            )
+            user = cur.fetchone()
+            if not user:
+                return jsonify({"error": "not_found", "message": "ไม่พบสมาชิก"}), 404
+
+            cur.execute(
+                """
+                SELECT id, code, status FROM user_promotions 
+                WHERE id = %s AND user_id = %s
+                """,
+                (user_promo_id, user["user_id"]),
+            )
+            row = cur.fetchone()
+            if not row:
+                return jsonify({"error": "not_found", "message": "ไม่พบข้อมูลคูปอง"}), 404
+
+            if row["status"] != "active":
+                return jsonify({"error": "invalid_status", "message": "คูปองไม่อยู่ในสถานะพร้อมใช้งาน"}), 400
+
+            code = row["code"]
+            if not code:
+                import random
+                import string
+
+                while True:
+                    rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                    generated = f"CP-{rand_str}"
+                    cur.execute("SELECT 1 FROM user_promotions WHERE code = %s", (generated,))
+                    if not cur.fetchone():
+                        code = generated
+                        break
+
+                cur.execute(
+                    "UPDATE user_promotions SET code = %s WHERE id = %s",
+                    (code, user_promo_id),
+                )
+                db.commit()
+
+        return jsonify({"status": "ok", "code": code}), 200
+
+    except Exception as e:
+        logger.error(f"[Orders] reveal_coupon_code error for {phone}/{user_promo_id}: {e}")
+        return jsonify({"error": "server_error", "message": "ไม่สามารถดึงรหัสคูปองได้"}), 500
 
 
 @orders_api.route("/api/orders/<charge_id>/pickup", methods=["POST"])

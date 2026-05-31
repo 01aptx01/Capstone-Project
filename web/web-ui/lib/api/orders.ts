@@ -61,3 +61,19 @@ export async function fetchMemberCoupons(
   return data.coupons ?? [];
 }
 
+/**
+ * generateCouponCode
+ * เจเนอเรตรหัสคูปองเฉพาะตัวของผู้ใช้สำหรับคูปองที่เลือก
+ */
+export async function generateCouponCode(
+  phone: string,
+  userPromoId: string | number,
+): Promise<{ code: string }> {
+  return apiFetch<{ code: string }>(
+    `/api/members/${encodeURIComponent(phone)}/coupons/${userPromoId}/reveal`,
+    {
+      method: "POST",
+    },
+  );
+}
+
