@@ -24,7 +24,7 @@ export interface Category {
 // ─── Categories (หมวดหมู่สินค้าสำหรับการกรองข้อมูลในหน้ารายการสินค้า) ───────────
 export const CATEGORIES: Category[] = [
   { key: "all", label: "ทั้งหมด" },
-  { key: "pork", label: "หมูสับ/หมูแดง" },
+  { key: "pork", label: "ไส้คาว" },
   { key: "veggie", label: "มังสวิรัติ" },
   { key: "sweet", label: "ไส้หวาน" },
 ];
@@ -34,18 +34,18 @@ export interface Coupon {
   id: number;
   title: string;
   description: string;
-  points: number;       // จำนวนคะแนนที่ใช้ในการแลก
-  colorBg: string;      // สีของธีมการ์ดคูปอง
-  discountValue: number;// มูลค่าส่วนลด (บาท)
-  expiry: string;       // วันหมดอายุของคูปอง
+  points: number; // จำนวนคะแนนที่ใช้ในการแลก
+  colorBg: string; // สีของธีมการ์ดคูปอง
+  discountValue: number; // มูลค่าส่วนลด (บาท)
+  expiry: string; // วันหมดอายุของคูปอง
 }
 
 // ─── Order History (โครงสร้างข้อมูลประวัติการสั่งซื้อสินค้า) ──────────────────────────
 export interface OrderHistory {
   id: string;
-  orderNumber: string;  // รหัสอ้างอิงออเดอร์
-  datetime: string;     // วันและเวลาที่สั่งซื้อ
-  items: string;        // สรุปรายการสินค้าที่ซื้อ (เช่น "หมูสับ x 1, ครีม x 2")
-  total: number;        // ราคารวมสุทธิ
+  orderNumber: string; // รหัสอ้างอิงออเดอร์
+  datetime: string; // วันและเวลาที่สั่งซื้อ
+  items: string; // สรุปรายการสินค้าที่ซื้อ (เช่น "หมูสับ x 1, ครีม x 2")
+  total: number; // ราคารวมสุทธิ
   status: "ready_to_scan" | "completed"; // สถานะการรับสินค้า
 }
