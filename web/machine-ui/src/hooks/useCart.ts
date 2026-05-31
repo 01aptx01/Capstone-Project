@@ -1,7 +1,7 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { Product, CartItem } from "../types";
-import { MAX_CART_ITEMS } from "../constants";
+import { MAX_CART_ITEMS, getPublicApiUrl } from "../constants";
 import { clampCartToCatalog } from "../utils/cart";
 import { estimateApproxWaitSeconds } from "../utils/dispenseSchedule";
 
@@ -9,6 +9,15 @@ interface UseCartOptions {
   machineCode: string;
   onCartLimitReached: () => void;
   onStockLimitReached: (message: string) => void;
+}
+
+const PRODUCT_CATEGORIES = ["meat", "vegetarian", "sweet"] as const;
+
+function parseProductCategory(raw?: string): Product["category"] {
+  if (raw && (PRODUCT_CATEGORIES as readonly string[]).includes(raw)) {
+    return raw as (typeof PRODUCT_CATEGORIES)[number];
+  }
+  return undefined;
 }
 
 // useCart Hook
@@ -29,71 +38,37 @@ export function useCart({ machineCode, onCartLimitReached, onStockLimitReached }
       const silent = options?.silent ?? false;
       if (!silent) setIsLoadingProducts(true);
       try {
-        // const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-        // const response = await fetch(
-        //   `${apiUrl}/api/products?machine_code=${encodeURIComponent(machineCode)}`,
-        // );
-        // if (!response.ok) throw new Error("Failed to fetch products");
+        const apiUrl = getPublicApiUrl();
+        const response = await fetch(
+          `${apiUrl}/api/products?machine_code=${encodeURIComponent(machineCode)}`,
+        );
+        if (!response.ok) throw new Error("Failed to fetch products");
 
-        // const data = await response.json();
-        // // แปลงรูปแบบข้อมูลจาก API ให้ตรงกับ Type Product (ฝั่ง Frontend)
-        // const mappedProducts: Product[] = data.map((p: any) => ({
-        //   id: p.product_id,
-        //   name: p.name,
-        //   desc: p.description,
-        //   price: p.price,
-        //   heatingTime: p.heating_time,
-        //   image: p.image_url,
-        //   category: p.category,
-        //   stock: Number(p.stock) || 0,
-        // }));
+        const data = await response.json();
+        const mappedProducts: Product[] = (Array.isArray(data) ? data : []).map(
+          (p: {
+            product_id: number;
+            name: string;
+            description?: string;
+            price: number;
+            heating_time?: number;
+            image_url?: string;
+            category?: string;
+            stock?: number;
+          }) => ({
+            id: p.product_id,
+            name: p.name,
+            desc: p.description ?? "",
+            price: p.price,
+            heatingTime: p.heating_time ?? 15,
+            image: p.image_url || "/Logo_modpao.png",
+            category: parseProductCategory(p.category),
+            stock: Number(p.stock) || 0,
+          }),
+        );
 
-        const MOCK_PRODUCTS: Product[] = [
-        {
-          id: 1,
-          name: "ข้าวหมูแดง",
-          desc: "ข้าวหอมมะลิราดด้วยหมูแดงสูตรพิเศษ",
-          price: 49,
-          heatingTime: 180, // 3 นาที
-          image: "/Logo_modpao.png",
-          category: "meat",
-          stock: 12,
-        },
-        {
-          id: 2,
-          name: "ข้าวกะเพราไก่",
-          desc: "ไก่สับผัดพริกกระเพราเสิร์ฟพร้อมข้าวสวย",
-          price: 55,
-          heatingTime: 150, // 2 นาที 30 วินาที
-          image: "/Logo_modpao.png",
-          category: "meat",
-          stock: 15,
-        },
-        {
-          id: 3,
-          name: "ข้าวมันไก่",
-          desc: "ข้าวมันไก่ต้มหอมนุ่ม เสิร์ฟพร้อมน้ำจิ้มรสเด็ด",
-          price: 45,
-          heatingTime: 120, // 2 นาที
-          image: "/Logo_modpao.png",
-          category: "meat",
-          stock: 0,
-        },
-        {
-          id: 4,
-          name: "ข้าวผัดกะเพราหมู",
-          desc: "ผัดข้าวหอมกลิ่นกะเพราและพริกสด",
-          price: 55,
-          heatingTime: 150, // 2 นาที 30 วินาที
-          image: "/Logo_modpao.png",
-          category: "meat",
-          stock: 1,
-        }
-      ];
-
-        setProducts(MOCK_PRODUCTS);
-
-        setCart((prev) => clampCartToCatalog(prev, MOCK_PRODUCTS));
+        setProducts(mappedProducts);
+        setCart((prev) => clampCartToCatalog(prev, mappedProducts));
       } catch (err) {
         console.error("Error fetching products:", err);
       } finally {

@@ -7,33 +7,29 @@ from typing import Any, Dict, Optional
 import socketio
 from socketio.exceptions import ConnectionRefusedError
 
+from env_config import machine_code as _machine_code_from_env
+from env_config import machine_token as _machine_token_from_env
+from env_config import server_socket_url as _server_url_from_env
 from ws_outbox import get_pending, mark_sent
 
 logger = logging.getLogger(__name__)
 
 
 def _server_url() -> Optional[str]:
-    url = os.environ.get("SERVER_SOCKET_URL") or os.environ.get("SERVER_URL")
-    if url and url.strip():
-        return url.strip()
-    return None
-
+    return _server_url_from_env()
 
 def _machine_id_from_env() -> str:
-    return (os.environ.get("MACHINE_ID") or os.environ.get("MACHINE_CODE") or "").strip()
-
+    return _machine_code_from_env()
 
 def _machine_token_from_env() -> str:
-    return (os.environ.get("MACHINE_TOKEN") or "").strip()
+    return _machine_token_from_env()
 
-
-def _socketio_auth(machine_id: str, token: str) -> Dict[str, Any]:
-    return {"machine_id": machine_id, "token": token}
-
+def _socketio_auth(machine_code: str, token: str) -> Dict[str, Any]:
+    return {"machine_code": machine_code, "token": token}
 
 class AgentSocketClient:
     def __init__(self) -> None:
-        self._machine_id = ""
+        self._machine_code = ""
         self._sio = socketio.Client(
             reconnection=True,
             reconnection_attempts=0,
@@ -52,11 +48,11 @@ class AgentSocketClient:
         def connect():
             with self._lock:
                 self._connected = True
-            logger.info(f"✅ [WS] connected to server as {self._machine_id}")
+            logger.info(f"✅ [WS] connected to server as {self._machine_code}")
             try:
                 self._sio.call(
                     "machine_ready",
-                    {"machine_code": self._machine_id},
+                    {"machine_code": self._machine_code},
                     timeout=5,
                 )
             except Exception:
@@ -77,7 +73,7 @@ class AgentSocketClient:
             try:
                 from routes import job_manager, _run_mock_job  # local import to avoid import cycle at startup
 
-                machine_code = data.get("machine_code") or data.get("machine_id") or self._machine_id
+                machine_code = data.get("machine_code") or self._machine_code
                 items = data.get("items") or []
                 job_id = data.get("job_id")
                 order_charge_id = data.get("order_charge_id")
@@ -103,22 +99,22 @@ class AgentSocketClient:
             logger.warning("⚠️ [WS] SERVER_SOCKET_URL not set; websocket disabled")
             return
 
-        machine_id = _machine_id_from_env()
+        machine_code = _machine_id_from_env()
         token = _machine_token_from_env()
-        if not machine_id or not token:
+        if not machine_code or not token:
             logger.warning(
-                "⚠️ [WS] MACHINE_ID (or MACHINE_CODE) and MACHINE_TOKEN are required; websocket disabled"
+                "⚠️ [WS] MACHINE_CODE และ MACHINE_TOKEN จำเป็น — ปิด websocket"
             )
             return
 
-        self._machine_id = machine_id
+        self._machine_code = machine_code
 
         while True:
             try:
                 if not self._sio.connected:
                     self._sio.connect(
                         url,
-                        auth=_socketio_auth(machine_id, token),
+                        auth=_socketio_auth(machine_code, token),
                         transports=["websocket"],
                         wait=True,
                         wait_timeout=10,
@@ -128,8 +124,10 @@ class AgentSocketClient:
                     self.flush_outbox()
                     time.sleep(0.3)
             except ConnectionRefusedError:
-                logger.error("Authentication failed: Invalid Machine ID or Token")
-                return
+                logger.error(
+                    "❌ [WS] Authentication failed (MACHINE_CODE + MACHINE_TOKEN); retrying in 30s"
+                )
+                time.sleep(30)
             except Exception:
                 time.sleep(1)
 
@@ -154,6 +152,19 @@ class AgentSocketClient:
 
 
 _client: Optional[AgentSocketClient] = None
+
+
+def get_ws_client_status() -> Dict[str, Any]:
+    global _client
+    if _client is None:
+        return {"connected": False, "machine_code": _machine_id_from_env() or None}
+    with _client._lock:
+        connected = _client._connected
+    return {
+        "connected": connected,
+        "machine_code": _client._machine_code or _machine_id_from_env() or None,
+        "server_url": _server_url(),
+    }
 
 
 def start_ws_client() -> None:

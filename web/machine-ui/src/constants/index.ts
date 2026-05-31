@@ -38,6 +38,32 @@ export const PAYMENT_TIMEOUT_MS = 60000; // ระยะเวลาเชื่
 export const DEFAULT_MACHINE_CODE =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) || "MP1-001";
 
+/** URL REST API ของ Flask (checkout, สินค้า, สมาชิก) */
+export function getPublicApiUrl(): string {
+  return (typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "http://localhost:8000";
+}
+
+/** URL Socket.IO — ถ้าไม่ตั้ง ใช้ค่าเดียวกับ API (กรณี server ตัวเดียว) */
+export function getPublicSocketUrl(): string {
+  const socket =
+    typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SERVER_SOCKET_URL?.trim() : "";
+  return socket || getPublicApiUrl();
+}
+
+/** URL Pi agent สำหรับ poll NFC (รันบน localhost ของตู้) */
+export function getPublicAgentBaseUrl(): string {
+  const base =
+    typeof process !== "undefined" ? process.env.NEXT_PUBLIC_AGENT_BASE_URL?.trim() : "";
+  return (base || "http://localhost:5000").replace(/\/$/, "");
+}
+
+/** รหัสลับจอตู้ — ต้องตรง KIOSK_SOCKET_SECRET บน server (ฝังตอน build) */
+export function getKioskSocketSecret(): string {
+  return (
+    (typeof process !== "undefined" && process.env.NEXT_PUBLIC_KIOSK_SOCKET_SECRET?.trim()) || ""
+  );
+}
+
 // ==========================================
 // Test Cards (ข้อมูลบัตรเครดิตทดสอบสำหรับการจำลองแตะ NFC)
 // ==========================================

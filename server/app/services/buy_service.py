@@ -111,6 +111,47 @@ class InventoryService:
             cur.close()
             db.close()
 
+    def enrich_cart_items(self, cart_items: list) -> list:
+        """Attach heating_time and name from products for hardware dispatch."""
+        if not cart_items:
+            return []
+        product_ids = [int(it["product_id"]) for it in cart_items if it.get("product_id") is not None]
+        if not product_ids:
+            return list(cart_items)
+
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        meta: dict = {}
+        try:
+            placeholders = ",".join(["%s"] * len(product_ids))
+            cur.execute(
+                f"""
+                SELECT product_id, heating_time, name
+                FROM products
+                WHERE product_id IN ({placeholders})
+                """,
+                tuple(product_ids),
+            )
+            for row in cur.fetchall() or []:
+                meta[int(row["product_id"])] = row
+        finally:
+            cur.close()
+            db.close()
+
+        enriched: list = []
+        for it in cart_items:
+            pid = int(it["product_id"])
+            row = meta.get(pid) or {}
+            enriched.append(
+                {
+                    "product_id": pid,
+                    "quantity": int(it["quantity"]),
+                    "heating_time": int(row.get("heating_time") or it.get("heating_time") or 15),
+                    "name": row.get("name") or it.get("name"),
+                }
+            )
+        return enriched
+
     def compute_cart_subtotal(self, machine_code: str, cart_items: list) -> float:
         """Sum catalog prices × qty for cart lines (THB, 2 decimals)."""
         db = self.get_db()

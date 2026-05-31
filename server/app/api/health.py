@@ -49,16 +49,9 @@ class HealthController:
 
     def _check_hardware_agent(self) -> dict:
         """ตรวจสอบสถานะของ Hardware Agent"""
-        agent_url = os.environ.get("AGENT_URL", "http://localhost:5000/dispense")
-        try:
-            base_agent_url = agent_url.rsplit('/', 1)[0]
-            response = requests.get(base_agent_url, timeout=3)
-            return {
-                "status": "CONNECTED",
-                "url": base_agent_url
-            }
-        except Exception as e:
-            return {"status": "ERROR", "message": str(e)}
+        from app.services.hardware_service import HardwareAgentService
+
+        return HardwareAgentService().ping_health()
 
     def health_check(self):
         """System Health Check"""
