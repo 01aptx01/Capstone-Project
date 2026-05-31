@@ -16,6 +16,7 @@
 9. [Build & Deployment](#build--deployment)
 10. [Development Workflow](#development-workflow)
 11. [Glossary & Terminology](#glossary--terminology)
+12. [Service Worker & Offline Support](#service-worker--offline-support)
 
 ---
 
@@ -203,4 +204,33 @@ All static files are served directly from this folder:
 
 ---
 
-*This README is generated automatically to give new contributors a clear map of the `web/web-ui` folder. For deeper dive into each component, refer to the JSDoc comments inside the source files.*
+## Service Worker & Offline Support
+
+ระบบ Web UI ได้มีการติดตั้ง **Service Worker** เพื่อช่วยจัดการระบบแคช (Caching) ป้องกันปัญหาเมื่อเครือข่ายอินเทอร์เน็ตขาดหายหรือสัญญาณไม่เสถียร (Offline Support) และช่วยทำให้การเปลี่ยนหน้าหรือโหลดข้อมูลคงที่ทำงานได้เร็วขึ้นอย่างมาก
+
+### 1. โครงสร้างและการติดตั้ง (Architecture)
+* **Service Worker File (`public/sw.js`)**: เขียนด้วย Vanilla Javascript ในโฟลเดอร์ public เพื่อดักจับทุกการดาวน์โหลดไฟล์และเรียกข้อมูล API
+* **Registration Component (`components/layout/ServiceWorkerRegister.tsx`)**: คอมโพเนนต์ประเภท Client Component ทำหน้าที่ตรวจจับเบราว์เซอร์และลงทะเบียน Service Worker หลังหน้าเว็บหลักโหลดเสร็จสมบูรณ์
+* **Root Layout (`app/layout.tsx`)**: มีการเรียกใช้ `<ServiceWorkerRegister />` ที่ส่วนท้ายของ Layout เพื่อเปิดระบบควบคุม Service Worker ทั่วทั้งแอปพลิเคชัน
+
+### 2. กลยุทธ์การจัดการแคช (Caching Strategies)
+เราเลือกใช้กลยุทธ์ที่เหมาะสมกับข้อมูลแต่ละประเภทดังนี้:
+
+| ประเภทข้อมูล | กลยุทธ์การแคช (Strategy) | การทำงาน |
+|-------------|-----------------------|---------|
+| **Static Assets** <br>(JS, CSS, รูปภาพ, ฟอนต์) | **Stale-While-Revalidate** | ดึงข้อมูลจากแคชส่งให้ผู้ใช้ทันทีเพื่อความเร็วสูงที่สุด จากนั้นส่ง HTTP Request ไปตรวจสอบเวอร์ชันล่าสุดเบื้องหลังเพื่ออัปเดตแคช |
+| **API Requests** <br>(ข้อมูลคูปอง, ข้อมูลสมาชิก) | **Network-First** | พยายามเรียกข้อมูลจริงจากเครือข่ายอินเทอร์เน็ตก่อนเสมอ หากสำเร็จจะอัปเดตลงแคชใหม่ แต่หากไม่มีสัญญาณอินเทอร์เน็ต (Offline) จะดึงข้อมูลคูปองหรือโปรไฟล์ที่เก็บไว้ในแคชล่าสุดมาแสดงผลแทน |
+
+### 3. วิธีการทดสอบการใช้งาน (How to Test)
+1. เปิดเครื่องมือ **Chrome DevTools** (กด F12)
+2. ไปที่แท็บ **Application** > เลือกหัวข้อ **Service Workers** ด้านซ้ายมือ
+3. จะต้องปรากฏสถานะของ Service Worker `public/sw.js` เป็นสถานะ **"activated and is running"**
+4. หากต้องการทดสอบระบบออฟไลน์ (Offline Mode):
+   * ทำการเช็กคะแนนหรือโหลดหน้าคูปองทิ้งไว้ 1 ครั้งเพื่อให้เกิดแคชข้อมูล
+   * ตรวจสอบแท็บ **Application** > **Cache Storage** จะเห็นว่ามีแคชของระบบเกิดขึ้น
+   * ไปที่แท็บ **Network** ใน DevTools เปลี่ยนตัวเลือกตรงช่อง No Throttling เป็น **Offline**
+   * ทดลองรีเฟรชหน้าเว็บหรือเปลี่ยนหน้า เมนูของแอปจะยังแสดงขึ้นมาได้ตามปกติจากแคช
+
+---
+
+*This README has been updated to include Service Worker & Offline Support documentation and detailed source code explanations inside each file.*
