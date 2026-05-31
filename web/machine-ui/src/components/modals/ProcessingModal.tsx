@@ -15,6 +15,8 @@ interface Props {
   isMultiFlavor: boolean;
   hasStartedServing: boolean;
   progressLineWidth: string;
+  activeJobId: string | null;
+  isConnected: boolean;
   onComplete: () => void;
 }
 
@@ -29,6 +31,8 @@ export default function ProcessingModal({
   isMultiFlavor,
   hasStartedServing,
   progressLineWidth,
+  activeJobId,
+  isConnected,
   onComplete,
 }: Props) {
   return (
@@ -36,16 +40,23 @@ export default function ProcessingModal({
       className="processing-modal-box"
       onClick={(e) => e.stopPropagation()}
     >
+      {!isConnected && !isProcessCompleted && (
+        <div style={{ backgroundColor: '#ef4444', color: 'white', padding: '8px', textAlign: 'center', fontSize: '14px', borderRadius: '16px 16px 0 0' }}>
+          ⚠️ สัญญาณอินเทอร์เน็ตขัดข้อง กำลังพยายามเชื่อมต่อใหม่...
+        </div>
+      )}
       {/* ส่วนหัว */}
       <div
-        className={`processing-header ${isProcessSuccess ? "success-theme" : ""}`}
+        className={`processing-header ${isProcessSuccess ? "success-theme" : isProcessCompleted && !isProcessSuccess ? "error-theme" : ""}`}
       >
         <div className="processing-title">
-          {isProcessSuccess ? "ทานให้อร่อยนะครับ!" : "กรุณารอสักครู่..."}
+          {isProcessSuccess ? "ทานให้อร่อยนะครับ!" : isProcessCompleted && !isProcessSuccess ? "ระบบขัดข้องชั่วคราว" : "กรุณารอสักครู่..."}
         </div>
         <div className="processing-subtitle">
           {isProcessSuccess
             ? "🎉 สินค้าของคุณพร้อมแล้ว!"
+            : isProcessCompleted && !isProcessSuccess
+            ? "ขออภัยในความไม่สะดวก"
             : PROCESS_STEPS[currentStep]}
         </div>
       </div>
@@ -92,7 +103,17 @@ export default function ProcessingModal({
           <div
             className={`bun-illustration ${currentStep === 3 ? "ready" : ""}`}
           >
-            {currentStep === 3 ? (
+            {isProcessCompleted && !isProcessSuccess ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ fontSize: '80px', marginBottom: '10px' }}>❌</div>
+                <div style={{ fontSize: '18px', color: '#64748b', textAlign: 'center', lineHeight: '1.5' }}>
+                  กรุณาติดต่อพนักงานเพื่อขอคืนเงิน<br/>
+                  โทร: 02-XXX-XXXX<br/>
+                  <br/>
+                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>รหัสอ้างอิง: {activeJobId || "-"}</span>
+                </div>
+              </div>
+            ) : currentStep === 3 ? (
               <Image
                 src="/Pao.png"
                 alt="Completed Bun"
@@ -116,7 +137,7 @@ export default function ProcessingModal({
 
       {/* ส่วนล่าง */}
       <div
-        className={`processing-bottom-area ${isProcessSuccess ? "success-theme" : ""}`}
+        className={`processing-bottom-area ${isProcessSuccess ? "success-theme" : isProcessCompleted && !isProcessSuccess ? "error-theme" : ""}`}
       >
         {!isProcessCompleted ? (
           <div className="stepper-container">
@@ -182,10 +203,10 @@ export default function ProcessingModal({
         ) : (
           <button
             className="modal-confirm-btn"
-            style={{ fontSize: "24px", padding: "15px 50px" }}
+            style={{ fontSize: "24px", padding: "15px 50px", backgroundColor: !isProcessSuccess ? '#ef4444' : undefined }}
             onClick={onComplete}
           >
-            หยิบสินค้าเรียบร้อยแล้ว
+            {!isProcessSuccess ? "กลับสู่หน้าหลัก" : "หยิบสินค้าเรียบร้อยแล้ว"}
           </button>
         )}
       </div>

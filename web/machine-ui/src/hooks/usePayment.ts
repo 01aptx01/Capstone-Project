@@ -50,6 +50,7 @@ export function usePayment({
   const [paymentCountdown, setPaymentCountdown] = useState<number>(PAYMENT_COUNTDOWN_SECONDS); // เวลานับถอยหลังหมดอายุบิลการทำรายการชำระเงิน
   const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
   const [isNfcBlocked, setIsNfcBlocked] = useState(false); // บล็อกการกดแตะบัตรชั่วคราวเพื่อกันระบบ Omise ทำงานซ้ำซ้อน
+  const [paymentErrorMsg, setPaymentErrorMsg] = useState<string | null>(null); // ข้อความแจ้งเตือนเมื่อเกิดข้อผิดพลาดในการชำระเงิน
 
   // REFS
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // เก็บตัวแปร Interval สำหรับเรียกตรวจสอบสถานะเงินแบบวนรอบ
@@ -88,6 +89,7 @@ export function usePayment({
     setPaymentStep(1);
     setRealQrCode(null);
     setCurrentChargeId(null);
+    setPaymentErrorMsg(null);
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
@@ -273,7 +275,10 @@ export function usePayment({
           `[Frontend] Poll timeout after ${PAYMENT_POLL_MAX_ATTEMPTS} attempts — auto-cancelling`,
         );
         stopPolling();
-        await cancelAndClosePaymentModal();
+        setPaymentErrorMsg("หมดเวลาการทำรายการชำระเงิน กรุณาลองใหม่อีกครั้ง");
+        setTimeout(async () => {
+          await cancelAndClosePaymentModal();
+        }, 3000);
         inFlight = false;
         return;
       }
@@ -592,6 +597,7 @@ export function usePayment({
     setPaymentCountdown,
     isCancelPaymentConfirmOpen,
     isNfcBlocked,
+    paymentErrorMsg,
     // Actions
     handleCheckout,
     attemptClosePaymentModal,

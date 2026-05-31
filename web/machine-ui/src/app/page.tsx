@@ -73,6 +73,7 @@ export default function VendingPage() {
     agentJobState,
     agentCurrentItemIndex,
     globalTimeLeft: socketGlobalTimeLeft,
+    isConnected,
   } = useJobSocket({
     activeJobId: (isAfterPayment || activeModal === "processing") ? payment.currentChargeId : null,
   });
@@ -296,6 +297,7 @@ export default function VendingPage() {
               isProcessingPayment={payment.isProcessingPayment}
               isNfcBlocked={payment.isNfcBlocked}
               isCancelPaymentConfirmOpen={payment.isCancelPaymentConfirmOpen}
+              paymentErrorMsg={payment.paymentErrorMsg}
               onAttemptClose={payment.attemptClosePaymentModal}
               onSelectMethod={payment.setSelectedPaymentMethod}
               onDirectPromptPay={payment.handleDirectPromptPay}
@@ -322,6 +324,8 @@ export default function VendingPage() {
               isMultiFlavor={heating.isMultiFlavor}
               hasStartedServing={heating.hasStartedServing}
               progressLineWidth={heating.progressLineWidth}
+              activeJobId={payment.currentChargeId}
+              isConnected={isConnected}
               onComplete={heating.handleProcessingCompleteClose}
             />
           )}

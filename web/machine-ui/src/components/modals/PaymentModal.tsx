@@ -19,6 +19,7 @@ interface Props {
   isProcessingPayment: boolean;
   isNfcBlocked: boolean;
   isCancelPaymentConfirmOpen: boolean;
+  paymentErrorMsg: string | null;
   onAttemptClose: () => void;
   onSelectMethod: (method: PaymentMethod) => void;
   onDirectPromptPay: () => void;
@@ -41,6 +42,7 @@ export default function PaymentModal({
   isProcessingPayment,
   isNfcBlocked,
   isCancelPaymentConfirmOpen,
+  paymentErrorMsg,
   onAttemptClose,
   onSelectMethod,
   onDirectPromptPay,
@@ -66,6 +68,11 @@ export default function PaymentModal({
           <span style={{ fontSize: "28px", lineHeight: 1 }}>&times;</span>
         </button>
         <div className="payment-wrapper">
+          {paymentErrorMsg && (
+            <div style={{ backgroundColor: '#ef4444', color: 'white', padding: '12px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center' }}>
+              {paymentErrorMsg}
+            </div>
+          )}
           {/* --- Step 0: เลือกช่องทางชำระเงิน --- */}
           {selectedPaymentMethod === null && (
             <>
