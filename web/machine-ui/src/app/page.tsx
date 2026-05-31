@@ -74,6 +74,7 @@ export default function VendingPage() {
     agentCurrentItemIndex,
     globalTimeLeft: socketGlobalTimeLeft,
     isConnected,
+    isAgentOnline,
   } = useJobSocket({
     activeJobId: (isAfterPayment || activeModal === "processing") ? payment.currentChargeId : null,
   });
@@ -326,6 +327,8 @@ export default function VendingPage() {
               progressLineWidth={heating.progressLineWidth}
               activeJobId={payment.currentChargeId}
               isConnected={isConnected}
+              isAgentOnline={isAgentOnline}
+              hasHardwareTelemetry={agentJobState !== null}
               onComplete={heating.handleProcessingCompleteClose}
             />
           )}

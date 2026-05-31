@@ -64,15 +64,18 @@ export function useHeatingProcess({
     return () => clearInterval(interval);
   }, [localHeatCountdownActive, agentJobState]);
 
-  // HARDWARE TIMEOUT
-  // - ถ้ารอเกิน 60 วินาทีแล้วไม่มีสัญญาณจากตู้จริงเลย ถือว่าตู้มีปัญหา ให้แสดง Error ไปเลย
+  // HARDWARE TIMEOUT — รอ event จาก Pi agent จริง (agentJobState) สูงสุด 60 วินาที
   useEffect(() => {
-    if (activeModal === "processing" && !agentJobState) {
-      const timer = setTimeout(() => {
-        setIsHardwareTimeout(true);
-      }, 60000); // 60 วินาที
-      return () => clearTimeout(timer);
+    if (activeModal !== "processing") {
+      setIsHardwareTimeout(false);
+      return;
     }
+    if (agentJobState) {
+      setIsHardwareTimeout(false);
+      return;
+    }
+    const timer = setTimeout(() => setIsHardwareTimeout(true), 60000);
+    return () => clearTimeout(timer);
   }, [activeModal, agentJobState]);
 
   // DERIVED DATA
@@ -99,12 +102,12 @@ export function useHeatingProcess({
     ? true
     : agentJobState
     ? agentJobState === "DONE" || agentJobState === "ERROR"
-    : currentStep === 4;
+    : false;
   const isProcessSuccess = isHardwareTimeout
     ? false
-    : agentJobState 
-    ? agentJobState === "DONE" 
-    : currentStep >= 3;
+    : agentJobState
+    ? agentJobState === "DONE"
+    : false;
 
   // เช็คว่าลูกแรกอุ่นเสร็จและเริ่มเปิดประตูตู้เพื่อเสิร์ฟหรือยัง
   const hasStartedServing =
