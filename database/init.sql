@@ -241,7 +241,7 @@ INSERT INTO machines (machine_code, location, status) VALUES ('MP1-001', 'KMUTT'
 
 -- Products
 INSERT INTO products (name, description, price, heating_time, image_url, category) VALUES
-('เปามดแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png', 'meat'),
+('เปาหมูแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png', 'meat'),
 ('เปาหมูสับ', 'หมูสับไข่เค็ม รสกลมกล่อม', 32.00, 20, '/product/img/pao-moosub.png', 'meat'),
 ('เปากุ้ง', 'เนื้อกุ้งเด้งเต็มคำ', 32.00, 15, '/product/img/pao-shrimp.png', 'meat'),
 ('เปาเต้าหู้', 'ไส้เต้าหู้รสกลมกล่อม', 22.00, 12, '/product/img/pao-tofu.png', 'vegetarian'),
