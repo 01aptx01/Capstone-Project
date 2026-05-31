@@ -54,7 +54,7 @@ export default function RedeemPage() {
               <span className="text-sm font-extrabold text-muted uppercase">Points</span>
             </div>
             <p className="text-xs text-muted mt-3 leading-relaxed max-w-xs">
-              สะสมคะแนนจากการซื้อสินค้าที่ตู้ แล้วนำแต้มมาแลกคูปองส่วนลดเพื่อนำไปสแกนใช้งานที่หน้าตู้ได้ทันที
+              สะสมคะแนนจากการซื้อสินค้าที่ตู้ แล้วนำแต้มมาแลกคูปองส่วนลดเพื่อนำรหัสไปกรอกใช้งานที่หน้าตู้ได้ทันที
             </p>
           </Card>
         </div>
