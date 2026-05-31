@@ -269,3 +269,23 @@ ON DUPLICATE KEY UPDATE
   points = VALUES(points),
   last_use = VALUES(last_use),
   status = VALUES(status);
+
+-- Seed mock order history for the demo user
+SET @demo_user_id = (SELECT user_id FROM users WHERE phone_number = '0631723422' LIMIT 1);
+
+-- Order 1: Completed order (2 days ago)
+INSERT INTO orders (machine_code, user_id, charge_id, total_price, payment_method, status, created_at)
+VALUES ('MP1-001', @demo_user_id, 'chrg_test_00000001', 57.00, 'qr_code', 'completed', DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+SET @order1_id = LAST_INSERT_ID();
+INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES
+(@order1_id, 2, 1, 32.00), -- เปาหมูสับ
+(@order1_id, 5, 1, 25.00); -- เปาเห็ดหอม
+
+-- Order 2: Completed order (1 hour ago)
+INSERT INTO orders (machine_code, user_id, charge_id, total_price, payment_method, status, created_at)
+VALUES ('MP1-001', @demo_user_id, 'chrg_test_00000002', 32.00, 'credit_card', 'completed', DATE_SUB(NOW(), INTERVAL 1 HOUR));
+
+SET @order2_id = LAST_INSERT_ID();
+INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES
+(@order2_id, 1, 1, 32.00); -- เปาหมูแดง
