@@ -6,7 +6,6 @@ sequenceDiagram
     participant Inv as InventoryService
     participant Om as OmisePaymentService
     participant DB as MySQL
-    participant HW as HardwareAgentService
     participant SIO as Socket.IO emit_job_start
 
     User->>UI: ยืนยันชำระ (token + cart)
@@ -18,11 +17,8 @@ sequenceDiagram
     BC->>BC: _execute_dispense(charge_id)
     BC->>Inv: deduct_stock(machine, cart, charge_id)
     Inv->>DB: atomic claim + slot deduction
-    alt DISPATCH_MODE == http
-        BC->>HW: notify_dispense → /jobs/start or /dispense
-        HW-->>BC: ack / fail
-    else default (socket)
-        BC->>SIO: job.start to machine room
-    end
+    BC->>SIO: job.start to machine room
+    Note over BC,SIO: Pi offline → warn + replay on reconnect\n(emit failure → dispense_failed + refund)
     BC-->>UI: {status: paid, charge_id, ...}
-    UI-->>User: กำลังจ่ายของ
+    UI->>SIO: kiosk Socket job_event_broadcast
+    UI-->>User: กำลังจ่ายของ / สำเร็จ

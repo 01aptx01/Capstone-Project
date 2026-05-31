@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ModalType } from "../types";
-import { NUMPAD_COUNTDOWN_SECONDS, POINTS_COUNTDOWN_SECONDS } from "../constants";
+import { NUMPAD_COUNTDOWN_SECONDS, POINTS_COUNTDOWN_SECONDS, getPublicApiUrl } from "../constants";
 import { displayFormattedPhone } from "../utils/phone";
 
 interface UseMemberOptions {
@@ -101,7 +101,7 @@ export function useMember({
       return;
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiUrl = getPublicApiUrl();
     setIsMemberLoading(true);
     setMemberError(null);
 

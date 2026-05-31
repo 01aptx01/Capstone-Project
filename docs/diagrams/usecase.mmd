@@ -19,6 +19,7 @@ useCaseDiagram
         usecase "UC7: Mock จ่าย (dev)\nPOST /api/buy/mock-pay" as UC7
         usecase "UC8: ค้นหาสมาชิก\nGET /api/members/:phone" as UC8
         usecase "UC9: สะสมแต้ม / ผูก order\nPOST /api/members/earn" as UC9
+        usecase "UC24: Realtime job UI\nSocket.IO kiosk + job_event_broadcast" as UC24
     }
 
     package "Admin / admin-ui → /api/admin" {
@@ -34,9 +35,8 @@ useCaseDiagram
     }
 
     package "Agent & telemetry" {
-        usecase "UC19: รับงานจ่ายของ\nHTTP /jobs/start หรือ /dispense" as UC19
-        usecase "UC20: Socket.IO job.start / job events" as UC20
-        usecase "UC21: รายงานเหตุการณ์เครื่อง\nPOST /api/machines/events" as UC21
+        usecase "UC19: Manual job test (dev)\nPOST /jobs/start on agent" as UC19
+        usecase "UC20: Socket.IO job.start / machine_event" as UC20
     }
 
     package "System / internal" {
@@ -53,6 +53,7 @@ useCaseDiagram
     Customer --> UC7
     Customer --> UC8
     Customer --> UC9
+    Customer --> UC24
 
     Admin --> UC10
     Admin --> UC11
@@ -66,13 +67,12 @@ useCaseDiagram
 
     Agent --> UC19
     Agent --> UC20
-    Agent --> UC21
 
     UC4 ..> Omise : creates charge
     UC23 ..> Omise : charge.complete
-    UC4 ..> Agent : notify dispense (HTTP mode)
+    UC4 ..> UC20 : emit job.start after paid
+    UC24 ..> UC20 : kiosk listens job_event_broadcast
     note right of UC4
-        Default DISPATCH_MODE uses
-        Socket.IO job.start (UC20)
-        instead of direct HTTP to agent
+        Checkout dispatches only via
+        Socket.IO (no HTTP /dispense)
     end note
