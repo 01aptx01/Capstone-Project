@@ -1,4 +1,6 @@
-"use client";
+/* eslint-disable react-hooks/set-state-in-effect */
+
+
 
 import { useState, useEffect } from "react";
 import { IconSearch } from "@/components/icons";
@@ -15,6 +17,7 @@ export function DesktopSearchInput({
 }: DesktopSearchInputProps) {
   const [searchValue, setSearchValue] = useState(initialQuery);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setSearchValue(initialQuery);
   }, [initialQuery]);

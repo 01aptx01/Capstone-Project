@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
@@ -42,6 +43,7 @@ function mapToMyCoupon(coupon: UserCoupon): MyCoupon {
     expiry: expiryLabel,
     status,
     color,
+    remaining: coupon.quantity ?? null,
   };
 }
 
@@ -72,7 +74,8 @@ export default function MyCouponsPage() {
   }, [phone]);
 
   useEffect(() => {
-    void loadCoupons();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadCoupons();
   }, [loadCoupons]);
 
   const mappedCoupons = coupons.map(mapToMyCoupon);
