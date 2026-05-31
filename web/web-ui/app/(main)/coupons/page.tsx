@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { fetchMemberCoupons, type UserCoupon } from "@/lib/api/orders";
-import { Button, EmptyState, PageHeader, Skeleton } from "@/components/Ui";
+import { Button, EmptyState, PageHeader, Skeleton, Chip } from "@/components/Ui";
 import { MyCouponCard } from "@/components/cards/MyCouponCard";
 import type { MyCoupon } from "@/components/cards/MyCouponCard";
 
@@ -52,6 +52,7 @@ export default function MyCouponsPage() {
   const [coupons, setCoupons] = useState<UserCoupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "used" | "expired">("all");
 
   const loadCoupons = useCallback(async () => {
     if (!phone) {
@@ -74,10 +75,16 @@ export default function MyCouponsPage() {
     void loadCoupons();
   }, [loadCoupons]);
 
-  const activeCoupons = coupons.filter((c) => c.status === "active");
-  const usedOrExpiredCoupons = coupons.filter(
-    (c) => c.status === "used" || c.status === "expired",
-  );
+  const mappedCoupons = coupons.map(mapToMyCoupon);
+
+  const filteredCoupons = mappedCoupons.filter((c) => {
+    if (activeFilter === "all") return true;
+    return c.status === activeFilter;
+  });
+
+  const countActive = mappedCoupons.filter((c) => c.status === "active").length;
+  const countUsed = mappedCoupons.filter((c) => c.status === "used").length;
+  const countExpired = mappedCoupons.filter((c) => c.status === "expired").length;
 
   return (
     <div className="flex-1 overflow-y-auto pb-6">
@@ -88,8 +95,35 @@ export default function MyCouponsPage() {
           คุณสามารถแลกคะแนนสะสมเพิ่มได้ที่หน้าแลกรับ
         </p>
 
-        {/* Applied coupon banner */}
-
+        {/* Filters */}
+        {phone && !isLoading && !error && (
+          <div className="chip-scroll flex gap-2 overflow-x-auto pb-3 mb-6 -mx-1 px-1 border-b border-border/50">
+            <Chip
+              active={activeFilter === "all"}
+              onClick={() => setActiveFilter("all")}
+            >
+              ทั้งหมด ({mappedCoupons.length})
+            </Chip>
+            <Chip
+              active={activeFilter === "active"}
+              onClick={() => setActiveFilter("active")}
+            >
+              พร้อมใช้งาน ({countActive})
+            </Chip>
+            <Chip
+              active={activeFilter === "used"}
+              onClick={() => setActiveFilter("used")}
+            >
+              ใช้งานแล้ว ({countUsed})
+            </Chip>
+            <Chip
+              active={activeFilter === "expired"}
+              onClick={() => setActiveFilter("expired")}
+            >
+              หมดอายุ ({countExpired})
+            </Chip>
+          </div>
+        )}
 
         {/* Loading state */}
         {isLoading && (
@@ -122,53 +156,41 @@ export default function MyCouponsPage() {
           />
         )}
 
-        {/* Active coupons */}
-        {!isLoading && !error && phone && activeCoupons.length > 0 && (
-          <section className="mb-8">
-            <h2 className="font-bold text-foreground text-sm mb-3 uppercase tracking-wide text-muted">
-              คูปองที่ใช้ได้ ({activeCoupons.length})
-            </h2>
-            <div className="flex flex-col gap-3">
-              {activeCoupons.map((coupon) => (
-                <MyCouponCard
-                  key={coupon.id}
-                  coupon={mapToMyCoupon(coupon)}
-                />
-              ))}
-            </div>
-          </section>
+        {/* Coupon list */}
+        {!isLoading && !error && phone && filteredCoupons.length > 0 && (
+          <div className="flex flex-col gap-3 mb-8">
+            {filteredCoupons.map((coupon) => (
+              <MyCouponCard
+                key={coupon.id}
+                coupon={coupon}
+              />
+            ))}
+          </div>
         )}
 
-        {/* Used/Expired coupons */}
-        {!isLoading && !error && phone && usedOrExpiredCoupons.length > 0 && (
-          <section className="mb-8">
-            <h2 className="font-bold text-sm mb-3 uppercase tracking-wide text-muted">
-              ประวัติคูปอง
-            </h2>
-            <div className="flex flex-col gap-3">
-              {usedOrExpiredCoupons.map((coupon) => (
-                <MyCouponCard
-                  key={coupon.id}
-                  coupon={mapToMyCoupon(coupon)}
-                />
-              ))}
-            </div>
-          </section>
+        {/* Filter empty state */}
+        {!isLoading && !error && phone && coupons.length > 0 && filteredCoupons.length === 0 && (
+          <EmptyState
+            title={
+              activeFilter === "active"
+                ? "ไม่มีคูปองที่พร้อมใช้งาน"
+                : activeFilter === "used"
+                ? "ไม่มีคูปองที่ใช้งานแล้ว"
+                : activeFilter === "expired"
+                ? "ไม่มีคูปองที่หมดอายุ"
+                : "ไม่พบคูปอง"
+            }
+            description="คุณสามารถแลกคะแนนสะสมเพิ่มได้ที่หน้าแลกรับ"
+          />
         )}
 
-        {/* Empty state */}
+        {/* Empty state (No coupons at all) */}
         {!isLoading && !error && phone && coupons.length === 0 && (
           <EmptyState
             title="ยังไม่มีคูปอง"
             description="แลกแต้มเพื่อรับคูปองส่วนลดได้ที่หน้าแลกรับ"
-            action={
-              <Button variant="secondary" onClick={() => router.push("/redeem")}>
-                ไปแลกแต้ม
-              </Button>
-            }
           />
         )}
-
         <div className="mt-4 flex flex-col gap-3">
           <Button
             variant="secondary"
@@ -178,6 +200,8 @@ export default function MyCouponsPage() {
             แลกแต้มรับคูปอง
           </Button>
         </div>
+
+        
       </div>
     </div>
   );
