@@ -17,6 +17,8 @@ interface Props {
   progressLineWidth: string;
   activeJobId: string | null;
   isConnected: boolean;
+  isAgentOnline: boolean;
+  hasHardwareTelemetry: boolean;
   onComplete: () => void;
 }
 
@@ -33,6 +35,8 @@ export default function ProcessingModal({
   progressLineWidth,
   activeJobId,
   isConnected,
+  isAgentOnline,
+  hasHardwareTelemetry,
   onComplete,
 }: Props) {
   return (
@@ -43,6 +47,20 @@ export default function ProcessingModal({
       {!isConnected && !isProcessCompleted && (
         <div style={{ backgroundColor: '#ef4444', color: 'white', padding: '8px', textAlign: 'center', fontSize: '14px', borderRadius: '16px 16px 0 0' }}>
           ⚠️ สัญญาณอินเทอร์เน็ตขัดข้อง กำลังพยายามเชื่อมต่อใหม่...
+        </div>
+      )}
+      {isConnected && !isAgentOnline && !hasHardwareTelemetry && !isProcessCompleted && (
+        <div
+          style={{
+            backgroundColor: "#f59e0b",
+            color: "white",
+            padding: "8px",
+            textAlign: "center",
+            fontSize: "14px",
+            borderRadius: isConnected ? "16px 16px 0 0" : "0",
+          }}
+        >
+          ⏳ กำลังเชื่อมต่อตู้ฮาร์ดแวร์...
         </div>
       )}
       {/* ส่วนหัว */}

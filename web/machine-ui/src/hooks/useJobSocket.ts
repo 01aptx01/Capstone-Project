@@ -25,7 +25,8 @@ export interface JobSocketState {
   agentJobState: AgentJobState | null; // สถานะปัจจุบันของตู้
   agentCurrentItemIndex: number; // ชิ้นที่กำลังทำอยู่ (เริ่มที่ 0)
   globalTimeLeft: number; // วินาทีคงเหลือจริงที่ส่งจากเซ็นเซอร์เครื่อง
-  isConnected: boolean; // สถานะการต่อเชื่อมของ Socket.IO
+  isConnected: boolean; // สถานะการต่อเชื่อมของ Socket.IO (kiosk ↔ server)
+  isAgentOnline: boolean; // Pi hardware agent ใน room เดียวกัน (machine_presence)
 }
 
 export interface UseJobSocketOptions {
@@ -45,6 +46,7 @@ export function useJobSocket({
 
   // --- STATES ---
   const [isConnected, setIsConnected] = useState(false);
+  const [isAgentOnline, setIsAgentOnline] = useState(false);
   const [agentJobState, setAgentJobState] = useState<AgentJobState | null>(null);
   const [agentCurrentItemIndex, setAgentCurrentItemIndex] = useState(0);
   const [globalTimeLeft, setGlobalTimeLeft] = useState(0);
@@ -90,6 +92,11 @@ export function useJobSocket({
 
     const onDisconnect = () => setIsConnected(false);
 
+    const onMachinePresence = (data: { machine_code?: string; online?: boolean }) => {
+      if (data?.machine_code && data.machine_code !== machineCode) return;
+      setIsAgentOnline(Boolean(data?.online));
+    };
+
     // สัญญาณ 'job.start': ได้รับเมื่อ Server สั่งเริ่มงานส่งไปที่ตู้
     const onJobStart = (data: { job_id?: string;[key: string]: unknown }) => {
       if (activeJobId && data?.job_id !== activeJobId) return; // กรองเฉพาะบิลของเรา
@@ -126,6 +133,7 @@ export function useJobSocket({
     socket.on("disconnect", onDisconnect);
     socket.on("job.start", onJobStart);
     socket.on("job_event_broadcast", onJobEventBroadcast);
+    socket.on("machine_presence", onMachinePresence);
 
     // เช็คกรณีถ้า socket มีการเชื่อมต่อค้างไว้อยู่แล้ว ให้เซ็ตเป็นเชื่อมต่อทันที
     if (socket.connected) {
@@ -138,6 +146,7 @@ export function useJobSocket({
       socket.off("disconnect", onDisconnect);
       socket.off("job.start", onJobStart);
       socket.off("job_event_broadcast", onJobEventBroadcast);
+      socket.off("machine_presence", onMachinePresence);
     };
   }, [serverUrl, machineCode, kioskSecret, activeJobId, onConnect, resetJobState]);
 
@@ -151,5 +160,6 @@ export function useJobSocket({
     agentCurrentItemIndex,
     globalTimeLeft,
     isConnected,
+    isAgentOnline,
   };
 }

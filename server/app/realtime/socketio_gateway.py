@@ -105,6 +105,18 @@ def _verify_admin_auth(auth: Optional[Dict[str, Any]]) -> bool:
     return isinstance(auth, dict) and auth.get("admin_token") == admin_secret
 
 
+def _emit_machine_presence(machine_code: str, *, online: bool) -> None:
+    """Notify kiosk clients in the machine room whether the Pi agent is connected."""
+    try:
+        sio.emit(
+            "machine_presence",
+            {"machine_code": machine_code, "online": online},
+            room=machine_code,
+        )
+    except Exception as e:
+        logger.warning("[SocketIO] emit machine_presence failed: %s", e)
+
+
 def emit_dashboard_update(payload: Dict[str, Any]) -> None:
     """Broadcast telemetry to all admin dashboard clients."""
     try:
@@ -414,6 +426,7 @@ def connect(sid, environ, auth):
         machine_code = result
         sio.enter_room(sid, machine_code)
         _kiosk_sids.add(sid)
+        _emit_machine_presence(machine_code, online=machine_code in _online_machines)
         logger.info(f"[SocketIO] kiosk UI connected: {machine_code} (sid={sid})")
         return
 
@@ -439,6 +452,7 @@ def connect(sid, environ, auth):
     _update_machine_is_online(machine_code, online=True)
 
     sent = dispatch_pending_jobs(machine_code)
+    _emit_machine_presence(machine_code, online=True)
     logger.info(f"✅ [SocketIO] machine connected: {machine_code} (sid={sid}) pending_sent={sent}")
 
 
@@ -454,6 +468,7 @@ def disconnect(sid):
 
     if machine_code:
         _update_machine_is_online(machine_code, online=False)
+        _emit_machine_presence(machine_code, online=False)
         logger.info(f"🔌 [SocketIO] machine disconnected: {machine_code} (sid={sid})")
 
 
