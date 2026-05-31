@@ -1,6 +1,6 @@
 // components/cards/MyCouponCard.tsx
+"use client";
 import React from "react";
-
 export type MyCouponStatus = "active" | "used" | "expired";
 
 export interface MyCoupon {
@@ -11,6 +11,8 @@ export interface MyCoupon {
   expiry: string;
   status: MyCouponStatus;
   color: string; 
+  /** Remaining quantity, null or undefined means not applicable */
+  remaining?: number | null;
 }
 
 interface MyCouponCardProps {
@@ -88,6 +90,11 @@ export function MyCouponCard({ coupon }: MyCouponCardProps) {
 
           <p className={`text-xs ${config.isFaded ? "text-gray-400" : "text-gray-500"} mb-3`}>
             {coupon.description}
+          </p>
+
+          {/* Remaining quantity */}
+          <p className={`text-xs ${config.isFaded ? "text-gray-400" : "text-gray-500"} mb-2`}>
+            คงเหลือ: {coupon.remaining != null ? coupon.remaining : '-'}
           </p>
 
           {/* Display Coupon Code for user */}

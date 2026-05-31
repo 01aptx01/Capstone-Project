@@ -22,6 +22,7 @@ export interface UserCoupon {
   status: "active" | "used" | "expired";
   expiry: string | null;
   redeemed_at: string;
+  quantity?: number;
 }
 
 export async function fetchMemberOrders(
