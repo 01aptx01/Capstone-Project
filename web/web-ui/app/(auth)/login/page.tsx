@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { sendOtp, verifyOtp } from "@/lib/auth/otp";
 import { getMember, registerMember } from "@/lib/api/members";
@@ -17,6 +17,8 @@ const RESEND_COOLDOWN_SEC = 60;
 export default function LoginPage() {
   const router = useRouter();
   const { loginWithPhone } = useUser();
+
+  const isSubmittingRef = useRef(false);
 
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -38,6 +40,8 @@ export default function LoginPage() {
   }, [resendSeconds]);
 
   const requestOtp = useCallback(async (phone: string) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
     setFormError(null);
     setDevHint(null);
     setIsSubmitting(true);
@@ -45,23 +49,21 @@ export default function LoginPage() {
       const res = await sendOtp(phone);
       setResendSeconds(RESEND_COOLDOWN_SEC);
       if (res.delivery === "console" || res.delivery === "dev") {
-        setDevHint(
-          "โหมดทดสอบ: ดูรหัส OTP ใน log ของ server (ยังไม่ได้ตั้งค่า Twilio)",
-        );
+        setDevHint("โหมดทดสอบ: ดูรหัส OTP ใน log ของ server");
       }
       setStep(2);
     } catch (err) {
       console.error("🔴 [requestOtp] Error requesting OTP:", err);
-      setFormError(
-        err instanceof Error ? err.message : "ส่ง OTP ไม่สำเร็จ",
-      );
+      setFormError(err instanceof Error ? err.message : "ส่ง OTP ไม่สำเร็จ");
     } finally {
       setIsSubmitting(false);
+      isSubmittingRef.current = false;
     }
   }, []);
 
   const handleAction = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current) return;
     setFormError(null);
 
     if (step === 1) {
@@ -80,6 +82,7 @@ export default function LoginPage() {
       if (otpString.length !== 6) return;
 
       const phone = normalizePhone(phoneNumber);
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
       try {
         const verified = await verifyOtp(phone, otpString);
@@ -89,19 +92,17 @@ export default function LoginPage() {
 
         const member = await getMember(phone);
         if (member.found) {
-          loginWithPhone(
-            phone,
-            accessToken,
-            member.display_name || undefined,
-          );
+          loginWithPhone(phone, accessToken, member.display_name || undefined);
           router.push("/home");
         } else {
           setStep(3);
+          isSubmittingRef.current = false;
         }
       } catch (err) {
         setFormError(
           err instanceof Error ? err.message : "ยืนยัน OTP ไม่สำเร็จ",
         );
+        isSubmittingRef.current = false;
       } finally {
         setIsSubmitting(false);
       }
@@ -110,12 +111,14 @@ export default function LoginPage() {
 
     if (step === 3 && displayName) {
       const phone = normalizePhone(phoneNumber);
+      isSubmittingRef.current = true;
       setIsSubmitting(true);
       try {
         const accessToken = pendingToken;
         if (!accessToken) {
           setFormError("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
           setStep(1);
+          isSubmittingRef.current = false;
           return;
         }
         saveSession(phone, accessToken);
@@ -126,6 +129,7 @@ export default function LoginPage() {
         setFormError(
           err instanceof Error ? err.message : "สร้างบัญชีไม่สำเร็จ",
         );
+        isSubmittingRef.current = false;
       } finally {
         setIsSubmitting(false);
       }
@@ -133,7 +137,7 @@ export default function LoginPage() {
   };
 
   const handleResend = async () => {
-    if (resendSeconds > 0) return;
+    if (resendSeconds > 0 || isSubmittingRef.current) return;
     const phone = normalizePhone(phoneNumber);
     await requestOtp(phone);
   };
