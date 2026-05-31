@@ -1,16 +1,15 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 
 export type AppliedCoupon = {
-  code: string;
-  promotion_id: number;
-  type: string;
-  subtotal_thb: number;
-  discount_thb: number;
-  final_thb: number;
-  points_cost: number;
-  label_th: string;
+  code: string; // รหัสคูปอง
+  promotion_id: number; // ไอดีระบุแคมเปญโปรโมชั่น
+  type: string; // ประเภทคูปอง (เช่น ส่วนลดเงินสด หรือ แลกแต้ม)
+  subtotal_thb: number; // ยอดราคารวมเดิมก่อนหักส่วนลด
+  discount_thb: number; // จำนวนเงินส่วนลดที่ได้หักไป
+  final_thb: number; // ยอดเงินหลังลดแล้ว
+  points_cost: number; // แต้มสะสมที่ต้องชำระแลกสิทธิ์
+  label_th: string; // ตำอธิบายส่วนลด
 };
 
 type Props = {
@@ -21,6 +20,8 @@ type Props = {
   cart: { product_id: number; quantity: number }[];
 };
 
+// CouponModal Component
+// - โมดอลป๊อปอัปให้ลูกค้ากรอกรหัสคูปองส่วนลด
 export default function CouponModal({
   open,
   onClose,
@@ -34,6 +35,7 @@ export default function CouponModal({
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AppliedCoupon | null>(null);
 
+  // ล้างค่าฟิลด์และตัวแปรต่างๆ ทุกครั้งเมื่อมีการเปิดหน้าต่างนี้ใหม่
   useEffect(() => {
     if (open) {
       setStep("input");
@@ -47,6 +49,7 @@ export default function CouponModal({
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
+  // ฟังก์ชันส่งรหัสที่ลูกค้าพิมพ์ไปตรวจสอบความถูกต้องกับ API Backend
   const handleCheck = async () => {
     setError(null);
     const trimmed = code.trim().toUpperCase();
@@ -66,10 +69,14 @@ export default function CouponModal({
         }),
       });
       const data = await res.json();
+
+      // กรณีคูปองไม่ตรงตามเงื่อนไข (เช่น รหัสหมดอายุ สินค้าไม่ตรงหมวดหมู่ หรือสิทธิ์เต็ม)
       if (!data.valid) {
         setError(data.message || "ไม่สามารถใช้คูปองนี้ได้");
         return;
       }
+
+      // กรณีผ่านเกณฑ์
       const next: AppliedCoupon = {
         code: data.code,
         promotion_id: data.promotion_id,
@@ -80,6 +87,7 @@ export default function CouponModal({
         points_cost: data.points_cost ?? 0,
         label_th: data.label_th,
       };
+
       setPreview(next);
       setStep("confirm");
     } catch {
@@ -98,11 +106,10 @@ export default function CouponModal({
 
   return (
     <div className="coupon-modal-box" onClick={(e) => e.stopPropagation()}>
-      <button type="button" className="modal-close-btn" onClick={onClose} aria-label="ปิด">
-        &times;
-      </button>
+      <button type="button" className="modal-close-btn" onClick={onClose} aria-label="ปิด">&times;</button>
       <div className="coupon-modal-title">ใช้คูปองส่วนลด</div>
 
+      {/* ขั้นตอนการกรอกรหัส */}
       {step === "input" && (
         <>
           <p className="coupon-modal-hint">กรอกรหัสคูปองเพื่อตรวจสอบกับระบบ</p>
@@ -127,6 +134,7 @@ export default function CouponModal({
         </>
       )}
 
+      {/* ขั้นตอนการแสดงสิทธิ์และให้ลูกค้ายืนยัน */}
       {step === "confirm" && preview && (
         <>
           <div className="coupon-preview-card coupon-preview-card--simple">

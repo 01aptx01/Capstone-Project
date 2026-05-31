@@ -7,12 +7,18 @@ import { displayFormattedPhone } from "../utils/phone";
 interface UseMemberOptions {
   activeModal: ModalType;
   setActiveModal: (modal: ModalType) => void;
-  isAfterPayment: boolean;
-  currentChargeId: string | null;
-  totalPriceRef: React.MutableRefObject<number>;
-  onStartHeating: () => void;
+  isAfterPayment: boolean; // เป็นขั้นตอนสมัครสมาชิกหลังจ่ายเงินเสร็จหรือไม่
+  currentChargeId: string | null; // รหัสบิลงานชำระเงินปัจจุบัน
+  totalPriceRef: React.MutableRefObject<number>; // อ้างอิงยอดราคาสุทธิที่จ่ายไป (ใช้คำนวณแต้มสะสม)
+  onStartHeating: () => void; // คำสั่งสำหรับเริ่มเดินเครื่องอุ่นอาหาร
 }
 
+// useMember Hook
+// - จัดการระบบสมาชิกและสะสมคะแนน (Loyalty Points System)
+// - รองรับการป้อนข้อมูลผ่านแป้นพิมพ์จำลอง (Numpad Modal)
+// - ค้นหาข้อมูลสมาชิกเดิม
+// - สะสมคะแนนหลังซื้อ
+// - นับเวลาถอยหลังปิดหน้าจออัตโนมัติหากผู้ใช้ละทิ้งหน้าจอ
 export function useMember({
   activeModal,
   setActiveModal,
@@ -21,26 +27,21 @@ export function useMember({
   totalPriceRef,
   onStartHeating,
 }: UseMemberOptions) {
-  // ==========================================
   // STATE
-  // ==========================================
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [memberPoints, setMemberPoints] = useState<number | null>(null);
-  const [earnedPoints, setEarnedPoints] = useState<number>(0);
-  const [isNewMember, setIsNewMember] = useState<boolean>(false);
-  const [isMemberLoading, setIsMemberLoading] = useState<boolean>(false);
-  const [memberError, setMemberError] = useState<string | null>(null);
-  const [numpadCountdown, setNumpadCountdown] = useState<number>(NUMPAD_COUNTDOWN_SECONDS);
-  const [pointsCountdown, setPointsCountdown] = useState<number>(POINTS_COUNTDOWN_SECONDS);
+  const [phoneNumber, setPhoneNumber] = useState(""); // เบอร์โทรศัพท์ที่ลูกค้าป้อน (10 หลัก)
+  const [memberPoints, setMemberPoints] = useState<number | null>(null); // คะแนนสะสมทั้งหมดของสมาชิก
+  const [earnedPoints, setEarnedPoints] = useState<number>(0); // คะแนนที่เพิ่งได้รับจากออเดอร์นี้
+  const [isNewMember, setIsNewMember] = useState<boolean>(false); // บ่งบอกว่าเป็นสมาชิกใหม่แกะกล่องที่เพิ่งสมัครหรือไม่
+  const [isMemberLoading, setIsMemberLoading] = useState<boolean>(false); // แสดงสถานะกำลังเช็คข้อมูลสมาชิกกับ API
+  const [memberError, setMemberError] = useState<string | null>(null); // ข้อผิดพลาดเกี่ยวกับระบบสมาชิก
+  const [numpadCountdown, setNumpadCountdown] = useState<number>(NUMPAD_COUNTDOWN_SECONDS); // เวลาถอยหลังหน้ากรอกเบอร์ (วิ)
+  const [pointsCountdown, setPointsCountdown] = useState<number>(POINTS_COUNTDOWN_SECONDS); // เวลาถอยหลังหน้าผลลัพธ์คะแนน (วิ)
 
-  // Stable ref for callback
   const onStartHeatingRef = useRef(onStartHeating);
   onStartHeatingRef.current = onStartHeating;
 
-  // ==========================================
   // TIMERS
-  // ==========================================
-  // Timer: นับถอยหลังหน้ารับเบอร์โทร (Numpad)
+  // ตัวนับถอยหลังหน้าจอแป้นพิมพ์ (Numpad)
   useEffect(() => {
     if (activeModal !== "numpad") return;
     const timer = setInterval(() => {
@@ -59,7 +60,7 @@ export function useMember({
     }
   }, [activeModal, numpadCountdown, isAfterPayment, setActiveModal]);
 
-  // Timer: นับถอยหลังการโชว์คะแนนสะสม
+  // ตัวนับถอยหลังแสดงแต้มผลลัพธ์ (Points Result Screen)
   useEffect(() => {
     if (activeModal !== "points_result") return;
     const timer = setInterval(() => {
@@ -68,6 +69,7 @@ export function useMember({
     return () => clearInterval(timer);
   }, [activeModal]);
 
+  // หากเวลาโชว์แต้มหมด
   useEffect(() => {
     if (activeModal === "points_result" && pointsCountdown === 0) {
       if (isAfterPayment) {
@@ -78,9 +80,8 @@ export function useMember({
     }
   }, [activeModal, pointsCountdown, isAfterPayment, setActiveModal]);
 
-  // ==========================================
-  // PHONE HANDLERS
-  // ==========================================
+  // PHONE HANDLERS (ฟังก์ชันจัดการแป้นป้อนเบอร์โทร)
+  // กดเลข 0-9
   const handleNumberClick = useCallback(
     (num: string) => {
       if (phoneNumber.length < 10) setPhoneNumber((prev) => prev + num);
@@ -88,10 +89,12 @@ export function useMember({
     [phoneNumber.length],
   );
 
+  // กดลบตัวเลขหลังสุด (Backspace)
   const handleDeleteClick = useCallback(() => {
     setPhoneNumber((prev) => prev.slice(0, -1));
   }, []);
 
+  // กดยืนยันเบอร์โทรศัพท์
   const handleConfirmPhone = useCallback(async () => {
     if (phoneNumber.length !== 10) {
       alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
@@ -103,6 +106,7 @@ export function useMember({
     setMemberError(null);
 
     if (isAfterPayment) {
+      // กรณี: สะสมแต้ม (หลังจ่ายเงิน)
       try {
         const res = await fetch(`${apiUrl}/api/members/earn`, {
           method: "POST",
@@ -114,21 +118,26 @@ export function useMember({
           }),
         });
         const data = await res.json();
+        
+        // รับแต้มสะสมและอัปเดตข้อมูลขึ้นหน้าจอผลลัพธ์
         setEarnedPoints(data.points_earned ?? 0);
         setMemberPoints(data.total_points ?? 0);
         setIsNewMember(data.is_new_member ?? false);
-        setPointsCountdown(POINTS_COUNTDOWN_SECONDS);
+        setPointsCountdown(POINTS_COUNTDOWN_SECONDS); // ตั้งเวลานับถอยหลังใหม่
         setActiveModal("points_result");
       } catch (err) {
         console.error("Earn points error:", err);
+        // หากระบบแต้มขัดข้อง ให้ข้ามไปขั้นตอนสำคัญที่สุดคือเริ่มอุ่นอาหารทันที
         onStartHeatingRef.current();
       } finally {
         setIsMemberLoading(false);
       }
     } else {
+      // กรณี: ดูคะแนนเฉยๆ
       try {
         const res = await fetch(`${apiUrl}/api/members/${phoneNumber}`);
         if (res.status === 404) {
+          // หากไม่พบเบอร์ในฐานข้อมูล
           setMemberError("ไม่พบข้อมูลสมาชิก กรุณาลงทะเบียนหลังจากซื้อสินค้า");
           setMemberPoints(null);
           setEarnedPoints(0);
@@ -136,6 +145,7 @@ export function useMember({
           setPointsCountdown(POINTS_COUNTDOWN_SECONDS);
           setActiveModal("points_result");
         } else if (res.ok) {
+          // หากพบเบอร์โทร
           const data = await res.json();
           setMemberPoints(data.points);
           setEarnedPoints(0);
@@ -155,9 +165,10 @@ export function useMember({
     }
   }, [phoneNumber, isAfterPayment, currentChargeId, totalPriceRef, setActiveModal]);
 
+  // จัดรูปแบบเบอร์โทรศัพท์ให้อ่านง่ายขึ้น
   const formattedPhone = displayFormattedPhone(phoneNumber);
 
-  /** Reset numpad state when opening for a fresh session */
+  // ล้างสถานะเมื่อเปิดแป้นพิมพ์ขึ้นมาใหม่
   const handleOpenNumpad = useCallback(() => {
     setNumpadCountdown(NUMPAD_COUNTDOWN_SECONDS);
     setPhoneNumber("");
@@ -166,12 +177,12 @@ export function useMember({
   return {
     phoneNumber,
     setPhoneNumber,
-    memberPoints,
-    earnedPoints,
-    isNewMember,
-    isMemberLoading,
-    memberError,
-    numpadCountdown,
+    memberPoints, 
+    earnedPoints, 
+    isNewMember, 
+    isMemberLoading, 
+    memberError, 
+    numpadCountdown, 
     setNumpadCountdown,
     pointsCountdown,
     handleNumberClick,

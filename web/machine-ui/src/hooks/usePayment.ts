@@ -13,14 +13,24 @@ import {
 interface UsePaymentOptions {
   activeModal: ModalType;
   setActiveModal: (modal: ModalType) => void;
-  cart: CartItem[];
-  payableTotal: number;
-  appliedCoupon: AppliedCoupon | null;
-  machineCode: string;
-  /** Called when payment succeeds — page orchestrates cross-cutting state reset */
-  onPaymentSuccess: () => void;
+  cart: CartItem[]; // รายการของในตะกร้า
+  payableTotal: number; // ราคาสุทธิที่รวมส่วนลดแล้ว
+  appliedCoupon: AppliedCoupon | null; // คูปองที่ใช้
+  machineCode: string; // รหัสของตู้กดสินค้า
+  onPaymentSuccess: () => void; // ฟังก์ชันทำงานเมื่อชำระเงินเรียบร้อย
 }
 
+/**
+ * usePayment Hook
+ * - จัดการระบบจ่ายเงินชำระสินค้าของตู้กดอาหารทั้งหมด
+ * รองรับ:
+ *  - สร้างรายการสั่งซื้อชั่วคราว (Create Draft Order)
+ *  - ชำระเงินผ่านระบบ Omise API (PromptPay, Credit Card Tokenization)
+ *  - ชำระเงินผ่าน TrueMoney Wallet
+ *  - จำลองแตะบัตรเครดิตผ่าน NFC (Hardware / Virtual Simulator)
+ *  - ระบบสืบค้นเช็คผลการชำระเงินเรียลไทม์ (Polling Status)
+ *  - ระบบควบคุมเวลาหมดเขตการทำธุรกรรม (Payment Timeout Countdown)
+ */
 export function usePayment({
   activeModal,
   setActiveModal,
@@ -30,27 +40,23 @@ export function usePayment({
   machineCode,
   onPaymentSuccess,
 }: UsePaymentOptions) {
-  // ==========================================
   // STATE
-  // ==========================================
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
-  const [paymentStep, setPaymentStep] = useState<1 | 2>(1);
-  const [isOmiseLoaded, setIsOmiseLoaded] = useState(false);
-  const [realQrCode, setRealQrCode] = useState<string | null>(null);
-  const [currentChargeId, setCurrentChargeId] = useState<string | null>(null);
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [paymentCountdown, setPaymentCountdown] = useState<number>(PAYMENT_COUNTDOWN_SECONDS);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null); // ช่องทางจ่ายเงินที่ลูกค้าเลือก
+  const [paymentStep, setPaymentStep] = useState<1 | 2>(1); // สเตปการชำระเงิน: 1 = หน้าเลือกช่องทาง, 2 = หน้าแสดงผลคิวอาร์โค้ด / แตะบัตร
+  const [isOmiseLoaded, setIsOmiseLoaded] = useState(false); // ตรวจจับว่าไลบรารีสคริปต์ Omise.js โหลดเข้าหน้าจอสำเร็จแล้วหรือยัง
+  const [realQrCode, setRealQrCode] = useState<string | null>(null); // ข้อความ Base64 หรือลิงก์สำหรับสร้างภาพ QR Code จ่ายเงินจริง
+  const [currentChargeId, setCurrentChargeId] = useState<string | null>(null); // รหัสหมายเลขอ้างอิงบิลจ่ายเงิน (Charge ID จาก Omise หรือ Draft ID จากระบบตู้)
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false); // สถานะว่าระบบกำลังทำรายการชำระเงินค้างอยู่ ป้องกันผู้ใช้กดย้ำซ้ำๆ
+  const [paymentCountdown, setPaymentCountdown] = useState<number>(PAYMENT_COUNTDOWN_SECONDS); // เวลานับถอยหลังหมดอายุบิลการทำรายการชำระเงิน
   const [isCancelPaymentConfirmOpen, setIsCancelPaymentConfirmOpen] = useState(false);
-  const [isNfcBlocked, setIsNfcBlocked] = useState(false);
+  const [isNfcBlocked, setIsNfcBlocked] = useState(false); // บล็อกการกดแตะบัตรชั่วคราวเพื่อกันระบบ Omise ทำงานซ้ำซ้อน
 
-  // ==========================================
-  // REFS (for timer/interval callbacks)
-  // ==========================================
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const currentChargeIdRef = useRef<string | null>(null);
-  const nfcBlockTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // REFS
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null); // เก็บตัวแปร Interval สำหรับเรียกตรวจสอบสถานะเงินแบบวนรอบ
+  const currentChargeIdRef = useRef<string | null>(null); // เก็บประวัติ Charge ID ปัจจุบัน ป้องกันการปิดการทำงานช้าแล้วข้อมูลเก่าหาย
+  const nfcBlockTimerRef = useRef<NodeJS.Timeout | null>(null); // ตัวแปรเคลียร์เวลาล็อกแตะบัตรเครดิต
 
-  // Keep refs to latest values for use inside timer/interval callbacks
+  // คัดลอกค่าล่าสุดลงสู่ Refs เพื่อไม่เกิดบั๊กข้อมูลแช่แข็งค้างคืนภายในตัวทำงาน setInterval
   const onPaymentSuccessRef = useRef(onPaymentSuccess);
   onPaymentSuccessRef.current = onPaymentSuccess;
   const cartRef = useRef(cart);
@@ -62,21 +68,20 @@ export function usePayment({
   const isProcessingPaymentRef = useRef(isProcessingPayment);
   isProcessingPaymentRef.current = isProcessingPayment;
 
-  // Sync state to ref for timers
+  // ซิงค์ ID ธุรกรรมเข้าสู่ Ref เสมอเมื่อเปลี่ยนค่า State
   useEffect(() => {
     currentChargeIdRef.current = currentChargeId;
   }, [currentChargeId]);
 
-  // Reset cancel confirm when leaving payment or going back to step 1
+  // ล้างตัวยืนยันการยกเลิกอัตโนมัติหากออกจากโมดอล หรือย้อนกลับไปหน้าเลือกช่องทางชำระ (สเตป 1)
   useEffect(() => {
     if (activeModal !== "payment" || paymentStep === 1) {
       setIsCancelPaymentConfirmOpen(false);
     }
   }, [activeModal, paymentStep]);
 
-  // ==========================================
   // CORE FUNCTIONS
-  // ==========================================
+  // - เคลียร์ค่าสถานะจ่ายเงินทั้งหมด และสั่งปิดโมดอลชำระเงินแบบปกติ
   const closePaymentModal = () => {
     setActiveModal("none");
     setSelectedPaymentMethod(null);
@@ -89,11 +94,14 @@ export function usePayment({
     }
   };
 
+  // - สั่งยกเลิกธุรกรรมการชำระเงินที่ค้างคาไปยัง API และปิดหน้าจอ
+  // - ช่วยเคลียร์คิวสต็อกสินค้าที่ตู้ล็อคไว้ให้เพื่อนสมาชิกลูกค้าคนถัดไปมาใช้ต่อได้ทันที
   const cancelAndClosePaymentModal = async () => {
     const chargeIdToCancel = currentChargeIdRef.current;
     if (chargeIdToCancel) {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        // ยิงแจ้งเตือนหลังตู้เพื่อให้ยกเลิกการกักตุนสต็อกสินค้าในคิว
         await fetch(`${apiUrl}/api/buy/cancel`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -107,6 +115,9 @@ export function usePayment({
     closePaymentModal();
   };
 
+  // - จัดการเมื่อผู้ใช้กดปุ่มกากบาทหรือกดปิดหน้าชำระเงิน
+  // - หากสแกน QR ค้างอยู่ (สเตป 2) จะเปิดหน้าต่างถามยืนยันยกเลิก
+  // - เพื่อป้องกันลูกค้ากดปิดโดยไม่ตั้งใจ
   const attemptClosePaymentModal = () => {
     if (paymentStep === 2) {
       setIsCancelPaymentConfirmOpen(true);
@@ -115,43 +126,46 @@ export function usePayment({
     cancelAndClosePaymentModal();
   };
 
+  // - ยืนยันยกเลิกและปิดหน้าระบบการชำระเงินจริง
   const confirmCancelPayment = async () => {
     setIsCancelPaymentConfirmOpen(false);
     await cancelAndClosePaymentModal();
   };
 
+  // - ซ่อนหน้ายืนยันยกเลิกกลับเข้าสู่การสแกน QR ต่อไป
   const dismissCancelPaymentConfirm = () => {
     setIsCancelPaymentConfirmOpen(false);
   };
 
-  /** Internal: clear polling + notify page orchestrator */
+  // - เคลียร์ Loop การเช็คและส่งต่อสัญญาณเข้าสู่ฟังก์ชันออเดอร์พร้อมอุ่นอาหาร
   const handlePaymentSuccessInternal = () => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
     }
     setRealQrCode(null);
-    onPaymentSuccessRef.current();
+    onPaymentSuccessRef.current(); // เรียก Callback จบงานเข้าสู่ขั้นสะสมแต้มและสลับหน้าจออุ่น
   };
 
-  // ==========================================
   // PAYMENT API LOGIC
-  // ==========================================
+  // - ดำเนินการชำระเงินโดยส่งข้อมูลบิลที่หักจากผู้ใช้ไปยังเซิร์ฟเวอร์
   const processPayment = async (paymentData: {
     type: "token" | "source" | "truemoney";
-    id: string;
-    amount: number;
+    id: string; // Token ID จาก Omise API
+    amount: number; // ยอดรวมเงิน (สตางค์)
   }) => {
     if (isProcessingPaymentRef.current) return;
     setIsProcessingPayment(true);
+    
     const controller = new AbortController();
-    const timeoutMs = PAYMENT_TIMEOUT_MS;
+    const timeoutMs = PAYMENT_TIMEOUT_MS; // ตัดจบหากเชื่อมต่อยาวเกินกำหนด
     const startedAt = Date.now();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       console.log("[Frontend] Initiating processPayment:", paymentData);
+      
       const response = await fetch(`${apiUrl}/api/buy/checkout`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -162,6 +176,7 @@ export function usePayment({
           amount: paymentData.amount,
           payment_type: paymentData.type,
           payment_id: paymentData.id,
+          // หากสร้าง Draft Order ไว้ก่อน (แตะบัตรเครดิต) ให้ส่ง Draft ID ตัวเดิมไปเปลี่ยนสเตตัสป้องกันบิลซ้ำซ้อน
           draft_id: currentChargeIdRef.current?.startsWith("draft_")
             ? currentChargeIdRef.current
             : undefined,
@@ -192,10 +207,12 @@ export function usePayment({
         (paymentData.type === "source" || paymentData.type === "truemoney") &&
         result.qr_code
       ) {
+        // กรณีคิวอาร์โค้ดสแกนจ่ายเงินสำเร็จ
         setRealQrCode(result.qr_code);
         setPaymentStep(2);
         pollPaymentStatus(result.charge_id);
       } else {
+        // กรณีชำระผ่านบัตรเครดิตเสร็จสิ้นสมบูรณ์ทันทีโดยไม่สแกน
         handlePaymentSuccessInternal();
       }
     } catch (err: any) {
@@ -213,7 +230,7 @@ export function usePayment({
         alert(`เกิดข้อผิดพลาด: ${err.message}`);
       }
 
-      // Safeguard: Reset to home screen to prevent freeze
+      // ระบบช่วยเหลือ: หากจ่ายเงินล้มเหลวสุดขีด ให้รีเซ็ตกลับหน้าจอหลักใน 3 วินาทีเพื่อไม่ให้ตู้กดอาหารจอนิ่งค้าง
       setTimeout(() => {
         cancelAndClosePaymentModal();
       }, 3000);
@@ -223,6 +240,7 @@ export function usePayment({
     }
   };
 
+  // - สอบถามตรวจสอบสถานะการชำระเงินออเดอร์นี้เป็นระยะๆ (Polling Loop)
   const pollPaymentStatus = (chargeId: string) => {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
@@ -232,9 +250,9 @@ export function usePayment({
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     console.log(`[Frontend] Starting poll for charge: ${chargeId}`);
 
-    let attempts = 0;
-    let inFlight = false;
-    let stopped = false;
+    let attempts = 0; // รอบการทำงานปัจจุบัน
+    let inFlight = false; // ป้องกันการเรียก API ซ้ำซ้อนก่อนที่รอบเก่าจะตอบกลับเสร็จสิ้น
+    let stopped = false; // ตัวควบคุมจบตัววนซ้ำ
 
     const stopPolling = () => {
       stopped = true;
@@ -248,6 +266,8 @@ export function usePayment({
       if (stopped || inFlight) return;
       inFlight = true;
       attempts++;
+      
+      // กรณีใช้จำนวนรอบในการตรวจสอบการจ่ายเงินจนเกินขีดจำกัด -> สั่งยกเลิกบิล
       if (attempts > PAYMENT_POLL_MAX_ATTEMPTS) {
         console.warn(
           `[Frontend] Poll timeout after ${PAYMENT_POLL_MAX_ATTEMPTS} attempts — auto-cancelling`,
@@ -267,12 +287,16 @@ export function usePayment({
             `[Frontend] Poll result for ${chargeId} [${attempts}/${PAYMENT_POLL_MAX_ATTEMPTS}]:`,
             data.status,
           );
+          
+          // ตรวจสอบว่าสเตตัสได้รับการยืนยันการจ่ายเงินเรียบร้อยแล้วหรือไม่
           if (st === "paid" || st === "dispensing" || st === "completed") {
             console.log("[Frontend] Payment confirmed via polling!");
             stopPolling();
             handlePaymentSuccessInternal();
             return;
           }
+          
+          // ตรวจสอบหากยอดชำระล้มเหลว หรือมีการขอคืนเงินกะทันหัน หรือสินค้าขัดข้อง
           if (
             st === "dispense_failed" ||
             st === "refunded" ||
@@ -299,15 +323,15 @@ export function usePayment({
     };
 
     void tick();
+    // ทำงานตรวจสอบซ้ำทุกๆ 1 วินาที
     pollingIntervalRef.current = setInterval(
       () => void tick(),
       PAYMENT_POLL_INTERVAL_MS,
     );
   };
 
-  // ==========================================
-  // PAYMENT METHOD HANDLERS
-  // ==========================================
+  // PAYMENT METHOD HANDLERS (จัดการปุ่มกดเลือกช่องทางต่างๆ)
+  // - สร้างบิลและรับคิวอาร์โค้ด PromptPay จ่ายเงินสดผ่าน Omise.js SDK
   const handleDirectPromptPay = async () => {
     if (!(window as any).Omise) {
       alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
@@ -317,7 +341,9 @@ export function usePayment({
     const Omise = (window as any).Omise;
     Omise.setPublicKey(process.env.NEXT_PUBLIC_OMISE_PUBLIC_KEY);
 
-    const amount = Math.round(payableTotalRef.current * 100);
+    const amount = Math.round(payableTotalRef.current * 100); // แปลงมูลค่าไปเป็นหน่วยสตางค์
+    
+    // เรียก API ของ Omise เพื่อรับสิทธิ์เชื่อมโยง PromptPay
     Omise.createSource(
       "promptpay",
       { amount, currency: "THB" },
@@ -334,6 +360,7 @@ export function usePayment({
     );
   };
 
+  // - จัดเตรียมสเปกของคิวอาร์สำหรับช่องทาง TrueMoney Wallet
   const handleDirectTrueMoney = async () => {
     setPaymentStep(2);
     setRealQrCode(null);
@@ -344,11 +371,12 @@ export function usePayment({
     });
   };
 
+  // - นำผู้ใช้สลับเข้าสู่ขั้นตอนเตรียมแตะบัตรจ่ายเงิน (NFC Card Reader Mode)
+  // - ทำการจองสินค้าชั่วคราว (Create Draft Order ใน DB)
   const handleProceedToTap = async () => {
     setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
     setPaymentStep(2);
 
-    // สร้าง Draft Order ใน Database เพื่อให้มีสถานะ "รอจ่าย"
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const response = await fetch(`${apiUrl}/api/buy/create-draft`, {
@@ -367,14 +395,15 @@ export function usePayment({
       });
       const data = await response.json();
       if (data.charge_id) {
-        setCurrentChargeId(data.charge_id);
+        setCurrentChargeId(data.charge_id); // บันทึกบิลฉบับร่าง (Draft ID)
       }
     } catch (err) {
       console.error("[Frontend] Error creating draft order:", err);
     }
   };
 
-  // --- ฟังก์ชันจำลองการแตะบัตรที่เครื่องอ่าน NFC ---
+  // - ฟังก์ชันจำลองการแตะบัตรเครดิตที่หน้าตู้ (NFC simulation)
+  // - จะทำการจำลองแปลงข้อมูลบัตรเครดิตไปเป็น Token ของ Omise API
   const simulateNfcTap = async (brand: TestCardBrand) => {
     if (!(window as any).Omise) {
       alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
@@ -388,6 +417,7 @@ export function usePayment({
       `[Frontend] Simulating Card Tap (${brand}): Generating Omise Token...`,
     );
 
+    // ดึงค่าหมายเลขบัตรทดสอบที่ระบุ (เช่น Visa, Mastercard)
     const cardData = {
       name: TEST_CARDS[brand].name,
       number: TEST_CARDS[brand].number,
@@ -396,6 +426,7 @@ export function usePayment({
       security_code: "123",
     };
 
+    // ส่งชุดข้อมูลจำลองเพื่อรับ Token ID สำหรับตัดบัตรอย่างถูกต้องและปลอดภัย
     Omise.createToken(
       "card",
       cardData,
@@ -418,7 +449,8 @@ export function usePayment({
     );
   };
 
-  /** Wrapper for NFC tap from UI buttons — adds blocking logic to prevent rapid re-taps */
+  // - แผงครอบปุ่มกดแตะบัตรเครดิตบน UI หน้าจอทดสอบ
+  // - มีกลไกป้องกันบั๊กแตะบัตรซ้ำๆ ถี่เกินไป (Rate Limiting)
   const handleSimulateNfcTap = (brand: TestCardBrand) => {
     if (isProcessingPayment || isNfcBlocked) return;
     setIsNfcBlocked(true);
@@ -430,6 +462,7 @@ export function usePayment({
     simulateNfcTap(brand);
   };
 
+  // - ฟังก์ชันจำลองการชำระเงินโอนเงินแบบ QR PromptPay สำเร็จ
   const simulatePromptPaySuccess = async () => {
     if (!currentChargeIdRef.current) return;
     try {
@@ -445,6 +478,7 @@ export function usePayment({
     }
   };
 
+  // - ล้างประวัติต่างๆ และสั่งเริ่มต้นระบบจ่ายเงินจากหน้าหลัก
   const handleCheckout = () => {
     setSelectedPaymentMethod(null);
     setPaymentStep(1);
@@ -454,10 +488,8 @@ export function usePayment({
     setActiveModal("payment");
   };
 
-  // ==========================================
-  // TIMERS & EFFECTS
-  // ==========================================
-  // Timer: นับถอยหลังการชำระเงิน
+  // TIMERS & EFFECTS (ระบบเวลาหมดอายุธุรกรรม)
+  // Timer: ทำหน้าที่หักคะแนนเวลานับถอยหลังของหน้าจอชำระเงินในทุกๆ วินาที
   useEffect(() => {
     if (activeModal !== "payment") return;
     const timer = setInterval(() => {
@@ -466,14 +498,14 @@ export function usePayment({
     return () => clearInterval(timer);
   }, [activeModal]);
 
+  // ตรวจจับเมื่อเวลากรอกชำระเงินลดลงเป็น 0 วินาที -> ยกเลิกและปิดหน้าต่างอัตโนมัติป้องกันยอดบิลค้างคา
   useEffect(() => {
     if (activeModal === "payment" && paymentCountdown === 0) {
       cancelAndClosePaymentModal();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModal, paymentCountdown]);
 
-  // NFC Reader Listener (จำลองการพิมพ์จากเครื่องอ่าน NFC)
+  // NFC Keyboard Listener
   useEffect(() => {
     if (
       activeModal === "payment" &&
@@ -488,6 +520,7 @@ export function usePayment({
         if (isProcessingPayment || isNfcBlocked) return;
 
         const now = Date.now();
+        // หากลูกค้าไม่ได้พิมพ์ติดต่อกันใน 100ms ให้ถือว่าเป็นข้อความขยะชุดใหม่
         if (now - lastKeyTime > 100) {
           nfcBuffer = "";
         }
@@ -513,10 +546,9 @@ export function usePayment({
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
 
-  // Polling สำหรับ Hardware NFC Tap (จาก Python Agent / MFRC522)
+  // Polling สำหรับ Hardware NFC Tap (ตัววนเช็คสัญญาณบัตรจาก Python Agent เซ็นเซอร์เครื่องจริง)
   useEffect(() => {
     if (
       activeModal === "payment" &&
@@ -527,6 +559,7 @@ export function usePayment({
       const pollNfc = async () => {
         if (isProcessingPayment || isNfcBlocked) return;
         try {
+          // ดึงสถานะการแตะบัตรผ่านพอร์ตความร้อนเครื่องอ่านบัตรฮาร์ดแวร์
           const res = await fetch("http://localhost:5000/nfc/status");
           if (res.ok) {
             const data = await res.json();
@@ -536,18 +569,17 @@ export function usePayment({
             }
           }
         } catch (e) {
-          // Agent not running — ignore
+          // หากไม่พบ Agent เครื่องเชื่อมอยู่ ให้ปล่อยผ่าน
         }
       };
 
       const interval = setInterval(pollNfc, 1000);
       return () => clearInterval(interval);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
 
   return {
-    // State
+    // States
     selectedPaymentMethod,
     setSelectedPaymentMethod,
     paymentStep,
@@ -574,3 +606,4 @@ export function usePayment({
     simulatePromptPaySuccess,
   };
 }
+
