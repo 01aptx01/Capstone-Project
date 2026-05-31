@@ -5,23 +5,17 @@ info:
     Flask backend for smart vending: catalog, Omise checkout, members, and admin CRUD under `/api/admin`.
     Interactive docs (Flasgger) are also served by the server at `/apidocs` when the app is running.
 
-    **Socket.IO (same host/port as HTTP, e.g. `http://localhost:8000`):**
-    - **Pi agent:** auth `{ "machine_code": "<code>", "token": "<secret>" }` (bcrypt on server). Server emits **`job.start`** to room `machine_code` after checkout; agent replies via **`machine_event`** RPC (persisted + **`job_event_broadcast`** to kiosk).
-    - **Kiosk (machine-ui):** auth `{ "role": "kiosk", "kiosk_secret": "<KIOSK_SOCKET_SECRET>" }` — required in production. Listens for **`job_event_broadcast`**.
-    - **Admin dashboard:** `{ "role": "admin" }` when `ADMIN_SOCKET_SECRET` is unset, or `{ "admin_token": "<secret>" }` when set. Receives **`dashboard_update`** on machine events.
+    Socket.IO (same host/port as HTTP, e.g. http://localhost:8000):
+    - Pi agent: auth machine_code and token (bcrypt on server). Server emits job.start after checkout; agent replies via machine_event RPC (persisted and job_event_broadcast to kiosk).
+    - Kiosk (machine-ui): auth role kiosk and kiosk_secret — required in production. Listens for job_event_broadcast.
+    - **Admin dashboard:** role admin (or admin_token when ADMIN_SOCKET_SECRET is set). Receives dashboard_update on machine events.
 
-  Checkout dispatches hardware jobs **only** via Socket.IO (`emit_job_start`). There is no HTTP `/dispense` or `POST /api/machines/events`. Manual agent test: `POST http://localhost:5000/jobs/start`.
+    Checkout dispatches hardware jobs only via Socket.IO emit_job_start. No HTTP /dispense or POST /api/machines/events. Manual agent test: POST http://localhost:5000/jobs/start.
 
-    **Docker Compose — default published ports on the host:**
-    | Service | Host URL |
-    |---------|----------|
-    | MySQL (`db`) | `localhost:3307` |
-    | API + Socket.IO (`server`) | `http://localhost:8000` |
-    | Hardware agent (`client`) | `http://localhost:5000` |
-    | machine-ui | `http://localhost:3000` |
-    | admin-ui | `http://localhost:3001` |
-    | swagger-ui (this spec in UI) | `http://localhost:8081` (host; avoids Jenkins on 8080) |
-    | Flasgger (same server) | `http://localhost:8000/apidocs` |
+    Docker Compose default published ports on the host:
+    MySQL db localhost:3307; API and Socket.IO server http://localhost:8000;
+    hardware agent http://localhost:5000; machine-ui http://localhost:3000;
+    admin-ui http://localhost:3001; swagger-ui http://localhost:8081; Flasgger http://localhost:8000/apidocs.
   version: "2.0.0"
 
 host: localhost:8000
