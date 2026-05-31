@@ -2,12 +2,14 @@
 import { useState, useEffect, useMemo } from "react";
 import type { CartItem, AppliedCoupon } from "../types";
 
-/**
- * Manages coupon state and auto-recalculation when cart changes.
- */
+// useCoupon Hook
+// - จัดการการใช้คูปองส่วนลด คะแนน และราคาสุทธิที่ต้องจ่าย
+// - มีระบบคำนวณและตรวจสอบสิทธิ์คูปองซ้ำแบบเรียลไทม์เมื่อจำนวนสินค้าในตะกร้าเปลี่ยนแปลง
 export function useCoupon(cart: CartItem[], machineCode: string, totalPrice: number) {
+  // สถานะเก็บคูปองที่กำลังใช้งานอยู่ (ถ้าไม่มีเก็บเป็น null)
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
+  // สร้าง Cart Signature เพื่อตรวจจับการเปลี่ยนแปลงของ id และ qty เท่านั้น
   const cartSignature = useMemo(
     () =>
       cart
@@ -17,8 +19,11 @@ export function useCoupon(cart: CartItem[], machineCode: string, totalPrice: num
     [cart],
   );
 
-  /** ล้างคูปองเมื่อตะกร้าว่าง; เมื่อมีสินค้าและมีคูปอง — คำนวณยอดใหม่กับตะกร้าปัจจุบัน (ไม่ล้างเพราะแค่เพิ่มของ) */
+  // ผลกระทบข้างเคียง (Side Effect):
+  // 1. ล้างคูปองอัตโนมัติหากตะกร้าว่างเปล่า
+  // 2. หากมีคูปองค้างอยู่ และตะกร้าเปลี่ยน -> เรียก API ตรวจสอบความถูกต้องของคูปองกับสินค้าปัจจุบัน
   useEffect(() => {
+    // 1. ถ้าตะกร้าไม่มีของเลย ให้ยกเลิกการใช้คูปองทันที
     if (cart.length === 0) {
       setAppliedCoupon(null);
       return;
@@ -26,8 +31,10 @@ export function useCoupon(cart: CartItem[], machineCode: string, totalPrice: num
     if (!appliedCoupon?.code) return;
 
     const code = appliedCoupon.code;
-    let cancelled = false;
+    let cancelled = false; // ตัวแปรสำหรับยกเลิก API call ตัวเดิมหากมีอันใหม่แทรกเข้ามาก่อนส่งเสร็จ (Race Conditions)
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    
+    // แปลงตะกร้าสินค้าไปเป็นรูปแบบ payload
     const payloadCart = cart.map((item) => ({ product_id: item.id, quantity: item.qty }));
 
     void (async () => {
@@ -43,10 +50,13 @@ export function useCoupon(cart: CartItem[], machineCode: string, totalPrice: num
         });
         const data = await res.json();
         if (cancelled) return;
+        
         if (!data.valid) {
           setAppliedCoupon(null);
           return;
         }
+        
+        // ถ้าผ่านเกณฑ์
         setAppliedCoupon((prev) => {
           if (!prev || prev.code !== code) return prev;
           return {
@@ -62,17 +72,20 @@ export function useCoupon(cart: CartItem[], machineCode: string, totalPrice: num
         if (!cancelled) setAppliedCoupon(null);
       }
     })();
-
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartSignature, cart.length, appliedCoupon?.code, machineCode]);
 
+  // คำนวณยอดเงินที่ต้องชำระจริงหลังหักส่วนลดคูปอง
   const payableTotal = useMemo(() => {
     if (appliedCoupon && cart.length > 0) return appliedCoupon.final_thb;
     return totalPrice;
   }, [appliedCoupon, cart.length, totalPrice]);
 
-  return { appliedCoupon, setAppliedCoupon, payableTotal };
+  return { 
+    appliedCoupon,
+    setAppliedCoupon,
+    payableTotal
+  };
 }

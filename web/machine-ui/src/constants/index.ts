@@ -2,7 +2,7 @@ import React from "react";
 import type { TestCardBrand } from "../types";
 
 // ==========================================
-// Process Steps (UI labels)
+// Process Steps (ข้อความสเตปสถานะการอุ่นบนหน้าจอ UI)
 // ==========================================
 export const PROCESS_STEPS = [
   "กำลังนำเข้าเตาอุ่น",
@@ -12,34 +12,34 @@ export const PROCESS_STEPS = [
 ];
 
 // ==========================================
-// Timing Constants (seconds)
+// Timing Constants (ค่าควบคุมหน่วงเวลา - วินาที)
 // ==========================================
-export const STEP1_DELAY = 2;
-export const DISPENSE_WINDOW = 2;
-export const STEP4_HOLD = 3;
-export const FINAL_STEP_HOLD = 3;
-export const SECONDS_PER_HEATING_TIME_TYPE = 3;
+export const STEP1_DELAY = 2; // ระยะเวลาหน่วงตอนเริ่มแรกของระบบจ่ายความร้อน (วิ)
+export const DISPENSE_WINDOW = 2; // ระยะเวลาในการเปิดประตูกลไกเสิร์ฟของแต่ละชิ้น (วิ)
+export const STEP4_HOLD = 3; // เวลาที่หยุดค้างที่สเต็ป 3 (พร้อมเสิร์ฟตัวสุดท้าย) ก่อนสลับไปหน้าจอจบ (วิ)
+export const FINAL_STEP_HOLD = 3; // เวลาหน่วงของหน้าจอแสดงความขอบคุณหรือสรุปคิวก่อนปิดหน้าจออุ่นกลับสู่หน้าหลัก (วิ)
+export const SECONDS_PER_HEATING_TIME_TYPE = 3; // ตัวแปรคูณระยะเวลารวมในตะกร้า ต่อ 1 ชนิดสินค้าที่อุ่นร้อนเสร็จ (วิ)
 
 // ==========================================
-// Cart & Payment Limits
+// Cart & Payment Limits (ขีดจำกัดต่างๆ ของโปรแกรมและระบบจ่ายเงิน)
 // ==========================================
-export const MAX_CART_ITEMS = 4;
-export const PAYMENT_COUNTDOWN_SECONDS = 180;
-export const POINTS_COUNTDOWN_SECONDS = 10;
-export const NUMPAD_COUNTDOWN_SECONDS = 60;
-export const NFC_BLOCK_DURATION_MS = 5000;
-export const PAYMENT_POLL_INTERVAL_MS = 1000;
-export const PAYMENT_POLL_MAX_ATTEMPTS = 120;
-export const PAYMENT_TIMEOUT_MS = 60000;
+export const MAX_CART_ITEMS = 4; // จำนวนรวมชิ้นสูงสุดที่อนุญาตให้ใส่ตะกร้าต่อ 1 ออเดอร์
+export const PAYMENT_COUNTDOWN_SECONDS = 180; // เวลานับถอยหลังในหน้าชำระเงิน (3 นาที)
+export const POINTS_COUNTDOWN_SECONDS = 10; // เวลานับถอยหลังของหน้าสรุปผลสะสมแต้ม (วิ)
+export const NUMPAD_COUNTDOWN_SECONDS = 60; // เวลานับถอยหลังของหน้าจอสัมผัสป้อนเบอร์โทรศัพท์ (1 นาที)
+export const NFC_BLOCK_DURATION_MS = 5000; // เวลาห้ามแตะบัตรเครดิตซ้ำ (มิลลิวินาที) เพื่อกันความขัดข้องระบบ Omise API
+export const PAYMENT_POLL_INTERVAL_MS = 1000; // รอบการยิง API ตรวจเช็คยอดชำระเงินสำเร็จ (1 วิ)
+export const PAYMENT_POLL_MAX_ATTEMPTS = 120; // จำนวนรอบสูงสุดที่จะยิงเช็คสถานะยอดชำระ (120 รอบ = 2 นาที)
+export const PAYMENT_TIMEOUT_MS = 60000; // ระยะเวลาเชื่อมต่อระบบธนาคารสูงสุดก่อนตัดการทำงาน (60 วิ)
 
 // ==========================================
-// Machine Config
+// Machine Config (การกำหนดค่าระบุตัวตู้สินค้า)
 // ==========================================
 export const DEFAULT_MACHINE_CODE =
   (typeof process !== "undefined" && process.env.NEXT_PUBLIC_MACHINE_CODE) || "MP1-001";
 
 // ==========================================
-// Test Cards (for NFC simulation)
+// Test Cards (ข้อมูลบัตรเครดิตทดสอบสำหรับการจำลองแตะ NFC)
 // ==========================================
 export const TEST_CARDS: Record<TestCardBrand, { name: string; number: string }> = {
   visa: { name: "Test Visa Machine", number: "4242424242424242" },
@@ -48,7 +48,7 @@ export const TEST_CARDS: Record<TestCardBrand, { name: string; number: string }>
 };
 
 // ==========================================
-// Shared Styles
+// Shared Styles อยุ่แค่ตอนจำลอง
 // ==========================================
 export const testBtnStyle: React.CSSProperties = {
   padding: "10px",
@@ -61,3 +61,4 @@ export const testBtnStyle: React.CSSProperties = {
   border: "none",
   cursor: "pointer",
 };
+

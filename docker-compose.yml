@@ -1,14 +1,3 @@
-# =============================================================================
-# Published URLs from host (default port mapping)
-# -----------------------------------------------------------------------------
-#   db (MySQL)       localhost:3307   -> container :3306
-#   server (API)     http://localhost:8000   (Flask + Socket.IO + /apidocs)
-#   client (agent)   http://localhost:5000
-#   machine-ui       http://localhost:3000
-#   admin-ui         http://localhost:3001
-#   swagger-ui       http://localhost:8081  (host; avoids Jenkins on 8080)
-# =============================================================================
-
 services:
   compose-banner:
     image: alpine:3.20
