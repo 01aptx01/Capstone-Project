@@ -46,24 +46,17 @@ export default function RedeemPage() {
   return (
     <div className="flex-1 overflow-y-auto pb-6">
       <div className="page-container pt-6 max-w-5xl">
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
-          <Card className="flex-1 flex flex-col items-center justify-center p-6">
-            <span className="text-muted font-bold mb-1">คะแนนของคุณ</span>
-            <div className="flex items-baseline gap-1.5">
+        <div className="max-w-md mx-auto mb-8">
+          <Card className="flex flex-col items-center justify-center p-6 text-center shadow-md border border-brand/10 bg-gradient-to-br from-surface to-brand-muted/10 rounded-2xl">
+            <span className="text-muted font-bold text-xs uppercase tracking-wider mb-2">คะแนนสะสมของคุณ</span>
+            <div className="flex items-baseline gap-1.5 justify-center">
               <span className="text-5xl font-extrabold text-brand">{points}</span>
-              <span className="text-sm font-bold text-muted uppercase">Points</span>
+              <span className="text-sm font-extrabold text-muted uppercase">Points</span>
             </div>
+            <p className="text-xs text-muted mt-3 leading-relaxed max-w-xs">
+              สะสมคะแนนจากการซื้อสินค้าที่ตู้ แล้วนำแต้มมาแลกคูปองส่วนลดเพื่อนำไปสแกนใช้งานที่หน้าตู้ได้ทันที
+            </p>
           </Card>
-
-          <Link
-            href="/coupons"
-            className="flex-1 bg-surface p-6 rounded-card shadow-sm border border-border flex md:flex-col items-center justify-between md:justify-center hover:bg-brand-muted transition-colors touch-target"
-          >
-            <span className="text-foreground font-bold">คูปองที่สามารถใช้ได้</span>
-            <span className="text-2xl font-extrabold text-brand">
-              ใส่โค้ดตอนชำระ
-            </span>
-          </Link>
         </div>
 
         {message && (
