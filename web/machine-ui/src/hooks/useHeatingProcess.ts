@@ -37,6 +37,7 @@ export function useHeatingProcess({
   const [queue, setQueue] = useState<Product[]>([]); // คิวรายการสินค้าที่ต้องทำการอุ่น (เรียงลำดับเวลาอุ่นจากน้อยไปหามากแล้ว)
   const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมดที่เหลืออยู่ (วินาที)
   const [isInitialStep1Delay, setIsInitialStep1Delay] = useState(false); // ควบคุมการหน่วงเวลาก่อนเริ่มอุ่นจริงชิ้นแรก
+  const [isHardwareTimeout, setIsHardwareTimeout] = useState(false); // สถานะเมื่อตู้ไม่ตอบสนองเกินเวลา
   const heatingTimelineStartedRef = useRef(false); // Ref ช่วยจำว่ากระบวนการนับถอยหลังได้เริ่มขึ้นแล้วหรือยัง
 
   // SOCKET SYNC (การซิงค์ข้อมูลกับบอร์ดตู้จริง)
@@ -63,6 +64,17 @@ export function useHeatingProcess({
     return () => clearInterval(interval);
   }, [localHeatCountdownActive, agentJobState]);
 
+  // HARDWARE TIMEOUT
+  // - ถ้ารอเกิน 60 วินาทีแล้วไม่มีสัญญาณจากตู้จริงเลย ถือว่าตู้มีปัญหา ให้แสดง Error ไปเลย
+  useEffect(() => {
+    if (activeModal === "processing" && !agentJobState) {
+      const timer = setTimeout(() => {
+        setIsHardwareTimeout(true);
+      }, 60000); // 60 วินาที
+      return () => clearTimeout(timer);
+    }
+  }, [activeModal, agentJobState]);
+
   // DERIVED DATA
   const dispenseSchedule = useMemo(() => buildDispenseSchedule(queue), [queue]); // ตารางคำนวณไทม์ไลน์การเสิร์ฟของแต่ละชิ้น
   const totalProcessTime = calculateTotalProcessTime(queue); // เวลาทั้งหมดที่ต้องใช้ในคิวนี้ (วินาที)
@@ -83,10 +95,16 @@ export function useHeatingProcess({
   const isDispensingItem = agentJobState ? agentJobState === "DISPENSING" : fallbackStatus.isDispensingItem;
 
   // ตรวจสอบว่ากระบวนการทั้งหมดเสร็จสิ้นหรือยัง
-  const isProcessCompleted = agentJobState
+  const isProcessCompleted = isHardwareTimeout
+    ? true
+    : agentJobState
     ? agentJobState === "DONE" || agentJobState === "ERROR"
     : currentStep === 4;
-  const isProcessSuccess = agentJobState ? agentJobState === "DONE" : currentStep >= 3;
+  const isProcessSuccess = isHardwareTimeout
+    ? false
+    : agentJobState 
+    ? agentJobState === "DONE" 
+    : currentStep >= 3;
 
   // เช็คว่าลูกแรกอุ่นเสร็จและเริ่มเปิดประตูตู้เพื่อเสิร์ฟหรือยัง
   const hasStartedServing =
@@ -131,6 +149,7 @@ export function useHeatingProcess({
   // - จัดการปิดโมดอลการอุ่นเมื่อเสร็จสมบูรณ์ -> รีเซ็ตและดึงข้อมูลสต็อกใหม่ทันที
   const handleProcessingCompleteClose = useCallback(() => {
     heatingTimelineStartedRef.current = false;
+    setIsHardwareTimeout(false);
     setActiveModal("none");
     void fetchProducts({ silent: true });
   }, [setActiveModal, fetchProducts]);
