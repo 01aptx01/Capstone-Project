@@ -506,8 +506,11 @@ export function usePayment({
   // ตรวจจับเมื่อเวลากรอกชำระเงินลดลงเป็น 0 วินาที -> ยกเลิกและปิดหน้าต่างอัตโนมัติป้องกันยอดบิลค้างคา
   useEffect(() => {
     if (activeModal === "payment" && paymentCountdown === 0) {
-      cancelAndClosePaymentModal();
+      setTimeout(() => {
+        void cancelAndClosePaymentModal();
+      }, 0);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModal, paymentCountdown]);
 
   // NFC Keyboard Listener
@@ -551,6 +554,7 @@ export function usePayment({
       window.addEventListener("keydown", handleKeyDown);
       return () => window.removeEventListener("keydown", handleKeyDown);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
 
   // Polling สำหรับ Hardware NFC Tap (ตัววนเช็คสัญญาณบัตรจาก Python Agent เซ็นเซอร์เครื่องจริง)
@@ -581,6 +585,7 @@ export function usePayment({
       const interval = setInterval(pollNfc, 1000);
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeModal, selectedPaymentMethod, paymentStep, isProcessingPayment, isNfcBlocked]);
 
   return {
