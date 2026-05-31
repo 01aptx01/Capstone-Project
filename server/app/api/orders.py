@@ -101,10 +101,12 @@ def redeemable_promotions():
         with get_db_cursor() as (_, cur):
             cur.execute(
                 """
-                SELECT promotion_id, code, type, discount_amount, points_cost, expire_date
-                FROM promotions
-                WHERE is_active = 1 AND points_cost > 0
-                ORDER BY points_cost ASC
+                SELECT
+                    p.promotion_id, p.code, p.type, p.discount_amount, p.points_cost, p.expire_date, p.max_uses,
+                    (SELECT COUNT(*) FROM user_promotions WHERE promotion_id = p.promotion_id) AS total_redeemed
+                FROM promotions p
+                WHERE p.is_active = 1 AND p.points_cost > 0
+                ORDER BY p.points_cost ASC
                 """
             )
             rows = cur.fetchall()
@@ -116,6 +118,14 @@ def redeemable_promotions():
                 title = f"ส่วนลด {disc:g}%"
             else:
                 title = f"ส่วนลด {disc:g} บาท"
+
+            max_uses = row.get("max_uses") or 0
+            total_redeemed = row.get("total_redeemed") or 0
+            if max_uses > 0:
+                quantity_remaining = max(0, max_uses - total_redeemed)
+            else:
+                quantity_remaining = None  # ไม่จำกัด
+
             coupons.append(
                 {
                     "promotion_id": row["promotion_id"],
@@ -126,6 +136,7 @@ def redeemable_promotions():
                     "discount_amount": disc,
                     "type": row["type"],
                     "expiry": str(row["expire_date"]) if row["expire_date"] else None,
+                    "quantity_remaining": quantity_remaining,
                 }
             )
         return jsonify({"coupons": coupons}), 200
@@ -267,7 +278,9 @@ def member_coupons(phone: str):
                     p.discount_amount,
                     p.points_cost,
                     p.expire_date,
-                    p.is_active
+                    p.is_active,
+                    p.max_uses,
+                    (SELECT COUNT(*) FROM user_promotions WHERE promotion_id = up.promotion_id) AS total_redeemed
                 FROM user_promotions up
                 JOIN promotions p ON p.promotion_id = up.promotion_id
                 WHERE up.user_id = %s
@@ -285,6 +298,14 @@ def member_coupons(phone: str):
             else:
                 title = f"ส่วนลด {disc:g} บาท"
 
+            # คำนวณจำนวนคงเหลือ: max_uses - จำนวนที่แลกไปแล้วทั้งหมด
+            max_uses = row.get("max_uses")
+            total_redeemed = row.get("total_redeemed", 0)
+            if max_uses and int(max_uses) > 0:
+                quantity = max(0, int(max_uses) - int(total_redeemed))
+            else:
+                quantity = None  # ไม่จำกัด → แสดงเป็น '-' ใน UI
+
             coupons.append({
                 "id": str(row["id"]),
                 "promotion_id": row["promotion_id"],
@@ -296,6 +317,7 @@ def member_coupons(phone: str):
                 "status": row["status"],
                 "expiry": str(row["expire_date"]) if row["expire_date"] else None,
                 "redeemed_at": str(row["redeemed_at"]),
+                "quantity": quantity,
             })
 
         return jsonify({"coupons": coupons}), 200
