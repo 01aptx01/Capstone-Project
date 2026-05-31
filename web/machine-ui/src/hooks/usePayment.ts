@@ -8,6 +8,8 @@ import {
   PAYMENT_POLL_MAX_ATTEMPTS,
   PAYMENT_TIMEOUT_MS,
   TEST_CARDS,
+  getPublicAgentBaseUrl,
+  getPublicApiUrl,
 } from "../constants";
 
 interface UsePaymentOptions {
@@ -102,7 +104,7 @@ export function usePayment({
     const chargeIdToCancel = currentChargeIdRef.current;
     if (chargeIdToCancel) {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const apiUrl = getPublicApiUrl();
         // ยิงแจ้งเตือนหลังตู้เพื่อให้ยกเลิกการกักตุนสต็อกสินค้าในคิว
         await fetch(`${apiUrl}/api/buy/cancel`, {
           method: "POST",
@@ -165,7 +167,7 @@ export function usePayment({
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = getPublicApiUrl();
       console.log("[Frontend] Initiating processPayment:", paymentData);
       
       const response = await fetch(`${apiUrl}/api/buy/checkout`, {
@@ -249,7 +251,7 @@ export function usePayment({
       pollingIntervalRef.current = null;
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const apiUrl = getPublicApiUrl();
     console.log(`[Frontend] Starting poll for charge: ${chargeId}`);
 
     let attempts = 0; // รอบการทำงานปัจจุบัน
@@ -383,7 +385,7 @@ export function usePayment({
     setPaymentStep(2);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = getPublicApiUrl();
       const response = await fetch(`${apiUrl}/api/buy/create-draft`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -471,7 +473,7 @@ export function usePayment({
   const simulatePromptPaySuccess = async () => {
     if (!currentChargeIdRef.current) return;
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const apiUrl = getPublicApiUrl();
       await fetch(`${apiUrl}/api/buy/mock-pay`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -569,7 +571,7 @@ export function usePayment({
         if (isProcessingPayment || isNfcBlocked) return;
         try {
           // ดึงสถานะการแตะบัตรผ่านพอร์ตความร้อนเครื่องอ่านบัตรฮาร์ดแวร์
-          const res = await fetch("http://localhost:5000/nfc/status");
+          const res = await fetch(`${getPublicAgentBaseUrl()}/nfc/status`);
           if (res.ok) {
             const data = await res.json();
             if (data.status === "tapped") {

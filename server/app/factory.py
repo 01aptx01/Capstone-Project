@@ -10,7 +10,6 @@ load_dotenv()
 
 from app.api.buy import buy_api
 from app.api.health import health_api
-from app.api.machine_events import machine_events_api
 from app.api.members import members_api
 from app.api.products import products_api
 from app.db_config.db import init_db
@@ -37,8 +36,19 @@ def _resolve_swagger_path() -> str:
 _SWAGGER_FILE = _resolve_swagger_path()
 
 
+def _validate_socket_env() -> None:
+    if os.getenv("SOCKETIO_ENABLED", "1") == "0":
+        return
+    if not (os.environ.get("KIOSK_SOCKET_SECRET") or "").strip():
+        raise RuntimeError(
+            "KIOSK_SOCKET_SECRET is required when Socket.IO is enabled. "
+            "Set the same value in NEXT_PUBLIC_KIOSK_SOCKET_SECRET for machine-ui build."
+        )
+
+
 def create_app() -> Flask:
     """Flask application factory (used by ServerApp, wsgi.py, and Flask-Migrate CLI)."""
+    _validate_socket_env()
     # Use flask_app (not app): `import app.models` would shadow a local named `app`.
     flask_app = Flask(__name__)
 
@@ -66,7 +76,6 @@ def create_app() -> Flask:
     flask_app.register_blueprint(buy_api)
     flask_app.register_blueprint(products_api)
     flask_app.register_blueprint(health_api)
-    flask_app.register_blueprint(machine_events_api)
     flask_app.register_blueprint(members_api)
 
     from app.api.admin import admin_bp

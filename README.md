@@ -79,7 +79,9 @@ Standardized configuration for the production-ready stack:
 | `NEXT_PUBLIC_OMISE_PUBLIC_KEY` | Omise Public Key for client-side tokenization | Frontend |
 | `OMISE_SECRET_KEY` | Omise Secret Key (KEEP PRIVATE) | Backend |
 | `NEXT_PUBLIC_API_URL` | Backend API Endpoint | Frontend |
-| `AGENT_URL` | URL of the hardware agent | Backend |
+| `AGENT_BASE_URL` | Pi health check URL only | Backend |
+| `MACHINE_CODE` / `MACHINE_TOKEN` | Pi Socket.IO auth | Pi agent |
+| `KIOSK_SOCKET_SECRET` / `NEXT_PUBLIC_KIOSK_SOCKET_SECRET` | Kiosk UI Socket lock (required) | Server + machine-ui build |
 | `DB_HOST` / `DB_USER` ... | MySQL Database Connection | Backend |
 | `CORS_ORIGINS` | Comma-separated allowed origins (override for LAN/hardware) | Backend |
 | `SERVER_SOCKET_URL` | Socket.IO URL the agent connects to (override for LAN/hardware) | Hardware agent |

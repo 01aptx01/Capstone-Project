@@ -32,7 +32,7 @@ app = create_app()
 # Initialize Hardware Machine Kiosk & LEDs
 bootstrap_machine()
 
-# Start background Socket.IO client (server <-> agent room by MACHINE_ID)
+# Start background Socket.IO client (server <-> agent room by MACHINE_CODE)
 start_ws_client()
 
 logger.info("🚀 Hardware Agent starting on port 5000...")
