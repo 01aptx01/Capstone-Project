@@ -88,18 +88,21 @@ class BuyController:
         discount = 0.0
         final = subtotal
         promotion_id = None
+        user_promotion_id = None # ADDED
         raw = coupon_code
         if raw is not None and str(raw).strip():
-            reason, c = lookup_coupon_by_code(raw)
+            reason, c, user_promo_id = lookup_coupon_by_code(raw)
             if reason != "ok" or not c:
                 return None
             discount, final = discount_and_final(subtotal, c)
             promotion_id = c.promotion_id
+            user_promotion_id = user_promo_id # ADDED
         return {
             "subtotal": subtotal,
             "discount": discount,
             "final": final,
             "promotion_id": promotion_id,
+            "user_promotion_id": user_promotion_id, # ADDED
         }
 
     def _resolve_fulfillment_mode(
@@ -241,7 +244,7 @@ class BuyController:
                 {"valid": False, "reason": "pricing_failed", "message": "ไม่สามารถคำนวณยอดได้"}
             ), 200
 
-        reason, c = lookup_coupon_by_code(code)
+        reason, c, user_promo_id = lookup_coupon_by_code(code)
         if reason != "ok" or not c:
             return jsonify(
                 {
@@ -332,6 +335,7 @@ class BuyController:
                 ), 400
             total_price = pricing["final"]
             promotion_id = pricing["promotion_id"]
+            user_promotion_id = pricing["user_promotion_id"] # ADDED
 
         charge_amount_satang = int(round(float(total_price) * 100))
         client_satang = int(amount) if amount is not None else None
@@ -378,6 +382,7 @@ class BuyController:
                 payment_method=payment_method,
                 total_price=total_price,
                 promotion_id=promotion_id,
+                user_promotion_id=user_promotion_id, # ADDED
             )
 
         if not persisted:
@@ -482,6 +487,7 @@ class BuyController:
 
         total_price = pricing["final"]
         promotion_id = pricing["promotion_id"]
+        user_promotion_id = pricing["user_promotion_id"] # ADDED
 
         import uuid
         draft_id = f"draft_{uuid.uuid4().hex[:16]}"
@@ -500,6 +506,7 @@ class BuyController:
             payment_method=payment_method,
             total_price=total_price,
             promotion_id=promotion_id,
+            user_promotion_id=user_promotion_id, # ADDED
         )
         
         if not persisted:
