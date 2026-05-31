@@ -1,5 +1,9 @@
-// ─── All SVG Icons ───────────────────────────────────────────────────────────
+// components/icons/index.tsx
+// ─── ALL SVG ICON COMPONENTS ──────────────────────────────────────────────────
+// คอลเลกชันไอคอน SVG สำหรับเรียกใช้งานในหน้าเว็บและระบบนำทาง (Icons Library)
+// เขียนเป็น React Functional Component เพื่อให้ง่ายต่อการเปลี่ยนสไตล์ ขนาด และสีผ่าน Props
 
+// ไอคอนสามขีด (Hamburger Menu Icon) สำหรับหน้าจอขนาดมือถือ
 export function HamburgerIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -8,6 +12,7 @@ export function HamburgerIcon() {
   );
 }
 
+// ไอคอนปิดกากบาท (Close/Cancel Icon) สำหรับปิดหน้าต่าง Modal หรือ Drawer
 export function CloseIcon() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
@@ -16,6 +21,7 @@ export function CloseIcon() {
   );
 }
 
+// ไอคอนรูปหน้าแรก (Home Icon)
 export function IconHome({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -25,6 +31,7 @@ export function IconHome({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปกล่องของขวัญ/แลกคูปอง (Redeem/Gift Icon)
 export function IconRedeem({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -37,6 +44,7 @@ export function IconRedeem({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปนาฬิกาประวัติการใช้งาน (History/Clock Icon)
 export function IconHistory({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -47,6 +55,7 @@ export function IconHistory({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปโปรไฟล์/ผู้ใช้งาน (Profile/User Icon)
 export function IconProfile({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -56,6 +65,7 @@ export function IconProfile({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนออกจากระบบ (Logout Icon)
 export function IconLogout() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -64,6 +74,7 @@ export function IconLogout() {
   );
 }
 
+// ไอคอนรูปคูปองกระดาษ (Coupons/Ticket Icon)
 export function IconCoupons({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -74,6 +85,7 @@ export function IconCoupons({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปเครื่องหมายคำถาม/ศูนย์ช่วยเหลือ (Help/FAQ Icon)
 export function IconHelp({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -84,6 +96,7 @@ export function IconHelp({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปแว่นขยายค้นหา (Search Icon)
 export function IconSearch() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -93,6 +106,7 @@ export function IconSearch() {
   );
 }
 
+// ไอคอนรูปกระดิ่งแจ้งเตือน (Bell/Notification Icon)
 export function IconBell() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -102,6 +116,7 @@ export function IconBell() {
   );
 }
 
+// ไอคอนรูปรถเข็น/ตะกร้าสินค้า (Cart Icon)
 export function IconCart() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -112,10 +127,11 @@ export function IconCart() {
   );
 }
 
+// ไอคอนรูปเมนูรายการอาหาร/หมวดหมู่
 export function IconMenu() {
   return (
     <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
       <path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
-}
+}
