@@ -157,12 +157,40 @@ Use this after [.env](.env) matches [.env.example](.env.example) and you complet
 | 1 | Admin → create machine → copy `machine_code` + `secret_token` into root `.env` (`MACHINE_CODE`, `MACHINE_TOKEN`) |
 | 2 | `KIOSK_SOCKET_SECRET` = `NEXT_PUBLIC_KIOSK_SOCKET_SECRET`; `NEXT_PUBLIC_MACHINE_CODE` matches `MACHINE_CODE` |
 | 3 | `docker compose up --build` — server starts (non-empty `KIOSK_SOCKET_SECRET`) |
-| 4 | `docker logs vending-pi` shows WebSocket connected (not auth retry loop) |
-| 5 | Browser [machine-ui](http://localhost:3000) — devtools console: no kiosk secret / Socket auth errors |
+| 4 | `docker logs vending-pi` (or `client` service) shows WebSocket connected (not auth retry loop) — **required before purchase** |
+| 5 | Browser [machine-ui](http://localhost:3000) — no full-screen “ระบบขัดข้องชั่วคราว” overlay; devtools: no kiosk secret / Socket auth errors |
 | 6 | Add slot inventory for your `machine_code` in Admin if not using seeded `MP1-001` slots |
 | 7 | Purchase (card or mock-pay) — server log: `job.start` emitted; if Pi was offline, warning then replay on reconnect |
 | 8 | UI advances via **`job_event_broadcast`** (not only 60s fallback countdown) |
 | 9 | Pi agent: Section 11 checklist — Admin Socket online + `machine_job_events` after purchase |
+| 10 | Card + NFC: agent log `POST /nfc/arm` 200 + `[NFC] armed` in browser console before tap |
+| 11 | Pi offline during dispense: UI shows blue “still processing” banner, then succeeds when Pi reconnects (order poll) |
+
+### 6.2 Edge cases (NFC, Pi offline, agent DB)
+
+**Pre-payment hardware gate:** Before any successful payment, Machine UI blocks the whole screen until the **Pi agent** is online (`machine_presence` / `isAgentOnline`). If the kiosk Socket is down, the overlay says “สัญญาณขัดข้องชั่วคราว”; if the kiosk is up but Pi is not, it says “ระบบขัดข้องชั่วคราว — กำลังพยายามเชื่อมต่อตู้”. After payment (numpad / processing), the UI does **not** use this full-page blocker — it keeps the existing processing banners and order-status poll.
+
+**Docker dev:** You must run the **`client`** service (container `vending-pi`) or a real Pi agent with matching `MACHINE_CODE` / `MACHINE_TOKEN`. Without it, checkout is intentionally blocked on the main screen.
+
+**Active order lock (หลังรีเฟรช / ซื้อซ้ำ):** Kiosk polls `GET /api/buy/active-order?machine_code=…` (optional `exclude_charge_id` for the current payment draft) and blocks the main screen while the machine has `paid` / `dispensing`, or `pending_payment` **younger than 5 minutes** (สอดคล้อง Omise QR). ก่อนตัดสิน `busy` server จะ **reconcile กับ Omise** ทุก `pending_payment` บนตู้ — ถ้าจ่ายแล้วจะอัปเดตเป็น `paid` และสั่ง dispense. Draft/รายการเก่ากว่า 5 นาทีจะถูก cancel (หลังเช็ค Omise) โดย sweeper และทุกครั้งที่เรียก `active-order`. Machine UI เก็บ `charge_id` ใน `sessionStorage` หลังรีโหลดเพื่อแสดงปุ่ม **ดำเนินการต่อ** / **ยกเลิกรายการ**. `checkout` / `create-draft` return **409 `MACHINE_BUSY`** if blocked.
+
+**Stale paid/dispensing:** A second sweeper (every 5 minutes) marks orders stuck in `paid` / `dispensing` for more than **45 minutes** as `dispense_failed` and queues Omise refund — so the kiosk is not locked forever if the Pi never finishes.
+
+| Scenario | Expected behavior |
+|----------|-------------------|
+| รีเฟรชกลางจ่ายของ แต่ order ยัง `paid`/`dispensing` | หน้าหลัก overlay “ตู้กำลังดำเนินการออเดอร์ก่อนหน้า”; สั่งซื้อใหม่ไม่ได้จน order จบ |
+| ชำระเงินอยู่ (มี draft ของ session) | `exclude_charge_id` — ไม่โดน overlay ทับ payment modal |
+| `pending_payment` เกิน 5 นาที | Reconcile Omise ก่อน → cancel ถ้าไม่จ่าย → ซื้อใหม่ได้ |
+| `paid`/`dispensing` ค้าง > 45 นาที | Sweeper → `dispense_failed` + refund queue → ซื้อใหม่ได้ |
+| Pi agent offline **before** pay | Full-screen overlay; checkout / payment handlers no-op |
+| Pi agent offline **after** pay | No full-page overlay; orange/blue processing banners + order poll (~2 min) |
+| Tap NFC before payment step 2 / before draft | Agent log `ignored (not armed)` — no charge |
+| Tap after `create-draft` + arm | Checkout proceeds (`[NFC] tapped` in console) |
+| `create-draft` fails | Payment modal shows red error, returns to step 1 |
+| Pi agent offline after pay | Server keeps order `paid`, replays `job.start` on reconnect; UI polls order status up to ~2 min |
+| Duplicate `job.start` | Server skips orders that already have rows in `machine_job_events`; Pi skips if job already in memory |
+| Pi `AGENT_DB_PATH` wrong | Use writable path e.g. `./data/agent.db` on Pi (not `/data`) — see [`client/agent/.env.example`](client/agent/.env.example) |
+| Production Omise webhooks | Set `OMISE_WEBHOOK_SECRET` in root `.env` (see [.env.example](.env.example)) |
 
 ---
 
@@ -306,8 +334,9 @@ SERVER_SOCKET_URL=http://<IP-of-PC-running-docker-server>:8000
 | Indicator | Meaning |
 |-----------|---------|
 | Admin `machines.is_online` | **Pi agent** authenticated to Socket.IO (`machine_code` + `token`) |
-| Machine UI “internet reconnect” banner | **Kiosk** Socket to server (`KIOSK_SOCKET_SECRET`) — can be OK while Pi is offline |
-| Machine UI “connecting to hardware…” banner | Pi agent presence (`machine_presence` event) — added in current stack |
+| Machine UI full-screen gate (main screen) | **Pi agent** must be online (`machine_presence`) — blocks entire UI **before** payment only |
+| Machine UI “internet reconnect” banner | **Kiosk** Socket to server (`KIOSK_SOCKET_SECRET`) — processing modal only |
+| Machine UI “connecting to hardware…” banner | Pi agent presence during **processing** modal — post-payment flow |
 
 No rows in `machine_job_events` until the Pi receives `job.start` and sends `machine_event`.
 
@@ -353,6 +382,31 @@ If `8000`, `3000`, `3001`, `5000`, `3307`, or `8081` is taken, either stop the c
 ### Build failures on machine-ui
 
 - Ensure `NEXT_PUBLIC_OMISE_PUBLIC_KEY` is set at build time (passed as build arg in Compose). Empty key can break or warn depending on app code.
+
+### NFC tap does not start payment
+
+- Confirm `POST /nfc/arm` appears in agent logs when entering card tap screen (after draft is created).
+- Pi: `AGENT_DB_PATH` writable; UI on Pi uses `NEXT_PUBLIC_AGENT_BASE_URL=http://127.0.0.1:5000` (rebuild machine-ui if needed).
+- Do not tap before arm — logs should not stay on `ignored (not armed)` during an active payment attempt.
+
+### Paid but UI shows hardware error immediately
+
+- After ~60s without Socket events, UI switches to **order status polling** (blue banner) instead of failing instantly.
+- If Pi reconnects within ~2 minutes, order may move to `dispensing` / `completed` and UI shows success.
+
+### Machine UI stuck on “ตู้กำลังดำเนินการออเดอร์ก่อนหน้า”
+
+- Another kiosk session or a **page refresh** left an order in `paid` / `dispensing` (or recent `pending_payment`) in MySQL.
+- Wait until dispense completes, or fix the order status in Admin / DB.
+- Stale `pending_payment` (>5 min) is reconciled with Omise then cancelled on the next `active-order` check or sweeper run.
+- After reload during payment, use **ดำเนินการต่อ** on the recovery overlay or wait for reconcile on poll.
+
+### Machine UI stuck on “ระบบขัดข้องชั่วคราว” (cannot buy)
+
+- Expected when the **Pi agent** is not connected to Socket.IO — start `client` / `vending-pi` in Docker or run `python agent.py` on the Pi (Section 11).
+- Confirm server log: `machine connected: <MACHINE_CODE>`.
+- `MACHINE_CODE` / `MACHINE_TOKEN` must match Admin; kiosk `NEXT_PUBLIC_MACHINE_CODE` must match after rebuild.
+- If only the **internet** variant shows, fix kiosk Socket (`KIOSK_SOCKET_SECRET` + rebuild `machine-ui`).
 
 ---
 

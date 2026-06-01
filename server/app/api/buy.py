@@ -5,7 +5,12 @@ import hmac
 import hashlib
 from flask import Blueprint, request, jsonify
 from app.services.omise_service import OmisePaymentService
-from app.services.buy_service import InventoryService, AlreadyClaimedError, InsufficientStockError
+from app.services.buy_service import (
+    InventoryService,
+    AlreadyClaimedError,
+    InsufficientStockError,
+    PENDING_PAYMENT_BUSY_MINUTES,
+)
 from app.realtime.socketio_gateway import emit_job_start, is_machine_agent_online
 
 # Configure logger
@@ -34,7 +39,55 @@ class BuyController:
         self.blueprint.add_url_rule("/api/buy/mock-pay",       view_func=self.mock_pay,       methods=["POST"])
         self.blueprint.add_url_rule("/api/buy/cancel",         view_func=self.cancel_order,   methods=["POST"])
         self.blueprint.add_url_rule("/api/buy/status/<charge_id>", view_func=self.check_status, methods=["GET"])
+        self.blueprint.add_url_rule(
+            "/api/buy/active-order", view_func=self.get_active_order, methods=["GET"]
+        )
         self.blueprint.add_url_rule("/api/buy",                view_func=self.buy,            methods=["POST"])
+
+    _MACHINE_BUSY_MESSAGE = "ตู้กำลังดำเนินการออเดอร์ก่อนหน้า กรุณารอสักครู่"
+
+    def _reject_if_machine_busy(
+        self, machine_code: str, exclude_charge_id: str | None = None
+    ):
+        row = self.inventory_service.get_blocking_order(
+            machine_code, exclude_charge_id=exclude_charge_id
+        )
+        if not row:
+            return None
+        created = row.get("created_at")
+        return (
+            jsonify(
+                {
+                    "status": "ERROR",
+                    "code": "MACHINE_BUSY",
+                    "message": self._MACHINE_BUSY_MESSAGE,
+                    "blocking_charge_id": row.get("charge_id"),
+                    "blocking_status": row.get("status"),
+                    "blocking_created_at": created.isoformat() if created else None,
+                }
+            ),
+            409,
+        )
+
+    def get_active_order(self):
+        """คืนว่าตู้นี้มีออเดอร์ค้างที่ห้ามเปิดซื้อใหม่หรือไม่ (สำหรับ kiosk หลังรีเฟรช)."""
+        machine_code = request.args.get("machine_code") or request.args.get("machine_id") or "MP1-001"
+        exclude_charge_id = (request.args.get("exclude_charge_id") or "").strip() or None
+        row = self.inventory_service.get_blocking_order(
+            machine_code, exclude_charge_id=exclude_charge_id
+        )
+        if not row:
+            return jsonify({"busy": False, "machine_code": machine_code})
+        created = row.get("created_at")
+        return jsonify(
+            {
+                "busy": True,
+                "machine_code": machine_code,
+                "charge_id": row.get("charge_id"),
+                "status": row.get("status"),
+                "created_at": created.isoformat() if created else None,
+            }
+        )
 
     def _verify_webhook_signature(self, body: bytes) -> bool:
         """Verify Omise webhook HMAC-SHA256 signature.
@@ -104,18 +157,91 @@ class BuyController:
     # INTERNAL: Dispense orchestration
     # =============================================
 
+    def _hydrate_pending_order(self, charge_id: str, charge_obj=None) -> bool:
+        """โหลด cart เข้า pending_orders จาก DB หรือ Omise metadata (หลังรีสตาร์ท server / reload UI)."""
+        if charge_id in self.pending_orders:
+            return True
+        ctx = self.inventory_service.get_order_context_for_charge(charge_id)
+        if ctx:
+            self.pending_orders[charge_id] = ctx
+            logger.info(f"[Dispense] Recovered order from DB for charge: {charge_id}")
+            return True
+        if charge_obj:
+            metadata = getattr(charge_obj, "metadata", {}) or {}
+            if "cart" in metadata:
+                raw_cart = metadata["cart"]
+                cart = json.loads(raw_cart) if isinstance(raw_cart, str) else raw_cart
+                self.pending_orders[charge_id] = {
+                    "cart": cart,
+                    "machine_code": metadata.get("machine_code")
+                    or metadata.get("machine_id")
+                    or "MP1-001",
+                }
+                logger.info(
+                    f"[Dispense] Recovered order from Omise metadata for charge: {charge_id}"
+                )
+                return True
+        return False
+
+    def reconcile_pending_charge(self, charge_id: str) -> str:
+        """ซิงค์ pending_payment กับ Omise ก่อน cancel — คืน status ล่าสุดใน DB."""
+        db_status = self._get_db_status(charge_id)
+        if db_status != "pending_payment":
+            return db_status or "unknown"
+
+        age = self.inventory_service.get_order_age_minutes(charge_id)
+        is_stale = age is not None and age >= PENDING_PAYMENT_BUSY_MINUTES
+
+        if str(charge_id).startswith("draft_"):
+            if not is_stale:
+                return "pending_payment"
+            self.inventory_service.cancel_order(charge_id)
+            self.order_statuses.pop(charge_id, None)
+            self.pending_orders.pop(charge_id, None)
+            logger.info(f"[Reconcile] Cancelled stale draft {charge_id}")
+            return "cancelled"
+
+        try:
+            import omise
+
+            charge = omise.Charge.retrieve(charge_id)
+        except Exception as e:
+            logger.error(f"[Reconcile] Omise retrieve failed for {charge_id}: {e}")
+            if is_stale:
+                self.inventory_service.cancel_order(charge_id)
+                return self._get_db_status(charge_id) or "cancelled"
+            return "pending_payment"
+
+        omise_status = getattr(charge, "status", None)
+        if omise_status == "successful":
+            self._hydrate_pending_order(charge_id, charge)
+            self.order_statuses[charge_id] = "paid"
+            self._execute_dispense(charge_id, charge_obj=charge)
+            return self._get_db_status(charge_id) or "paid"
+
+        if omise_status in ("failed", "expired"):
+            self.inventory_service.update_order_status(charge_id, "payment_failed")
+            self.order_statuses[charge_id] = "payment_failed"
+            self.pending_orders.pop(charge_id, None)
+            return "payment_failed"
+
+        if is_stale:
+            self.inventory_service.cancel_order(charge_id)
+            self.order_statuses.pop(charge_id, None)
+            self.pending_orders.pop(charge_id, None)
+            logger.info(
+                f"[Reconcile] Cancelled stale pending Omise charge {charge_id} (omise={omise_status})"
+            )
+            return self._get_db_status(charge_id) or "cancelled"
+
+        return "pending_payment"
+
     def _execute_dispense(self, charge_id: str, charge_obj=None) -> bool:
         order = self.pending_orders.get(charge_id)
 
-        if not order and charge_obj:
-            # Recovery: ดึงข้อมูล cart จาก Omise metadata
-            metadata = getattr(charge_obj, 'metadata', {})
-            if 'cart' in metadata:
-                order = {
-                    "cart": json.loads(metadata['cart']),
-                    "machine_code": metadata.get('machine_code') or metadata.get('machine_id') or 'MP1-001'
-                }
-                logger.info(f"[Dispense] Recovered order from Omise metadata for charge: {charge_id}")
+        if not order:
+            self._hydrate_pending_order(charge_id, charge_obj)
+            order = self.pending_orders.get(charge_id)
 
         if not order:
             logger.warning(f"[Dispense] No pending order found for charge_id: {charge_id}")
@@ -281,6 +407,12 @@ class BuyController:
         draft_id     = data.get("draft_id")
         coupon_code  = data.get("coupon_code") or data.get("couponCode")
 
+        busy_resp = self._reject_if_machine_busy(
+            machine_code, exclude_charge_id=draft_id
+        )
+        if busy_resp:
+            return busy_resp
+
         cart = self._normalize_cart(raw_cart)
 
         payment_method = "qr_code" if payment_type in ("source", "truemoney") else "credit_card"
@@ -436,6 +568,10 @@ class BuyController:
         payment_method = data.get("payment_method", "credit_card")
         coupon_code = data.get("coupon_code") or data.get("couponCode")
 
+        busy_resp = self._reject_if_machine_busy(machine_code)
+        if busy_resp:
+            return busy_resp
+
         cart = self._normalize_cart(raw_cart)
 
         if not self.inventory_service.check_stock(machine_code, cart):
@@ -511,6 +647,14 @@ class BuyController:
         if charge_id not in self.order_statuses:
             return jsonify({"status": "ERROR", "message": "Unknown charge_id"}), 404
 
+        order = self.pending_orders.get(charge_id)
+        machine_code = (order or {}).get("machine_code") or "MP1-001"
+        busy_resp = self._reject_if_machine_busy(
+            machine_code, exclude_charge_id=charge_id
+        )
+        if busy_resp:
+            return busy_resp
+
         self.order_statuses[charge_id] = "paid"
         success = self._execute_dispense(charge_id)
 
@@ -519,27 +663,60 @@ class BuyController:
         else:
             return jsonify({"status": "paid", "message": "Payment marked as successful, but dispense had issues"}), 200
 
-    def check_status(self, charge_id):
-        """Poll Order Status — คืนค่าจาก DB เสมอ (single source of truth)"""
-        db_status = self._get_db_status(charge_id)
+    @staticmethod
+    def _qr_uri_from_omise_charge(charge) -> str | None:
+        try:
+            source = getattr(charge, "source", None)
+            scannable = getattr(source, "scannable_code", None) if source else None
+            if scannable and getattr(scannable, "image", None):
+                return scannable.image.download_uri
+        except Exception:
+            pass
+        return None
 
-        if db_status:
-            # ถ้า DB บอกว่ายังรอจ่าย แต่ Omise บอกว่าผ่านแล้ว → trigger dispense
-            if db_status == "pending_payment":
+    def _order_payment_method(self, charge_id: str) -> str | None:
+        try:
+            from app.db_config.db import get_db
+
+            db = get_db()
+            cur = db.cursor(dictionary=True)
+            try:
+                cur.execute(
+                    "SELECT payment_method FROM orders WHERE charge_id = %s",
+                    (charge_id,),
+                )
+                row = cur.fetchone()
+                return row["payment_method"] if row else None
+            finally:
+                cur.close()
+                db.close()
+        except Exception:
+            return None
+
+    def check_status(self, charge_id):
+        """Poll Order Status — reconcile ก่อน; คืน qr_code สำหรับกู้หน้าจอหลังรีเฟรช"""
+        db_status = self._get_db_status(charge_id)
+        payload: dict = {"status": db_status or "unknown"}
+
+        if db_status == "pending_payment":
+            reconciled = self.reconcile_pending_charge(charge_id)
+            db_status = self._get_db_status(charge_id) or reconciled
+            payload["status"] = db_status
+            if db_status == "pending_payment" and not str(charge_id).startswith("draft_"):
                 try:
                     import omise
-                    charge = omise.Charge.retrieve(charge_id)
-                    if charge.status == "successful":
-                        self.order_statuses[charge_id] = "paid"
-                        self._execute_dispense(charge_id, charge_obj=charge)
-                        return jsonify({"status": "paid"})
-                except Exception as e:
-                    logger.error(f"[CheckStatus] Error retrieving charge {charge_id}: {e}")
-            return jsonify({"status": db_status})
 
-        # Fallback: ดูจาก in-memory
-        status = self.order_statuses.get(charge_id, "unknown")
-        return jsonify({"status": status})
+                    charge = omise.Charge.retrieve(charge_id)
+                    qr_uri = self._qr_uri_from_omise_charge(charge)
+                    if qr_uri:
+                        payload["qr_code"] = qr_uri
+                except Exception as e:
+                    logger.error("[CheckStatus] QR recovery failed for %s: %s", charge_id, e)
+            pm = self._order_payment_method(charge_id)
+            if pm:
+                payload["payment_method"] = pm
+
+        return jsonify(payload)
 
     def _get_db_status(self, charge_id: str) -> str | None:
         """ดึง status จาก DB โดยตรง"""

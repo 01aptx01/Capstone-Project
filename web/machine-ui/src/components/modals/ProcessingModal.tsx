@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type { Product } from "../../types";
 import { PROCESS_STEPS } from "../../constants";
 
@@ -19,7 +19,32 @@ interface Props {
   isConnected: boolean;
   isAgentOnline: boolean;
   hasHardwareTelemetry: boolean;
+  processingStatusMessage?: string | null;
   onComplete: () => void;
+}
+
+/** แสดงแถบเดียว: อินเทอร์เน็ต > สถานะระบบ (poll) > กำลังเชื่อมต่อตู้ */
+type ProcessingBanner =
+  | { kind: "internet" }
+  | { kind: "status"; message: string }
+  | { kind: "hardware" };
+
+export function resolveProcessingBanner(params: {
+  isProcessCompleted: boolean;
+  isConnected: boolean;
+  processingStatusMessage?: string | null;
+  isAgentOnline: boolean;
+  hasHardwareTelemetry: boolean;
+}): ProcessingBanner | null {
+  if (params.isProcessCompleted) return null;
+  if (!params.isConnected) return { kind: "internet" };
+  if (params.processingStatusMessage) {
+    return { kind: "status", message: params.processingStatusMessage };
+  }
+  if (!params.isAgentOnline && !params.hasHardwareTelemetry) {
+    return { kind: "hardware" };
+  }
+  return null;
 }
 
 export default function ProcessingModal({
@@ -37,29 +62,35 @@ export default function ProcessingModal({
   isConnected,
   isAgentOnline,
   hasHardwareTelemetry,
+  processingStatusMessage,
   onComplete,
 }: Props) {
+  const isErrorState = isProcessCompleted && !isProcessSuccess;
+  const banner = resolveProcessingBanner({
+    isProcessCompleted,
+    isConnected,
+    processingStatusMessage,
+    isAgentOnline,
+    hasHardwareTelemetry,
+  });
+
   return (
     <div
-      className="processing-modal-box"
+      className={`processing-modal-box${isErrorState ? " processing-modal-box--error" : ""}`}
       onClick={(e) => e.stopPropagation()}
     >
-      {!isConnected && !isProcessCompleted && (
-        <div style={{ backgroundColor: '#ef4444', color: 'white', padding: '8px', textAlign: 'center', fontSize: '14px', borderRadius: '16px 16px 0 0' }}>
+      {banner?.kind === "internet" && (
+        <div className="processing-status-banner processing-status-banner--internet">
           ⚠️ สัญญาณอินเทอร์เน็ตขัดข้อง กำลังพยายามเชื่อมต่อใหม่...
         </div>
       )}
-      {isConnected && !isAgentOnline && !hasHardwareTelemetry && !isProcessCompleted && (
-        <div
-          style={{
-            backgroundColor: "#f59e0b",
-            color: "white",
-            padding: "8px",
-            textAlign: "center",
-            fontSize: "14px",
-            borderRadius: isConnected ? "16px 16px 0 0" : "0",
-          }}
-        >
+      {banner?.kind === "status" && (
+        <div className="processing-status-banner processing-status-banner--status">
+          {banner.message}
+        </div>
+      )}
+      {banner?.kind === "hardware" && (
+        <div className="processing-status-banner processing-status-banner--hardware">
           ⏳ กำลังเชื่อมต่อตู้ฮาร์ดแวร์...
         </div>
       )}
@@ -80,78 +111,78 @@ export default function ProcessingModal({
       </div>
 
       {/* ส่วนกลาง */}
-      <div className="processing-center-area">
-        {currentStep < 3 && (
-          <div className="countdown-timer">
-            {globalTimeLeft >= 60 ? (
-              <>
-                {Math.floor(globalTimeLeft / 60)}:
-                {String(globalTimeLeft % 60).padStart(2, "0")}
-                <span className="countdown-label">นาทีที่เหลือ</span>
-              </>
-            ) : (
-              <>
-                {globalTimeLeft}
-                <span className="countdown-label">วินาทีที่เหลือ</span>
-              </>
-            )}
-
-            {/* แสดงบอกสถานะคิว */}
-            {(currentStep === 1 || currentStep === 2) &&
-              queue.length > 0 &&
-              isDispensingItem && (
-                <div
-                  key={`status-${currentItemIndex}`}
-                  className="current-queue-status"
-                  style={{ animation: "fadeSwitch 0.4s ease-out forwards" }}
-                >
-                  ♨️ กำลังเสิร์ฟ: {queue[currentItemIndex]?.name}
-                </div>
-              )}
-          </div>
-        )}
-
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-          }}
-        >
-          <div
-            className={`bun-illustration ${currentStep === 3 ? "ready" : ""}`}
-          >
-            {isProcessCompleted && !isProcessSuccess ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ fontSize: '80px', marginBottom: '10px' }}>❌</div>
-                <div style={{ fontSize: '18px', color: '#64748b', textAlign: 'center', lineHeight: '1.5' }}>
-                  กรุณาติดต่อพนักงานเพื่อขอคืนเงิน<br/>
-                  โทร: 02-XXX-XXXX<br/>
-                  <br/>
-                  <span style={{ fontWeight: 'bold', color: '#ef4444' }}>รหัสอ้างอิง: {activeJobId || "-"}</span>
-                </div>
-              </div>
-            ) : currentStep === 3 ? (
-              <Image
-                src="/Pao.png"
-                alt="Completed Bun"
-                width={190}
-                height={190}
-              />
-            ) : (
-              <>
-                <span className="bun-smoke">♨️</span>
-                <Image
-                  src="/Pao.png"
-                  alt="Heating Bun"
-                  width={160}
-                  height={160}
-                />
-              </>
-            )}
+      {isErrorState ? (
+        <div className="processing-center-area processing-center-area--error">
+          <div className="processing-error-content">
+            <div className="processing-error-icon" aria-hidden>
+              <X size={72} strokeWidth={3} color="#ef4444" />
+            </div>
+            <p className="processing-error-line">กรุณาติดต่อพนักงานเพื่อขอคืนเงิน</p>
+            <p className="processing-error-line processing-error-phone">
+              โทร: 02-XXX-XXXX
+            </p>
+            <p className="processing-error-ref">
+              รหัสอ้างอิง: {activeJobId || "-"}
+            </p>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="processing-center-area">
+          {currentStep < 3 && (
+            <div className="countdown-timer">
+              {globalTimeLeft >= 60 ? (
+                <>
+                  {Math.floor(globalTimeLeft / 60)}:
+                  {String(globalTimeLeft % 60).padStart(2, "0")}
+                  <span className="countdown-label">นาทีที่เหลือ</span>
+                </>
+              ) : (
+                <>
+                  {globalTimeLeft}
+                  <span className="countdown-label">วินาทีที่เหลือ</span>
+                </>
+              )}
+
+              {(currentStep === 1 || currentStep === 2) &&
+                queue.length > 0 &&
+                isDispensingItem && (
+                  <div
+                    key={`status-${currentItemIndex}`}
+                    className="current-queue-status"
+                    style={{ animation: "fadeSwitch 0.4s ease-out forwards" }}
+                  >
+                    ♨️ กำลังเสิร์ฟ: {queue[currentItemIndex]?.name}
+                  </div>
+                )}
+            </div>
+          )}
+
+          <div className="processing-illustration-wrap">
+            <div
+              className={`bun-illustration ${currentStep === 3 ? "ready" : ""}`}
+            >
+              {currentStep === 3 ? (
+                <Image
+                  src="/Pao.png"
+                  alt="Completed Bun"
+                  width={190}
+                  height={190}
+                />
+              ) : (
+                <>
+                  <span className="bun-smoke">♨️</span>
+                  <Image
+                    src="/Pao.png"
+                    alt="Heating Bun"
+                    width={160}
+                    height={160}
+                  />
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ส่วนล่าง */}
       <div
@@ -220,8 +251,8 @@ export default function ProcessingModal({
           </div>
         ) : (
           <button
-            className="modal-confirm-btn"
-            style={{ fontSize: "24px", padding: "15px 50px", backgroundColor: !isProcessSuccess ? '#ef4444' : undefined }}
+            type="button"
+            className={`modal-confirm-btn${!isProcessSuccess ? " modal-confirm-btn--processing-error" : ""}`}
             onClick={onComplete}
           >
             {!isProcessSuccess ? "กลับสู่หน้าหลัก" : "หยิบสินค้าเรียบร้อยแล้ว"}

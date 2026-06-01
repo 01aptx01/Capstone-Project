@@ -1,5 +1,4 @@
 "use client";
-
 interface Props {
   onClose: () => void;
   onOpenUsage: () => void;

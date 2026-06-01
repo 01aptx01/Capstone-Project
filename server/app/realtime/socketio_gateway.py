@@ -156,12 +156,18 @@ def _get_pending_orders(machine_code: str) -> list[dict]:
     try:
         cur.execute(
             """
-            SELECT order_id, charge_id
-            FROM orders
-            WHERE machine_code = %s
-              AND status = 'paid'
-              AND charge_id IS NOT NULL
-            ORDER BY created_at ASC
+            SELECT o.order_id, o.charge_id
+            FROM orders o
+            WHERE o.machine_code = %s
+              AND o.status = 'paid'
+              AND o.charge_id IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1
+                FROM machine_job_events mje
+                WHERE mje.job_id = o.charge_id
+                LIMIT 1
+              )
+            ORDER BY o.created_at ASC
             LIMIT 20
             """,
             (machine_code,),
