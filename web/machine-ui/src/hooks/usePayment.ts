@@ -11,6 +11,12 @@ import {
   getPublicAgentBaseUrl,
   getPublicApiUrl,
 } from "../constants";
+import {
+  clearPendingPaymentSession,
+  paymentMethodFromDb,
+  savePendingPaymentSession,
+  type PendingPaymentSession,
+} from "../utils/paymentSession";
 
 const MACHINE_BUSY_DEFAULT_MSG =
   "ตู้กำลังดำเนินการออเดอร์ก่อนหน้า กรุณารอสักครู่";
@@ -40,7 +46,7 @@ interface UsePaymentOptions {
   appliedCoupon: AppliedCoupon | null; // คูปองที่ใช้
   machineCode: string; // รหัสของตู้กดสินค้า
   isAgentOnline: boolean; // Pi hardware agent connected to server
-  isMachineBusy: boolean; // ตู้มีออเดอร์ค้าง (paid/dispensing หรือ draft < 15 นาที)
+  isMachineBusy: boolean; // ตู้มีออเดอร์ค้าง (paid/dispensing หรือ pending < 5 นาที)
   refreshMachineBusy: () => void | Promise<void>;
   onPaymentSuccess: () => void; // ฟังก์ชันทำงานเมื่อชำระเงินเรียบร้อย
 }
@@ -108,6 +114,23 @@ export function usePayment({
     currentChargeIdRef.current = currentChargeId;
   }, [currentChargeId]);
 
+  useEffect(() => {
+    if (activeModal === "payment" && currentChargeId) {
+      savePendingPaymentSession(machineCode, currentChargeId, selectedPaymentMethod, {
+        qrCode: realQrCode,
+        cart: cartRef.current,
+        appliedCoupon: appliedCouponRef.current,
+        payableTotal: payableTotalRef.current,
+      });
+    }
+  }, [
+    activeModal,
+    currentChargeId,
+    machineCode,
+    selectedPaymentMethod,
+    realQrCode,
+  ]);
+
   // ล้างตัวยืนยันการยกเลิกอัตโนมัติหากออกจากโมดอล หรือย้อนกลับไปหน้าเลือกช่องทางชำระ (สเตป 1)
   useEffect(() => {
     if (activeModal !== "payment" || paymentStep === 1) {
@@ -124,6 +147,7 @@ export function usePayment({
     setRealQrCode(null);
     setCurrentChargeId(null);
     setPaymentErrorMsg(null);
+    clearPendingPaymentSession();
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
@@ -227,6 +251,7 @@ export function usePayment({
       pollingIntervalRef.current = null;
     }
     setRealQrCode(null);
+    clearPendingPaymentSession();
     onPaymentSuccessRef.current(); // เรียก Callback จบงานเข้าสู่ขั้นสะสมแต้มและสลับหน้าจออุ่น
   };
 
@@ -332,6 +357,103 @@ export function usePayment({
     }
   };
 
+  const handlePollStatusResult = async (
+    st: string,
+    qrCode?: string | null,
+  ): Promise<"continue" | "stop"> => {
+    if (qrCode) {
+      setRealQrCode(qrCode);
+    }
+    if (st === "paid" || st === "dispensing" || st === "completed") {
+      handlePaymentSuccessInternal();
+      return "stop";
+    }
+    if (
+      st === "dispense_failed" ||
+      st === "refunded" ||
+      st === "cancelled" ||
+      st === "canceled" ||
+      st === "payment_failed" ||
+      st === "failed"
+    ) {
+      setPaymentErrorMsg(
+        "การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่",
+      );
+      await cancelAndClosePaymentModal();
+      return "stop";
+    }
+    return "continue";
+  };
+
+  const hydratePaymentFromServer = async (chargeId: string) => {
+    const apiUrl = getPublicApiUrl();
+    try {
+      const res = await fetch(
+        `${apiUrl}/api/buy/status/${encodeURIComponent(chargeId)}`,
+      );
+      if (!res.ok) {
+        // #region agent log
+        fetch(
+          "http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-Debug-Session-Id": "190ecb",
+            },
+            body: JSON.stringify({
+              sessionId: "190ecb",
+              location: "usePayment.ts:hydratePaymentFromServer",
+              message: "status_http_error",
+              data: { chargeId, status: res.status },
+              hypothesisId: "H3",
+              timestamp: Date.now(),
+            }),
+          },
+        ).catch(() => {});
+        // #endregion
+        return;
+      }
+      const data = await res.json();
+      const st = String(data.status ?? "").toLowerCase();
+      // #region agent log
+      fetch(
+        "http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Debug-Session-Id": "190ecb",
+          },
+          body: JSON.stringify({
+            sessionId: "190ecb",
+            location: "usePayment.ts:hydratePaymentFromServer",
+            message: "status_ok",
+            data: {
+              chargeId,
+              st,
+              hasQr: Boolean(data.qr_code),
+              paymentMethod: data.payment_method ?? null,
+            },
+            hypothesisId: "H1-H3",
+            timestamp: Date.now(),
+          }),
+        },
+      ).catch(() => {});
+      // #endregion
+      const uiMethod =
+        paymentMethodFromDb(
+          typeof data.payment_method === "string" ? data.payment_method : null,
+        ) ?? null;
+      if (uiMethod) {
+        setSelectedPaymentMethod(uiMethod);
+      }
+      await handlePollStatusResult(st, data.qr_code ?? null);
+    } catch (e) {
+      console.error("[Frontend] hydratePaymentFromServer failed:", e);
+    }
+  };
+
   // - สอบถามตรวจสอบสถานะการชำระเงินออเดอร์นี้เป็นระยะๆ (Polling Loop)
   const pollPaymentStatus = (chargeId: string) => {
     if (pollingIntervalRef.current) {
@@ -382,29 +504,31 @@ export function usePayment({
             `[Frontend] Poll result for ${chargeId} [${attempts}/${PAYMENT_POLL_MAX_ATTEMPTS}]:`,
             data.status,
           );
-          
-          // ตรวจสอบว่าสเตตัสได้รับการยืนยันการจ่ายเงินเรียบร้อยแล้วหรือไม่
-          if (st === "paid" || st === "dispensing" || st === "completed") {
-            console.log("[Frontend] Payment confirmed via polling!");
-            stopPolling();
-            handlePaymentSuccessInternal();
-            return;
+          if (attempts === 1) {
+            // #region agent log
+            fetch(
+              "http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-Debug-Session-Id": "190ecb",
+                },
+                body: JSON.stringify({
+                  sessionId: "190ecb",
+                  location: "usePayment.ts:poll.tick",
+                  message: "first_poll",
+                  data: { chargeId, st, hasQr: Boolean(data.qr_code) },
+                  hypothesisId: "H3",
+                  timestamp: Date.now(),
+                }),
+              },
+            ).catch(() => {});
+            // #endregion
           }
-          
-          // ตรวจสอบหากยอดชำระล้มเหลว หรือมีการขอคืนเงินกะทันหัน หรือสินค้าขัดข้อง
-          if (
-            st === "dispense_failed" ||
-            st === "refunded" ||
-            st === "cancelled" ||
-            st === "canceled" ||
-            st === "payment_failed" ||
-            st === "failed"
-          ) {
+          const outcome = await handlePollStatusResult(st, data.qr_code ?? null);
+          if (outcome === "stop") {
             stopPolling();
-            setPaymentErrorMsg(
-              "การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่",
-            );
-            await cancelAndClosePaymentModal();
             return;
           }
         } else {
@@ -619,6 +743,71 @@ export function usePayment({
     setActiveModal("payment");
   };
 
+  const resumePaymentSession = async (session: PendingPaymentSession) => {
+    // #region agent log
+    fetch("http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "190ecb",
+      },
+      body: JSON.stringify({
+        sessionId: "190ecb",
+        location: "usePayment.ts:resumePaymentSession",
+        message: "resume_start",
+        data: {
+          chargeId: session.chargeId,
+          paymentMethod: session.paymentMethod,
+          hasStoredQr: Boolean(session.qrCode),
+        },
+        hypothesisId: "H1-H2",
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+    setPaymentErrorMsg(null);
+    setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
+    setCurrentChargeId(session.chargeId);
+    currentChargeIdRef.current = session.chargeId;
+    if (session.paymentMethod) {
+      setSelectedPaymentMethod(session.paymentMethod);
+    }
+    if (session.qrCode) {
+      setRealQrCode(session.qrCode);
+    }
+    setPaymentStep(2);
+    setActiveModal("payment");
+    await hydratePaymentFromServer(session.chargeId);
+    pollPaymentStatus(session.chargeId);
+    if (
+      session.paymentMethod === "card" &&
+      session.chargeId.startsWith("draft_")
+    ) {
+      void armNfcForDraft(session.chargeId);
+    }
+    void refreshMachineBusyRef.current?.();
+  };
+
+  const cancelPendingCharge = async (chargeId: string) => {
+    try {
+      const apiUrl = getPublicApiUrl();
+      await fetch(`${apiUrl}/api/buy/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ charge_id: chargeId }),
+      });
+    } catch (err) {
+      console.error("[Frontend] Cancel pending charge error:", err);
+    }
+    clearPendingPaymentSession();
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    setCurrentChargeId(null);
+    void refreshMachineBusyRef.current?.();
+  };
+
   // TIMERS & EFFECTS (ระบบเวลาหมดอายุธุรกรรม)
   // Timer: ทำหน้าที่หักคะแนนเวลานับถอยหลังของหน้าจอชำระเงินในทุกๆ วินาที
   useEffect(() => {
@@ -744,6 +933,8 @@ export function usePayment({
     handleProceedToTap,
     handleSimulateNfcTap,
     simulatePromptPaySuccess,
+    resumePaymentSession,
+    cancelPendingCharge,
   };
 }
 

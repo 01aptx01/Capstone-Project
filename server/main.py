@@ -63,25 +63,28 @@ class ServerApp:
             logger.info(f"✅ Omise Keys Loaded (Secret key ends with ...{omise_key[-4:]})")
 
     def _background_sweeper(self):
-        """Background job to sweep and auto-cancel zombie orders stuck in pending_payment."""
-        logger.info("🧹 [Sweeper] Background zombie order sweeper started")
+        """Reconcile then cancel stale pending_payment (Omise check before cancel)."""
+        from app.api.buy import buy_controller
+        from app.services.buy_service import InventoryService
+
+        inventory = InventoryService()
+        logger.info("🧹 [Sweeper] Pending-payment reconcile sweeper started")
         while True:
             try:
-                with get_db_cursor() as (db, cur):
-                    cur.execute(
-                        """
-                        UPDATE orders
-                        SET status = 'cancelled'
-                        WHERE status = 'pending_payment'
-                          AND created_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)
-                        """
+                charge_ids = inventory.list_stale_pending_charge_ids()
+                reconciled = 0
+                for charge_id in charge_ids:
+                    before = "pending_payment"
+                    after = buy_controller.reconcile_pending_charge(charge_id)
+                    if after != before:
+                        reconciled += 1
+                if reconciled:
+                    logger.info(
+                        "🧹 [Sweeper] Reconciled %s stale pending order(s)",
+                        reconciled,
                     )
-                    db.commit()
-                    if cur.rowcount > 0:
-                        logger.info(f"🧹 [Sweeper] Auto-cancelled {cur.rowcount} zombie order(s)")
             except Exception as e:
                 logger.error(f"❌ [Sweeper] Error in sweeper: {e}")
-            # Sleep for 5 minutes before next sweep
             eventlet.sleep(300)
 
     def _stale_paid_sweeper(self):

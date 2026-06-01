@@ -13,11 +13,10 @@ class AlreadyClaimedError(Exception):
     pass
 
 
-# สอดคล้อง background sweeper ใน server/main.py — draft เก่ากว่านี้ไม่บล็อกซื้อใหม่
-PENDING_PAYMENT_BUSY_MINUTES = 15
+# สอดคล้อง Omise QR expires_at (5 นาที) + kiosk payment countdown
+PENDING_PAYMENT_BUSY_MINUTES = 5
 # paid/dispensing ค้างเกินนี้ → sweeper ตั้ง dispense_failed (ปลดล็อก kiosk)
 PAID_DISPENSE_STALE_MINUTES = 45
-
 
 class InventoryService:
     def __init__(self, db_provider=None):
@@ -436,47 +435,131 @@ class InventoryService:
             cur.close()
             db.close()
 
-    def cancel_stale_pending_orders(self, machine_code: str) -> int:
-        """ยกเลิก pending_payment ที่เกินกำหนด — กัน edge case จ่ายทับ draft เก่า."""
+    def get_order_age_minutes(self, charge_id: str) -> int | None:
         db = self.get_db()
-        cur = db.cursor()
+        cur = db.cursor(dictionary=True)
         try:
             cur.execute(
                 """
-                UPDATE orders
-                SET status = 'cancelled'
-                WHERE machine_code = %s
-                  AND status = 'pending_payment'
-                  AND created_at < DATE_SUB(NOW(), INTERVAL %s MINUTE)
+                SELECT TIMESTAMPDIFF(MINUTE, created_at, NOW()) AS age_min
+                FROM orders
+                WHERE charge_id = %s
                 """,
-                (machine_code, PENDING_PAYMENT_BUSY_MINUTES),
+                (charge_id,),
             )
-            db.commit()
-            n = cur.rowcount
-            if n:
-                logger.info(
-                    "[InventoryService] Cancelled %s stale pending_payment order(s) for %s",
-                    n,
-                    machine_code,
-                )
-            return n
-        except Exception as e:
-            db.rollback()
-            logger.error(
-                "[InventoryService] cancel_stale_pending_orders error for %s: %s",
-                machine_code,
-                e,
-            )
-            return 0
+            row = cur.fetchone()
+            if not row or row.get("age_min") is None:
+                return None
+            return int(row["age_min"])
         finally:
             cur.close()
             db.close()
 
+    def get_order_context_for_charge(self, charge_id: str) -> dict | None:
+        """คืน { machine_code, cart: [{product_id, quantity}] } จาก DB สำหรับกู้ dispense หลังรีสตาร์ท."""
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT order_id, machine_code
+                FROM orders
+                WHERE charge_id = %s
+                """,
+                (charge_id,),
+            )
+            order = cur.fetchone()
+            if not order:
+                return None
+            cur.execute(
+                """
+                SELECT product_id, quantity
+                FROM order_items
+                WHERE order_id = %s
+                """,
+                (order["order_id"],),
+            )
+            items = cur.fetchall() or []
+            if not items:
+                return None
+            cart = [
+                {"product_id": int(i["product_id"]), "quantity": int(i["quantity"])}
+                for i in items
+            ]
+            return {"machine_code": order["machine_code"], "cart": cart}
+        finally:
+            cur.close()
+            db.close()
+
+    def list_pending_payment_orders(
+        self, machine_code: str | None = None
+    ) -> list[dict]:
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            if machine_code:
+                cur.execute(
+                    """
+                    SELECT charge_id, machine_code, status, created_at
+                    FROM orders
+                    WHERE machine_code = %s AND status = 'pending_payment'
+                    ORDER BY created_at DESC
+                    """,
+                    (machine_code,),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT charge_id, machine_code, status, created_at
+                    FROM orders
+                    WHERE status = 'pending_payment'
+                    ORDER BY created_at DESC
+                    """
+                )
+            return list(cur.fetchall() or [])
+        finally:
+            cur.close()
+            db.close()
+
+    def list_stale_pending_charge_ids(self) -> list[str]:
+        """pending_payment เกิน TTL — สำหรับ background sweeper."""
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT charge_id
+                FROM orders
+                WHERE status = 'pending_payment'
+                  AND created_at < DATE_SUB(NOW(), INTERVAL %s MINUTE)
+                """,
+                (PENDING_PAYMENT_BUSY_MINUTES,),
+            )
+            return [str(r["charge_id"]) for r in (cur.fetchall() or []) if r.get("charge_id")]
+        finally:
+            cur.close()
+            db.close()
+
+    def reconcile_pending_orders_for_machine(self, machine_code: str) -> int:
+        """เรียก Omise reconcile ก่อนตัดสิน busy — lazy import หลีก circular."""
+        from app.api.buy import buy_controller
+
+        changed = 0
+        for row in self.list_pending_payment_orders(machine_code):
+            cid = row.get("charge_id")
+            if not cid:
+                continue
+            before = row.get("status")
+            after = buy_controller.reconcile_pending_charge(str(cid))
+            if after != before:
+                changed += 1
+        return changed
+
     def get_blocking_order(
         self, machine_code: str, exclude_charge_id: str | None = None
     ) -> dict | None:
-        """ออเดอร์ที่ยังไม่ควรเปิดซื้อใหม่บนตู้นี้ (หลังเคลียร์ draft เก่าแล้ว)."""
-        self.cancel_stale_pending_orders(machine_code)
+        """ออเดอร์ที่ยังไม่ควรเปิดซื้อใหม่บนตู้นี้ (หลัง reconcile pending แล้ว)."""
+        self.reconcile_pending_orders_for_machine(machine_code)
         db = self.get_db()
         cur = db.cursor(dictionary=True)
         try:
