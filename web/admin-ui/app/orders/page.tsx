@@ -50,19 +50,27 @@ function OrdersPageClient() {
   }, [load]);
 
   const summary = useMemo(() => {
+    // สถานะที่เงินเข้าจริง (จ่ายสำเร็จ ไม่ถูก refund/ยกเลิก/ล้มเหลว)
+    // ไม่นับ dispense_failed (จ่ายสินค้าไม่สำเร็จ → ต้อง refund), refunded, cancelled, payment_failed
+    const SALE_STATUSES = new Set(["paid", "dispensing", "completed"]);
     let pending = 0;
     let completed = 0;
     let revenue = 0;
     for (const o of rawItems) {
       const s = o.status.toLowerCase();
-      revenue += Number(o.total_price) || 0;
+      if (SALE_STATUSES.has(s)) {
+        revenue += Number(o.total_price) || 0;
+      }
       if (
         s === "pending_payment" ||
         s === "cancelled" ||
         s === "payment_failed"
       )
         pending++;
-      if (s === "completed") completed++;
+      // "สำเร็จแล้ว" = order ที่จ่ายเงินสำเร็จจริง (เงินเข้าแล้ว ไม่ล้มเหลว)
+      // ใช้ชุดเดียวกับรายได้ — order ที่เงินเข้าแล้วแต่ยังอยู่ระหว่างจ่ายสินค้า
+      // (paid/dispensing) ก็ถือว่าสำเร็จ ไม่ต้องรอถึง completed
+      if (SALE_STATUSES.has(s)) completed++;
     }
     return { pending, completed, revenue };
   }, [rawItems]);

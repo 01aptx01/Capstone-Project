@@ -251,6 +251,13 @@ export async function updateMachineSlots(
   );
 }
 
+export async function deleteMachine(machineCode: string): Promise<void> {
+  await adminFetch<{ ok: boolean }>(`/machines/${encodeURIComponent(machineCode)}`, {
+    method: "DELETE",
+    skipGlobalErrorToast: true,
+  });
+}
+
 export async function createMachine(body: {
   machine_code: string;
   location?: string | null;
@@ -335,6 +342,13 @@ export async function createCoupon(body: {
   return adminFetch<ApiCoupon>("/coupons", {
     method: "POST",
     body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
+}
+
+export async function deleteCoupon(promotionId: number): Promise<void> {
+  await adminFetch<{ ok: boolean }>(`/coupons/${promotionId}`, {
+    method: "DELETE",
     skipGlobalErrorToast: true,
   });
 }

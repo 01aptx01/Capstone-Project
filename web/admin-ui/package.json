@@ -10,7 +10,7 @@
     "lint:theme": "node scripts/check-theme-tokens.mjs"
   },
   "dependencies": {
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "framer-motion": "^12.38.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",

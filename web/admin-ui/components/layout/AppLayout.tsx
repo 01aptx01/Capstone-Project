@@ -1,15 +1,17 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import { applyDarkModeClass, getStoredDarkMode } from "@/lib/theme";
+import { isAuthenticated } from "@/lib/auth";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
-  
+
   const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/verify-otp";
 
   useEffect(() => {
@@ -18,13 +20,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Simulate auth check/loading state on route change
-    setIsChecking(true);
-    const timer = setTimeout(() => {
+    // ─── Auth guard ───
+    // หน้า auth (login/register/otp) เข้าได้เสมอ
+    if (isAuthPage) {
       setIsChecking(false);
-    }, 400); // 400ms splash screen to prevent UI leaking
-    return () => clearTimeout(timer);
-  }, [pathname]);
+      return;
+    }
+    // หน้าอื่นๆ ต้องมี token — ถ้าไม่มีให้เด้งไปหน้า login
+    if (!isAuthenticated()) {
+      router.replace("/login");
+      return; // คง splash ไว้ระหว่างเด้ง (กัน UI รั่ว)
+    }
+    setIsChecking(false);
+  }, [pathname, isAuthPage, router]);
 
   if (isChecking) {
     return (
