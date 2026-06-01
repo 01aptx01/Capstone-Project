@@ -1,17 +1,16 @@
 "use client";
 import React, { useCallback, useEffect, useState } from "react";
-import NumericKeyboard from "./NumericKeyboard";
-import { getPublicApiUrl, MAX_COUPON_CODE_LENGTH } from "../constants";
+import { getPublicApiUrl, MAX_COUPON_CODE_LENGTH, NUMPAD_COUNTDOWN_SECONDS } from "../constants";
 
 export type AppliedCoupon = {
-  code: string; // รหัสคูปอง
-  promotion_id: number; // ไอดีระบุแคมเปญโปรโมชั่น
-  type: string; // ประเภทคูปอง (เช่น ส่วนลดเงินสด หรือ แลกแต้ม)
-  subtotal_thb: number; // ยอดราคารวมเดิมก่อนหักส่วนลด
-  discount_thb: number; // จำนวนเงินส่วนลดที่ได้หักไป
-  final_thb: number; // ยอดเงินหลังลดแล้ว
-  points_cost: number; // แต้มสะสมที่ต้องชำระแลกสิทธิ์
-  label_th: string; // ตำอธิบายส่วนลด
+  code: string;
+  promotion_id: number;
+  type: string;
+  subtotal_thb: number;
+  discount_thb: number;
+  final_thb: number;
+  points_cost: number;
+  label_th: string;
 };
 
 type Props = {
@@ -22,8 +21,6 @@ type Props = {
   cart: { product_id: number; quantity: number }[];
 };
 
-// CouponModal Component
-// - โมดอลป๊อปอัปให้ลูกค้ากรอกรหัสคูปองส่วนลด
 export default function CouponModal({
   open,
   onClose,
@@ -36,49 +33,54 @@ export default function CouponModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<AppliedCoupon | null>(null);
+  const [countdown, setCountdown] = useState(NUMPAD_COUNTDOWN_SECONDS);
 
-  // ล้างค่าฟิลด์และตัวแปรต่างๆ ทุกครั้งเมื่อมีการเปิดหน้าต่างนี้ใหม่
   useEffect(() => {
-    if (open) {
-      setStep("input");
-      setCode("");
-      setError(null);
-      setPreview(null);
-    }
+    if (!open) return;
+    setStep("input");
+    setCode("");
+    setError(null);
+    setPreview(null);
+    setCountdown(NUMPAD_COUNTDOWN_SECONDS);
   }, [open]);
 
-  const handleKey = useCallback(
-    (char: string) => {
-      setError(null);
-      setCode((prev) => {
-        if (prev.length >= MAX_COUPON_CODE_LENGTH) return prev;
-        return prev + char;
-      });
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!open) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => Math.max(0, prev - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [open]);
+
+  useEffect(() => {
+    if (open && countdown === 0) {
+      onClose();
+    }
+  }, [open, countdown, onClose]);
+
+  const handleKey = useCallback((char: string) => {
+    setError(null);
+    setCode((prev) => {
+      if (prev.length >= MAX_COUPON_CODE_LENGTH) return prev;
+      return prev + char;
+    });
+  }, []);
 
   const handleDelete = useCallback(() => {
     setError(null);
     setCode((prev) => prev.slice(0, -1));
   }, []);
 
-  if (!open) return null;
-
-  const apiUrl = getPublicApiUrl();
-  const displayCode = code || "เช่น 123456";
-  const isPlaceholder = !code;
-
-  // ฟังก์ชันส่งรหัสที่ลูกค้าพิมพ์ไปตรวจสอบความถูกต้องกับ API Backend
   const handleCheck = async () => {
     setError(null);
-    const trimmed = code.trim().toUpperCase();
+    const trimmed = code.trim();
     if (!trimmed) {
       setError("กรุณากรอกรหัสคูปอง");
       return;
     }
     setLoading(true);
     try {
+      const apiUrl = getPublicApiUrl();
       const res = await fetch(`${apiUrl}/api/buy/validate-coupon`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,14 +92,12 @@ export default function CouponModal({
       });
       const data = await res.json();
 
-      // กรณีคูปองไม่ตรงตามเงื่อนไข (เช่น รหัสหมดอายุ สินค้าไม่ตรงหมวดหมู่ หรือสิทธิ์เต็ม)
       if (!data.valid) {
         setError(data.message || "ไม่สามารถใช้คูปองนี้ได้");
         return;
       }
 
-      // กรณีผ่านเกณฑ์
-      const next: AppliedCoupon = {
+      setPreview({
         code: data.code,
         promotion_id: data.promotion_id,
         type: data.type,
@@ -106,10 +106,9 @@ export default function CouponModal({
         final_thb: data.final_thb,
         points_cost: data.points_cost ?? 0,
         label_th: data.label_th,
-      };
-
-      setPreview(next);
+      });
       setStep("confirm");
+      setError(null);
     } catch {
       setError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ");
     } finally {
@@ -124,39 +123,78 @@ export default function CouponModal({
     }
   };
 
-  return (
-    <div className="coupon-modal-box" onClick={(e) => e.stopPropagation()}>
-      <button type="button" className="modal-close-btn" onClick={onClose} aria-label="ปิด">&times;</button>
-      <div className="coupon-modal-title">ใช้คูปองส่วนลด</div>
+  if (!open) return null;
 
-      {/* ขั้นตอนการกรอกรหัส */}
+  const displayCode = code || "กรอกรหัสคูปอง";
+
+  return (
+    <div className="numpad-modal-box" onClick={(e) => e.stopPropagation()}>
+      <button type="button" className="timeout-close-btn" onClick={onClose}>
+        <span>{countdown}</span>
+        <span className="points-close-icon">&times;</span>
+      </button>
+
       {step === "input" && (
-        <>
-          <p className="coupon-modal-hint">แตะตัวเลขด้านล่างเพื่อกรอกรหัสคูปอง</p>
+        <div className="numpad-modal-body">
+          <div className="numpad-title">ใช้คูปองส่วนลด</div>
+          {error && (
+            <div
+              className="numpad-modal-error kiosk-alert kiosk-alert--error"
+              role="alert"
+            >
+              {error}
+            </div>
+          )}
           <div
-            className={`coupon-code-display${isPlaceholder ? " coupon-code-display--placeholder" : ""}`}
+            className="phone-display"
+            style={{ opacity: code ? 1 : 0.6 }}
             aria-live="polite"
           >
             {displayCode}
           </div>
-          {error && (
-            <div className="coupon-modal-error kiosk-alert kiosk-alert--error" role="alert">
-              {error}
-            </div>
-          )}
-          <NumericKeyboard
-            disabled={loading}
-            loading={loading}
-            onKey={handleKey}
-            onDelete={handleDelete}
-            onConfirm={() => void handleCheck()}
-          />
-        </>
+          <div className="numpad-grid">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+              <button
+                key={num}
+                type="button"
+                className="numpad-btn"
+                disabled={loading}
+                onClick={() => handleKey(String(num))}
+              >
+                {num}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="numpad-btn action"
+              disabled={loading}
+              onClick={handleDelete}
+            >
+              DEL
+            </button>
+            <button
+              type="button"
+              className="numpad-btn"
+              disabled={loading}
+              onClick={() => handleKey("0")}
+            >
+              0
+            </button>
+            <button
+              type="button"
+              className="numpad-btn action"
+              disabled={loading}
+              onClick={() => void handleCheck()}
+            >
+              {loading ? "..." : "OK"}
+            </button>
+          </div>
+        </div>
       )}
 
-      {/* ขั้นตอนการแสดงสิทธิ์และให้ลูกค้ายืนยัน */}
       {step === "confirm" && preview && (
-        <>
+        <div className="numpad-modal-body">
+          <div className="numpad-title">ยืนยันใช้คูปอง</div>
           <div className="coupon-preview-card coupon-preview-card--simple">
             <div className="coupon-preview-code">{preview.code}</div>
             <p className="coupon-preview-label">{preview.label_th}</p>
@@ -169,15 +207,20 @@ export default function CouponModal({
               onClick={() => {
                 setStep("input");
                 setPreview(null);
+                setError(null);
               }}
             >
               กลับไปแก้รหัส
             </button>
-            <button type="button" className="coupon-modal-btn primary" onClick={confirmApply}>
+            <button
+              type="button"
+              className="coupon-modal-btn primary"
+              onClick={confirmApply}
+            >
               ยืนยันใช้คูปอง
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

@@ -297,7 +297,7 @@ export default function VendingPage() {
                    payment.cancelAndClosePaymentModal();
                  }
                }
-               : (activeModal === "numpad" || activeModal === "points_result" || activeModal === "processing")
+               : (activeModal === "numpad" || activeModal === "points_result" || activeModal === "processing" || activeModal === "coupon")
                  ? undefined // ห้ามคลิกพื้นหลังสีดำเพื่อกดออกเด็ดขาด ป้องกัน Flow ชำระเงิน/อุ่นอาหารล่ม
                  : () => setActiveModal("none")
            }
