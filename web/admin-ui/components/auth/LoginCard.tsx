@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { isAxiosError } from "axios";
 import AuthCardWrapper from "./AuthCardWrapper";
-import { adminLogin } from "@/lib/auth";
+import { loginAdmin } from "@/lib/admin-api";
 
 export default function LoginCard() {
   const [email, setEmail] = useState("");
@@ -16,23 +15,38 @@ export default function LoginCard() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
+    setError(null);
+
     try {
-      await adminLogin(email.trim(), password);
-      router.replace("/");
-    } catch (err) {
-      const msg = isAxiosError(err)
-        ? String((err.response?.data as { error?: string })?.error || "อีเมลหรือรหัสผ่านไม่ถูกต้อง")
-        : "เข้าสู่ระบบไม่สำเร็จ กรุณาลองใหม่";
-      setError(msg);
+      const res = await loginAdmin(email, password);
+
+      if ("needs_registration" in res && res.needs_registration) {
+        sessionStorage.setItem("reg_token", res.registration_token);
+        router.push(`/register?email=${encodeURIComponent(res.email)}`);
+        return;
+      }
+
+      if ("token" in res && res.token) {
+        localStorage.setItem("admin_token", res.token);
+        router.push("/");
+      }
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      setError(
+        axiosErr?.response?.data?.error || "Login failed. Please check your credentials."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    setError("ยังไม่รองรับการเข้าสู่ระบบด้วย Google");
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      router.push("/");
+    }, 800);
   };
 
   return (

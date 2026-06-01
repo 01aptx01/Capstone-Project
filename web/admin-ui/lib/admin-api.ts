@@ -451,3 +451,81 @@ export async function resolveAlert(eventId: number): Promise<ResolveAlertRespons
   );
   return data;
 }
+
+// ── Admin Auth ──────────────────────────────────────────────────────────────
+
+export type AdminUserInfo = {
+  id: number;
+  email: string;
+  first_name: string | null;
+  last_name: string | null;
+  position: string | null;
+  phone: string | null;
+  is_active: boolean;
+  created_at: string | null;
+};
+
+export type LoginResponse =
+  | { token: string; user: AdminUserInfo }
+  | { needs_registration: true; registration_token: string; email: string };
+
+export async function loginAdmin(
+  email: string,
+  password: string
+): Promise<LoginResponse> {
+  const { data } = await api.post<LoginResponse>(
+    "/api/admin/auth/login",
+    { email, password },
+    { skipGlobalErrorToast: true }
+  );
+  return data;
+}
+
+export async function registerAdmin(body: {
+  registration_token: string;
+  new_password: string;
+  first_name: string;
+  last_name: string;
+  position: string;
+  phone: string;
+}): Promise<{ token: string; user: AdminUserInfo }> {
+  const { data } = await api.post<{ token: string; user: AdminUserInfo }>(
+    "/api/admin/auth/register",
+    body,
+    { skipGlobalErrorToast: true }
+  );
+  return data;
+}
+
+export async function inviteAdmin(
+  email: string,
+  temp_password: string
+): Promise<{ admin: AdminUserInfo; invite_link: string; message: string }> {
+  return adminFetch<{ admin: AdminUserInfo; invite_link: string; message: string }>(
+    "/auth/invite",
+    {
+      method: "POST",
+      body: JSON.stringify({ email, temp_password }),
+      skipGlobalErrorToast: true,
+    }
+  );
+}
+
+export async function revokeAdmin(
+  adminId: number
+): Promise<{ ok: boolean; message: string }> {
+  return adminFetch<{ ok: boolean; message: string }>(
+    `/auth/revoke/${adminId}`,
+    { method: "DELETE", skipGlobalErrorToast: true }
+  );
+}
+
+export async function getMe(): Promise<{ user: AdminUserInfo }> {
+  return adminFetch<{ user: AdminUserInfo }>("/auth/me");
+}
+
+export type AdminListItem = AdminUserInfo & { status: string };
+
+export async function listAdmins(): Promise<{ admins: AdminListItem[] }> {
+  return adminFetch<{ admins: AdminListItem[] }>("/auth/admins");
+}
