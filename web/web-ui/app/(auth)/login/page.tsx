@@ -152,14 +152,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col relative">
       <div
-        className="absolute top-0 left-0 w-full h-[42vh] bg-cover bg-center bg-no-repeat"
+        className="absolute top-0 left-0 w-full h-full bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/BG.png')" }}
       >
         <div className="absolute inset-0 bg-stone-900/55 backdrop-blur-[2px]" />
       </div>
 
-      <div className="relative flex-1 flex flex-col items-center justify-end md:justify-center pt-[28vh] z-10 w-full max-w-lg mx-auto px-4 pb-6 md:pb-0">
-        <div className="w-full bg-surface rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-lg pt-24 px-6 pb-8 md:pb-12 relative flex flex-col min-h-[58vh] md:min-h-0 border border-border/50">
+      <div className="relative flex-1 flex flex-col items-center justify-end md:justify-center pt-[28vh] z-10 w-full max-w-lg mx-auto px-0 md:px-4 pb-0 md:pb-0">
+        <div className="w-full bg-surface rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-lg pt-24 px-6 pb-8 md:pb-12 relative flex flex-col min-h-[58vh] md:min-h-0 border-t border-x-0 border-b-0 md:border border-border/50">
           <div className="absolute -top-[65px] left-1/2 -translate-x-1/2 w-[130px] h-[130px] bg-surface rounded-full p-2 shadow-sm border-4 border-border">
             <div className="w-full h-full bg-brand rounded-full flex items-center justify-center p-1 overflow-hidden">
               <img
