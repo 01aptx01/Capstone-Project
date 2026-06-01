@@ -119,47 +119,51 @@ export function usePayment({
     closePaymentModal();
   };
 
-  // NFC ARM/DISARM (Hardware reader)
-  // - Arm only while the UI is actively waiting for a card tap (card + step 2).
-  // - Bind the tap to the current draft_id to prevent stale taps from paying the next order.
-  useEffect(() => {
-    const shouldArm =
-      activeModal === "payment" &&
-      selectedPaymentMethod === "card" &&
-      paymentStep === 2;
-
-    const draftId = currentChargeIdRef.current;
+  // NFC ARM/DISARM (Hardware reader) — no cleanup disarm on draft_id change (avoids race window).
+  const armNfcForDraft = async (draftId: string) => {
     const agentBase = getPublicAgentBaseUrl();
-    if (!shouldArm || !draftId) return;
-
-    const arm = async () => {
-      try {
-        const res = await fetch(`${agentBase}/nfc/arm`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ draft_id: draftId, ttl_ms: PAYMENT_COUNTDOWN_SECONDS * 1000 }),
-        });
-        if (res.ok) {
-          console.log(`[NFC] armed for ${String(draftId).slice(0, 12)}…`);
-        } else {
-          console.warn("[NFC] arm failed:", res.status);
-        }
-      } catch {
-        // ignore — if agent isn't reachable, polling will just never detect taps
-        console.warn("[NFC] arm failed: agent unreachable");
+    try {
+      const res = await fetch(`${agentBase}/nfc/arm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          draft_id: draftId,
+          ttl_ms: PAYMENT_COUNTDOWN_SECONDS * 1000,
+        }),
+      });
+      if (res.ok) {
+        console.log(`[NFC] armed for ${String(draftId).slice(0, 12)}…`);
+      } else {
+        console.warn("[NFC] arm failed:", res.status);
       }
-    };
-    void arm();
+    } catch {
+      console.warn("[NFC] arm failed: agent unreachable");
+    }
+  };
 
-    return () => {
-      // Best-effort disarm to clear pending tap when leaving the screen.
-      void fetch(`${agentBase}/nfc/disarm`, { method: "POST" })
-        .then((r) => {
-          if (r.ok) console.log("[NFC] disarmed");
-        })
-        .catch(() => {});
-    };
-  }, [activeModal, selectedPaymentMethod, paymentStep, currentChargeId]);
+  const disarmNfc = async () => {
+    const agentBase = getPublicAgentBaseUrl();
+    try {
+      const res = await fetch(`${agentBase}/nfc/disarm`, { method: "POST" });
+      if (res.ok) console.log("[NFC] disarmed");
+    } catch {
+      // agent offline
+    }
+  };
+
+  const shouldArmNfc =
+    activeModal === "payment" &&
+    selectedPaymentMethod === "card" &&
+    paymentStep === 2;
+
+  useEffect(() => {
+    if (!shouldArmNfc) {
+      void disarmNfc();
+      return;
+    }
+    if (!currentChargeId) return;
+    void armNfcForDraft(currentChargeId);
+  }, [shouldArmNfc, currentChargeId]);
 
   // - จัดการเมื่อผู้ใช้กดปุ่มกากบาทหรือกดปิดหน้าชำระเงิน
   // - หากสแกน QR ค้างอยู่ (สเตป 2) จะเปิดหน้าต่างถามยืนยันยกเลิก
@@ -446,6 +450,8 @@ export function usePayment({
       const data = await response.json();
       if (data.charge_id) {
         setCurrentChargeId(data.charge_id); // บันทึกบิลฉบับร่าง (Draft ID)
+        // Arm immediately (do not wait for effect) so taps are not ignored as "not armed".
+        void armNfcForDraft(data.charge_id);
       }
     } catch (err) {
       console.error("[Frontend] Error creating draft order:", err);
