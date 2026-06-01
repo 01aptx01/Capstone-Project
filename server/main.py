@@ -63,25 +63,53 @@ class ServerApp:
             logger.info(f"✅ Omise Keys Loaded (Secret key ends with ...{omise_key[-4:]})")
 
     def _background_sweeper(self):
-        """Background job to sweep and auto-cancel zombie orders stuck in pending_payment."""
-        logger.info("🧹 [Sweeper] Background zombie order sweeper started")
+        """Reconcile then cancel stale pending_payment (Omise check before cancel)."""
+        from app.api.buy import buy_controller
+        from app.services.buy_service import InventoryService
+
+        inventory = InventoryService()
+        logger.info("🧹 [Sweeper] Pending-payment reconcile sweeper started")
         while True:
             try:
-                with get_db_cursor() as (db, cur):
-                    cur.execute(
-                        """
-                        UPDATE orders
-                        SET status = 'cancelled'
-                        WHERE status = 'pending_payment'
-                          AND created_at < DATE_SUB(NOW(), INTERVAL 15 MINUTE)
-                        """
+                charge_ids = inventory.list_stale_pending_charge_ids()
+                reconciled = 0
+                for charge_id in charge_ids:
+                    before = "pending_payment"
+                    after = buy_controller.reconcile_pending_charge(charge_id)
+                    if after != before:
+                        reconciled += 1
+                if reconciled:
+                    logger.info(
+                        "🧹 [Sweeper] Reconciled %s stale pending order(s)",
+                        reconciled,
                     )
-                    db.commit()
-                    if cur.rowcount > 0:
-                        logger.info(f"🧹 [Sweeper] Auto-cancelled {cur.rowcount} zombie order(s)")
             except Exception as e:
                 logger.error(f"❌ [Sweeper] Error in sweeper: {e}")
-            # Sleep for 5 minutes before next sweep
+            eventlet.sleep(300)
+
+    def _stale_paid_sweeper(self):
+        """Mark paid/dispensing orders stuck too long as dispense_failed and trigger refund."""
+        import threading as _t
+
+        from app.realtime.socketio_gateway import _auto_refund
+        from app.services.buy_service import InventoryService
+
+        inventory = InventoryService()
+        logger.info("⏱️ [Sweeper] Stale paid/dispensing order sweeper started")
+        while True:
+            try:
+                charge_ids = inventory.fail_stale_paid_orders()
+                for charge_id in charge_ids:
+                    _t.Thread(
+                        target=_auto_refund, args=(charge_id,), daemon=True
+                    ).start()
+                if charge_ids:
+                    logger.info(
+                        "⏱️ [Sweeper] Failed %s stale paid/dispensing order(s), refund queued",
+                        len(charge_ids),
+                    )
+            except Exception as e:
+                logger.error("❌ [Sweeper] Error in stale paid sweeper: %s", e)
             eventlet.sleep(300)
 
     def _user_maintenance_sweeper(self):
@@ -142,6 +170,7 @@ class ServerApp:
 
         # Start all background sweepers
         eventlet.spawn(self._background_sweeper)
+        eventlet.spawn(self._stale_paid_sweeper)
         eventlet.spawn(self._user_maintenance_sweeper)
         eventlet.spawn(self._events_cleanup_sweeper)
 

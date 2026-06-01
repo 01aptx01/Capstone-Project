@@ -1,7 +1,8 @@
 "use client";
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import type { Product, CartItem } from "../types";
-import { MAX_CART_ITEMS, getPublicApiUrl } from "../constants";
+import { MAX_CART_ITEMS, getPublicApiUrl, useMockProducts } from "../constants";
+import { MOCK_PRODUCTS } from "../data/mockProducts";
 import { clampCartToCatalog } from "../utils/cart";
 import { estimateApproxWaitSeconds } from "../utils/dispenseSchedule";
 
@@ -38,6 +39,13 @@ export function useCart({ machineCode, onCartLimitReached, onStockLimitReached }
       const silent = options?.silent ?? false;
       if (!silent) setIsLoadingProducts(true);
       try {
+        if (useMockProducts()) {
+          setProducts(MOCK_PRODUCTS);
+          setCart((prev) => clampCartToCatalog(prev, MOCK_PRODUCTS));
+          console.info("[useCart] Using mock products (NEXT_PUBLIC_USE_MOCK_PRODUCTS)");
+          return;
+        }
+
         const apiUrl = getPublicApiUrl();
         const response = await fetch(
           `${apiUrl}/api/products?machine_code=${encodeURIComponent(machineCode)}`,

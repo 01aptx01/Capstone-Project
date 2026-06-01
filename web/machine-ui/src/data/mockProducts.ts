@@ -1,0 +1,55 @@
+import type { Product } from "../types";
+
+/** สินค้าจำลองสำหรับแก้ UI โดยไม่ต้องรัน Flask/MySQL */
+export const MOCK_PRODUCTS: Product[] = [
+  {
+    id: 9001,
+    name: "ข้าวหมูแดง (Mock)",
+    desc: "อุ่นร้อนพร้อมทาน — ข้อมูลจำลอง",
+    price: 45,
+    heatingTime: 12,
+    image: "/QR_code-fake.svg",
+    category: "meat",
+    stock: 8,
+  },
+  {
+    id: 9002,
+    name: "สลัดผักโขม (Mock)",
+    desc: "เมนูมังสวิรัติ",
+    price: 39,
+    heatingTime: 10,
+    image: "/QR_code-fake.svg",
+    category: "vegetarian",
+    stock: 5,
+  },
+  {
+    id: 9003,
+    name: "บราวนี่ช็อกโกแลต (Mock)",
+    desc: "ของหวาน",
+    price: 35,
+    heatingTime: 8,
+    image: "/QR_code-fake.svg",
+    category: "sweet",
+    stock: 12,
+  },
+  {
+    id: 9004,
+    name: "ก๋วยเตี๋ยวต้มยำ (Mock)",
+    desc: "เผ็ดกลาง อุ่น 90 วิ",
+    price: 55,
+    heatingTime: 18,
+    image: "/QR_code-fake.svg",
+    category: "meat",
+    stock: 3,
+  },
+  {
+    id: 9005,
+    name: "สินค้าหมดสต็อก (Mock)",
+    desc: "ทดสอบปุ่ม disabled",
+    price: 25,
+    heatingTime: 5,
+    image: "/QR_code-fake.svg",
+    category: "vegetarian",
+    stock: 0,
+  },
+];

@@ -33,47 +33,19 @@ export default function PointsResultModal({
 
       {memberError ? (
         <>
-          <div className="points-title" style={{ color: "#ef4444" }}>
-            ❌ ไม่พบสมาชิก
-          </div>
-          <div
-            className="points-disclaimer"
-            style={{ marginTop: "16px", fontSize: "16px" }}
-          >
-            {memberError}
-          </div>
+          <div className="points-member-error-title">ไม่พบสมาชิก</div>
+          <p className="points-member-error-msg">{memberError}</p>
         </>
       ) : (
         <>
           {isNewMember && (
-            <div
-              style={{
-                background: "linear-gradient(135deg, #f89025, #f59e0b)",
-                color: "white",
-                borderRadius: "20px",
-                padding: "6px 18px",
-                fontSize: "14px",
-                fontWeight: "bold",
-                marginBottom: "8px",
-              }}
-            >
-              ✨ ยินดีต้อนรับสมาชิกใหม่!
-            </div>
+            <div className="points-new-member-badge">✨ ยินดีต้อนรับสมาชิกใหม่!</div>
           )}
           <div className="points-title">
             {isAfterPayment ? "ได้รับแต้ม" : "คะแนนสะสมปัจจุบัน"}
           </div>
           {isAfterPayment && earnedPoints > 0 && (
-            <div
-              style={{
-                color: "#22c55e",
-                fontSize: "22px",
-                fontWeight: "bold",
-                marginBottom: "4px",
-              }}
-            >
-              +{earnedPoints} แต้ม
-            </div>
+            <div className="points-earned-delta">+{earnedPoints} แต้ม</div>
           )}
           <div className="points-value">{memberPoints ?? 0}</div>
           <div className="points-unit">คะแนน</div>
