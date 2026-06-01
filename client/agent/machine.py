@@ -435,6 +435,13 @@ class NfcPaymentGate:
 		self._lock = threading.RLock()  # Use RLock to prevent deadlock
 		self._last_tap_at = 0.0
 		self._debounce_interval = 2.0 # Seconds to block after successful tap
+		# Arm/disarm state — prevents "stale tap" leaking into the next payment attempt.
+		self._armed: bool = False
+		self._armed_for: Optional[str] = None
+		self._armed_until: float = 0.0
+		self._last_tap_for: Optional[str] = None
+		self._last_tap_tag: Optional[str] = None
+		self._last_tap_ts: float = 0.0
 		
 		self._reader = None
 		self._adafruit_reader = None
@@ -517,6 +524,16 @@ class NfcPaymentGate:
 		now = time.time()
 		should_tap = False
 		with self._lock:
+			# Ignore taps unless we're armed for an active payment flow.
+			# This prevents "tap now, pay later" behavior when the UI isn't ready yet.
+			if not self._armed or (self._armed_until and now > self._armed_until):
+				# Auto-disarm on expiry to avoid confusion.
+				if self._armed and self._armed_until and now > self._armed_until:
+					self._armed = False
+					self._armed_for = None
+					self._armed_until = 0.0
+				logger.info(f"[Machine] NFC tag {tag_id} ignored (not armed)")
+				return
 			if now - self._last_tap_at < self._debounce_interval:
 				logger.info(f"[Machine] NFC tag {tag_id} ignored (debounce {self._debounce_interval}s, wait {self._debounce_interval - (now - self._last_tap_at):.1f}s more)")
 			else:
@@ -525,21 +542,90 @@ class NfcPaymentGate:
 				should_tap = True
 		# Call tap() OUTSIDE the lock to prevent deadlock
 		if should_tap:
-			self.tap()
+			self.tap(tag_id=tag_id)
 
-	def tap(self) -> None:
+	def tap(self, *, tag_id: Optional[str] = None) -> None:
 		with self._lock:
+			self._last_tap_ts = time.time()
+			self._last_tap_tag = tag_id
+			self._last_tap_for = self._armed_for
 			self._event.set()
 
 	def reset(self) -> None:
 		with self._lock:
 			self._event.clear()
+			self._last_tap_tag = None
+			self._last_tap_for = None
+			self._last_tap_ts = 0.0
+
+	def arm(self, *, draft_id: str, ttl_ms: int = 30000) -> None:
+		"""Arm NFC detection for a specific draft/charge id for a limited time."""
+		now = time.time()
+		with self._lock:
+			self._armed = True
+			self._armed_for = str(draft_id).strip() or None
+			ttl_s = max(1.0, float(ttl_ms) / 1000.0)
+			self._armed_until = now + ttl_s
+			# Clear any stale tap signal when arming.
+			self._event.clear()
+			self._last_tap_tag = None
+			self._last_tap_for = None
+			self._last_tap_ts = 0.0
+
+	def disarm(self) -> None:
+		"""Disarm NFC detection and clear pending tap."""
+		with self._lock:
+			self._armed = False
+			self._armed_for = None
+			self._armed_until = 0.0
+			self._event.clear()
+			self._last_tap_tag = None
+			self._last_tap_for = None
+			self._last_tap_ts = 0.0
+
+	def status(self, *, draft_id: Optional[str] = None) -> dict[str, Any]:
+		"""Return NFC status for UI polling. If draft_id is provided, only report taps for that id."""
+		now = time.time()
+		with self._lock:
+			armed = self._armed and (not self._armed_until or now <= self._armed_until)
+			if self._armed and not armed:
+				# Auto-disarm on expiry
+				self._armed = False
+				self._armed_for = None
+				self._armed_until = 0.0
+
+			req = str(draft_id).strip() if draft_id is not None else None
+			tapped = self._event.is_set()
+			if tapped and req and self._last_tap_for and self._last_tap_for != req:
+				# Tap belongs to a different flow; treat as waiting.
+				tapped = False
+
+			return {
+				"status": "tapped" if tapped else "waiting",
+				"armed": bool(armed),
+				"armed_for": self._armed_for,
+				"armed_until": int(self._armed_until * 1000) if self._armed_until else None,
+				"tapped_for": self._last_tap_for,
+				"tapped_tag": self._last_tap_tag,
+				"tapped_at": int(self._last_tap_ts * 1000) if self._last_tap_ts else None,
+			}
+
+	def consume_tap(self, *, draft_id: Optional[str] = None) -> bool:
+		"""Consume a pending tap (idempotent). Returns True if a tap was consumed for this draft."""
+		with self._lock:
+			req = str(draft_id).strip() if draft_id is not None else None
+			if not self._event.is_set():
+				return False
+			if req and self._last_tap_for and self._last_tap_for != req:
+				return False
+			self._event.clear()
+			return True
 
 	def wait_for_payment(self, timeout: Optional[float] = None) -> bool:
 		if self._config.nfc_auto_approve:
 			delay = float(os.environ.get("NFC_SIMULATED_DELAY", "0.75"))
 			time.sleep(max(0.0, delay))
-			self.tap()
+			self.tap(tag_id="simulated")
 			return True
 
 		# Reset the event BEFORE waiting so old signals don't cause instant return
