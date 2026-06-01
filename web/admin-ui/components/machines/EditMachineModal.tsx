@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import Modal from "@/components/ui/Modal";
-import { updateMachine } from "@/lib/admin-api";
+import { updateMachine, deleteMachine } from "@/lib/admin-api";
 import { ADMIN_MACHINES_REFRESH_EVENT } from "@/components/machines/AddMachineModal";
 import { useLang } from "@/lib/i18n/lang";
 
@@ -27,6 +27,12 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
   const [location, setLocation] = useState("");
   const [status, setStatus] = useState("online");
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!open) setShowDeleteConfirm(false);
+  }, [open]);
 
   useEffect(() => {
     if (!machine) return;
@@ -66,7 +72,27 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
     }
   };
 
+  const handleDelete = async () => {
+    if (!machineCode) return;
+    setDeleting(true);
+    try {
+      await deleteMachine(machineCode);
+      toast.success(t("deleteMachine.toastDeleted"));
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent(ADMIN_MACHINES_REFRESH_EVENT));
+      }
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("deleteMachine.toastFailed");
+      toast.error(msg);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   return (
+    <>
     <Modal open={open} onClose={onClose} title={t("editMachine.title")}>
       <div className="relative overflow-hidden">
         <div className="absolute top-0 right-0 -z-10 p-12 opacity-5 pointer-events-none">
@@ -166,8 +192,56 @@ export default function EditMachineModal({ open, onClose, machine }: EditMachine
               </div>
             </button>
           </div>
+
+          <div className="pt-2 border-t border-[var(--border)]">
+            <button
+              type="button"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={saving}
+              className="w-full px-8 py-4 rounded-[24px] text-[14px] font-black text-white bg-rose-500 hover:bg-rose-600 border-2 border-rose-600 shadow-[0_4px_14px_rgba(225,29,72,0.3)] hover:shadow-[0_6px_20px_rgba(225,29,72,0.4)] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <i className="fi fi-rr-trash"></i>
+              {t("deleteMachine.button")}
+            </button>
+          </div>
         </form>
       </div>
     </Modal>
+
+    <Modal
+      open={showDeleteConfirm}
+      onClose={() => setShowDeleteConfirm(false)}
+      title={t("deleteMachine.confirmTitle")}
+    >
+      <div className="space-y-6">
+        <div className="flex items-start gap-4 p-4 rounded-2xl bg-rose-50 border border-rose-200">
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+            <i className="fi fi-rr-triangle-warning text-rose-600 text-lg"></i>
+          </div>
+          <p className="text-[14px] font-bold text-rose-800 leading-relaxed">
+            {t("deleteMachine.confirmBody").replace("{code}", machineCode)}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(false)}
+            disabled={deleting}
+            className="flex-1 py-4 rounded-[22px] bg-[var(--surface-2)] text-[var(--text-muted)] font-black text-[14px] hover:bg-[var(--border)] transition-all disabled:opacity-50"
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex-[2] py-4 rounded-[22px] bg-rose-600 text-white font-black text-[14px] hover:bg-rose-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {deleting ? t("deleteMachine.deleting") : t("deleteMachine.confirmYes")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+    </>
   );
 }

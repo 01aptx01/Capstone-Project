@@ -205,6 +205,25 @@ def admin_create_coupon():
     return jsonify(_coupon_to_dict(c)), 201
 
 
+@admin_bp.route("/coupons/<int:promotion_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_coupon(promotion_id: int):
+    c = db.session.get(Coupon, promotion_id)
+    if not c:
+        return jsonify({"error": "not found"}), 404
+    try:
+        db.session.delete(c)
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "ไม่สามารถลบคูปองที่มีออเดอร์ใช้งานแล้ว"}), 409
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("admin_delete_coupon failed: %s", e)
+        return jsonify({"error": "ลบคูปองไม่สำเร็จ"}), 500
+    return jsonify({"ok": True, "promotion_id": promotion_id}), 200
+
+
 @admin_bp.route("/coupons/<int:promotion_id>", methods=["PUT"])
 @admin_required
 def admin_update_coupon(promotion_id: int):
