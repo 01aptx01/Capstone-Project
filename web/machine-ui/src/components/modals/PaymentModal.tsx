@@ -69,7 +69,7 @@ export default function PaymentModal({
         </button>
         <div className="payment-wrapper">
           {paymentErrorMsg && (
-            <div style={{ backgroundColor: '#ef4444', color: 'white', padding: '12px', borderRadius: '8px', marginBottom: '16px', textAlign: 'center' }}>
+            <div className="kiosk-alert kiosk-alert--error" role="alert">
               {paymentErrorMsg}
             </div>
           )}
@@ -77,6 +77,11 @@ export default function PaymentModal({
           {selectedPaymentMethod === null && (
             <>
               <div className="modal-title">โปรดเลือกวิธีการชำระเงิน</div>
+              {!isOmiseLoaded && (
+                <div className="kiosk-alert kiosk-alert--warning" role="status">
+                  กำลังโหลดระบบชำระเงิน กรุณารอสักครู่...
+                </div>
+              )}
               <div className="modal-payment">
                 <div className="modal-payment-column">
                   <button

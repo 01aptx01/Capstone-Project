@@ -11,6 +11,32 @@ import {
   getPublicAgentBaseUrl,
   getPublicApiUrl,
 } from "../constants";
+import {
+  clearPendingPaymentSession,
+  paymentMethodFromDb,
+  savePendingPaymentSession,
+  type PendingPaymentSession,
+} from "../utils/paymentSession";
+
+const MACHINE_BUSY_DEFAULT_MSG =
+  "ตู้กำลังดำเนินการออเดอร์ก่อนหน้า กรุณารอสักครู่";
+
+async function readMachineBusyFromResponse(
+  response: Response,
+): Promise<string | null> {
+  if (response.status !== 409) return null;
+  try {
+    const data = await response.json();
+    if (data?.code === "MACHINE_BUSY") {
+      return typeof data.message === "string"
+        ? data.message
+        : MACHINE_BUSY_DEFAULT_MSG;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 interface UsePaymentOptions {
   activeModal: ModalType;
@@ -19,6 +45,9 @@ interface UsePaymentOptions {
   payableTotal: number; // ราคาสุทธิที่รวมส่วนลดแล้ว
   appliedCoupon: AppliedCoupon | null; // คูปองที่ใช้
   machineCode: string; // รหัสของตู้กดสินค้า
+  isAgentOnline: boolean; // Pi hardware agent connected to server
+  isMachineBusy: boolean; // ตู้มีออเดอร์ค้าง (paid/dispensing หรือ pending < 5 นาที)
+  refreshMachineBusy: () => void | Promise<void>;
   onPaymentSuccess: () => void; // ฟังก์ชันทำงานเมื่อชำระเงินเรียบร้อย
 }
 
@@ -40,6 +69,9 @@ export function usePayment({
   payableTotal,
   appliedCoupon,
   machineCode,
+  isAgentOnline,
+  isMachineBusy,
+  refreshMachineBusy,
   onPaymentSuccess,
 }: UsePaymentOptions) {
   // STATE
@@ -70,11 +102,34 @@ export function usePayment({
   appliedCouponRef.current = appliedCoupon;
   const isProcessingPaymentRef = useRef(isProcessingPayment);
   isProcessingPaymentRef.current = isProcessingPayment;
+  const isAgentOnlineRef = useRef(isAgentOnline);
+  isAgentOnlineRef.current = isAgentOnline;
+  const isMachineBusyRef = useRef(isMachineBusy);
+  isMachineBusyRef.current = isMachineBusy;
+  const refreshMachineBusyRef = useRef(refreshMachineBusy);
+  refreshMachineBusyRef.current = refreshMachineBusy;
 
   // ซิงค์ ID ธุรกรรมเข้าสู่ Ref เสมอเมื่อเปลี่ยนค่า State
   useEffect(() => {
     currentChargeIdRef.current = currentChargeId;
   }, [currentChargeId]);
+
+  useEffect(() => {
+    if (activeModal === "payment" && currentChargeId) {
+      savePendingPaymentSession(machineCode, currentChargeId, selectedPaymentMethod, {
+        qrCode: realQrCode,
+        cart: cartRef.current,
+        appliedCoupon: appliedCouponRef.current,
+        payableTotal: payableTotalRef.current,
+      });
+    }
+  }, [
+    activeModal,
+    currentChargeId,
+    machineCode,
+    selectedPaymentMethod,
+    realQrCode,
+  ]);
 
   // ล้างตัวยืนยันการยกเลิกอัตโนมัติหากออกจากโมดอล หรือย้อนกลับไปหน้าเลือกช่องทางชำระ (สเตป 1)
   useEffect(() => {
@@ -92,6 +147,7 @@ export function usePayment({
     setRealQrCode(null);
     setCurrentChargeId(null);
     setPaymentErrorMsg(null);
+    clearPendingPaymentSession();
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
@@ -117,6 +173,7 @@ export function usePayment({
       }
     }
     closePaymentModal();
+    void refreshMachineBusyRef.current?.();
   };
 
   // NFC ARM/DISARM (Hardware reader) — no cleanup disarm on draft_id change (avoids race window).
@@ -194,6 +251,7 @@ export function usePayment({
       pollingIntervalRef.current = null;
     }
     setRealQrCode(null);
+    clearPendingPaymentSession();
     onPaymentSuccessRef.current(); // เรียก Callback จบงานเข้าสู่ขั้นสะสมแต้มและสลับหน้าจออุ่น
   };
 
@@ -204,6 +262,7 @@ export function usePayment({
     id: string; // Token ID จาก Omise API
     amount: number; // ยอดรวมเงิน (สตางค์)
   }) => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     if (isProcessingPaymentRef.current) return;
     setIsProcessingPayment(true);
     setPaymentErrorMsg(null);
@@ -240,6 +299,13 @@ export function usePayment({
       });
 
       if (!response.ok) {
+        const busyMsg = await readMachineBusyFromResponse(response);
+        if (busyMsg) {
+          setPaymentErrorMsg(busyMsg);
+          setPaymentStep(1);
+          void refreshMachineBusyRef.current?.();
+          return;
+        }
         const errorText = await response.text();
         console.error("[Frontend] Backend error text:", errorText);
         throw new Error(
@@ -278,7 +344,7 @@ export function usePayment({
           `ระบบเชื่อมต่อล่าช้า กรุณาลองใหม่อีกครั้ง (Timeout ${Math.round(timeoutMs / 1000)}s)`,
         );
       } else {
-        setPaymentErrorMsg(`เกิดข้อผิดพลาด: ${err.message}`);
+        setPaymentErrorMsg("เกิดข้อผิดพลาดในการชำระเงิน กรุณาลองใหม่อีกครั้ง");
       }
 
       // ระบบช่วยเหลือ: หากจ่ายเงินล้มเหลวสุดขีด ให้รีเซ็ตกลับหน้าจอหลักใน 3 วินาทีเพื่อไม่ให้ตู้กดอาหารจอนิ่งค้าง
@@ -288,6 +354,58 @@ export function usePayment({
     } finally {
       clearTimeout(timeoutId);
       setIsProcessingPayment(false);
+    }
+  };
+
+  const handlePollStatusResult = async (
+    st: string,
+    qrCode?: string | null,
+  ): Promise<"continue" | "stop"> => {
+    if (qrCode) {
+      setRealQrCode(qrCode);
+    }
+    if (st === "paid" || st === "dispensing" || st === "completed") {
+      handlePaymentSuccessInternal();
+      return "stop";
+    }
+    if (
+      st === "dispense_failed" ||
+      st === "refunded" ||
+      st === "cancelled" ||
+      st === "canceled" ||
+      st === "payment_failed" ||
+      st === "failed"
+    ) {
+      setPaymentErrorMsg(
+        "การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่",
+      );
+      await cancelAndClosePaymentModal();
+      return "stop";
+    }
+    return "continue";
+  };
+
+  const hydratePaymentFromServer = async (chargeId: string) => {
+    const apiUrl = getPublicApiUrl();
+    try {
+      const res = await fetch(
+        `${apiUrl}/api/buy/status/${encodeURIComponent(chargeId)}`,
+      );
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json();
+      const st = String(data.status ?? "").toLowerCase();
+      const uiMethod =
+        paymentMethodFromDb(
+          typeof data.payment_method === "string" ? data.payment_method : null,
+        ) ?? null;
+      if (uiMethod) {
+        setSelectedPaymentMethod(uiMethod);
+      }
+      await handlePollStatusResult(st, data.qr_code ?? null);
+    } catch (e) {
+      console.error("[Frontend] hydratePaymentFromServer failed:", e);
     }
   };
 
@@ -341,29 +459,9 @@ export function usePayment({
             `[Frontend] Poll result for ${chargeId} [${attempts}/${PAYMENT_POLL_MAX_ATTEMPTS}]:`,
             data.status,
           );
-          
-          // ตรวจสอบว่าสเตตัสได้รับการยืนยันการจ่ายเงินเรียบร้อยแล้วหรือไม่
-          if (st === "paid" || st === "dispensing" || st === "completed") {
-            console.log("[Frontend] Payment confirmed via polling!");
+          const outcome = await handlePollStatusResult(st, data.qr_code ?? null);
+          if (outcome === "stop") {
             stopPolling();
-            handlePaymentSuccessInternal();
-            return;
-          }
-          
-          // ตรวจสอบหากยอดชำระล้มเหลว หรือมีการขอคืนเงินกะทันหัน หรือสินค้าขัดข้อง
-          if (
-            st === "dispense_failed" ||
-            st === "refunded" ||
-            st === "cancelled" ||
-            st === "canceled" ||
-            st === "payment_failed" ||
-            st === "failed"
-          ) {
-            stopPolling();
-            setPaymentErrorMsg(
-              "การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่หรือลองใหม่",
-            );
-            await cancelAndClosePaymentModal();
             return;
           }
         } else {
@@ -387,8 +485,9 @@ export function usePayment({
   // PAYMENT METHOD HANDLERS (จัดการปุ่มกดเลือกช่องทางต่างๆ)
   // - สร้างบิลและรับคิวอาร์โค้ด PromptPay จ่ายเงินสดผ่าน Omise.js SDK
   const handleDirectPromptPay = async () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     if (!(window as any).Omise) {
-      setPaymentErrorMsg("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      setPaymentErrorMsg("ระบบชำระเงินยังไม่พร้อม กรุณารอสักครู่แล้วลองใหม่");
       return;
     }
 
@@ -416,6 +515,7 @@ export function usePayment({
 
   // - จัดเตรียมสเปกของคิวอาร์สำหรับช่องทาง TrueMoney Wallet
   const handleDirectTrueMoney = async () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     setPaymentStep(2);
     setRealQrCode(null);
     processPayment({
@@ -428,8 +528,10 @@ export function usePayment({
   // - นำผู้ใช้สลับเข้าสู่ขั้นตอนเตรียมแตะบัตรจ่ายเงิน (NFC Card Reader Mode)
   // - ทำการจองสินค้าชั่วคราว (Create Draft Order ใน DB)
   const handleProceedToTap = async () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
     setPaymentStep(2);
+    setPaymentErrorMsg(null);
 
     try {
       const apiUrl = getPublicApiUrl();
@@ -447,14 +549,41 @@ export function usePayment({
           coupon_code: appliedCouponRef.current?.code,
         }),
       });
-      const data = await response.json();
-      if (data.charge_id) {
-        setCurrentChargeId(data.charge_id); // บันทึกบิลฉบับร่าง (Draft ID)
-        // Arm immediately (do not wait for effect) so taps are not ignored as "not armed".
-        void armNfcForDraft(data.charge_id);
+
+      if (!response.ok) {
+        const busyMsg = await readMachineBusyFromResponse(response);
+        if (busyMsg) {
+          setPaymentErrorMsg(busyMsg);
+          setPaymentStep(1);
+          void disarmNfc();
+          void refreshMachineBusyRef.current?.();
+          return;
+        }
+        const errText = await response.text().catch(() => "");
+        setPaymentErrorMsg(
+          `ไม่สามารถเตรียมรายการชำระเงินได้ (${response.status})${errText ? `: ${errText.slice(0, 120)}` : ""}`,
+        );
+        setPaymentStep(1);
+        void disarmNfc();
+        return;
       }
+
+      const data = await response.json();
+      if (!data.charge_id) {
+        setPaymentErrorMsg("ไม่สามารถสร้างรายการชำระเงินได้ กรุณาลองใหม่");
+        setPaymentStep(1);
+        void disarmNfc();
+        return;
+      }
+
+      setCurrentChargeId(data.charge_id);
+      void armNfcForDraft(data.charge_id);
+      void refreshMachineBusyRef.current?.();
     } catch (err) {
       console.error("[Frontend] Error creating draft order:", err);
+      setPaymentErrorMsg("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่ภายหลัง");
+      setPaymentStep(1);
+      void disarmNfc();
     }
   };
 
@@ -462,7 +591,7 @@ export function usePayment({
   // - จะทำการจำลองแปลงข้อมูลบัตรเครดิตไปเป็น Token ของ Omise API
   const simulateNfcTap = async (brand: TestCardBrand) => {
     if (!(window as any).Omise) {
-      setPaymentErrorMsg("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      setPaymentErrorMsg("ระบบชำระเงินยังไม่พร้อม กรุณารอสักครู่แล้วลองใหม่");
       return;
     }
 
@@ -496,7 +625,9 @@ export function usePayment({
           });
         } else {
           console.error("[Frontend] Omise Tokenization Failed:", response);
-          setPaymentErrorMsg(`Tokenization Error: ${response.message || "Unknown error"}`);
+          setPaymentErrorMsg(
+            "ไม่สามารถยืนยันบัตรได้ กรุณาลองใหม่หรือเปลี่ยนช่องทางชำระเงิน",
+          );
           setTimeout(() => {
             cancelAndClosePaymentModal();
           }, 2000);
@@ -536,12 +667,57 @@ export function usePayment({
 
   // - ล้างประวัติต่างๆ และสั่งเริ่มต้นระบบจ่ายเงินจากหน้าหลัก
   const handleCheckout = () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     setSelectedPaymentMethod(null);
     setPaymentStep(1);
     setRealQrCode(null);
     setCurrentChargeId(null);
     setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
     setActiveModal("payment");
+  };
+
+  const resumePaymentSession = async (session: PendingPaymentSession) => {
+    setPaymentErrorMsg(null);
+    setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
+    setCurrentChargeId(session.chargeId);
+    currentChargeIdRef.current = session.chargeId;
+    if (session.paymentMethod) {
+      setSelectedPaymentMethod(session.paymentMethod);
+    }
+    if (session.qrCode) {
+      setRealQrCode(session.qrCode);
+    }
+    setPaymentStep(2);
+    setActiveModal("payment");
+    await hydratePaymentFromServer(session.chargeId);
+    pollPaymentStatus(session.chargeId);
+    if (
+      session.paymentMethod === "card" &&
+      session.chargeId.startsWith("draft_")
+    ) {
+      void armNfcForDraft(session.chargeId);
+    }
+    void refreshMachineBusyRef.current?.();
+  };
+
+  const cancelPendingCharge = async (chargeId: string) => {
+    try {
+      const apiUrl = getPublicApiUrl();
+      await fetch(`${apiUrl}/api/buy/cancel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ charge_id: chargeId }),
+      });
+    } catch (err) {
+      console.error("[Frontend] Cancel pending charge error:", err);
+    }
+    clearPendingPaymentSession();
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    setCurrentChargeId(null);
+    void refreshMachineBusyRef.current?.();
   };
 
   // TIMERS & EFFECTS (ระบบเวลาหมดอายุธุรกรรม)
@@ -669,6 +845,8 @@ export function usePayment({
     handleProceedToTap,
     handleSimulateNfcTap,
     simulatePromptPaySuccess,
+    resumePaymentSession,
+    cancelPendingCharge,
   };
 }
 

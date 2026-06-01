@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Script from "next/script";
 import "./globals.css";
@@ -22,6 +22,7 @@ import ContactModal from "../components/modals/ContactModal";
 import LimitWarningModal from "../components/modals/LimitWarningModal";
 import PaymentModal from "../components/modals/PaymentModal";
 import ProcessingModal from "../components/modals/ProcessingModal";
+import HardwareGateOverlay from "../components/HardwareGateOverlay";
 
 // Custom Hooks
 import { useJobSocket } from "../hooks/useJobSocket";
@@ -30,6 +31,12 @@ import { useCoupon } from "../hooks/useCoupon";
 import { usePayment } from "../hooks/usePayment";
 import { useHeatingProcess } from "../hooks/useHeatingProcess";
 import { useMember } from "../hooks/useMember";
+import { useMachineBusy } from "../hooks/useMachineBusy";
+import {
+  readPendingPaymentSession,
+  type PendingPaymentSession,
+} from "../utils/paymentSession";
+import { getPublicApiUrl } from "../constants";
 
 export default function VendingPage() {
   const machineCode = DEFAULT_MACHINE_CODE;
@@ -38,6 +45,7 @@ export default function VendingPage() {
   const [activeModal, setActiveModal] = useState<ModalType>("none");
   const [isAfterPayment, setIsAfterPayment] = useState(false);
   const [stockLimitMessage, setStockLimitMessage] = useState("");
+  const [chargeIdForSocket, setChargeIdForSocket] = useState<string | null>(null);
   const totalPriceRef = useRef<number>(0);
 
   // Ref for deferred payment success handler
@@ -59,14 +67,19 @@ export default function VendingPage() {
 
   const { appliedCoupon, setAppliedCoupon, payableTotal } = useCoupon(cart, machineCode, totalPrice);
 
-  const payment = usePayment({
-    activeModal,
-    setActiveModal,
-    cart,
-    payableTotal,
-    appliedCoupon,
+  const isPostPaymentFlow =
+    isAfterPayment || activeModal === "processing";
+
+  const [recoverySession, setRecoverySession] =
+    useState<PendingPaymentSession | null>(() =>
+      readPendingPaymentSession(machineCode),
+    );
+  const [excludeChargeId, setExcludeChargeId] = useState<string | null>(null);
+
+  const { isMachineBusy, blockingOrder, refreshMachineBusy } = useMachineBusy({
     machineCode,
-    onPaymentSuccess: () => paymentSuccessHandlerRef.current(),
+    pollEnabled: !isPostPaymentFlow,
+    excludeChargeId,
   });
 
   const {
@@ -76,8 +89,48 @@ export default function VendingPage() {
     isConnected,
     isAgentOnline,
   } = useJobSocket({
-    activeJobId: (isAfterPayment || activeModal === "processing") ? payment.currentChargeId : null,
+    activeJobId:
+      isAfterPayment || activeModal === "processing" ? chargeIdForSocket : null,
   });
+
+  const payment = usePayment({
+    activeModal,
+    setActiveModal,
+    cart,
+    payableTotal,
+    appliedCoupon,
+    machineCode,
+    isAgentOnline,
+    isMachineBusy,
+    refreshMachineBusy,
+    onPaymentSuccess: () => paymentSuccessHandlerRef.current(),
+  });
+
+  useEffect(() => {
+    setRecoverySession(readPendingPaymentSession(machineCode));
+    if (activeModal === "payment" && payment.currentChargeId) {
+      setExcludeChargeId(payment.currentChargeId);
+    } else {
+      setExcludeChargeId(null);
+    }
+  }, [machineCode, activeModal, payment.currentChargeId]);
+
+  useEffect(() => {
+    const session = readPendingPaymentSession(machineCode);
+    if (!session) return;
+    const apiUrl = getPublicApiUrl();
+    void fetch(`${apiUrl}/api/buy/status/${encodeURIComponent(session.chargeId)}`)
+      .then(() => refreshMachineBusy())
+      .catch(() => undefined);
+  }, [machineCode, refreshMachineBusy]);
+
+  useEffect(() => {
+    if (isAfterPayment || activeModal === "processing") {
+      setChargeIdForSocket(payment.currentChargeId);
+    } else {
+      setChargeIdForSocket(null);
+    }
+  }, [isAfterPayment, activeModal, payment.currentChargeId]);
 
   const heating = useHeatingProcess({
     activeModal,
@@ -88,6 +141,7 @@ export default function VendingPage() {
     agentCurrentItemIndex,
     socketGlobalTimeLeft,
     fetchProducts,
+    orderChargeId: payment.currentChargeId,
   });
 
   const member = useMember({
@@ -102,10 +156,17 @@ export default function VendingPage() {
 
   // ----- PAYMENT SUCCESS ORCHESTRATOR -----
   paymentSuccessHandlerRef.current = () => {
-    const flatQueue = cart.flatMap((item) => Array(item.qty).fill(item));
+    const session = readPendingPaymentSession(machineCode);
+    const cartSource = cart.length > 0 ? cart : (session?.cart ?? []);
+    const couponSource =
+      appliedCoupon ?? session?.appliedCoupon ?? null;
+
+    const flatQueue = cartSource.flatMap((item) => Array(item.qty).fill(item));
     flatQueue.sort((a: any, b: any) => a.heatingTime - b.heatingTime);
 
-    const paidTotal = appliedCoupon ? appliedCoupon.final_thb : totalPrice;
+    const paidTotal =
+      session?.payableTotal ??
+      (couponSource ? couponSource.final_thb : totalPrice);
     totalPriceRef.current = paidTotal;
 
     // Set queue and clear cart/coupon
@@ -129,9 +190,71 @@ export default function VendingPage() {
   };
 
   const handleCheckout = () => {
+    if (!isAgentOnline || isMachineBusy) return;
     heating.heatingTimelineStartedRef.current = false;
     payment.handleCheckout();
   };
+
+  const handleAddToCartGuarded = (product: Parameters<typeof handleAddToCart>[0]) => {
+    if (isMachineBusy) return;
+    handleAddToCart(product);
+  };
+
+  const showPendingRecovery =
+    !isPostPaymentFlow &&
+    isMachineBusy &&
+    blockingOrder?.status === "pending_payment" &&
+    recoverySession != null &&
+    blockingOrder.charge_id === recoverySession.chargeId;
+
+  const showOrderBlocker =
+    isMachineBusy && !isPostPaymentFlow && !showPendingRecovery;
+  const showSystemBlocker =
+    !showOrderBlocker && !showPendingRecovery && !isAgentOnline && !isPostPaymentFlow;
+
+  const gateVariant = showPendingRecovery
+    ? "order_pending_recovery"
+    : showOrderBlocker
+      ? "order_busy"
+      : !isConnected
+        ? "internet"
+        : "hardware";
+
+  const showGateOverlay =
+    showOrderBlocker || showSystemBlocker || showPendingRecovery;
+
+  const handleResumePendingPayment = () => {
+    if (!recoverySession) return;
+    void payment.resumePaymentSession(recoverySession);
+  };
+
+  const handleCancelPendingRecovery = async () => {
+    if (!recoverySession) return;
+    await payment.cancelPendingCharge(recoverySession.chargeId);
+    setRecoverySession(null);
+  };
+
+  const statusDotClass = showOrderBlocker
+    ? "status-dot-warning"
+    : !isConnected
+      ? "status-dot-offline"
+      : !isAgentOnline
+        ? "status-dot-warning"
+        : "";
+
+  const deviceStatusWrapClass = !isConnected
+    ? "device-status-wrap--offline"
+    : showOrderBlocker || !isAgentOnline
+      ? "device-status-wrap--warning"
+      : "";
+
+  const statusLabel = showOrderBlocker
+    ? "ตู้กำลังทำออเดอร์ก่อนหน้า"
+    : !isConnected
+      ? "อินเทอร์เน็ตขัดข้อง"
+      : !isAgentOnline
+        ? "ตู้ออฟไลน์"
+        : "พร้อมใช้งาน";
 
   // ----- RENDER -----
   return (
@@ -169,8 +292,8 @@ export default function VendingPage() {
                 <ProductCard
                   key={product.id}
                   {...product}
-                  canAdd={canAdd}
-                  onAdd={() => handleAddToCart(product)}
+                  canAdd={canAdd && !isMachineBusy}
+                  onAdd={() => handleAddToCartGuarded(product)}
                 />
               );
             })
@@ -179,8 +302,18 @@ export default function VendingPage() {
           )}
         </div>
 
-        <div className="device-id">
-          <div className="status-dot"></div>ID:{machineCode}
+        <div
+          className={`device-id device-status-wrap${deviceStatusWrapClass ? ` ${deviceStatusWrapClass}` : ""}`}
+          title={statusLabel}
+        >
+          <div
+            className={`status-dot${statusDotClass ? ` ${statusDotClass}` : ""}`}
+            aria-hidden
+          />
+          <span className="device-id-line">
+            ID:{machineCode}
+            <span className="device-status-suffix"> · {statusLabel}</span>
+          </span>
         </div>
       </div>
 
@@ -213,7 +346,7 @@ export default function VendingPage() {
                    payment.cancelAndClosePaymentModal();
                  }
                }
-               : (activeModal === "numpad" || activeModal === "points_result" || activeModal === "processing")
+               : (activeModal === "numpad" || activeModal === "points_result" || activeModal === "processing" || activeModal === "coupon")
                  ? undefined // ห้ามคลิกพื้นหลังสีดำเพื่อกดออกเด็ดขาด ป้องกัน Flow ชำระเงิน/อุ่นอาหารล่ม
                  : () => setActiveModal("none")
            }
@@ -248,6 +381,7 @@ export default function VendingPage() {
               numpadCountdown={member.numpadCountdown}
               isMemberLoading={member.isMemberLoading}
               formattedPhone={member.formattedPhone}
+              numpadError={member.numpadError}
               onClose={() => setActiveModal("none")}
               onStartHeating={heating.startHeatingProcess}
               onNumberClick={member.handleNumberClick}
@@ -329,11 +463,19 @@ export default function VendingPage() {
               isConnected={isConnected}
               isAgentOnline={isAgentOnline}
               hasHardwareTelemetry={agentJobState !== null}
+              processingStatusMessage={heating.processingStatusMessage}
               onComplete={heating.handleProcessingCompleteClose}
             />
           )}
         </div>
       )}
+
+      <HardwareGateOverlay
+        visible={showGateOverlay}
+        variant={gateVariant}
+        onResumePayment={handleResumePendingPayment}
+        onCancelPendingOrder={() => void handleCancelPendingRecovery()}
+      />
     </div>
   );
 }
