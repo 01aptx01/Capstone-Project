@@ -60,7 +60,12 @@ def create_app() -> Flask:
         ensure_promotions_max_uses(db.engine)
 
     allowed_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    CORS(flask_app, origins=allowed_origins)
+    # อนุญาต Authorization header เพื่อให้ admin-ui ส่ง Bearer JWT ได้ (CORS preflight)
+    CORS(
+        flask_app,
+        origins=allowed_origins,
+        allow_headers=["Content-Type", "Authorization"],
+    )
     Swagger(flask_app, template_file=_SWAGGER_FILE)
 
     flask_app.register_blueprint(buy_api)
@@ -72,6 +77,13 @@ def create_app() -> Flask:
     from app.api.admin import admin_bp
 
     flask_app.register_blueprint(admin_bp)
+
+    # สร้าง admin เริ่มต้นถ้ายังไม่มีในระบบ (idempotent — ปลอดภัยถ้ารันซ้ำ)
+    if os.getenv("DEFER_DB_POOL") != "1":
+        from app.api.admin.auth import seed_default_admin
+
+        with flask_app.app_context():
+            seed_default_admin()
 
     @flask_app.route("/")
     def react_index():

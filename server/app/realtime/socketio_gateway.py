@@ -75,11 +75,33 @@ ADMIN_ROOM = "admin"
 
 
 def _verify_admin_auth(auth: Optional[Dict[str, Any]]) -> bool:
-    """Admin dashboard Socket.IO clients join ADMIN_ROOM when auth passes."""
+    """Admin dashboard Socket.IO clients join ADMIN_ROOM when auth passes.
+
+    ลำดับการตรวจ (ปลอดภัย):
+      1) JWT admin ที่ถูกต้องใน auth.token หรือ auth.admin_token (วิธีหลัก)
+      2) ADMIN_SOCKET_SECRET ที่ตรงกัน (ทางเลือกสำหรับ client ที่ไม่ใช่ browser)
+    ไม่มี fallback แบบ role=="admin" อีกต่อไป (ไม่ปลอดภัย)
+    """
+    if not isinstance(auth, dict):
+        return False
+
+    # 1) JWT (admin-ui ส่ง Bearer JWT มาทาง admin_token)
+    raw = auth.get("token") or auth.get("admin_token")
+    if raw:
+        try:
+            from app.api.admin.security import decode_access_token
+
+            decode_access_token(str(raw))
+            return True
+        except Exception:
+            pass  # ไม่ใช่ JWT ที่ถูกต้อง → ลองวิธีถัดไป
+
+    # 2) shared secret (ออปชัน)
     admin_secret = os.environ.get("ADMIN_SOCKET_SECRET")
-    if not admin_secret:
-        return isinstance(auth, dict) and auth.get("role") == "admin"
-    return isinstance(auth, dict) and auth.get("admin_token") == admin_secret
+    if admin_secret and auth.get("admin_token") == admin_secret:
+        return True
+
+    return False
 
 
 def emit_dashboard_update(payload: Dict[str, Any]) -> None:
@@ -265,6 +287,9 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
     payload_json = _json_dumps_safe(payload)
 
     event_id_for_socket: Optional[int] = None
+    # True เมื่อ ERROR นี้ถือเป็น "ความล้มเหลวจริง" ที่ควร refund
+    # (False ถ้า job เคยสำเร็จ DONE แล้ว หรือ order อยู่ในสถานะสำเร็จแล้ว)
+    error_is_real_failure = False
     db = get_db()
     cur = db.cursor(dictionary=True)
     try:
@@ -301,19 +326,63 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
         # Update status on terminal machine states
         if order_charge_id and event_type == "job.state" and state in ("DONE", "ERROR", "DISPENSING"):
             if state == "DONE":
-                new_status = "completed"
+                # DONE = จ่ายเงินสำเร็จ + จ่ายสินค้าเสร็จ → completed ✅
+                cur.execute(
+                    "UPDATE orders SET status = 'completed' WHERE charge_id = %s",
+                    (order_charge_id,),
+                )
+                logger.info(f"✅ [MachineEvent] {order_charge_id} → 'completed' (DONE)")
             elif state == "DISPENSING":
-                new_status = "dispensing"
+                # อัปเดตเป็น 'dispensing' เฉพาะตอนกำลังทำงาน — อย่าทับสถานะที่จบแล้ว
+                # (paid = เพิ่งจ่ายเงิน รอจ่ายสินค้า → อนุญาตให้เปลี่ยนเป็น dispensing ได้)
+                cur.execute(
+                    """
+                    UPDATE orders
+                    SET status = 'dispensing'
+                    WHERE charge_id = %s
+                      AND status NOT IN ('completed', 'refunded', 'dispense_failed')
+                    """,
+                    (order_charge_id,),
+                )
             else:  # ERROR
-                new_status = "dispense_failed"
-            cur.execute(
-                """
-                UPDATE orders
-                SET status = %s
-                WHERE charge_id = %s
-                """,
-                (new_status, order_charge_id),
-            )
+                # ─── Guard: อย่าให้ ERROR ที่มาทีหลังไปทับงานที่สำเร็จแล้ว ───
+                # 1) ถ้า job_id นี้เคยส่ง DONE มาแล้ว → เพิกเฉย ERROR ทั้งหมด
+                #    (เคสหลัก: cleanup exception ฝั่ง agent ยิง ERROR หลังจบงาน)
+                cur.execute(
+                    "SELECT 1 FROM machine_job_events WHERE job_id = %s AND state = 'DONE' LIMIT 1",
+                    (job_id,),
+                )
+                already_done = cur.fetchone() is not None
+
+                if already_done:
+                    logger.warning(
+                        f"🛡️ [MachineEvent] เพิกเฉย ERROR ของ {order_charge_id} "
+                        f"(job {job_id} ส่ง DONE ไปแล้ว — ไม่ทับเป็น dispense_failed)"
+                    )
+                else:
+                    # 2) อัปเดตเป็น dispense_failed เฉพาะ order ที่ยังไม่อยู่ในสถานะสำเร็จ
+                    #    (completed / refunded เท่านั้นที่เป็นสถานะสำเร็จที่ห้ามทับ —
+                    #     paid/dispensing ยังถือว่าระหว่างทาง ยอมให้ล้มเหลวได้ถ้าเกิด error จริง)
+                    cur.execute(
+                        """
+                        UPDATE orders
+                        SET status = 'dispense_failed'
+                        WHERE charge_id = %s
+                          AND status NOT IN ('completed', 'refunded')
+                        """,
+                        (order_charge_id,),
+                    )
+                    # ถือเป็นความล้มเหลวจริงก็ต่อเมื่อมีแถวถูกอัปเดต (status เปลี่ยนจริง)
+                    error_is_real_failure = cur.rowcount > 0
+                    if error_is_real_failure:
+                        logger.error(
+                            f"❌ [MachineEvent] {order_charge_id} → 'dispense_failed' (ERROR จริง)"
+                        )
+                    else:
+                        logger.warning(
+                            f"🛡️ [MachineEvent] ERROR ของ {order_charge_id} ไม่ทับ "
+                            f"(order อยู่ในสถานะสำเร็จแล้ว)"
+                        )
 
         # touch last_active
         cur.execute(
@@ -333,8 +402,9 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
         cur.close()
         db.close()
 
-    # Auto-refund: fire in a background thread so we don't block eventlet
-    if order_charge_id and event_type == "job.state" and state == "ERROR":
+    # Auto-refund: ยิงเฉพาะเมื่อ ERROR เป็นความล้มเหลวจริงเท่านั้น
+    # (ไม่ refund ถ้า job สำเร็จ DONE ไปแล้ว หรือ order อยู่ในสถานะสำเร็จ)
+    if order_charge_id and event_type == "job.state" and state == "ERROR" and error_is_real_failure:
         threading.Thread(
             target=_auto_refund,
             args=(order_charge_id,),

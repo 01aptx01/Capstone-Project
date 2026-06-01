@@ -10,7 +10,8 @@ interface AuthCardWrapperProps {
 // Shell dimensions defined as JS constants — applied as inline styles
 // so they are guaranteed to be in the HTML before any stylesheet loads.
 const SHELL_STYLE: React.CSSProperties = {
-  width: "100%",
+  // กำหนดความกว้างแน่นอน (ไม่อิง parent) กัน flex parent หดตามเนื้อหาจนการ์ดแคบ
+  width: "min(440px, 92vw)",
   boxSizing: "border-box",
   display: "flex",
   flexDirection: "column",

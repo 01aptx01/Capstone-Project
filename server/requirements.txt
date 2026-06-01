@@ -12,3 +12,4 @@ python-socketio
 eventlet
 pytz
 bcrypt
+PyJWT
