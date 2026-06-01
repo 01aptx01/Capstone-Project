@@ -392,55 +392,10 @@ export function usePayment({
         `${apiUrl}/api/buy/status/${encodeURIComponent(chargeId)}`,
       );
       if (!res.ok) {
-        // #region agent log
-        fetch(
-          "http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "190ecb",
-            },
-            body: JSON.stringify({
-              sessionId: "190ecb",
-              location: "usePayment.ts:hydratePaymentFromServer",
-              message: "status_http_error",
-              data: { chargeId, status: res.status },
-              hypothesisId: "H3",
-              timestamp: Date.now(),
-            }),
-          },
-        ).catch(() => {});
-        // #endregion
         return;
       }
       const data = await res.json();
       const st = String(data.status ?? "").toLowerCase();
-      // #region agent log
-      fetch(
-        "http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "190ecb",
-          },
-          body: JSON.stringify({
-            sessionId: "190ecb",
-            location: "usePayment.ts:hydratePaymentFromServer",
-            message: "status_ok",
-            data: {
-              chargeId,
-              st,
-              hasQr: Boolean(data.qr_code),
-              paymentMethod: data.payment_method ?? null,
-            },
-            hypothesisId: "H1-H3",
-            timestamp: Date.now(),
-          }),
-        },
-      ).catch(() => {});
-      // #endregion
       const uiMethod =
         paymentMethodFromDb(
           typeof data.payment_method === "string" ? data.payment_method : null,
@@ -504,28 +459,6 @@ export function usePayment({
             `[Frontend] Poll result for ${chargeId} [${attempts}/${PAYMENT_POLL_MAX_ATTEMPTS}]:`,
             data.status,
           );
-          if (attempts === 1) {
-            // #region agent log
-            fetch(
-              "http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7",
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "X-Debug-Session-Id": "190ecb",
-                },
-                body: JSON.stringify({
-                  sessionId: "190ecb",
-                  location: "usePayment.ts:poll.tick",
-                  message: "first_poll",
-                  data: { chargeId, st, hasQr: Boolean(data.qr_code) },
-                  hypothesisId: "H3",
-                  timestamp: Date.now(),
-                }),
-              },
-            ).catch(() => {});
-            // #endregion
-          }
           const outcome = await handlePollStatusResult(st, data.qr_code ?? null);
           if (outcome === "stop") {
             stopPolling();
@@ -744,27 +677,6 @@ export function usePayment({
   };
 
   const resumePaymentSession = async (session: PendingPaymentSession) => {
-    // #region agent log
-    fetch("http://127.0.0.1:7897/ingest/f0fa3908-0aa3-4d9d-8775-57ce698f55e7", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "190ecb",
-      },
-      body: JSON.stringify({
-        sessionId: "190ecb",
-        location: "usePayment.ts:resumePaymentSession",
-        message: "resume_start",
-        data: {
-          chargeId: session.chargeId,
-          paymentMethod: session.paymentMethod,
-          hasStoredQr: Boolean(session.qrCode),
-        },
-        hypothesisId: "H1-H2",
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
     setPaymentErrorMsg(null);
     setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
     setCurrentChargeId(session.chargeId);
