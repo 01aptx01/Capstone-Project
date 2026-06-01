@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { CouponCard } from "@/components/cards/CouponCard";
 import { fetchRedeemableCoupons, type RedeemableCoupon } from "@/lib/api/promotions";
 import { redeemCoupon } from "@/lib/api/members";
@@ -50,14 +49,17 @@ export default function RedeemPage() {
   return (
     <div className="flex-1 overflow-y-auto pb-6">
       <div className="page-container pt-6 max-w-5xl">
-        <div className="w-full md:max-w-md md:mx-auto mb-8">
-          <Card className="w-full flex flex-col items-center justify-center p-6 text-center shadow-md border border-brand/10 bg-linear-to-br from-surface to-brand-muted/10 rounded-2xl">
-            <span className="text-muted font-bold text-xs uppercase tracking-wider mb-2">คะแนนสะสมของคุณ</span>
+        <div className="w-full mb-8">
+          <Card
+            className="w-full flex flex-col items-center justify-center p-6 text-center border-0"
+            style={{ background: 'var(--brand-grad)', boxShadow: 'var(--brand-glow)' }}
+          >
+            <span className="text-white/80 font-bold text-xs uppercase tracking-wider mb-2">คะแนนสะสมของคุณ</span>
             <div className="flex items-baseline gap-1.5 justify-center">
-              <span className="text-7xl font-extrabold text-brand">{points}</span>
-              <span className="text-sm font-extrabold text-muted uppercase">Points</span>
+              <span className="text-7xl font-extrabold text-white">{points}</span>
+              <span className="text-sm font-extrabold text-white/70 uppercase">Points</span>
             </div>
-            <p className="text-xs text-muted mt-3 leading-relaxed max-w-xs">
+            <p className="text-xs text-white/70 mt-3 leading-relaxed max-w-xs">
               สะสมคะแนนจากการซื้อสินค้าที่ตู้ แล้วนำแต้มมาแลกคูปองส่วนลดเพื่อนำรหัสไปกรอกใช้งานที่หน้าตู้ได้ทันที
             </p>
           </Card>

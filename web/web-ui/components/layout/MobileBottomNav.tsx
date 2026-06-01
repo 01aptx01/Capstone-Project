@@ -29,7 +29,12 @@ export function MobileBottomNav() {
                   active ? "text-brand" : "text-muted",
                 )}
               >
-                <Icon size={22} />
+                <span className={cn(
+                  "flex items-center justify-center w-10 h-7 rounded-full transition-colors",
+                  active && "bg-brand-muted",
+                )}>
+                  <Icon size={22} />
+                </span>
                 <span>{tab.label}</span>
               </Link>
             </li>

@@ -32,9 +32,43 @@ export default function ProfilePage() {
     : "-";
 
   const profileMenus = [
-    { id: "coupons", label: "คูปองของฉัน", href: "/coupons" },
-    { id: "history", label: "ประวัติการสั่งซื้อทั้งหมด", href: "/history" },
-    { id: "help", label: "ศูนย์ความช่วยเหลือ", href: "/help" },
+    {
+      id: "coupons",
+      label: "คูปองของฉัน",
+      description: "ดูคูปองที่พร้อมใช้งาน",
+      href: "/coupons",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M15 5V3H9v2M15 21v-2H9v2M5 9a2 2 0 0 0 2-2V5h10v2a2 2 0 0 0 2 2v6a2 2 0 0 0-2 2v2H7v-2a2 2 0 0 0-2-2V9z" />
+          <line x1="9" y1="12" x2="15" y2="12" strokeDasharray="2 2" />
+        </svg>
+      ),
+    },
+    {
+      id: "history",
+      label: "ประวัติการสั่งซื้อทั้งหมด",
+      description: "รายการย้อนหลัง",
+      href: "/history",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      ),
+    },
+    {
+      id: "help",
+      label: "ศูนย์ความช่วยเหลือ",
+      description: "คำถามที่พบบ่อย · ติดต่อเรา",
+      href: "/help",
+      icon: (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+      ),
+    },
   ];
 
   const handleSaveProfile = async (newName: string) => {
@@ -132,19 +166,23 @@ export default function ProfilePage() {
               key={menu.id}
               href={menu.href}
               className={cn(
-                "bg-surface p-4 rounded-card shadow-sm border border-border font-bold text-foreground",
-                "hover:bg-brand-muted transition-colors touch-target flex items-center justify-between",
+                "bg-surface px-4 py-3.5 rounded-card shadow-sm border border-border",
+                "hover:bg-brand-muted/40 transition-colors flex items-center gap-4",
               )}
             >
-              {menu.label}
-              <span className="text-muted text-lg" aria-hidden>
-                ›
-              </span>
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-muted text-brand">
+                {menu.icon}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-bold text-foreground text-sm">{menu.label}</p>
+                <p className="text-xs text-muted mt-0.5">{menu.description}</p>
+              </div>
+              <span className="text-muted text-lg shrink-0" aria-hidden>›</span>
             </Link>
           ))}
           <Button
             variant="ghost"
-            className="mt-2 text-destructive hover:bg-red-50 border border-red-100"
+            className="mt-2 text-red-600 font-bold hover:bg-red-50 border border-red-200 hover:border-red-300"
             fullWidth
             onClick={handleLogout}
           >

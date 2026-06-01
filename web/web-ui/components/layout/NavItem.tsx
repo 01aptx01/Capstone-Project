@@ -27,7 +27,7 @@ export function NavItem({
         "w-full flex items-center gap-3 py-3 rounded-xl text-sm font-medium transition-all touch-target",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
         active
-          ? "bg-brand-muted text-brand border-l-[3px] border-brand pl-[calc(1rem-3px)] pr-4"
+          ? "bg-brand-muted text-brand border-l-[3px] border-brand pl-3.25 pr-4"
           : "text-muted hover:bg-background border-l-[3px] border-transparent px-4",
       )}
     >

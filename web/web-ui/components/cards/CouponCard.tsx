@@ -9,7 +9,10 @@ interface CouponCardProps {
 export function CouponCard({ coupon, action }: CouponCardProps) {
   return (
     <Card padding="none" className="flex flex-col transition-transform hover:scale-[1.01]">
-      <div className={`relative h-32 ${coupon.colorBg} flex items-center justify-center`}>
+      <div
+        className="relative h-32 flex items-center justify-center"
+        style={{ background: 'var(--brand-grad)' }}
+      >
         <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full" />
         <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-background rounded-full" />
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" aria-hidden>
