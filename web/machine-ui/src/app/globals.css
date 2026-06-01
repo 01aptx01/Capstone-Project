@@ -1281,7 +1281,7 @@ body {
     font-size: 24px;
     font-weight: 700;
     color: #333;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
 }
 
 .payment-instruction-list {
@@ -1291,7 +1291,7 @@ body {
     padding: 20px;
     width: 100%;
     text-align: left;
-    margin-bottom: 25px;
+    margin-bottom: 10px;
 }
 
 .payment-instruction-list p {
@@ -1302,10 +1302,15 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-top: 5px;
 }
 
 .payment-instruction-list p:last-child {
     margin-bottom: 0;
+}
+
+.payment-instruction-list p:first-child {
+    margin-top: 0;
 }
 
 .supported-cards-row {
@@ -1313,7 +1318,7 @@ body {
     justify-content: center;
     align-items: center;
     gap: 15px;
-    margin-bottom: 20px;
+    margin-bottom: 10px;
     padding: 8px 15px;
     background: #fff;
     border-radius: 12px;
