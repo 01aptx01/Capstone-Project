@@ -2,14 +2,18 @@
 
 interface Props {
   disabled?: boolean;
+  loading?: boolean;
   onKey: (digit: string) => void;
   onDelete: () => void;
+  onConfirm: () => void;
 }
 
 export default function NumericKeyboard({
   disabled = false,
+  loading = false,
   onKey,
   onDelete,
+  onConfirm,
 }: Props) {
   return (
     <div className="coupon-numpad" aria-label="แป้นพิมพ์ตัวเลข">
@@ -41,7 +45,14 @@ export default function NumericKeyboard({
         >
           0
         </button>
-        <div className="coupon-numpad-spacer" aria-hidden />
+        <button
+          type="button"
+          className="coupon-numpad-btn coupon-numpad-btn--ok"
+          disabled={disabled}
+          onClick={onConfirm}
+        >
+          {loading ? "..." : "OK"}
+        </button>
       </div>
     </div>
   );

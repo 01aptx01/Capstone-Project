@@ -139,24 +139,18 @@ export default function CouponModal({
           >
             {displayCode}
           </div>
-          <NumericKeyboard
-            disabled={loading}
-            onKey={handleKey}
-            onDelete={handleDelete}
-          />
           {error && (
             <div className="coupon-modal-error kiosk-alert kiosk-alert--error" role="alert">
               {error}
             </div>
           )}
-          <div className="coupon-modal-actions">
-            <button type="button" className="coupon-modal-btn secondary" onClick={onClose} disabled={loading}>
-              ยกเลิก
-            </button>
-            <button type="button" className="coupon-modal-btn primary" onClick={() => void handleCheck()} disabled={loading}>
-              {loading ? "กำลังตรวจสอบ…" : "ตรวจสอบ"}
-            </button>
-          </div>
+          <NumericKeyboard
+            disabled={loading}
+            loading={loading}
+            onKey={handleKey}
+            onDelete={handleDelete}
+            onConfirm={() => void handleCheck()}
+          />
         </>
       )}
 
