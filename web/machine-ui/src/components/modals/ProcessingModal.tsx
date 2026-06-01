@@ -19,6 +19,7 @@ interface Props {
   isConnected: boolean;
   isAgentOnline: boolean;
   hasHardwareTelemetry: boolean;
+  processingStatusMessage?: string | null;
   onComplete: () => void;
 }
 
@@ -37,6 +38,7 @@ export default function ProcessingModal({
   isConnected,
   isAgentOnline,
   hasHardwareTelemetry,
+  processingStatusMessage,
   onComplete,
 }: Props) {
   return (
@@ -49,7 +51,25 @@ export default function ProcessingModal({
           ⚠️ สัญญาณอินเทอร์เน็ตขัดข้อง กำลังพยายามเชื่อมต่อใหม่...
         </div>
       )}
-      {isConnected && !isAgentOnline && !hasHardwareTelemetry && !isProcessCompleted && (
+      {processingStatusMessage && !isProcessCompleted && (
+        <div
+          style={{
+            backgroundColor: "#3b82f6",
+            color: "white",
+            padding: "8px",
+            textAlign: "center",
+            fontSize: "14px",
+            borderRadius: "16px 16px 0 0",
+          }}
+        >
+          {processingStatusMessage}
+        </div>
+      )}
+      {isConnected &&
+        !isAgentOnline &&
+        !hasHardwareTelemetry &&
+        !isProcessCompleted &&
+        !processingStatusMessage && (
         <div
           style={{
             backgroundColor: "#f59e0b",

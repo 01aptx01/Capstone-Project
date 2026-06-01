@@ -12,6 +12,26 @@ import {
   getPublicApiUrl,
 } from "../constants";
 
+const MACHINE_BUSY_DEFAULT_MSG =
+  "ตู้กำลังดำเนินการออเดอร์ก่อนหน้า กรุณารอสักครู่";
+
+async function readMachineBusyFromResponse(
+  response: Response,
+): Promise<string | null> {
+  if (response.status !== 409) return null;
+  try {
+    const data = await response.json();
+    if (data?.code === "MACHINE_BUSY") {
+      return typeof data.message === "string"
+        ? data.message
+        : MACHINE_BUSY_DEFAULT_MSG;
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
 interface UsePaymentOptions {
   activeModal: ModalType;
   setActiveModal: (modal: ModalType) => void;
@@ -19,6 +39,9 @@ interface UsePaymentOptions {
   payableTotal: number; // ราคาสุทธิที่รวมส่วนลดแล้ว
   appliedCoupon: AppliedCoupon | null; // คูปองที่ใช้
   machineCode: string; // รหัสของตู้กดสินค้า
+  isAgentOnline: boolean; // Pi hardware agent connected to server
+  isMachineBusy: boolean; // ตู้มีออเดอร์ค้าง (paid/dispensing หรือ draft < 15 นาที)
+  refreshMachineBusy: () => void | Promise<void>;
   onPaymentSuccess: () => void; // ฟังก์ชันทำงานเมื่อชำระเงินเรียบร้อย
 }
 
@@ -40,6 +63,9 @@ export function usePayment({
   payableTotal,
   appliedCoupon,
   machineCode,
+  isAgentOnline,
+  isMachineBusy,
+  refreshMachineBusy,
   onPaymentSuccess,
 }: UsePaymentOptions) {
   // STATE
@@ -70,6 +96,12 @@ export function usePayment({
   appliedCouponRef.current = appliedCoupon;
   const isProcessingPaymentRef = useRef(isProcessingPayment);
   isProcessingPaymentRef.current = isProcessingPayment;
+  const isAgentOnlineRef = useRef(isAgentOnline);
+  isAgentOnlineRef.current = isAgentOnline;
+  const isMachineBusyRef = useRef(isMachineBusy);
+  isMachineBusyRef.current = isMachineBusy;
+  const refreshMachineBusyRef = useRef(refreshMachineBusy);
+  refreshMachineBusyRef.current = refreshMachineBusy;
 
   // ซิงค์ ID ธุรกรรมเข้าสู่ Ref เสมอเมื่อเปลี่ยนค่า State
   useEffect(() => {
@@ -117,6 +149,7 @@ export function usePayment({
       }
     }
     closePaymentModal();
+    void refreshMachineBusyRef.current?.();
   };
 
   // NFC ARM/DISARM (Hardware reader) — no cleanup disarm on draft_id change (avoids race window).
@@ -204,6 +237,7 @@ export function usePayment({
     id: string; // Token ID จาก Omise API
     amount: number; // ยอดรวมเงิน (สตางค์)
   }) => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     if (isProcessingPaymentRef.current) return;
     setIsProcessingPayment(true);
     setPaymentErrorMsg(null);
@@ -240,6 +274,13 @@ export function usePayment({
       });
 
       if (!response.ok) {
+        const busyMsg = await readMachineBusyFromResponse(response);
+        if (busyMsg) {
+          setPaymentErrorMsg(busyMsg);
+          setPaymentStep(1);
+          void refreshMachineBusyRef.current?.();
+          return;
+        }
         const errorText = await response.text();
         console.error("[Frontend] Backend error text:", errorText);
         throw new Error(
@@ -387,6 +428,7 @@ export function usePayment({
   // PAYMENT METHOD HANDLERS (จัดการปุ่มกดเลือกช่องทางต่างๆ)
   // - สร้างบิลและรับคิวอาร์โค้ด PromptPay จ่ายเงินสดผ่าน Omise.js SDK
   const handleDirectPromptPay = async () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     if (!(window as any).Omise) {
       setPaymentErrorMsg("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
       return;
@@ -416,6 +458,7 @@ export function usePayment({
 
   // - จัดเตรียมสเปกของคิวอาร์สำหรับช่องทาง TrueMoney Wallet
   const handleDirectTrueMoney = async () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     setPaymentStep(2);
     setRealQrCode(null);
     processPayment({
@@ -428,8 +471,10 @@ export function usePayment({
   // - นำผู้ใช้สลับเข้าสู่ขั้นตอนเตรียมแตะบัตรจ่ายเงิน (NFC Card Reader Mode)
   // - ทำการจองสินค้าชั่วคราว (Create Draft Order ใน DB)
   const handleProceedToTap = async () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
     setPaymentStep(2);
+    setPaymentErrorMsg(null);
 
     try {
       const apiUrl = getPublicApiUrl();
@@ -447,14 +492,41 @@ export function usePayment({
           coupon_code: appliedCouponRef.current?.code,
         }),
       });
-      const data = await response.json();
-      if (data.charge_id) {
-        setCurrentChargeId(data.charge_id); // บันทึกบิลฉบับร่าง (Draft ID)
-        // Arm immediately (do not wait for effect) so taps are not ignored as "not armed".
-        void armNfcForDraft(data.charge_id);
+
+      if (!response.ok) {
+        const busyMsg = await readMachineBusyFromResponse(response);
+        if (busyMsg) {
+          setPaymentErrorMsg(busyMsg);
+          setPaymentStep(1);
+          void disarmNfc();
+          void refreshMachineBusyRef.current?.();
+          return;
+        }
+        const errText = await response.text().catch(() => "");
+        setPaymentErrorMsg(
+          `ไม่สามารถเตรียมรายการชำระเงินได้ (${response.status})${errText ? `: ${errText.slice(0, 120)}` : ""}`,
+        );
+        setPaymentStep(1);
+        void disarmNfc();
+        return;
       }
+
+      const data = await response.json();
+      if (!data.charge_id) {
+        setPaymentErrorMsg("ไม่สามารถสร้างรายการชำระเงินได้ กรุณาลองใหม่");
+        setPaymentStep(1);
+        void disarmNfc();
+        return;
+      }
+
+      setCurrentChargeId(data.charge_id);
+      void armNfcForDraft(data.charge_id);
+      void refreshMachineBusyRef.current?.();
     } catch (err) {
       console.error("[Frontend] Error creating draft order:", err);
+      setPaymentErrorMsg("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่");
+      setPaymentStep(1);
+      void disarmNfc();
     }
   };
 
@@ -536,6 +608,7 @@ export function usePayment({
 
   // - ล้างประวัติต่างๆ และสั่งเริ่มต้นระบบจ่ายเงินจากหน้าหลัก
   const handleCheckout = () => {
+    if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     setSelectedPaymentMethod(null);
     setPaymentStep(1);
     setRealQrCode(null);

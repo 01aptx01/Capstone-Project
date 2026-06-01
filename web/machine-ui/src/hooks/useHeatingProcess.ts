@@ -1,7 +1,14 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import type { Product, ModalType, AgentJobState } from "../types";
-import { STEP1_DELAY, PROCESS_STEPS } from "../constants";
+import {
+  STEP1_DELAY,
+  PROCESS_STEPS,
+  HARDWARE_EVENT_WAIT_MS,
+  ORDER_STATUS_POLL_INTERVAL_MS,
+  ORDER_STATUS_POLL_MAX_ATTEMPTS,
+  getPublicApiUrl,
+} from "../constants";
 import {
   buildDispenseSchedule,
   calculateTotalProcessTime,
@@ -12,17 +19,16 @@ import {
 interface UseHeatingProcessOptions {
   activeModal: ModalType;
   setActiveModal: (modal: ModalType) => void;
-  isAfterPayment: boolean; // เช็คว่าเป็นการเข้าสู่หน้าสมัครสมาชิก/โชว์แต้มหลังชำระเงินสำเร็จหรือไม่
-  setIsAfterPayment: (v: boolean) => void; // ฟังก์ชันอัปเดตสถานะหลังจ่ายเงิน
-  agentJobState: AgentJobState | null; // สถานะการทำงานจริงที่ยิงมาจากเครื่องอุ่นอาหารจริงผ่าน Socket
-  agentCurrentItemIndex: number; // ลำดับสินค้าตัวปัจจุบันที่กำลังจัดการ (ดึงจากตู้จริง)
-  socketGlobalTimeLeft: number; // วินาทีคงเหลือที่ดึงมาจากสถานะจริงของเครื่องอุ่นอาหาร
-  fetchProducts: (options?: { silent?: boolean }) => Promise<void>; // ฟังก์ชันเรียก API ดึงสต็อกสินค้าใหม่หลังเสร็จกระบวนการ
+  isAfterPayment: boolean;
+  setIsAfterPayment: (v: boolean) => void;
+  agentJobState: AgentJobState | null;
+  agentCurrentItemIndex: number;
+  socketGlobalTimeLeft: number;
+  fetchProducts: (options?: { silent?: boolean }) => Promise<void>;
+  /** รหัส charge หลังชำระเงิน — ใช้ poll สถานะเมื่อ Pi ช้า/offline */
+  orderChargeId: string | null;
 }
 
-// useHeatingProcess Hook
-// - ควบคุมจำลองและรับสถานะกระบวนการอุ่น/เสิร์ฟสินค้า
-// - รองรับทั้งกรณีดึงข้อมูลสดๆ จากเครื่องอุ่น (Socket) หรือใช้การนับถอยหลังจำลองในเบราว์เซอร์ (Fallback Local Countdown)
 export function useHeatingProcess({
   activeModal,
   setActiveModal,
@@ -32,84 +38,146 @@ export function useHeatingProcess({
   agentCurrentItemIndex,
   socketGlobalTimeLeft,
   fetchProducts,
+  orderChargeId,
 }: UseHeatingProcessOptions) {
-  // STATE
-  const [queue, setQueue] = useState<Product[]>([]); // คิวรายการสินค้าที่ต้องทำการอุ่น (เรียงลำดับเวลาอุ่นจากน้อยไปหามากแล้ว)
-  const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0); // เวลารวมทั้งหมดที่เหลืออยู่ (วินาที)
-  const [isInitialStep1Delay, setIsInitialStep1Delay] = useState(false); // ควบคุมการหน่วงเวลาก่อนเริ่มอุ่นจริงชิ้นแรก
-  const [isHardwareTimeout, setIsHardwareTimeout] = useState(false); // สถานะเมื่อตู้ไม่ตอบสนองเกินเวลา
-  const heatingTimelineStartedRef = useRef(false); // Ref ช่วยจำว่ากระบวนการนับถอยหลังได้เริ่มขึ้นแล้วหรือยัง
+  const [queue, setQueue] = useState<Product[]>([]);
+  const [globalTimeLeft, setGlobalTimeLeft] = useState<number>(0);
+  const [isInitialStep1Delay, setIsInitialStep1Delay] = useState(false);
+  const [isAwaitingHardware, setIsAwaitingHardware] = useState(false);
+  const [orderRecoveredSuccess, setOrderRecoveredSuccess] = useState(false);
+  const [hardwareGiveUp, setHardwareGiveUp] = useState(false);
+  const heatingTimelineStartedRef = useRef(false);
 
-  // SOCKET SYNC (การซิงค์ข้อมูลกับบอร์ดตู้จริง)
-  // - ซิงค์เวลาคงเหลือจาก socket เข้าสู่ตัวแปร globalTimeLeft ทันทีที่มีการสตรีมข้อมูลเข้ามาจากบอร์ดตู้จริง
   useEffect(() => {
     if ((isAfterPayment || activeModal === "processing") && agentJobState) {
       setGlobalTimeLeft(socketGlobalTimeLeft);
+      setIsAwaitingHardware(false);
+      setHardwareGiveUp(false);
     }
   }, [socketGlobalTimeLeft, activeModal, isAfterPayment, agentJobState]);
 
-  // LOCAL HEATING COUNTDOWN TIMER (ตัวเลขนับถอยหลังจำลองบนหน้าเว็บ)
-  // - เปิดระบบนับถอยหลังจำลองก็ต่อเมื่อ: ตู้จริงยังไม่ส่ง socket มา และหน้าจออยู่ในโหมดอุ่นอาหาร (หรือโหมดสมาชิก/โชว์คะแนนหลังชำระเงิน)
+  // ไม่ใช้ countdown จำลองบนหน้า processing — รอ event จริงหรือ poll order status เท่านั้น
   const localHeatCountdownActive =
     !agentJobState &&
-    (activeModal === "processing" ||
-      (activeModal === "numpad" && isAfterPayment) ||
+    ((activeModal === "numpad" && isAfterPayment) ||
       (activeModal === "points_result" && isAfterPayment));
 
   useEffect(() => {
     if (!localHeatCountdownActive) return;
     const interval = setInterval(() => {
-      setGlobalTimeLeft((prev) => Math.max(0, prev - 1)); // ลดเวลาลงวินาทีละ 1 วิ
+      setGlobalTimeLeft((prev) => Math.max(0, prev - 1));
     }, 1000);
     return () => clearInterval(interval);
   }, [localHeatCountdownActive, agentJobState]);
 
-  // HARDWARE TIMEOUT — รอ event จาก Pi agent จริง (agentJobState) สูงสุด 60 วินาที
   useEffect(() => {
     if (activeModal !== "processing") {
-      setIsHardwareTimeout(false);
+      setIsAwaitingHardware(false);
+      setOrderRecoveredSuccess(false);
+      setHardwareGiveUp(false);
       return;
     }
-    if (agentJobState) {
-      setIsHardwareTimeout(false);
+    if (agentJobState || orderRecoveredSuccess) {
+      setIsAwaitingHardware(false);
       return;
     }
-    const timer = setTimeout(() => setIsHardwareTimeout(true), 60000);
+    const timer = setTimeout(() => setIsAwaitingHardware(true), HARDWARE_EVENT_WAIT_MS);
     return () => clearTimeout(timer);
-  }, [activeModal, agentJobState]);
+  }, [activeModal, agentJobState, orderRecoveredSuccess]);
 
-  // DERIVED DATA
-  const dispenseSchedule = useMemo(() => buildDispenseSchedule(queue), [queue]); // ตารางคำนวณไทม์ไลน์การเสิร์ฟของแต่ละชิ้น
-  const totalProcessTime = calculateTotalProcessTime(queue); // เวลาทั้งหมดที่ต้องใช้ในคิวนี้ (วินาที)
+  // หลังรอ event จาก Pi ครบ 60s — poll สถานะ order (กรณี Pi offline แล้ว replay ทีหลัง)
+  useEffect(() => {
+    if (activeModal !== "processing" || !isAwaitingHardware || !orderChargeId) return;
+    if (agentJobState || orderRecoveredSuccess) return;
 
-  // เช็คว่ามีเวลาอุ่นแตกต่างกันมากกว่า 1 แบบไหม
+    const apiUrl = getPublicApiUrl();
+    let attempts = 0;
+    let stopped = false;
+
+    const tick = async () => {
+      if (stopped) return;
+      attempts++;
+      try {
+        const res = await fetch(`${apiUrl}/api/buy/status/${encodeURIComponent(orderChargeId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const st = String(data.status ?? "").toLowerCase();
+          if (st === "completed" || st === "dispensing") {
+            setOrderRecoveredSuccess(true);
+            setIsAwaitingHardware(false);
+            return;
+          }
+          if (
+            st === "dispense_failed" ||
+            st === "refunded" ||
+            st === "payment_failed" ||
+            st === "failed"
+          ) {
+            setHardwareGiveUp(true);
+            setIsAwaitingHardware(false);
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("[useHeatingProcess] order status poll failed:", e);
+      }
+      if (attempts >= ORDER_STATUS_POLL_MAX_ATTEMPTS) {
+        setHardwareGiveUp(true);
+        setIsAwaitingHardware(false);
+      }
+    };
+
+    void tick();
+    const interval = setInterval(() => void tick(), ORDER_STATUS_POLL_INTERVAL_MS);
+    return () => {
+      stopped = true;
+      clearInterval(interval);
+    };
+  }, [
+    activeModal,
+    isAwaitingHardware,
+    orderChargeId,
+    agentJobState,
+    orderRecoveredSuccess,
+  ]);
+
+  const dispenseSchedule = useMemo(() => buildDispenseSchedule(queue), [queue]);
+  const totalProcessTime = calculateTotalProcessTime(queue);
+
   const isMultiFlavor = useMemo(() => {
     if (queue.length <= 1) return false;
     const uniqueTimes = new Set(queue.map((it) => it.heatingTime));
     return uniqueTimes.size > 1;
   }, [queue]);
 
-  // ค่า Fallback ในกรณีที่ไม่ได้ต่อกับตู้จริง (ประมวลผลจำลอง)
   const fallbackStatus = getProcessStatus(queue, globalTimeLeft, totalProcessTime, dispenseSchedule);
 
-  // ตัดสินใจเลือกสถานะปัจจุบัน: ดึงจากเครื่องจริง (Socket) เป็นหลัก ถ้าไม่มีค่อยใช้แบบจำลอง
   const currentStep = agentJobState ? mapAgentStateToStep(agentJobState) : fallbackStatus.step;
   const currentItemIndex = agentJobState ? agentCurrentItemIndex : fallbackStatus.itemIndex;
   const isDispensingItem = agentJobState ? agentJobState === "DISPENSING" : fallbackStatus.isDispensingItem;
 
-  // ตรวจสอบว่ากระบวนการทั้งหมดเสร็จสิ้นหรือยัง
-  const isProcessCompleted = isHardwareTimeout
+  const isProcessCompleted = orderRecoveredSuccess
     ? true
-    : agentJobState
-    ? agentJobState === "DONE" || agentJobState === "ERROR"
-    : false;
-  const isProcessSuccess = isHardwareTimeout
-    ? false
-    : agentJobState
-    ? agentJobState === "DONE"
-    : false;
+    : hardwareGiveUp
+      ? true
+      : agentJobState
+        ? agentJobState === "DONE" || agentJobState === "ERROR"
+        : false;
 
-  // เช็คว่าลูกแรกอุ่นเสร็จและเริ่มเปิดประตูตู้เพื่อเสิร์ฟหรือยัง
+  const isProcessSuccess = orderRecoveredSuccess
+    ? true
+    : hardwareGiveUp
+      ? false
+      : agentJobState
+        ? agentJobState === "DONE"
+        : false;
+
+  const processingStatusMessage = isAwaitingHardware
+    ? "ระบบยังดำเนินการจ่ายสินค้า — รอสักครู่ (ตู้อาจกำลังเชื่อมต่อใหม่)"
+    : hardwareGiveUp
+      ? "ไม่ได้รับสัญญาณจากตู้ในเวลาที่กำหนด — หากชำระเงินแล้ว กรุณาติดต่อเจ้าหน้าที่"
+      : null;
+
   const hasStartedServing =
     queue.length > 0 &&
     totalProcessTime - globalTimeLeft - STEP1_DELAY >= queue[0].heatingTime;
@@ -119,8 +187,6 @@ export function useHeatingProcess({
       ? "50%"
       : `${(currentStep / (PROCESS_STEPS.length - 1)) * 75}%`;
 
-  // FUNCTIONS
-  // - สั่งให้ระบบเริ่มทำงานจับเวลาและสร้างตารางงานอุ่น โดยไม่สลับหน้า modal (ใช้รันเบื้องหลังขณะผู้ใช้กรอกเบอร์โทร)
   const beginHeatingTimelineOnly = useCallback(
     (q: Product[]) => {
       if (!agentJobState) {
@@ -135,12 +201,10 @@ export function useHeatingProcess({
     [agentJobState],
   );
 
-  // - ออกจากหน้าจอหลังจ่ายเงิน เพื่อกลับไปหน้าหลัก
   const exitPostPaymentLoyalty = useCallback(() => {
     setIsAfterPayment(false);
   }, [setIsAfterPayment]);
 
-  // - เริ่มเข้าสู่หน้าจอการอุ่นอาหารอย่างเป็นทางการ
   const startHeatingProcess = useCallback(() => {
     if (!heatingTimelineStartedRef.current) {
       beginHeatingTimelineOnly(queue);
@@ -149,22 +213,21 @@ export function useHeatingProcess({
     exitPostPaymentLoyalty();
   }, [queue, beginHeatingTimelineOnly, setActiveModal, exitPostPaymentLoyalty]);
 
-  // - จัดการปิดโมดอลการอุ่นเมื่อเสร็จสมบูรณ์ -> รีเซ็ตและดึงข้อมูลสต็อกใหม่ทันที
   const handleProcessingCompleteClose = useCallback(() => {
     heatingTimelineStartedRef.current = false;
-    setIsHardwareTimeout(false);
+    setIsAwaitingHardware(false);
+    setOrderRecoveredSuccess(false);
+    setHardwareGiveUp(false);
     setActiveModal("none");
     void fetchProducts({ silent: true });
   }, [setActiveModal, fetchProducts]);
 
   return {
-    // States
     queue,
     setQueue,
     globalTimeLeft,
     setGlobalTimeLeft,
     isInitialStep1Delay,
-    // Derived (ข้อมูลประมวลผล)
     currentStep,
     currentItemIndex,
     isDispensingItem,
@@ -174,11 +237,11 @@ export function useHeatingProcess({
     hasStartedServing,
     progressLineWidth,
     totalProcessTime,
-    // Actions
+    processingStatusMessage,
+    isAwaitingHardware,
     beginHeatingTimelineOnly,
     startHeatingProcess,
     handleProcessingCompleteClose,
-    // Ref (ใช้สำหรับเช็คสถานะอุ่น)
     heatingTimelineStartedRef,
   };
 }

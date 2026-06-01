@@ -13,6 +13,12 @@ class AlreadyClaimedError(Exception):
     pass
 
 
+# สอดคล้อง background sweeper ใน server/main.py — draft เก่ากว่านี้ไม่บล็อกซื้อใหม่
+PENDING_PAYMENT_BUSY_MINUTES = 15
+# paid/dispensing ค้างเกินนี้ → sweeper ตั้ง dispense_failed (ปลดล็อก kiosk)
+PAID_DISPENSE_STALE_MINUTES = 45
+
+
 class InventoryService:
     def __init__(self, db_provider=None):
         self.get_db = db_provider or get_db
@@ -426,6 +432,117 @@ class InventoryService:
             db.rollback()
             logger.error(f"❌ [InventoryService] cancel_order error for charge {charge_id}: {e}")
             return False
+        finally:
+            cur.close()
+            db.close()
+
+    def cancel_stale_pending_orders(self, machine_code: str) -> int:
+        """ยกเลิก pending_payment ที่เกินกำหนด — กัน edge case จ่ายทับ draft เก่า."""
+        db = self.get_db()
+        cur = db.cursor()
+        try:
+            cur.execute(
+                """
+                UPDATE orders
+                SET status = 'cancelled'
+                WHERE machine_code = %s
+                  AND status = 'pending_payment'
+                  AND created_at < DATE_SUB(NOW(), INTERVAL %s MINUTE)
+                """,
+                (machine_code, PENDING_PAYMENT_BUSY_MINUTES),
+            )
+            db.commit()
+            n = cur.rowcount
+            if n:
+                logger.info(
+                    "[InventoryService] Cancelled %s stale pending_payment order(s) for %s",
+                    n,
+                    machine_code,
+                )
+            return n
+        except Exception as e:
+            db.rollback()
+            logger.error(
+                "[InventoryService] cancel_stale_pending_orders error for %s: %s",
+                machine_code,
+                e,
+            )
+            return 0
+        finally:
+            cur.close()
+            db.close()
+
+    def get_blocking_order(
+        self, machine_code: str, exclude_charge_id: str | None = None
+    ) -> dict | None:
+        """ออเดอร์ที่ยังไม่ควรเปิดซื้อใหม่บนตู้นี้ (หลังเคลียร์ draft เก่าแล้ว)."""
+        self.cancel_stale_pending_orders(machine_code)
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT charge_id, status, created_at
+                FROM orders
+                WHERE machine_code = %s
+                  AND (
+                    status IN ('paid', 'dispensing')
+                    OR (
+                      status = 'pending_payment'
+                      AND created_at >= DATE_SUB(NOW(), INTERVAL %s MINUTE)
+                    )
+                  )
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (machine_code, PENDING_PAYMENT_BUSY_MINUTES),
+            )
+            row = cur.fetchone()
+            if row and exclude_charge_id and row.get("charge_id") == exclude_charge_id:
+                return None
+            return row
+        finally:
+            cur.close()
+            db.close()
+
+    def fail_stale_paid_orders(self) -> list[str]:
+        """Mark stuck paid/dispensing orders as dispense_failed; return charge_ids updated."""
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT charge_id
+                FROM orders
+                WHERE status IN ('paid', 'dispensing')
+                  AND updated_at < DATE_SUB(NOW(), INTERVAL %s MINUTE)
+                  AND charge_id IS NOT NULL
+                """,
+                (PAID_DISPENSE_STALE_MINUTES,),
+            )
+            rows = list(cur.fetchall() or [])
+            charge_ids = [str(r["charge_id"]) for r in rows if r.get("charge_id")]
+            if not charge_ids:
+                return []
+            for cid in charge_ids:
+                cur.execute(
+                    """
+                    UPDATE orders
+                    SET status = 'dispense_failed'
+                    WHERE charge_id = %s AND status IN ('paid', 'dispensing')
+                    """,
+                    (cid,),
+                )
+            db.commit()
+            logger.warning(
+                "[InventoryService] Stale paid/dispensing → dispense_failed: %s",
+                charge_ids,
+            )
+            return charge_ids
+        except Exception as e:
+            db.rollback()
+            logger.error("[InventoryService] fail_stale_paid_orders error: %s", e)
+            return []
         finally:
             cur.close()
             db.close()
