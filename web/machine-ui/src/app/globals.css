@@ -684,9 +684,8 @@ body {
     background-color: #fca5a5;
 }
 
-.coupon-numpad-spacer {
-    visibility: hidden;
-    pointer-events: none;
+.coupon-numpad-btn--ok {
+    font-size: 18px;
 }
 
 .coupon-modal-error {
@@ -1153,39 +1152,65 @@ body {
 .numpad-modal-box {
     background-color: white;
     border-radius: 24px;
-    padding: 60px 20px 20px 20px;
-    width: 400px;
-    height: 465px;
+    padding: 58px 16px 15px;
+    width: min(390px, 92vw);
+    max-height: 90vh;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     display: flex;
     flex-direction: column;
     align-items: center;
+    overflow: hidden;
     animation: popIn 0.2s ease-out;
+    box-sizing: border-box;
+}
+
+.numpad-modal-body {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.numpad-modal-error {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    font-size: 13px;
+    line-height: 1.35;
+    margin-bottom: 8px;
+    flex-shrink: 0;
 }
 
 .numpad-title {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     color: #333;
+    text-align: center;
+    line-height: 1.3;
+    padding: 0 8px;
 }
 
 .phone-display {
     background-color: #f89025;
     color: white;
-    font-size: 32px;
+    font-size: 28px;
     font-weight: 700;
     letter-spacing: 2px;
     border-radius: 40px;
     width: 90%;
     text-align: center;
-    margin-bottom: 20px;
-    min-height: 50px;
+    margin-bottom: 12px;
+    min-height: 44px;
     display: flex;
     justify-content: center;
     align-items: center;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
 }
 
 .numpad-grid {
@@ -1193,6 +1218,7 @@ body {
     grid-template-columns: repeat(3, 1fr);
     gap: 5px;
     width: 80%;
+    flex-shrink: 0;
 }
 
 .numpad-btn {
@@ -1200,9 +1226,9 @@ body {
     color: #000;
     border: none;
     border-radius: 50%;
-    width: 62px;
-    height: 62px;
-    font-size: 28px;
+    width: min(56px, 24vw);
+    height: min(56px, 24vw);
+    font-size: 24px;
     font-weight: 700;
     cursor: pointer;
     display: flex;
@@ -1211,6 +1237,13 @@ body {
     margin: 0 auto;
     transition: background 0.1s, transform 0.1s;
     font-family: inherit;
+}
+
+.numpad-skip-link {
+    text-decoration: underline;
+    margin-top: 8px;
+    font-size: 13px;
+    flex-shrink: 0;
 }
 
 .numpad-btn:active {
@@ -1556,12 +1589,15 @@ body {
 .points-modal-box {
     background-color: white;
     border-radius: 24px;
-    padding: 50px 40px 40px 40px;
-    width: 500px;
+    padding: 44px 28px 28px;
+    width: min(420px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
     text-align: center;
     position: relative;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
     animation: popIn 0.3s ease-out;
+    box-sizing: border-box;
 }
 
 .points-title {
@@ -1572,11 +1608,11 @@ body {
 }
 
 .points-value {
-    font-size: 130px;
+    font-size: clamp(72px, 18vw, 130px);
     font-weight: 900;
     color: #f89025;
     line-height: 1;
-    margin: 15px 0 5px 0;
+    margin: 12px 0 4px 0;
     text-shadow: 3px 3px 0px #fff7ed;
 }
 
@@ -1625,11 +1661,12 @@ body {
 }
 
 .points-member-error-msg {
-    margin-top: 16px;
-    font-size: 18px;
+    margin-top: 12px;
+    font-size: 16px;
     font-weight: 600;
     color: #64748b;
-    line-height: 1.5;
+    line-height: 1.45;
+    word-break: break-word;
 }
 
 /* Limit warning modal */
