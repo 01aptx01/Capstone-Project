@@ -16,35 +16,6 @@ from app.realtime.socketio_gateway import emit_job_start, is_machine_agent_onlin
 # Configure logger
 logger = logging.getLogger(__name__)
 
-_DEBUG_LOG_PATH = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "debug-190ecb.log")
-)
-
-
-def _agent_debug_log(location: str, message: str, data: dict, hypothesis_id: str) -> None:
-    # #region agent log
-    try:
-        import time
-
-        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(
-                json.dumps(
-                    {
-                        "sessionId": "190ecb",
-                        "location": location,
-                        "message": message,
-                        "data": data,
-                        "hypothesisId": hypothesis_id,
-                        "timestamp": int(time.time() * 1000),
-                    },
-                    ensure_ascii=False,
-                )
-                + "\n"
-            )
-    except Exception:
-        pass
-    # #endregion
-
 class BuyController:
     def __init__(self, payment_service: OmisePaymentService, inventory_service: InventoryService):
         self.payment_service = payment_service
@@ -242,12 +213,6 @@ class BuyController:
             return "pending_payment"
 
         omise_status = getattr(charge, "status", None)
-        _agent_debug_log(
-            "buy.py:reconcile_pending_charge",
-            "omise_lookup",
-            {"charge_id": charge_id, "omise_status": omise_status, "is_stale": is_stale},
-            "H3",
-        )
         if omise_status == "successful":
             self._hydrate_pending_order(charge_id, charge)
             self.order_statuses[charge_id] = "paid"
@@ -750,17 +715,6 @@ class BuyController:
             pm = self._order_payment_method(charge_id)
             if pm:
                 payload["payment_method"] = pm
-
-        _agent_debug_log(
-            "buy.py:check_status",
-            "response",
-            {
-                "charge_id": charge_id,
-                "status": payload.get("status"),
-                "has_qr": bool(payload.get("qr_code")),
-            },
-            "H1-H3",
-        )
 
         return jsonify(payload)
 
