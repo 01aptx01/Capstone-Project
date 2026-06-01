@@ -119,6 +119,49 @@ export function usePayment({
     closePaymentModal();
   };
 
+  // NFC ARM/DISARM (Hardware reader)
+  // - Arm only while the UI is actively waiting for a card tap (card + step 2).
+  // - Bind the tap to the current draft_id to prevent stale taps from paying the next order.
+  useEffect(() => {
+    const shouldArm =
+      activeModal === "payment" &&
+      selectedPaymentMethod === "card" &&
+      paymentStep === 2;
+
+    const draftId = currentChargeIdRef.current;
+    const agentBase = getPublicAgentBaseUrl();
+    if (!shouldArm || !draftId) return;
+
+    const arm = async () => {
+      try {
+        const res = await fetch(`${agentBase}/nfc/arm`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ draft_id: draftId, ttl_ms: PAYMENT_COUNTDOWN_SECONDS * 1000 }),
+        });
+        if (res.ok) {
+          console.log(`[NFC] armed for ${String(draftId).slice(0, 12)}…`);
+        } else {
+          console.warn("[NFC] arm failed:", res.status);
+        }
+      } catch {
+        // ignore — if agent isn't reachable, polling will just never detect taps
+        console.warn("[NFC] arm failed: agent unreachable");
+      }
+    };
+    void arm();
+
+    return () => {
+      // Best-effort disarm to clear pending tap when leaving the screen.
+      void fetch(`${agentBase}/nfc/disarm`, { method: "POST" })
+        .then((r) => {
+          if (r.ok) console.log("[NFC] disarmed");
+        })
+        .catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeModal, selectedPaymentMethod, paymentStep]);
+
   // - จัดการเมื่อผู้ใช้กดปุ่มกากบาทหรือกดปิดหน้าชำระเงิน
   // - หากสแกน QR ค้างอยู่ (สเตป 2) จะเปิดหน้าต่างถามยืนยันยกเลิก
   // - เพื่อป้องกันลูกค้ากดปิดโดยไม่ตั้งใจ
@@ -160,6 +203,7 @@ export function usePayment({
   }) => {
     if (isProcessingPaymentRef.current) return;
     setIsProcessingPayment(true);
+    setPaymentErrorMsg(null);
     
     const controller = new AbortController();
     const timeoutMs = PAYMENT_TIMEOUT_MS; // ตัดจบหากเชื่อมต่อยาวเกินกำหนด
@@ -227,11 +271,11 @@ export function usePayment({
       });
 
       if (err.name === "AbortError") {
-        alert(
+        setPaymentErrorMsg(
           `ระบบเชื่อมต่อล่าช้า กรุณาลองใหม่อีกครั้ง (Timeout ${Math.round(timeoutMs / 1000)}s)`,
         );
       } else {
-        alert(`เกิดข้อผิดพลาด: ${err.message}`);
+        setPaymentErrorMsg(`เกิดข้อผิดพลาด: ${err.message}`);
       }
 
       // ระบบช่วยเหลือ: หากจ่ายเงินล้มเหลวสุดขีด ให้รีเซ็ตกลับหน้าจอหลักใน 3 วินาทีเพื่อไม่ให้ตู้กดอาหารจอนิ่งค้าง
@@ -313,7 +357,7 @@ export function usePayment({
             st === "failed"
           ) {
             stopPolling();
-            alert(
+            setPaymentErrorMsg(
               "การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่หรือลองใหม่",
             );
             await cancelAndClosePaymentModal();
@@ -341,7 +385,7 @@ export function usePayment({
   // - สร้างบิลและรับคิวอาร์โค้ด PromptPay จ่ายเงินสดผ่าน Omise.js SDK
   const handleDirectPromptPay = async () => {
     if (!(window as any).Omise) {
-      alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      setPaymentErrorMsg("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
       return;
     }
 
@@ -357,7 +401,7 @@ export function usePayment({
       async (statusCode: number, response: any) => {
         if (statusCode !== 200) {
           console.error("Omise Source Error:", response);
-          alert("ไม่สามารถสร้างรายการ PromptPay ได้");
+          setPaymentErrorMsg("ไม่สามารถสร้างรายการ PromptPay ได้");
           return;
         }
         const sourceId = response.id;
@@ -413,7 +457,7 @@ export function usePayment({
   // - จะทำการจำลองแปลงข้อมูลบัตรเครดิตไปเป็น Token ของ Omise API
   const simulateNfcTap = async (brand: TestCardBrand) => {
     if (!(window as any).Omise) {
-      alert("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      setPaymentErrorMsg("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
       return;
     }
 
@@ -447,7 +491,7 @@ export function usePayment({
           });
         } else {
           console.error("[Frontend] Omise Tokenization Failed:", response);
-          alert(`Tokenization Error: ${response.message || "Unknown error"}`);
+          setPaymentErrorMsg(`Tokenization Error: ${response.message || "Unknown error"}`);
           setTimeout(() => {
             cancelAndClosePaymentModal();
           }, 2000);
@@ -563,19 +607,22 @@ export function usePayment({
   useEffect(() => {
     if (
       activeModal === "payment" &&
-      selectedPaymentMethod !== null &&
-      selectedPaymentMethod !== "promptpay" &&
+      selectedPaymentMethod === "card" &&
       paymentStep === 2
     ) {
       const pollNfc = async () => {
         if (isProcessingPayment || isNfcBlocked) return;
         try {
-          // ดึงสถานะการแตะบัตรผ่านพอร์ตความร้อนเครื่องอ่านบัตรฮาร์ดแวร์
-          const res = await fetch(`${getPublicAgentBaseUrl()}/nfc/status`);
+          const draftId = currentChargeIdRef.current;
+          if (!draftId) return;
+          // ดึงสถานะการแตะบัตรจาก Python Agent (ผูกกับ draft_id ปัจจุบัน)
+          const res = await fetch(
+            `${getPublicAgentBaseUrl()}/nfc/status?draft_id=${encodeURIComponent(draftId)}`,
+          );
           if (res.ok) {
             const data = await res.json();
             if (data.status === "tapped") {
-              console.log("[Frontend] Hardware NFC Tap detected via Agent!");
+              console.log(`[NFC] tapped for ${String(draftId).slice(0, 12)}…`);
               simulateNfcTap("visa");
             }
           }

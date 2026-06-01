@@ -286,10 +286,35 @@ def job_events(job_id: str):
 @routes.route("/nfc/status", methods=["GET"])
 def nfc_status():
     """Endpoint for UI to poll for NFC tap status."""
-    if machine.nfc._event.is_set():
-        machine.nfc.reset()
-        return jsonify({"status": "tapped"}), 200
-    return jsonify({"status": "waiting"}), 200
+    draft_id = request.args.get("draft_id") or request.args.get("charge_id")
+    st = machine.nfc.status(draft_id=draft_id)
+    # Backward compatible behavior: "tapped" consumes the event once.
+    if st.get("status") == "tapped":
+        machine.nfc.consume_tap(draft_id=draft_id)
+    return jsonify(st), 200
+
+
+@routes.route("/nfc/arm", methods=["POST"])
+def nfc_arm():
+    """Arm NFC polling for the current payment flow (prevents stale taps leaking into next flow)."""
+    body = request.get_json(silent=True) or {}
+    draft_id = body.get("draft_id") or body.get("charge_id")
+    ttl_ms = body.get("ttl_ms") or body.get("ttlMs") or 30000
+    if not draft_id:
+        return jsonify({"ok": False, "error": "draft_id required"}), 400
+    try:
+        ttl_ms_int = int(ttl_ms)
+    except Exception:
+        ttl_ms_int = 30000
+    machine.nfc.arm(draft_id=str(draft_id), ttl_ms=ttl_ms_int)
+    return jsonify({"ok": True, **machine.nfc.status(draft_id=str(draft_id))}), 200
+
+
+@routes.route("/nfc/disarm", methods=["POST"])
+def nfc_disarm():
+    """Disarm NFC polling and clear pending tap."""
+    machine.nfc.disarm()
+    return jsonify({"ok": True, **machine.nfc.status()}), 200
 
 @routes.route("/health", methods=["GET"])
 def health():
