@@ -319,7 +319,7 @@ export function usePayment({
           `ระบบเชื่อมต่อล่าช้า กรุณาลองใหม่อีกครั้ง (Timeout ${Math.round(timeoutMs / 1000)}s)`,
         );
       } else {
-        setPaymentErrorMsg(`เกิดข้อผิดพลาด: ${err.message}`);
+        setPaymentErrorMsg("เกิดข้อผิดพลาดในการชำระเงิน กรุณาลองใหม่อีกครั้ง");
       }
 
       // ระบบช่วยเหลือ: หากจ่ายเงินล้มเหลวสุดขีด ให้รีเซ็ตกลับหน้าจอหลักใน 3 วินาทีเพื่อไม่ให้ตู้กดอาหารจอนิ่งค้าง
@@ -402,7 +402,7 @@ export function usePayment({
           ) {
             stopPolling();
             setPaymentErrorMsg(
-              "การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่หรือลองใหม่",
+              "การชำระเงินหรือการจ่ายสินค้าไม่สำเร็จ กรุณาติดต่อเจ้าหน้าที่",
             );
             await cancelAndClosePaymentModal();
             return;
@@ -430,7 +430,7 @@ export function usePayment({
   const handleDirectPromptPay = async () => {
     if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
     if (!(window as any).Omise) {
-      setPaymentErrorMsg("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      setPaymentErrorMsg("ระบบชำระเงินยังไม่พร้อม กรุณารอสักครู่แล้วลองใหม่");
       return;
     }
 
@@ -524,7 +524,7 @@ export function usePayment({
       void refreshMachineBusyRef.current?.();
     } catch (err) {
       console.error("[Frontend] Error creating draft order:", err);
-      setPaymentErrorMsg("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่");
+      setPaymentErrorMsg("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองใหม่ภายหลัง");
       setPaymentStep(1);
       void disarmNfc();
     }
@@ -534,7 +534,7 @@ export function usePayment({
   // - จะทำการจำลองแปลงข้อมูลบัตรเครดิตไปเป็น Token ของ Omise API
   const simulateNfcTap = async (brand: TestCardBrand) => {
     if (!(window as any).Omise) {
-      setPaymentErrorMsg("ระบบชำระเงิน (Omise.js) ยังไม่พร้อม");
+      setPaymentErrorMsg("ระบบชำระเงินยังไม่พร้อม กรุณารอสักครู่แล้วลองใหม่");
       return;
     }
 
@@ -568,7 +568,9 @@ export function usePayment({
           });
         } else {
           console.error("[Frontend] Omise Tokenization Failed:", response);
-          setPaymentErrorMsg(`Tokenization Error: ${response.message || "Unknown error"}`);
+          setPaymentErrorMsg(
+            "ไม่สามารถยืนยันบัตรได้ กรุณาลองใหม่หรือเปลี่ยนช่องทางชำระเงิน",
+          );
           setTimeout(() => {
             cancelAndClosePaymentModal();
           }, 2000);

@@ -34,6 +34,7 @@ export function useMember({
   const [isNewMember, setIsNewMember] = useState<boolean>(false); // บ่งบอกว่าเป็นสมาชิกใหม่แกะกล่องที่เพิ่งสมัครหรือไม่
   const [isMemberLoading, setIsMemberLoading] = useState<boolean>(false); // แสดงสถานะกำลังเช็คข้อมูลสมาชิกกับ API
   const [memberError, setMemberError] = useState<string | null>(null); // ข้อผิดพลาดเกี่ยวกับระบบสมาชิก
+  const [numpadError, setNumpadError] = useState<string | null>(null); // แจ้งเตือนบนหน้า numpad (แทน alert)
   const [numpadCountdown, setNumpadCountdown] = useState<number>(NUMPAD_COUNTDOWN_SECONDS); // เวลาถอยหลังหน้ากรอกเบอร์ (วิ)
   const [pointsCountdown, setPointsCountdown] = useState<number>(POINTS_COUNTDOWN_SECONDS); // เวลาถอยหลังหน้าผลลัพธ์คะแนน (วิ)
 
@@ -84,6 +85,7 @@ export function useMember({
   // กดเลข 0-9
   const handleNumberClick = useCallback(
     (num: string) => {
+      setNumpadError(null);
       if (phoneNumber.length < 10) setPhoneNumber((prev) => prev + num);
     },
     [phoneNumber.length],
@@ -91,19 +93,21 @@ export function useMember({
 
   // กดลบตัวเลขหลังสุด (Backspace)
   const handleDeleteClick = useCallback(() => {
+    setNumpadError(null);
     setPhoneNumber((prev) => prev.slice(0, -1));
   }, []);
 
   // กดยืนยันเบอร์โทรศัพท์
   const handleConfirmPhone = useCallback(async () => {
     if (phoneNumber.length !== 10) {
-      alert("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
+      setNumpadError("กรุณากรอกเบอร์โทรศัพท์ให้ครบ 10 หลัก");
       return;
     }
 
     const apiUrl = getPublicApiUrl();
     setIsMemberLoading(true);
     setMemberError(null);
+    setNumpadError(null);
 
     if (isAfterPayment) {
       // กรณี: สะสมแต้ม (หลังจ่ายเงิน)
@@ -127,8 +131,9 @@ export function useMember({
         setActiveModal("points_result");
       } catch (err) {
         console.error("Earn points error:", err);
-        // หากระบบแต้มขัดข้อง ให้ข้ามไปขั้นตอนสำคัญที่สุดคือเริ่มอุ่นอาหารทันที
-        onStartHeatingRef.current();
+        setNumpadError(
+          "ไม่สามารถสะสมแต้มได้ในขณะนี้ กรุณากด «ไม่สะสมแต้ม» เพื่อดำเนินการต่อ",
+        );
       } finally {
         setIsMemberLoading(false);
       }
@@ -154,11 +159,11 @@ export function useMember({
           setPointsCountdown(POINTS_COUNTDOWN_SECONDS);
           setActiveModal("points_result");
         } else {
-          alert("เกิดข้อผิดพลาดในการตรวจสอบข้อมูล");
+          setNumpadError("เกิดข้อผิดพลาดในการตรวจสอบข้อมูล กรุณาลองใหม่อีกครั้ง");
         }
       } catch (err) {
         console.error("Lookup error:", err);
-        alert("ไม่สามารถเชื่อมต่อกับระบบได้");
+        setNumpadError("ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาตรวจสอบเครือข่ายแล้วลองใหม่");
       } finally {
         setIsMemberLoading(false);
       }
@@ -172,6 +177,7 @@ export function useMember({
   const handleOpenNumpad = useCallback(() => {
     setNumpadCountdown(NUMPAD_COUNTDOWN_SECONDS);
     setPhoneNumber("");
+    setNumpadError(null);
   }, []);
 
   return {
@@ -181,7 +187,8 @@ export function useMember({
     earnedPoints, 
     isNewMember, 
     isMemberLoading, 
-    memberError, 
+    memberError,
+    numpadError,
     numpadCountdown, 
     setNumpadCountdown,
     pointsCountdown,
