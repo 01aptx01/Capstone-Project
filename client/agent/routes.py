@@ -192,6 +192,18 @@ class JobManager:
 job_manager = JobManager()
 
 
+def _safe_hw(label: str, fn, *args, **kwargs):
+    """เรียก hardware/LED/audio call แบบปลอดภัย — ถ้า throw จะ log แล้วเดินต่อ
+    ไม่ให้ exception จาก hardware (เช่นไฟ LED/เสียง ใน environment ที่ไม่มี GPIO จริง)
+    ทำให้ทั้ง job ล้มเหลวกลายเป็น ERROR ทั้งที่การจ่ายสินค้า (timeline) เสร็จปกติ
+    """
+    try:
+        return fn(*args, **kwargs)
+    except Exception as e:
+        logger.warning(f"[MockJob] hardware call '{label}' failed (ignored): {e!r}")
+        return None
+
+
 def _mk_event(job: Job, *, event_type: str, state: Optional[str] = None, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     job.seq += 1
     return {
@@ -236,13 +248,13 @@ def _run_mock_job(job: Job) -> None:
         active_slots = []
         for i, it, target_time in items_with_time:
             slot_index = machine.resolve_slot_index(it.get("product_id", 1))
-            machine.set_slot_active(slot_index, True)
+            _safe_hw("set_slot_active(on)", machine.set_slot_active, slot_index, True)
             if slot_index not in active_slots:
                 active_slots.append(slot_index)
-                
+
         # 2. Phase 1: TRANSFER_TO_OVEN (STEP1_DELAY = 2s)
         job.state = "TRANSFER_TO_OVEN"
-        machine.mark_step_active("TRANSFER_TO_OVEN")
+        _safe_hw("mark_step_active(TRANSFER)", machine.mark_step_active, "TRANSFER_TO_OVEN")
         job_manager.publish(
             job,
             _mk_event(
@@ -253,22 +265,22 @@ def _run_mock_job(job: Job) -> None:
             ),
         )
         tick(2) # Match STEP1_DELAY
-        machine.mark_step_complete("TRANSFER_TO_OVEN")
+        _safe_hw("mark_step_complete(TRANSFER)", machine.mark_step_complete, "TRANSFER_TO_OVEN")
 
         # 3. Phase 2: HEATING & DISPENSING
         elapsed_heating = 0
         for i, it, target_time in items_with_time:
             if job.done:
                 for slot in active_slots:
-                    machine.set_slot_active(slot, False)
+                    _safe_hw("set_slot_active(off)", machine.set_slot_active, slot, False)
                 return
-            
+
             job.current_item_index = i
             # Step A: HEATING
             time_to_heat = target_time - elapsed_heating
             if time_to_heat > 0:
                 job.state = "HEATING"
-                machine.mark_step_active("HEATING")
+                _safe_hw("mark_step_active(HEATING)", machine.mark_step_active, "HEATING")
                 job_manager.publish(
                     job,
                     _mk_event(
@@ -279,12 +291,12 @@ def _run_mock_job(job: Job) -> None:
                     ),
                 )
                 tick(time_to_heat)
-                machine.mark_step_complete("HEATING")
+                _safe_hw("mark_step_complete(HEATING)", machine.mark_step_complete, "HEATING")
                 elapsed_heating = target_time
 
             # Step B: DISPENSING (DISPENSE_WINDOW = 2s)
             job.state = "DISPENSING"
-            machine.mark_step_active("DISPENSING")
+            _safe_hw("mark_step_active(DISPENSING)", machine.mark_step_active, "DISPENSING")
             job_manager.publish(
                 job,
                 _mk_event(
@@ -295,18 +307,19 @@ def _run_mock_job(job: Job) -> None:
                 ),
             )
             tick(2) # Match DISPENSE_WINDOW
-            machine.mark_step_complete("DISPENSING")
+            _safe_hw("mark_step_complete(DISPENSING)", machine.mark_step_complete, "DISPENSING")
 
         # 4. Phase 3: Post-Dispense (STEP4_HOLD = 3s)
         # UI holds Step 3 for 3 seconds after last item
         tick(3)
 
         # 5. Phase 4: DONE (FINAL_STEP_HOLD = 3s)
+        # ตั้ง job.done = True ก่อน publish DONE — เมื่อถึงจุดนี้ถือว่าจ่ายสินค้าสำเร็จแล้ว
+        # การ publish DONE คือเหตุการณ์ที่ "ต้องไปถึงให้ได้" ดังนั้นทำก่อน hardware ใดๆ
         job.state = "DONE"
         job.remaining_seconds = 0
         job.done = True
-        
-        machine.mark_step_active("DONE")
+
         job_manager.publish(
             job,
             _mk_event(
@@ -316,22 +329,35 @@ def _run_mock_job(job: Job) -> None:
                 payload={"remaining_seconds": 0, "current_item_index": job.current_item_index},
             ),
         )
+        # hardware ของ DONE ทั้งหมดเป็น cosmetic — wrap ให้ปลอดภัย
+        _safe_hw("mark_step_active(DONE)", machine.mark_step_active, "DONE")
         tick(3) # Match FINAL_STEP_HOLD
-        machine.mark_step_complete("DONE")
-        machine.step_leds.set_all(success=True)
+        _safe_hw("mark_step_complete(DONE)", machine.mark_step_complete, "DONE")
+        _safe_hw("step_leds.set_all", machine.step_leds.set_all, success=True)
 
         # Turn off all green slot lights
         for slot in active_slots:
-            machine.set_slot_active(slot, False)
-            
+            _safe_hw("set_slot_active(off)", machine.set_slot_active, slot, False)
+
         time.sleep(2.0)
-        machine.step_leds.set_standby()
+        _safe_hw("step_leds.set_standby", machine.step_leds.set_standby)
 
     except Exception as e:
+        # ถ้า job สำเร็จแล้ว (job.done = True หลัง DONE state) แต่เกิด exception
+        # ในช่วง cleanup — ไม่ publish ERROR เพราะ DONE event ถูกส่งไปแล้ว
+        # (ป้องกัน ERROR event ทับ DONE ที่ server อาจทำให้ status กลายเป็น dispense_failed)
+        if job.done:
+            logger.warning(
+                f"[MockJob] cleanup exception after DONE (job={job.job_id}): {e!r} — ignoring"
+            )
+            return
+
+        # log traceback เต็มเพื่อวินิจฉัยว่าอะไรทำให้ job ล้มเหลวก่อนถึง DONE
+        logger.exception(f"[MockJob] job {job.job_id} FAILED before DONE: {e!r}")
         job.state = "ERROR"
         job.error_message = str(e)
         job.done = True
-        machine.mark_error(str(e))
+        _safe_hw("mark_error", machine.mark_error, str(e))
         job_manager.publish(
             job,
             _mk_event(

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useLang } from "@/lib/i18n/lang";
+import { adminLogout } from "@/lib/auth";
 
 export default function LogoutPage() {
   const router = useRouter();
@@ -12,13 +13,12 @@ export default function LogoutPage() {
 
   useEffect(() => {
     setMounted(true);
-    // Clear any local storage or cookies here
-    // localStorage.removeItem("token");
-    
+    // ลบ JWT ออกจาก localStorage (+ แจ้ง server) แล้วค่อยเด้งไปหน้า login
+    void adminLogout();
+
     const timer = setTimeout(() => {
-      // In a real app, you might hit an API endpoint first
-      router.push("/login");
-    }, 2000);
+      router.replace("/login");
+    }, 1500);
 
     return () => clearTimeout(timer);
   }, [router]);

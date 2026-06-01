@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import PageWrapper from "@/components/layout/PageWrapper";
 import DashboardChart from "@/components/dashboard/DashboardChart";
 import DashboardCard from "@/components/dashboard/DashboardCard";
-import RevenueChart from "@/components/dashboard/RevenueChart";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import {
   getAdminAlerts,
@@ -237,9 +236,8 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
-        <RevenueChart data={rechartsData} loading={loading && rechartsData.length === 0} />
-        <DashboardChart liveBuckets={liveBuckets} />
+      <div className="mb-8">
+        <DashboardChart liveBuckets={liveBuckets} salesSeriesData={rechartsData} />
       </div>
     </PageWrapper>
   );
