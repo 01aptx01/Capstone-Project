@@ -306,14 +306,17 @@ def nfc_arm():
         ttl_ms_int = int(ttl_ms)
     except Exception:
         ttl_ms_int = 30000
-    machine.nfc.arm(draft_id=str(draft_id), ttl_ms=ttl_ms_int)
-    return jsonify({"ok": True, **machine.nfc.status(draft_id=str(draft_id))}), 200
+    draft_id = str(draft_id)
+    machine.nfc.arm(draft_id=draft_id, ttl_ms=ttl_ms_int)
+    logger.info("[NFC] armed for %s (ttl_ms=%s)", draft_id, ttl_ms_int)
+    return jsonify({"ok": True, **machine.nfc.status(draft_id=draft_id)}), 200
 
 
 @routes.route("/nfc/disarm", methods=["POST"])
 def nfc_disarm():
     """Disarm NFC polling and clear pending tap."""
     machine.nfc.disarm()
+    logger.info("[NFC] disarmed")
     return jsonify({"ok": True, **machine.nfc.status()}), 200
 
 @routes.route("/health", methods=["GET"])
