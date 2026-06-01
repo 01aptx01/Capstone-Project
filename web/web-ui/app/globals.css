@@ -7,6 +7,8 @@
   --brand-hover: #ea580c;
   --brand-light: #ff8a33;
   --brand-muted: #fff3e8;
+  --brand-grad: linear-gradient(135deg, #FF9646 0%, #F4661B 60%, #E85709 100%);
+  --brand-glow: 0 14px 34px -12px rgba(233, 95, 8, .55);
 
   /* Surfaces */
   --background: #F9FAFB;
