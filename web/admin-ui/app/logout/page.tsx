@@ -2,87 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createPortal } from "react-dom";
-import { useLang } from "@/lib/i18n/lang";
-import { adminLogout } from "@/lib/auth";
 
 export default function LogoutPage() {
   const router = useRouter();
-  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // ลบ JWT ออกจาก localStorage (+ แจ้ง server) แล้วค่อยเด้งไปหน้า login
-    void adminLogout();
-
+    localStorage.removeItem("admin_token");
+    sessionStorage.removeItem("reg_token");
+    
     const timer = setTimeout(() => {
-      router.replace("/login");
-    }, 1500);
+      router.push("/login");
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [router]);
 
   if (!mounted) return null;
 
-  return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-      {/* Dark Backdrop Overlay */}
-      <div className="absolute inset-0 bg-[var(--overlay)]/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
-      
-      {/* Modal Content */}
-      <div className="relative z-10 logout-content animate-in zoom-in-95 duration-300">
-        <div className="loader-wrapper">
-          <div className="premium-loader"></div>
-          <div className="loader-icon"><i className="fi fi-rr-exit"></i></div>
+  return (
+    <div className="flex h-screen w-screen items-center justify-center fixed inset-0 z-[9999]" style={{ background: "var(--bg)" }}>
+      <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
+        <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center shadow-inner" style={{ background: "var(--warn-bg)", color: "var(--primary)" }}>
+           <i className="fi fi-rr-spinner animate-spin text-3xl"></i>
         </div>
-        <h2 className="text-2xl font-black text-[var(--text)] mb-3">{t("logout.title")}</h2>
-        <p className="text-[var(--text-muted)] font-medium text-[15px]">{t("logout.subtitle")}</p>
+        <div className="font-black tracking-widest uppercase text-sm" style={{ color: "var(--text-muted)" }}>Logging Out</div>
       </div>
-
-      <style jsx>{`
-        .logout-content {
-          text-align: center;
-          padding: 40px;
-          background: white;
-          border-radius: 32px;
-          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
-          max-width: 400px;
-          width: 90%;
-        }
-
-        .loader-wrapper {
-          position: relative;
-          width: 100px;
-          height: 100px;
-          margin: 0 auto 30px;
-        }
-
-        .premium-loader {
-          width: 100%;
-          height: 100%;
-          border: 4px solid var(--border);
-          border-top: 4px solid var(--primary);
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        .loader-icon {
-          position: absolute;
-          inset: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 2rem;
-          color: var(--primary);
-        }
-
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
-    </div>,
-    document.body
+    </div>
   );
 }

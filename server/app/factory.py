@@ -78,12 +78,9 @@ def create_app() -> Flask:
 
     flask_app.register_blueprint(admin_bp)
 
-    # สร้าง admin เริ่มต้นถ้ายังไม่มีในระบบ (idempotent — ปลอดภัยถ้ารันซ้ำ)
-    if os.getenv("DEFER_DB_POOL") != "1":
-        from app.api.admin.auth import seed_default_admin
-
-        with flask_app.app_context():
-            seed_default_admin()
+    # Auto-seed the first admin account when admin_users table is empty
+    from app.api.admin.admin_auth import seed_first_admin
+    seed_first_admin(flask_app)
 
     @flask_app.route("/")
     def react_index():

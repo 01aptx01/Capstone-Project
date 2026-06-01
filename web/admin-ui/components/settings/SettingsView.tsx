@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { applyDarkModeClass, getStoredDarkMode, setStoredDarkMode } from "@/lib/theme";
 import { useLang } from "@/lib/i18n/lang";
 import type { Lang } from "@/lib/i18n/dictionaries";
+import { inviteAdmin, listAdmins, revokeAdmin, type AdminListItem } from "@/lib/admin-api";
 
 // ── Portal wrapper ────────────────────────────────────────────────────────────
 function Portal({ children }: { children: React.ReactNode }) {
@@ -41,15 +42,32 @@ export default function SettingsView() {
   // Admin Permissions
   const [isFirstAdmin] = useState(true);
   const [inviteForm, setInviteForm] = useState({ email: "", tempPassword: "" });
-  const [admins, setAdmins] = useState([
-    { id: 1, email: "manager@example.com", status: "Active" },
-    { id: 2, email: "newhire@example.com",  status: "Pending" },
-  ]);
+  const [admins, setAdmins] = useState<AdminListItem[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: number; email: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Mount fade-in
   useEffect(() => { setMounted(true); }, []);
+
+  // Fetch admins list from DB when tab changes to admin
+  useEffect(() => {
+    if (activeTab !== "admin") return;
+    let active = true;
+    const fetchList = async () => {
+      setLoadingAdmins(true);
+      try {
+        const res = await listAdmins();
+        if (active) setAdmins(res.admins);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (active) setLoadingAdmins(false);
+      }
+    };
+    fetchList();
+    return () => { active = false; };
+  }, [activeTab]);
 
   // Init theme from storage
   useEffect(() => {
@@ -97,19 +115,33 @@ export default function SettingsView() {
     }
   };
 
-  const handleInvite = (e: React.FormEvent) => {
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteForm.email) return;
-    setAdmins(prev => [...prev, { id: Date.now(), email: inviteForm.email, status: "Pending" }]);
-    showToast(`Invitation sent to ${inviteForm.email}`);
-    setInviteForm({ email: "", tempPassword: "" });
+    if (!inviteForm.email || !inviteForm.tempPassword) return;
+    try {
+      await inviteAdmin(inviteForm.email, inviteForm.tempPassword);
+      showToast(`Invitation sent to ${inviteForm.email}`);
+      setInviteForm({ email: "", tempPassword: "" });
+      const updated = await listAdmins();
+      setAdmins(updated.admins);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      showToast(axiosErr?.response?.data?.error || "Failed to send invitation.");
+    }
   };
 
-  const confirmRevoke = () => {
+  const confirmRevoke = async () => {
     if (!revokeTarget) return;
-    setAdmins(prev => prev.filter(a => a.id !== revokeTarget.id));
-    showToast(`Access revoked for ${revokeTarget.email}`);
-    setRevokeTarget(null);
+    try {
+      await revokeAdmin(revokeTarget.id);
+      showToast(`Access revoked for ${revokeTarget.email}`);
+      setRevokeTarget(null);
+      const updated = await listAdmins();
+      setAdmins(updated.admins);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      showToast(axiosErr?.response?.data?.error || "Failed to revoke access.");
+    }
   };
 
   const inputCls = "w-full px-4 py-3 border border-[var(--border)] rounded-xl focus:border-[var(--primary)] outline-none transition-all text-[14px] font-medium";
@@ -334,31 +366,39 @@ export default function SettingsView() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]">
-                          {admins.map(admin => (
-                            <tr key={admin.id} className="hover:bg-[var(--surface-2)] transition-colors">
-                              <td className="px-6 py-4 font-bold text-[var(--text)]">{admin.email}</td>
-                              <td className="px-6 py-4">
-                                {admin.status === "Active" ? (
-                                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[12px] font-bold">Active</span>
-                                ) : (
-                                  <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[12px] font-bold">Pending</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <button
-                                  onClick={() => setRevokeTarget({ id: admin.id, email: admin.email })}
-                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--surface-1)] border border-rose-200 text-rose-500 hover:bg-rose-50 rounded-lg text-[13px] font-bold transition-all"
-                                >
-                                  <i className="fi fi-rr-ban text-[12px]" />
-                                  {t("settings.admin.revoke")}
-                                </button>
+                          {loadingAdmins ? (
+                            <tr>
+                              <td colSpan={3} className="px-6 py-8 text-center text-[var(--text-muted)] font-bold">
+                                <i className="fi fi-rr-spinner animate-spin mr-2" />
+                                Loading admins...
                               </td>
                             </tr>
-                          ))}
-                          {admins.length === 0 && (
+                          ) : admins.length === 0 ? (
                             <tr>
                               <td colSpan={3} className="px-6 py-8 text-center text-[var(--text-muted)] font-bold">{t("settings.admin.empty")}</td>
                             </tr>
+                          ) : (
+                            admins.map(admin => (
+                              <tr key={admin.id} className="hover:bg-[var(--surface-2)] transition-colors">
+                                <td className="px-6 py-4 font-bold text-[var(--text)]">{admin.email}</td>
+                                <td className="px-6 py-4">
+                                  {admin.status === "Active" ? (
+                                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[12px] font-bold">Active</span>
+                                  ) : (
+                                    <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[12px] font-bold">Pending</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <button
+                                    onClick={() => setRevokeTarget({ id: admin.id, email: admin.email })}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--surface-1)] border border-rose-200 text-rose-500 hover:bg-rose-50 rounded-lg text-[13px] font-bold transition-all"
+                                  >
+                                    <i className="fi fi-rr-ban text-[12px]" />
+                                    {t("settings.admin.revoke")}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
                           )}
                         </tbody>
                       </table>
