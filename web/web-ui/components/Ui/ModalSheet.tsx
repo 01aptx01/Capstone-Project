@@ -8,6 +8,7 @@ export interface ModalSheetProps {
   onClose: () => void;
   children: ReactNode;
   title?: string;
+  titleAlign?: "left" | "center";
   className?: string;
   panelClassName?: string;
 }
@@ -17,6 +18,7 @@ export function ModalSheet({
   onClose,
   children,
   title,
+  titleAlign = "left",
   className,
   panelClassName,
 }: ModalSheetProps) {
@@ -61,7 +63,10 @@ export function ModalSheet({
         {title && (
           <h2
             id="modal-title"
-            className="font-display text-xl font-bold text-foreground px-6 pt-6 pb-2"
+            className={cn(
+              "font-display text-xl font-bold text-foreground px-6 pt-6 pb-2",
+              titleAlign === "center" && "text-center",
+            )}
           >
             {title}
           </h2>

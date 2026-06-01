@@ -125,27 +125,12 @@ function HomePageContent() {
           <span className="text-brand"> สำหรับคุณ</span>
         </h1>
 
-        <p className="text-sm mt-1 flex items-center gap-1.5 text-muted">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <circle
-              cx="12"
-              cy="12"
-              r="9"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <path
-              d="M12 7v5l3 2"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </svg>
-          ดูรายการเมนูแสนอร่อยของ MOD PAO ได้ง่ายๆ และนำรหัสคูปองไปกรอกเพื่อรับส่วนลดสุดพิเศษที่ตู้ใกล้บ้านคุณ
+        <p className="text-sm mt-1 text-muted">
+          เลือกเมนู · สะสมแต้ม · แลกคูปองส่วนลด
         </p>
       </div>
 
-      <div className="sticky top-[var(--header-height)] md:top-[var(--topbar-height)] z-30 bg-background/95 backdrop-blur-sm border-b border-border/80 md:border-0 md:bg-transparent md:backdrop-blur-none">
+      <div className="sticky top-(--header-height) md:top-(--topbar-height) z-30 bg-background/95 backdrop-blur-sm border-b border-border/80 md:border-0 md:bg-transparent md:backdrop-blur-none">
         <div className="page-container py-3">
           <div className="chip-scroll flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
             {CATEGORIES.map((cat) => (

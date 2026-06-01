@@ -50,7 +50,7 @@ export default function HistoryPage() {
   return (
     <div className="flex flex-col">
       <div className="page-container pt-6">
-        <PageHeader title="ประวัติการสั่งซื้อ" />
+        <PageHeader title="ประวัติการสั่งซื้อ" back={false} />
       </div>
 
       <div className="page-container flex flex-col gap-4 max-w-md mx-auto w-full pb-6">
