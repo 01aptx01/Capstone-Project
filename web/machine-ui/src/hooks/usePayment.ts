@@ -159,8 +159,7 @@ export function usePayment({
         })
         .catch(() => {});
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeModal, selectedPaymentMethod, paymentStep]);
+  }, [activeModal, selectedPaymentMethod, paymentStep, currentChargeId]);
 
   // - จัดการเมื่อผู้ใช้กดปุ่มกากบาทหรือกดปิดหน้าชำระเงิน
   // - หากสแกน QR ค้างอยู่ (สเตป 2) จะเปิดหน้าต่างถามยืนยันยกเลิก
