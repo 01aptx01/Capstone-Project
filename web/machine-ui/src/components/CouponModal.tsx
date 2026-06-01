@@ -1,6 +1,7 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { getPublicApiUrl } from "../constants";
+import React, { useCallback, useEffect, useState } from "react";
+import NumericKeyboard from "./NumericKeyboard";
+import { getPublicApiUrl, MAX_COUPON_CODE_LENGTH } from "../constants";
 
 export type AppliedCoupon = {
   code: string; // รหัสคูปอง
@@ -46,9 +47,27 @@ export default function CouponModal({
     }
   }, [open]);
 
+  const handleKey = useCallback(
+    (char: string) => {
+      setError(null);
+      setCode((prev) => {
+        if (prev.length >= MAX_COUPON_CODE_LENGTH) return prev;
+        return prev + char;
+      });
+    },
+    [],
+  );
+
+  const handleDelete = useCallback(() => {
+    setError(null);
+    setCode((prev) => prev.slice(0, -1));
+  }, []);
+
   if (!open) return null;
 
   const apiUrl = getPublicApiUrl();
+  const displayCode = code || "เช่น 123456";
+  const isPlaceholder = !code;
 
   // ฟังก์ชันส่งรหัสที่ลูกค้าพิมพ์ไปตรวจสอบความถูกต้องกับ API Backend
   const handleCheck = async () => {
@@ -113,15 +132,17 @@ export default function CouponModal({
       {/* ขั้นตอนการกรอกรหัส */}
       {step === "input" && (
         <>
-          <p className="coupon-modal-hint">กรอกรหัสคูปองเพื่อตรวจสอบกับระบบ</p>
-          <input
-            type="text"
-            className="coupon-modal-input"
-            placeholder="เช่น PAO2026"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
+          <p className="coupon-modal-hint">แตะตัวเลขด้านล่างเพื่อกรอกรหัสคูปอง</p>
+          <div
+            className={`coupon-code-display${isPlaceholder ? " coupon-code-display--placeholder" : ""}`}
+            aria-live="polite"
+          >
+            {displayCode}
+          </div>
+          <NumericKeyboard
             disabled={loading}
-            autoComplete="off"
+            onKey={handleKey}
+            onDelete={handleDelete}
           />
           {error && (
             <div className="coupon-modal-error kiosk-alert kiosk-alert--error" role="alert">
