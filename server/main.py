@@ -84,6 +84,31 @@ class ServerApp:
             # Sleep for 5 minutes before next sweep
             eventlet.sleep(300)
 
+    def _stale_paid_sweeper(self):
+        """Mark paid/dispensing orders stuck too long as dispense_failed and trigger refund."""
+        import threading as _t
+
+        from app.realtime.socketio_gateway import _auto_refund
+        from app.services.buy_service import InventoryService
+
+        inventory = InventoryService()
+        logger.info("⏱️ [Sweeper] Stale paid/dispensing order sweeper started")
+        while True:
+            try:
+                charge_ids = inventory.fail_stale_paid_orders()
+                for charge_id in charge_ids:
+                    _t.Thread(
+                        target=_auto_refund, args=(charge_id,), daemon=True
+                    ).start()
+                if charge_ids:
+                    logger.info(
+                        "⏱️ [Sweeper] Failed %s stale paid/dispensing order(s), refund queued",
+                        len(charge_ids),
+                    )
+            except Exception as e:
+                logger.error("❌ [Sweeper] Error in stale paid sweeper: %s", e)
+            eventlet.sleep(300)
+
     def _user_maintenance_sweeper(self):
         """Background job to sweep and auto-suspend users inactive for > 1 year."""
         logger.info("👤 [Maintenance] User inactivity sweeper started")
@@ -142,6 +167,7 @@ class ServerApp:
 
         # Start all background sweepers
         eventlet.spawn(self._background_sweeper)
+        eventlet.spawn(self._stale_paid_sweeper)
         eventlet.spawn(self._user_maintenance_sweeper)
         eventlet.spawn(self._events_cleanup_sweeper)
 
