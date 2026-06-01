@@ -1,5 +1,4 @@
 "use client";
-
 interface Props {
   isAfterPayment: boolean;
   phoneNumber: string;
@@ -36,23 +35,27 @@ export default function NumpadModal({
         <span>{numpadCountdown}</span>
         <span className="points-close-icon">&times;</span>
       </button>
-      <div className="numpad-title">
-        {isAfterPayment
-          ? "กรุณากรอกเบอร์เพื่อสะสมแต้ม"
-          : "โปรดกรอกหมายเลขโทรศัพท์"}
-      </div>
-      {numpadError && (
-        <div className="kiosk-alert kiosk-alert--error" role="alert">
-          {numpadError}
+      <div className="numpad-modal-body">
+        <div className="numpad-title">
+          {isAfterPayment
+            ? "กรุณากรอกเบอร์เพื่อสะสมแต้ม"
+            : "โปรดกรอกหมายเลขโทรศัพท์"}
         </div>
-      )}
-      <div
-        className="phone-display"
-        style={{ opacity: phoneNumber ? 1 : 0.6 }}
-      >
-        {formattedPhone}
-      </div>
-      <div className="numpad-grid">
+        {numpadError && (
+          <div
+            className="numpad-modal-error kiosk-alert kiosk-alert--error"
+            role="alert"
+          >
+            {numpadError}
+          </div>
+        )}
+        <div
+          className="phone-display"
+          style={{ opacity: phoneNumber ? 1 : 0.6 }}
+        >
+          {formattedPhone}
+        </div>
+        <div className="numpad-grid">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
           <button
             key={num}
@@ -78,16 +81,17 @@ export default function NumpadModal({
         >
           {isMemberLoading ? "..." : "OK"}
         </button>
+        </div>
+        {isAfterPayment && (
+          <button
+            type="button"
+            className="modal-back-btn numpad-skip-link"
+            onClick={onStartHeating}
+          >
+            ไม่สะสมแต้ม ข้ามไปยังขั้นตอนการอุ่น
+          </button>
+        )}
       </div>
-      {isAfterPayment && (
-        <button
-          className="modal-back-btn"
-          onClick={onStartHeating}
-          style={{ textDecoration: "underline", marginTop: "10px" }}
-        >
-          ไม่สะสมแต้ม ข้ามไปยังขั้นตอนการอุ่น
-        </button>
-      )}
     </div>
   );
 }
