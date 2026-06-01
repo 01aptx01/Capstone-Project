@@ -18,8 +18,6 @@ logger = logging.getLogger(__name__)
 def _server_url() -> Optional[str]:
     return _server_url_from_env()
 
-def _machine_token_from_env() -> str:
-    return _machine_token_from_env()
 
 def _socketio_auth(machine_code: str, token: str) -> Dict[str, Any]:
     return {"machine_code": machine_code, "token": token}
