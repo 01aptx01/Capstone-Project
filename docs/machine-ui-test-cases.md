@@ -240,10 +240,10 @@ WHERE charge_id = 'chrg_xxxx';
 
 1. **Overlay / z-index** — ทับ modal ผิด, ข้อความผิด variant (internet vs hardware vs order_busy)
 2. **Typography / spacing** — อ่านยากระยะไกล, ภาษาไทยยาว
-3. **ProcessingModal** — สีแบนเนอร์, ลำดับแสดงเมื่อมีหลายแบนเนอร์พร้อมกัน
-4. **Payment modal** — error 409 ไม่เด่น, step กลับไม่ชัด
-5. **Loading / empty** — ช่วง poll 60s ลูกค้าไม่รู้ว่าระบบยังทำงาน
-6. **Status dot** — สีส้มบน header ไม่สื่อความหมาย
+3. **ProcessingModal** — แบนเนอร์ทีละแถบตาม priority (แดง > ฟ้า > ส้ม)
+4. **Payment / Numpad / Coupon / Limit / Points** — ใช้ `.kiosk-alert` ร่วมกัน; ไม่มี `alert()` บน numpad
+5. **Status dot** — มี label ข้างจุดสถานะ (พร้อม / ตู้ออฟไลน์ / net / order busy)
+6. **Placeholder** — เบอร์โทร error, QR contact ยังเป็น sim (ไม่แก้ในรอบนี้)
 
 ---
 

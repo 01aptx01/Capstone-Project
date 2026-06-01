@@ -185,6 +185,28 @@ export default function VendingPage() {
 
   const showGateOverlay = showOrderBlocker || showSystemBlocker;
 
+  const statusDotClass = showOrderBlocker
+    ? "status-dot-warning"
+    : !isConnected
+      ? "status-dot-offline"
+      : !isAgentOnline
+        ? "status-dot-warning"
+        : "";
+
+  const deviceStatusWrapClass = !isConnected
+    ? "device-status-wrap--offline"
+    : showOrderBlocker || !isAgentOnline
+      ? "device-status-wrap--warning"
+      : "";
+
+  const statusLabel = showOrderBlocker
+    ? "ตู้กำลังทำออเดอร์ก่อนหน้า"
+    : !isConnected
+      ? "อินเทอร์เน็ตขัดข้อง"
+      : !isAgentOnline
+        ? "ตู้ออฟไลน์"
+        : "พร้อมใช้งาน";
+
   // ----- RENDER -----
   return (
     <div className="vending-app">
@@ -231,11 +253,18 @@ export default function VendingPage() {
           )}
         </div>
 
-        <div className="device-id">
+        <div
+          className={`device-id device-status-wrap${deviceStatusWrapClass ? ` ${deviceStatusWrapClass}` : ""}`}
+          title={statusLabel}
+        >
           <div
-            className={`status-dot${showGateOverlay ? " status-dot-warning" : ""}`}
+            className={`status-dot${statusDotClass ? ` ${statusDotClass}` : ""}`}
+            aria-hidden
           />
-          ID:{machineCode}
+          <span className="device-id-line">
+            ID:{machineCode}
+            <span className="device-status-suffix"> · {statusLabel}</span>
+          </span>
         </div>
       </div>
 
@@ -303,6 +332,7 @@ export default function VendingPage() {
               numpadCountdown={member.numpadCountdown}
               isMemberLoading={member.isMemberLoading}
               formattedPhone={member.formattedPhone}
+              numpadError={member.numpadError}
               onClose={() => setActiveModal("none")}
               onStartHeating={heating.startHeatingProcess}
               onNumberClick={member.handleNumberClick}
