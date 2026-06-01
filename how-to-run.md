@@ -172,7 +172,7 @@ Use this after [.env](.env) matches [.env.example](.env.example) and you complet
 
 **Docker dev:** You must run the **`client`** service (container `vending-pi`) or a real Pi agent with matching `MACHINE_CODE` / `MACHINE_TOKEN`. Without it, checkout is intentionally blocked on the main screen.
 
-**Active order lock (หลังรีเฟรช / ซื้อซ้ำ):** Kiosk polls `GET /api/buy/active-order?machine_code=…` (optional `exclude_charge_id` for the current payment draft) and blocks the main screen while the machine has `paid` / `dispensing`, or `pending_payment` **younger than 15 minutes**. Drafts older than 15 minutes are auto-`cancelled` (same window as the background sweeper) so a late payment cannot collide with a new session. `checkout` / `create-draft` return **409 `MACHINE_BUSY`** if blocked.
+**Active order lock (หลังรีเฟรช / ซื้อซ้ำ):** Kiosk polls `GET /api/buy/active-order?machine_code=…` (optional `exclude_charge_id` for the current payment draft) and blocks the main screen while the machine has `paid` / `dispensing`, or `pending_payment` **younger than 5 minutes** (สอดคล้อง Omise QR). ก่อนตัดสิน `busy` server จะ **reconcile กับ Omise** ทุก `pending_payment` บนตู้ — ถ้าจ่ายแล้วจะอัปเดตเป็น `paid` และสั่ง dispense. Draft/รายการเก่ากว่า 5 นาทีจะถูก cancel (หลังเช็ค Omise) โดย sweeper และทุกครั้งที่เรียก `active-order`. Machine UI เก็บ `charge_id` ใน `sessionStorage` หลังรีโหลดเพื่อแสดงปุ่ม **ดำเนินการต่อ** / **ยกเลิกรายการ**. `checkout` / `create-draft` return **409 `MACHINE_BUSY`** if blocked.
 
 **Stale paid/dispensing:** A second sweeper (every 5 minutes) marks orders stuck in `paid` / `dispensing` for more than **45 minutes** as `dispense_failed` and queues Omise refund — so the kiosk is not locked forever if the Pi never finishes.
 
@@ -180,7 +180,7 @@ Use this after [.env](.env) matches [.env.example](.env.example) and you complet
 |----------|-------------------|
 | รีเฟรชกลางจ่ายของ แต่ order ยัง `paid`/`dispensing` | หน้าหลัก overlay “ตู้กำลังดำเนินการออเดอร์ก่อนหน้า”; สั่งซื้อใหม่ไม่ได้จน order จบ |
 | ชำระเงินอยู่ (มี draft ของ session) | `exclude_charge_id` — ไม่โดน overlay ทับ payment modal |
-| `pending_payment` เกิน 15 นาที | Server cancel → ซื้อใหม่ได้ |
+| `pending_payment` เกิน 5 นาที | Reconcile Omise ก่อน → cancel ถ้าไม่จ่าย → ซื้อใหม่ได้ |
 | `paid`/`dispensing` ค้าง > 45 นาที | Sweeper → `dispense_failed` + refund queue → ซื้อใหม่ได้ |
 | Pi agent offline **before** pay | Full-screen overlay; checkout / payment handlers no-op |
 | Pi agent offline **after** pay | No full-page overlay; orange/blue processing banners + order poll (~2 min) |
@@ -398,7 +398,8 @@ If `8000`, `3000`, `3001`, `5000`, `3307`, or `8081` is taken, either stop the c
 
 - Another kiosk session or a **page refresh** left an order in `paid` / `dispensing` (or recent `pending_payment`) in MySQL.
 - Wait until dispense completes, or fix the order status in Admin / DB.
-- Stale `pending_payment` (>15 min) should auto-cancel on the next `active-order` check or sweeper run.
+- Stale `pending_payment` (>5 min) is reconciled with Omise then cancelled on the next `active-order` check or sweeper run.
+- After reload during payment, use **ดำเนินการต่อ** on the recovery overlay or wait for reconcile on poll.
 
 ### Machine UI stuck on “ระบบขัดข้องชั่วคราว” (cannot buy)
 

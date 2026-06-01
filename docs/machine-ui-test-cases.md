@@ -123,12 +123,22 @@ ORDER BY created_at DESC
 LIMIT 5;
 ```
 
-### 4.1 Sweeper — `pending_payment` > 15 นาที
+### 4.1 Sweeper / reconcile — `pending_payment` > 5 นาที
 
 | ID | P | วิธีจำลอง | ผลที่คาด |
 |----|---|-----------|----------|
-| B-S1 | P1 | สร้าง draft แล้วทิ้ง >15 นาที (หรือแก้ `created_at` ใน DB ย้อนหลัง) | เรียก active-order → cancel stale → `busy:false`; ซื้อใหม่ได้ |
+| B-S1 | P1 | สร้าง draft แล้วทิ้ง >5 นาที (หรือแก้ `created_at` ใน DB ย้อนหลัง) | เรียก active-order → reconcile → cancel stale → `busy:false`; ซื้อใหม่ได้ |
 | B-S2 | P2 | จ่าย Omise หลัง DB cancel แล้ว | **out of scope** — อาจต้อง support manual; บันทึกผลถ้าเจอ |
+| B-S5 | P0 | จ่าย Omise สำเร็จ แต่ DB ยัง `pending_payment` แล้วรีโหลด UI | หน้า recovery หรือ poll `/status` → reconcile → `paid` + dispense หรือ overlay ติดต่อเจ้าหน้าที่ |
+| B-S6 | P1 | รีโหลดระหว่างชำระ (sessionStorage มี charge) | แสดง overlay **มีรายการชำระค้าง** + ปุ่มดำเนินการต่อ / ยกเลิก |
+| B-S7 | P1 | หลัง B-S6 กด **ดำเนินการต่อ** (PromptPay) | QR กลับมาแสดง (จาก session หรือ `/status` → `qr_code`) |
+| B-S8 | P0 | จ่าย QR แล้วรีโหลด → ดำเนินการต่อ | ภายใน ~2s เข้า numpad/อุ่น (ไม่รอ 5 นาที); ตะกร้ากู้จาก sessionStorage |
+
+**API smoke (ใน Docker):**
+
+```powershell
+Get-Content scripts/test-payment-recovery-api.py -Raw | docker exec -i vending-server python -
+```
 
 ### 4.2 Sweeper — `paid` / `dispensing` > 45 นาที
 
