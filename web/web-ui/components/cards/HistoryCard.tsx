@@ -49,6 +49,20 @@ export function HistoryCard({ order }: HistoryCardProps) {
 
   const statusInfo = getStatusDisplay(order.status);
 
+  const formattedDate = (() => {
+    try {
+      return new Date(order.datetime).toLocaleString("th-TH", {
+        day: "numeric",
+        month: "short",
+        year: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return order.datetime;
+    }
+  })();
+
   return (
     <Card className="flex flex-col gap-3 p-5 shadow-sm border border-border/80 hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start border-b border-border pb-3 gap-2">
@@ -60,7 +74,7 @@ export function HistoryCard({ order }: HistoryCardProps) {
             ตู้บริการ: <span className="font-semibold text-foreground/80">{order.machine_code}</span>
           </span>
           <span className="text-[10px] text-muted font-medium mt-0.5">
-            {order.datetime}
+            {formattedDate}
           </span>
         </div>
         <span

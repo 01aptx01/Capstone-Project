@@ -35,32 +35,37 @@ export default function HelpCenterPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen pb-6">
+    <div className="flex-1 overflow-y-auto pb-6">
       <div className="page-container pt-6 max-w-2xl">
-        <PageHeader title="ศูนย์ความช่วยเหลือ" />
+        <PageHeader title="ศูนย์ความช่วยเหลือ" back={false} />
 
         <section className="mb-8">
           <h2 className="font-bold text-foreground text-lg mb-4">ติดต่อเรา</h2>
           <div className="grid grid-cols-2 gap-4">
-            <Card className="flex flex-col items-center justify-center p-5 cursor-pointer hover:shadow-md transition-shadow">
-              <div className="w-14 h-14 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-3">
-                <span className="text-2xl" aria-hidden>
-                  💬
-                </span>
-              </div>
-              <span className="font-bold text-sm text-foreground">แชทผ่าน LINE</span>
-              <span className="text-[11px] text-muted mt-1">@modpao_support</span>
-            </Card>
+            <a
+              href="https://line.me/R/ti/p/@modpao_support"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="contents"
+            >
+              <Card className="flex flex-col items-center justify-center p-5 cursor-pointer hover:shadow-md transition-shadow">
+                <div className="w-14 h-14 bg-green-50 text-green-600 rounded-full flex items-center justify-center mb-3">
+                  <span className="text-2xl" aria-hidden>💬</span>
+                </div>
+                <span className="font-bold text-sm text-foreground">แชทผ่าน LINE</span>
+                <span className="text-[11px] text-muted mt-1">@modpao_support</span>
+              </Card>
+            </a>
 
-            <Card className="flex flex-col items-center justify-center p-5 cursor-pointer hover:shadow-md transition-shadow">
-              <div className="w-14 h-14 bg-sky-50 text-info rounded-full flex items-center justify-center mb-3">
-                <span className="text-2xl" aria-hidden>
-                  📞
-                </span>
-              </div>
-              <span className="font-bold text-sm text-foreground">โทรศัพท์</span>
-              <span className="text-[11px] text-muted mt-1">02-123-4567</span>
-            </Card>
+            <a href="tel:021234567" className="contents">
+              <Card className="flex flex-col items-center justify-center p-5 cursor-pointer hover:shadow-md transition-shadow">
+                <div className="w-14 h-14 bg-sky-50 text-info rounded-full flex items-center justify-center mb-3">
+                  <span className="text-2xl" aria-hidden>📞</span>
+                </div>
+                <span className="font-bold text-sm text-foreground">โทรศัพท์</span>
+                <span className="text-[11px] text-muted mt-1">02-123-4567</span>
+              </Card>
+            </a>
           </div>
         </section>
 
