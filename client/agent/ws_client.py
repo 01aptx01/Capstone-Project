@@ -82,8 +82,13 @@ class AgentSocketClient:
 
                 if len(job.history) == 0:
                     threading.Thread(target=_run_mock_job, args=(job,), daemon=True).start()
-
-                logger.info(f"🧾 [WS] received job.start job_id={job.job_id} items={len(job.items)}")
+                    logger.info(
+                        f"🧾 [WS] received job.start job_id={job.job_id} items={len(job.items)}"
+                    )
+                else:
+                    logger.info(
+                        f"🧾 [WS] job.start ignored (duplicate) job_id={job.job_id} history={len(job.history)}"
+                    )
 
             except Exception as e:
                 logger.error(f"❌ [WS] job.start handler failed: {e}")

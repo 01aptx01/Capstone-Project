@@ -34,7 +34,55 @@ class BuyController:
         self.blueprint.add_url_rule("/api/buy/mock-pay",       view_func=self.mock_pay,       methods=["POST"])
         self.blueprint.add_url_rule("/api/buy/cancel",         view_func=self.cancel_order,   methods=["POST"])
         self.blueprint.add_url_rule("/api/buy/status/<charge_id>", view_func=self.check_status, methods=["GET"])
+        self.blueprint.add_url_rule(
+            "/api/buy/active-order", view_func=self.get_active_order, methods=["GET"]
+        )
         self.blueprint.add_url_rule("/api/buy",                view_func=self.buy,            methods=["POST"])
+
+    _MACHINE_BUSY_MESSAGE = "ตู้กำลังดำเนินการออเดอร์ก่อนหน้า กรุณารอสักครู่"
+
+    def _reject_if_machine_busy(
+        self, machine_code: str, exclude_charge_id: str | None = None
+    ):
+        row = self.inventory_service.get_blocking_order(
+            machine_code, exclude_charge_id=exclude_charge_id
+        )
+        if not row:
+            return None
+        created = row.get("created_at")
+        return (
+            jsonify(
+                {
+                    "status": "ERROR",
+                    "code": "MACHINE_BUSY",
+                    "message": self._MACHINE_BUSY_MESSAGE,
+                    "blocking_charge_id": row.get("charge_id"),
+                    "blocking_status": row.get("status"),
+                    "blocking_created_at": created.isoformat() if created else None,
+                }
+            ),
+            409,
+        )
+
+    def get_active_order(self):
+        """คืนว่าตู้นี้มีออเดอร์ค้างที่ห้ามเปิดซื้อใหม่หรือไม่ (สำหรับ kiosk หลังรีเฟรช)."""
+        machine_code = request.args.get("machine_code") or request.args.get("machine_id") or "MP1-001"
+        exclude_charge_id = (request.args.get("exclude_charge_id") or "").strip() or None
+        row = self.inventory_service.get_blocking_order(
+            machine_code, exclude_charge_id=exclude_charge_id
+        )
+        if not row:
+            return jsonify({"busy": False, "machine_code": machine_code})
+        created = row.get("created_at")
+        return jsonify(
+            {
+                "busy": True,
+                "machine_code": machine_code,
+                "charge_id": row.get("charge_id"),
+                "status": row.get("status"),
+                "created_at": created.isoformat() if created else None,
+            }
+        )
 
     def _verify_webhook_signature(self, body: bytes) -> bool:
         """Verify Omise webhook HMAC-SHA256 signature.
@@ -281,6 +329,12 @@ class BuyController:
         draft_id     = data.get("draft_id")
         coupon_code  = data.get("coupon_code") or data.get("couponCode")
 
+        busy_resp = self._reject_if_machine_busy(
+            machine_code, exclude_charge_id=draft_id
+        )
+        if busy_resp:
+            return busy_resp
+
         cart = self._normalize_cart(raw_cart)
 
         payment_method = "qr_code" if payment_type in ("source", "truemoney") else "credit_card"
@@ -436,6 +490,10 @@ class BuyController:
         payment_method = data.get("payment_method", "credit_card")
         coupon_code = data.get("coupon_code") or data.get("couponCode")
 
+        busy_resp = self._reject_if_machine_busy(machine_code)
+        if busy_resp:
+            return busy_resp
+
         cart = self._normalize_cart(raw_cart)
 
         if not self.inventory_service.check_stock(machine_code, cart):
@@ -510,6 +568,14 @@ class BuyController:
 
         if charge_id not in self.order_statuses:
             return jsonify({"status": "ERROR", "message": "Unknown charge_id"}), 404
+
+        order = self.pending_orders.get(charge_id)
+        machine_code = (order or {}).get("machine_code") or "MP1-001"
+        busy_resp = self._reject_if_machine_busy(
+            machine_code, exclude_charge_id=charge_id
+        )
+        if busy_resp:
+            return busy_resp
 
         self.order_statuses[charge_id] = "paid"
         success = self._execute_dispense(charge_id)
