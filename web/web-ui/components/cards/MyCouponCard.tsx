@@ -1,4 +1,3 @@
-// components/cards/MyCouponCard.tsx
 "use client";
 import React from "react";
 import { useUser } from "@/context/UserContext";
@@ -107,16 +106,16 @@ export function MyCouponCard({ coupon }: MyCouponCardProps) {
 
   return (
     <div className={`flex relative rounded-2xl bg-white shadow-sm overflow-hidden border-2 transition-all ${config.outline} ${config.isFaded ? "opacity-60 grayscale-[0.2]" : ""}`}>
-      <div className={`w-[100px] sm:w-[120px] shrink-0 ${config.leftBg} flex items-center justify-center relative`}>
+      <div className={`w-25 sm:w-30 shrink-0 ${config.leftBg} flex items-center justify-center relative`}>
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="opacity-80">
           <path d="M4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M4 12v.01"/><path d="M4 14v.01"/><path d="M4 10v.01"/><path d="M20 12v.01"/><path d="M20 14v.01"/><path d="M20 10v.01"/><path d="M8 12h8"/>
         </svg>
-        <div className="absolute top-0 bottom-0 right-0 border-r-[2px] border-dashed border-white/50" />
+        <div className="absolute top-0 bottom-0 right-0 border-r-2 border-dashed border-white/50" />
       </div>
 
       <div className="flex-1 p-4 md:p-5 relative bg-white">
-        <div className="absolute -top-4 -left-4 w-8 h-8 bg-gray-50 rounded-full" />
-        <div className="absolute -bottom-4 -left-4 w-8 h-8 bg-gray-50 rounded-full" />
+        <div className="absolute -top-4 -left-4 w-8 h-8 bg-background rounded-full" />
+        <div className="absolute -bottom-4 -left-4 w-8 h-8 bg-background rounded-full" />
 
         <div className="pl-2">
           <div className="flex justify-between items-start gap-2 mb-1">

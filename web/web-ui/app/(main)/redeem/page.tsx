@@ -13,6 +13,7 @@ export default function RedeemPage() {
   const [coupons, setCoupons] = useState<RedeemableCoupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
+  const [redeemingId, setRedeemingId] = useState<number | null>(null);
 
   const points = profile?.points ?? 0;
 
@@ -30,8 +31,9 @@ export default function RedeemPage() {
   }, []);
 
   const handleRedeem = async (promotionId: number) => {
-    if (!phone) return;
+    if (!phone || redeemingId !== null) return;
     setMessage(null);
+    setRedeemingId(promotionId);
     try {
       const res = await redeemCoupon(phone, promotionId);
       setMessage(res.message || "แลกคูปองสำเร็จ");
@@ -40,17 +42,19 @@ export default function RedeemPage() {
       setMessage(
         err instanceof Error ? err.message : "แลกคูปองไม่สำเร็จ",
       );
+    } finally {
+      setRedeemingId(null);
     }
   };
 
   return (
     <div className="flex-1 overflow-y-auto pb-6">
       <div className="page-container pt-6 max-w-5xl">
-        <div className="max-w-md mx-auto mb-8">
-          <Card className="flex flex-col items-center justify-center p-6 text-center shadow-md border border-brand/10 bg-gradient-to-br from-surface to-brand-muted/10 rounded-2xl">
+        <div className="w-full md:max-w-md md:mx-auto mb-8">
+          <Card className="w-full flex flex-col items-center justify-center p-6 text-center shadow-md border border-brand/10 bg-linear-to-br from-surface to-brand-muted/10 rounded-2xl">
             <span className="text-muted font-bold text-xs uppercase tracking-wider mb-2">คะแนนสะสมของคุณ</span>
             <div className="flex items-baseline gap-1.5 justify-center">
-              <span className="text-5xl font-extrabold text-brand">{points}</span>
+              <span className="text-7xl font-extrabold text-brand">{points}</span>
               <span className="text-sm font-extrabold text-muted uppercase">Points</span>
             </div>
             <p className="text-xs text-muted mt-3 leading-relaxed max-w-xs">
@@ -80,26 +84,28 @@ export default function RedeemPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {coupons.map((coupon) => (
-              <div key={coupon.promotion_id} className="flex flex-col gap-3">
-                <CouponCard
-                  coupon={{
-                    id: coupon.promotion_id,
-                    title: coupon.title,
-                    description: coupon.description,
-                    points: coupon.points_cost,
-                    colorBg: "bg-brand",
-                    discountValue: coupon.discount_amount,
-                    expiry: coupon.expiry ?? "ไม่มีวันหมดอายุ",
-                  }}
-                />
-                <Button
-                  fullWidth
-                  disabled={points < coupon.points_cost}
-                  onClick={() => void handleRedeem(coupon.promotion_id)}
-                >
-                  แลกรับ ({coupon.points_cost} แต้ม)
-                </Button>
-              </div>
+              <CouponCard
+                key={coupon.promotion_id}
+                coupon={{
+                  id: coupon.promotion_id,
+                  title: coupon.title,
+                  description: coupon.description,
+                  points: coupon.points_cost,
+                  colorBg: "bg-brand",
+                  discountValue: coupon.discount_amount,
+                  expiry: coupon.expiry ?? "ไม่มีวันหมดอายุ",
+                }}
+                action={
+                  <Button
+                    size="sm"
+                    loading={redeemingId === coupon.promotion_id}
+                    disabled={points < coupon.points_cost || redeemingId !== null}
+                    onClick={() => void handleRedeem(coupon.promotion_id)}
+                  >
+                    แลกรับ
+                  </Button>
+                }
+              />
             ))}
           </div>
         )}

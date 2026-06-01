@@ -41,7 +41,7 @@ export function DrawerMenu({ open, onClose }: DrawerMenuProps) {
 
       <div
         className={cn(
-          "fixed left-0 right-0 w-full bg-surface z-[var(--z-drawer)] shadow-lg transform transition-transform duration-300 ease-in-out md:hidden border-b border-border",
+          "fixed left-0 right-0 w-full bg-surface z-(--z-drawer) shadow-lg transform transition-transform duration-300 ease-in-out md:hidden border-b border-border",
           open ? "translate-y-0" : "-translate-y-full pointer-events-none",
         )}
         style={{ top: "var(--header-height)" }}

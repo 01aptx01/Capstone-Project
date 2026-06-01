@@ -92,7 +92,7 @@ export default function MyCouponsPage() {
   return (
     <div className="flex-1 overflow-y-auto pb-6">
       <div className="page-container pt-6 max-w-3xl">
-        <PageHeader title="คูปองของฉัน" />
+        <PageHeader title="คูปองของฉัน" back={false} />
 
         <p className="text-muted text-sm mb-6">
           คุณสามารถแลกคะแนนสะสมเพิ่มได้ที่หน้าแลกรับ

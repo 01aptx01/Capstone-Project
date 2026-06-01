@@ -31,7 +31,7 @@ export function DesktopSidebar({ active }: DesktopSidebarProps) {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-[var(--sidebar-width)] bg-surface border-r border-border sticky top-0 h-screen shrink-0">
+    <aside className="hidden md:flex flex-col w-(--sidebar-width) bg-surface border-r border-border sticky top-0 h-screen shrink-0">
       <div className="px-5 pt-6 pb-4">
         <Link
           href="/home"
@@ -51,16 +51,16 @@ export function DesktopSidebar({ active }: DesktopSidebarProps) {
 
       <Link
         href="/profile"
-        className="mx-3 mb-4 flex items-center gap-3 rounded-xl border border-border bg-background p-3 transition-colors hover:bg-brand-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        className="mx-3 mb-4 flex items-center gap-3 rounded-xl border border-orange-300 bg-orange-400 p-3 transition-colors hover:bg-orange-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/60"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-border bg-brand-muted text-xl">
-          🧑
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-brand/20 bg-white overflow-hidden">
+          <img src="/Guest.png" alt={displayName || "โปรไฟล์"} className="w-full h-full object-cover" />
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-foreground">
+        <div className="min-w-0 flex-1 flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-bold text-white">
             {displayName || "สมาชิก"}
           </p>
-          <UserPointsBadge points={points} compact className="mt-1" />
+          <UserPointsBadge points={points} compact variant="inverse" className="text-base font-extrabold shrink-0" />
         </div>
       </Link>
 
