@@ -123,7 +123,11 @@ export default function CouponModal({
             disabled={loading}
             autoComplete="off"
           />
-          {error && <div className="coupon-modal-error">{error}</div>}
+          {error && (
+            <div className="coupon-modal-error kiosk-alert kiosk-alert--error" role="alert">
+              {error}
+            </div>
+          )}
           <div className="coupon-modal-actions">
             <button type="button" className="coupon-modal-btn secondary" onClick={onClose} disabled={loading}>
               ยกเลิก

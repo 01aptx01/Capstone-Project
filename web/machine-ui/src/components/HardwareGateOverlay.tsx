@@ -1,5 +1,4 @@
 "use client";
-
 export type HardwareGateVariant = "internet" | "hardware" | "order_busy";
 
 interface Props {

@@ -6,6 +6,7 @@ interface Props {
   numpadCountdown: number;
   isMemberLoading: boolean;
   formattedPhone: string;
+  numpadError: string | null;
   onClose: () => void;
   onStartHeating: () => void;
   onNumberClick: (num: string) => void;
@@ -19,6 +20,7 @@ export default function NumpadModal({
   numpadCountdown,
   isMemberLoading,
   formattedPhone,
+  numpadError,
   onClose,
   onStartHeating,
   onNumberClick,
@@ -39,6 +41,11 @@ export default function NumpadModal({
           ? "กรุณากรอกเบอร์เพื่อสะสมแต้ม"
           : "โปรดกรอกหมายเลขโทรศัพท์"}
       </div>
+      {numpadError && (
+        <div className="kiosk-alert kiosk-alert--error" role="alert">
+          {numpadError}
+        </div>
+      )}
       <div
         className="phone-display"
         style={{ opacity: phoneNumber ? 1 : 0.6 }}
