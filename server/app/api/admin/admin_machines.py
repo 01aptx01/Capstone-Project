@@ -264,9 +264,40 @@ def _admin_put_machine_metadata(machine_code: str):
     return jsonify(_machine_detail_payload(m2)), 200
 
 
-@admin_bp.route("/machines/<machine_code>", methods=["GET", "PUT"])
+def _admin_delete_machine(machine_code: str):
+    m = db.session.get(Machine, machine_code)
+    if not m:
+        return jsonify({"error": "not found"}), 404
+
+    from app.models.order_and_payment import Order
+    order_count = db.session.scalar(
+        select(func.count()).select_from(Order).where(Order.machine_code == machine_code)
+    ) or 0
+    if order_count > 0:
+        return jsonify(
+            {"error": f"ไม่สามารถลบตู้ได้ มีออเดอร์ที่เกี่ยวข้องอยู่ {order_count} รายการ"}
+        ), 409
+
+    from app.models.machine import MachineEvent
+    db.session.query(MachineEvent).filter_by(machine_code=machine_code).delete(
+        synchronize_session=False
+    )
+
+    db.session.delete(m)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "ลบตู้ไม่สำเร็จ"}), 500
+
+    return jsonify({"ok": True, "machine_code": machine_code}), 200
+
+
+@admin_bp.route("/machines/<machine_code>", methods=["GET", "PUT", "DELETE"])
 @admin_required
 def admin_machine_detail(machine_code: str):
+    if request.method == "DELETE":
+        return _admin_delete_machine(machine_code)
     if request.method == "PUT":
         return _admin_put_machine_metadata(machine_code)
     stmt = (
