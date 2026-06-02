@@ -38,6 +38,13 @@ export function uiLabelToApiCategory(label: string): string {
   return LABEL_TO_CATEGORY[raw] ?? LABEL_TO_CATEGORY[lower] ?? "meat";
 }
 
+export type ProductStockInfo = {
+  quantity: number;
+  machines: number;
+  machine_codes: string[];
+  quantity_by_machine: Record<string, number>;
+};
+
 /** Product row for ProductTable / export */
 export type UiProductRow = {
   id: string;
@@ -45,6 +52,9 @@ export type UiProductRow = {
   name: string;
   category?: string;
   machines?: number;
+  /** Machine codes with stock > 0 (for filters / display). */
+  machine_codes?: string[];
+  quantity_by_machine?: Record<string, number>;
   quantity?: number;
   unit_price?: number;
   status?: string;
@@ -55,7 +65,7 @@ export type UiProductRow = {
 
 export function apiProductToUiRow(
   p: ApiProduct,
-  stock?: { quantity: number; machines: number }
+  stock?: ProductStockInfo
 ): UiProductRow {
   const qty = stock?.quantity ?? 0;
   let status = "in_stock";
@@ -69,6 +79,8 @@ export function apiProductToUiRow(
     name: p.name,
     category: apiCategoryToLabel(p.category),
     machines: stock?.machines ?? 0,
+    machine_codes: stock?.machine_codes,
+    quantity_by_machine: stock?.quantity_by_machine,
     quantity: qty,
     unit_price: p.price,
     status,
@@ -80,10 +92,14 @@ export function apiProductToUiRow(
 /**
  * Sum slot quantities per product_id across all machines (bounded fetches).
  */
-export async function buildProductStockMap(): Promise<
-  Map<number, { quantity: number; machines: Set<string> }>
-> {
-  const map = new Map<number, { quantity: number; machines: Set<string> }>();
+type StockMapEntry = {
+  quantity: number;
+  machines: Set<string>;
+  byMachine: Map<string, number>;
+};
+
+export async function buildProductStockMap(): Promise<Map<number, StockMapEntry>> {
+  const map = new Map<number, StockMapEntry>();
   const { items: machines } = await listMachines({ page: 1, per_page: 200 });
   const codes = machines.map((m) => m.machine_code);
   const chunk = 8;
@@ -97,13 +113,15 @@ export async function buildProductStockMap(): Promise<
       const code = detail.machine_code;
       for (const slot of detail.slots || []) {
         const pid = slot.product_id;
+        if (pid == null) continue;
         const q = slot.quantity || 0;
         let entry = map.get(pid);
         if (!entry) {
-          entry = { quantity: 0, machines: new Set<string>() };
+          entry = { quantity: 0, machines: new Set<string>(), byMachine: new Map() };
           map.set(pid, entry);
         }
         entry.quantity += q;
+        entry.byMachine.set(code, (entry.byMachine.get(code) ?? 0) + q);
         if (q > 0) entry.machines.add(code);
       }
     }
@@ -111,22 +129,28 @@ export async function buildProductStockMap(): Promise<
   return map;
 }
 
+function stockEntryToInfo(s: StockMapEntry | undefined): ProductStockInfo {
+  if (!s) {
+    return { quantity: 0, machines: 0, machine_codes: [], quantity_by_machine: {} };
+  }
+  return {
+    quantity: s.quantity,
+    machines: s.machines.size,
+    machine_codes: Array.from(s.machines),
+    quantity_by_machine: Object.fromEntries(s.byMachine),
+  };
+}
+
 export async function enrichProductsWithStock(
   products: ApiProduct[]
 ): Promise<UiProductRow[]> {
-  let stockMap: Map<number, { quantity: number; machines: Set<string> }>;
+  let stockMap: Map<number, StockMapEntry>;
   try {
     stockMap = await buildProductStockMap();
   } catch {
     stockMap = new Map();
   }
-  return products.map((p) => {
-    const s = stockMap.get(p.product_id);
-    return apiProductToUiRow(p, {
-      quantity: s?.quantity ?? 0,
-      machines: s?.machines.size ?? 0,
-    });
-  });
+  return products.map((p) => apiProductToUiRow(p, stockEntryToInfo(stockMap.get(p.product_id))));
 }
 
 export type UiMachineCard = {

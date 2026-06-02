@@ -436,6 +436,15 @@ export type DictKey =
   | "addProduct.note"
   | "addProduct.creating"
   | "addProduct.confirm"
+  | "productImage.pickCatalog"
+  | "productImage.upload"
+  | "productImage.uploading"
+  | "productImage.catalogTitle"
+  | "productImage.previewAlt"
+  | "productImage.invalidUrl"
+  | "productImage.uploadFailed"
+  | "productImage.uploadSuccess"
+  | "productImage.uploadHint"
   | "editProduct.title"
   | "editProduct.errorNotFound"
   | "editProduct.toastSaved"
@@ -1055,6 +1064,15 @@ export const DICTS: Record<Lang, Dict> = {
     "addProduct.note": "สต็อกต่อตู้แก้ที่เมนูตู้จำหน่าย — API สินค้าไม่เก็บจำนวนคงเหลือรวม",
     "addProduct.creating": "กำลังบันทึก...",
     "addProduct.confirm": "ยืนยันการเพิ่มสินค้า",
+    "productImage.pickCatalog": "เลือกรูป",
+    "productImage.upload": "อัปโหลด",
+    "productImage.uploading": "กำลังอัปโหลด...",
+    "productImage.catalogTitle": "รูปมาตรฐานในระบบ",
+    "productImage.previewAlt": "ตัวอย่างรูปสินค้า",
+    "productImage.invalidUrl": "ลิงก์รูปไม่ถูกต้อง (ใช้ /product/img/... หรือ https://...)",
+    "productImage.uploadFailed": "อัปโหลดรูปไม่สำเร็จ",
+    "productImage.uploadSuccess": "อัปโหลดรูปแล้ว",
+    "productImage.uploadHint": "รูปที่อัปโหลดจะเก็บบนเซิร์ฟเวอร์และใช้ path /product/img/... ในฐานข้อมูล",
     "editProduct.title": "แก้ไขข้อมูลสินค้า",
     "editProduct.errorNotFound": "ไม่พบรหัสสินค้า",
     "editProduct.toastSaved": "บันทึกการแก้ไขสินค้าสำเร็จ",
@@ -1671,6 +1689,15 @@ export const DICTS: Record<Lang, Dict> = {
     "addProduct.note": "Adjust per-machine stock from the machine page — the product API does not track total qty.",
     "addProduct.creating": "Saving…",
     "addProduct.confirm": "Confirm",
+    "productImage.pickCatalog": "Pick image",
+    "productImage.upload": "Upload",
+    "productImage.uploading": "Uploading…",
+    "productImage.catalogTitle": "Standard catalogue images",
+    "productImage.previewAlt": "Product preview",
+    "productImage.invalidUrl": "Invalid image URL (use /product/img/… or https://…)",
+    "productImage.uploadFailed": "Image upload failed",
+    "productImage.uploadSuccess": "Image uploaded",
+    "productImage.uploadHint": "Uploaded files are stored on the server; the database keeps a /product/img/… path.",
     "editProduct.title": "Edit product",
     "editProduct.errorNotFound": "Product ID not found",
     "editProduct.toastSaved": "Product saved",
