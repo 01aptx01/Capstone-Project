@@ -87,6 +87,15 @@ def _parse_max_uses(raw):
     return n
 
 
+def _validate_discount_amount(ctype: str, amount_dec: Decimal) -> str | None:
+    """Return error message if invalid, else None."""
+    if amount_dec <= 0:
+        return "discount_amount must be greater than 0"
+    if ctype == "percent" and amount_dec > Decimal("100"):
+        return "percent discount cannot exceed 100"
+    return None
+
+
 @admin_bp.route("/coupons/<int:promotion_id>/redemptions", methods=["GET"])
 @roles_required("admin")
 def admin_coupon_redemptions(promotion_id: int):
@@ -162,6 +171,10 @@ def admin_create_coupon():
         amount_dec = Decimal(str(discount_amount))
     except Exception:
         return jsonify({"error": "invalid discount_amount"}), 400
+
+    discount_err = _validate_discount_amount(ctype, amount_dec)
+    if discount_err:
+        return jsonify({"error": discount_err}), 400
 
     try:
         expire_date = _parse_expire_date(data.get("expire_date"))
@@ -254,9 +267,20 @@ def admin_update_coupon(promotion_id: int):
         if "expire_date" in data:
             c.expire_date = new_expire
         if "discount_amount" in data and data["discount_amount"] is not None:
-            c.discount_amount = Decimal(str(data["discount_amount"]))
+            new_amount = Decimal(str(data["discount_amount"]))
+            new_type = (
+                data["type"] if "type" in data and data["type"] is not None else c.type
+            )
+            discount_err = _validate_discount_amount(new_type, new_amount)
+            if discount_err:
+                return jsonify({"error": discount_err}), 400
+            c.discount_amount = new_amount
         if "type" in data and data["type"] is not None:
-            c.type = data["type"]
+            new_type = data["type"]
+            discount_err = _validate_discount_amount(new_type, c.discount_amount)
+            if discount_err:
+                return jsonify({"error": discount_err}), 400
+            c.type = new_type
         if "code" in data and data["code"] is not None:
             c.code = str(data["code"]).strip()
         if "max_uses" in data:

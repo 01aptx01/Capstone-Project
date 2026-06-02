@@ -7,6 +7,11 @@ import Modal from "@/components/ui/Modal";
 import { updateProduct, deleteProduct } from "@/lib/admin-api";
 import { uiLabelToApiCategory } from "@/lib/admin-mappers";
 import { isValidProductImageUrl } from "@/lib/product-images";
+import {
+  isValidProductPriceThb,
+  MIN_PRODUCT_PRICE_THB,
+  parseProductPriceThb,
+} from "@/lib/product-price";
 import ProductImageUrlField from "@/components/products/ProductImageUrlField";
 import { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
 import { useLang } from "@/lib/i18n/lang";
@@ -84,9 +89,13 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
       setFormError(t("editProduct.errorNotFound"));
       return;
     }
-    const price = parseFloat(formData.unit_price);
-    if (!formData.name.trim() || Number.isNaN(price)) {
+    const price = parseProductPriceThb(formData.unit_price);
+    if (!formData.name.trim() || price === null) {
       setFormError(t("addProduct.errorInvalid"));
+      return;
+    }
+    if (!isValidProductPriceThb(price)) {
+      setFormError(t("addProduct.errorPriceMin").replace("{min}", String(MIN_PRODUCT_PRICE_THB)));
       return;
     }
     if (!isValidProductImageUrl(formData.image_url)) {
@@ -180,8 +189,8 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
               <input
                 type="number"
                 required
-                step="0.01"
-                min="0"
+                step="1"
+                min={MIN_PRODUCT_PRICE_THB}
                 className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
                 value={formData.unit_price}
                 onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}

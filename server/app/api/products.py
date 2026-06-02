@@ -13,6 +13,11 @@ class ProductService:
         self.get_db = db_provider or get_db
 
     def get_products_by_machine(self, machine_code: str) -> list:
+        """Return products that actually exist in the given machine (by slots).
+
+        - If a product has one or more slots (any quantity, including 0), it is included.
+        - Products with no slots for this machine are excluded entirely.
+        """
         db = self.get_db()
         cur = db.cursor(dictionary=True)
 
@@ -28,10 +33,10 @@ class ProductService:
                     p.image_url,
                     p.category,
                     COALESCE(SUM(ms.quantity), 0) AS stock
-                FROM products p
-                LEFT JOIN machine_slots ms
-                    ON ms.machine_code = %s
-                    AND ms.product_id = p.product_id
+                FROM machine_slots ms
+                INNER JOIN products p
+                    ON p.product_id = ms.product_id
+                WHERE ms.machine_code = %s
                 GROUP BY
                     p.product_id,
                     p.name,

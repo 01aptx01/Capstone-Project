@@ -15,6 +15,16 @@ from app.models import Product
 
 logger = logging.getLogger(__name__)
 
+MIN_PRODUCT_PRICE_THB = Decimal("20")
+
+
+def _validate_product_price(price_dec: Decimal) -> str | None:
+    if price_dec < MIN_PRODUCT_PRICE_THB:
+        return "price must be at least 20 THB"
+    if price_dec != price_dec.to_integral_value():
+        return "price must be a whole number of baht (no satang)"
+    return None
+
 
 def _dec(value):
     if value is None:
@@ -93,6 +103,10 @@ def admin_create_product():
     except Exception:
         return jsonify({"error": "invalid price"}), 400
 
+    price_err = _validate_product_price(price_dec)
+    if price_err:
+        return jsonify({"error": price_err}), 400
+
     p = Product(
         name=str(name).strip(),
         price=price_dec,
@@ -124,7 +138,11 @@ def admin_update_product(product_id: int):
         if "name" in data and data["name"] is not None:
             p.name = str(data["name"]).strip()
         if "price" in data and data["price"] is not None:
-            p.price = Decimal(str(data["price"]))
+            new_price = Decimal(str(data["price"]))
+            price_err = _validate_product_price(new_price)
+            if price_err:
+                return jsonify({"error": price_err}), 400
+            p.price = new_price
         if "description" in data:
             p.description = data["description"]
         if "image_url" in data:

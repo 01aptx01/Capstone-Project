@@ -119,6 +119,10 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
       setFormError(t("createCoupon.errorDiscount"));
       return;
     }
+    if (formData.discountType === "Percentage" && discount > 100) {
+      setFormError(t("createCoupon.errorPercentMax"));
+      return;
+    }
 
     const points =
       formData.pointsCost.trim() === "" ? 0 : Number.parseInt(formData.pointsCost, 10);
@@ -287,6 +291,7 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
                       required
                       step="0.01"
                       min="0"
+                      max={formData.discountType === "Percentage" ? 100 : undefined}
                       placeholder="0.00"
                       className={`w-full ${formData.discountType === "Fixed Amount" ? "pl-12" : "px-6"} py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all font-black text-[var(--text)]`}
                       value={formData.discountValue}
