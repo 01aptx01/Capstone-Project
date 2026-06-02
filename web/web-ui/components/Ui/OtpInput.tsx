@@ -28,7 +28,7 @@ export function OtpInput({
       const next = [...value];
       next[index] = digit.replace(/\D/g, "").slice(-1);
       onChange(next);
-      if (digit && index < length - 1) {
+      if (next[index] && index < length - 1) {
         refs.current[index + 1]?.focus();
       }
     },

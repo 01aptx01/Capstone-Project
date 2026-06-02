@@ -131,7 +131,7 @@ def verify_otp(phone_raw: str, code_raw: str) -> str:
     with get_db_cursor() as (conn, cur):
         cur.execute(
             """
-            SELECT id, code_hash, expires_at, verified_at
+            SELECT id, code_hash, expires_at, verified_at, failed_attempts
             FROM otp_sessions
             WHERE phone_number = %s
             ORDER BY created_at DESC
@@ -146,7 +146,12 @@ def verify_otp(phone_raw: str, code_raw: str) -> str:
             raise OtpError("already_used", "รหัส OTP ถูกใช้แล้ว", 400)
         if row["expires_at"] < now:
             raise OtpError("expired", "รหัส OTP หมดอายุ", 400)
+        if row["failed_attempts"] >= 5:
+            raise OtpError("too_many_failed_attempts", "รหัส OTP นี้ถูกล็อกเนื่องจากใส่รหัสผิดเกินกำหนด กรุณาขอรหัสใหม่", 400)
+            
         if row["code_hash"] != code_hash:
+            cur.execute("UPDATE otp_sessions SET failed_attempts = failed_attempts + 1 WHERE id = %s", (row["id"],))
+            conn.commit()
             raise OtpError("wrong_code", "รหัส OTP ไม่ถูกต้อง", 400)
 
         cur.execute(

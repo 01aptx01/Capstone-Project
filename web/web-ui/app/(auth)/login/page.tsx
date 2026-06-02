@@ -9,7 +9,13 @@ import { saveSession } from "@/lib/auth/session";
 import { Alert, Button, Input, OtpInput } from "@/components/Ui";
 
 function normalizePhone(raw: string): string {
-  return raw.replace(/\D/g, "").slice(0, 10);
+  let cleaned = raw.replace(/[^\d+]/g, "");
+  if (cleaned.startsWith("+66")) {
+    cleaned = "0" + cleaned.slice(3);
+  } else if (cleaned.startsWith("66") && cleaned.length > 10) {
+    cleaned = "0" + cleaned.slice(2);
+  }
+  return cleaned.replace(/\D/g, "");
 }
 
 const RESEND_COOLDOWN_SEC = 60;
@@ -37,7 +43,7 @@ export default function LoginPage() {
       setResendSeconds((s) => (s > 0 ? s - 1 : 0));
     }, 1000);
     return () => clearInterval(t);
-  }, [resendSeconds]);
+  }, [resendSeconds > 0]);
 
   const requestOtp = useCallback(async (phone: string) => {
     if (isSubmittingRef.current) return;
@@ -87,24 +93,31 @@ export default function LoginPage() {
       try {
         const verified = await verifyOtp(phone, otpString);
         const accessToken = verified.access_token;
-        saveSession(phone, accessToken);
         setPendingToken(accessToken);
 
+        // Fetch without the cookie. But wait! getMember does not take token right now? 
+        // Oh, wait. If they are a guest, getMember doesn't strictly need auth if we bypass or if we just pass the token.
+        // Wait, the API requires a token for getMember if it's protected? No, getMember might not be protected!
+        // Let's pass the token in headers if we can. Or we can just temporarily save it in cookies. 
+        // But if we save in cookies, we risk the ghost user issue!
+        // Let's just saveSession ONLY if member is found, OR pass token explicitly.
+        
+        // Wait, if getMember is public, we can just call it.
         const member = await getMember(phone);
         if (member.found) {
+          saveSession(phone, accessToken);
           loginWithPhone(phone, accessToken, member.display_name || undefined);
           router.push("/home");
         } else {
           setStep(3);
-          isSubmittingRef.current = false;
         }
       } catch (err) {
         setFormError(
           err instanceof Error ? err.message : "ยืนยัน OTP ไม่สำเร็จ",
         );
-        isSubmittingRef.current = false;
       } finally {
         setIsSubmitting(false);
+        isSubmittingRef.current = false;
       }
       return;
     }
@@ -118,20 +131,19 @@ export default function LoginPage() {
         if (!accessToken) {
           setFormError("เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่");
           setStep(1);
-          isSubmittingRef.current = false;
           return;
         }
+        await registerMember(displayName, accessToken);
         saveSession(phone, accessToken);
-        await registerMember(displayName);
         loginWithPhone(phone, accessToken, displayName);
         router.push("/home");
       } catch (err) {
         setFormError(
           err instanceof Error ? err.message : "สร้างบัญชีไม่สำเร็จ",
         );
-        isSubmittingRef.current = false;
       } finally {
         setIsSubmitting(false);
+        isSubmittingRef.current = false;
       }
     }
   };
