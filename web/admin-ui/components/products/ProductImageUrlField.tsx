@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { isAxiosError } from "axios";
 import { productImagePreviewSrc } from "@/lib/product-images";
+import ProductThumb from "@/components/products/ProductThumb";
 import { uploadProductImage } from "@/lib/admin-api";
 import { useLang } from "@/lib/i18n/lang";
 
@@ -75,19 +76,16 @@ export default function ProductImageUrlField({
       </div>
 
       {previewSrc ? (
-        <div className="flex items-center gap-4 p-3 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)]">
-          <div className="product-thumb-wrap w-16 h-16 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] shrink-0">
-            <img
-              src={previewSrc}
-              alt={t("productImage.previewAlt")}
-              className="product-thumb-img rounded-xl"
-              onError={(e) => {
-                e.currentTarget.src =
-                  "https://cdn-icons-png.flaticon.com/512/3081/3081918.png";
-              }}
-            />
-          </div>
-          <p className="text-[12px] font-bold text-[var(--text-muted)] break-all">{value}</p>
+        <div className="flex items-start gap-4 p-3 rounded-2xl bg-[var(--surface-2)] border border-[var(--border)] min-w-0">
+          <ProductThumb
+            src={previewSrc}
+            alt={t("productImage.previewAlt")}
+            size="md"
+            className="rounded-xl shrink-0"
+          />
+          <p className="text-[12px] font-bold text-[var(--text-muted)] break-all min-w-0 flex-1 pt-1">
+            {value}
+          </p>
         </div>
       ) : null}
     </div>
