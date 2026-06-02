@@ -18,9 +18,89 @@ PENDING_PAYMENT_BUSY_MINUTES = 5
 # paid/dispensing ค้างเกินนี้ → sweeper ตั้ง dispense_failed (ปลดล็อก kiosk)
 PAID_DISPENSE_STALE_MINUTES = 45
 
+_COUPON_CONSUME_ORDER_STATUSES = frozenset({"paid", "dispensing", "completed"})
+_COUPON_RELEASE_ORDER_STATUSES = frozenset(
+    {"cancelled", "payment_failed", "dispense_failed", "refunded"}
+)
+
+
 class InventoryService:
     def __init__(self, db_provider=None):
         self.get_db = db_provider or get_db
+
+    def _mark_user_promotion_used(self, cur, charge_id: str) -> int:
+        """Consume member coupon tied to this charge (active → used)."""
+        cur.execute(
+            """
+            UPDATE user_promotions up
+            JOIN orders o ON o.user_promotion_id = up.id
+            SET up.status = 'used'
+            WHERE o.charge_id = %s AND up.status = 'active'
+            """,
+            (charge_id,),
+        )
+        return cur.rowcount
+
+    def _release_user_promotion_for_charge(self, cur, charge_id: str) -> int:
+        """Return coupon after failed/cancelled checkout (used → active)."""
+        cur.execute(
+            """
+            UPDATE user_promotions up
+            JOIN orders o ON o.user_promotion_id = up.id
+            SET up.status = 'active'
+            WHERE o.charge_id = %s AND up.status = 'used'
+            """,
+            (charge_id,),
+        )
+        return cur.rowcount
+
+    def sync_coupon_for_order_status(
+        self, charge_id: str, status: str, *, cur=None
+    ) -> None:
+        """Keep user_promotions in sync with order lifecycle."""
+        if not charge_id:
+            return
+        if status in _COUPON_CONSUME_ORDER_STATUSES:
+            apply = self._mark_user_promotion_used
+        elif status in _COUPON_RELEASE_ORDER_STATUSES:
+            apply = self._release_user_promotion_for_charge
+        else:
+            return
+
+        if cur is not None:
+            n = apply(cur, charge_id)
+            if n:
+                logger.info(
+                    "[InventoryService] Coupon sync charge=%s status=%s rows=%s",
+                    charge_id,
+                    status,
+                    n,
+                )
+            return
+
+        db = self.get_db()
+        own_cur = db.cursor(dictionary=True)
+        try:
+            n = apply(own_cur, charge_id)
+            db.commit()
+            if n:
+                logger.info(
+                    "[InventoryService] Coupon sync charge=%s status=%s rows=%s",
+                    charge_id,
+                    status,
+                    n,
+                )
+        except Exception as e:
+            db.rollback()
+            logger.error(
+                "[InventoryService] sync_coupon_for_order_status %s → %s: %s",
+                charge_id,
+                status,
+                e,
+            )
+        finally:
+            own_cur.close()
+            db.close()
 
     def _ensure_machine_exists(self, cursor, machine_code: str) -> bool:
         cursor.execute(
@@ -375,6 +455,9 @@ class InventoryService:
                 qty = int(item["quantity"])
                 self._deduct_from_slots(cur, machine_code, product_id, qty)
 
+            if charge_id:
+                self._mark_user_promotion_used(cur, charge_id)
+
             db.commit()
             logger.info(f"✅ [InventoryService] Stock deducted successfully for charge {charge_id}")
             return True
@@ -416,19 +499,7 @@ class InventoryService:
                 """,
                 (status, charge_id),
             )
-            
-            # If successfully paid or being dispensed/completed, mark the user's specific coupon as 'used'!
-            if status in ("paid", "dispensing", "completed"):
-                cur.execute(
-                    """
-                    UPDATE user_promotions up
-                    JOIN orders o ON o.user_promotion_id = up.id
-                    SET up.status = 'used'
-                    WHERE o.charge_id = %s AND up.status = 'active'
-                    """,
-                    (charge_id,),
-                )
-                
+            self.sync_coupon_for_order_status(charge_id, status, cur=cur)
             db.commit()
             logger.info(f"✅ [InventoryService] Order {charge_id} → status='{status}'")
         except Exception as e:
@@ -655,6 +726,8 @@ class InventoryService:
                     """,
                     (cid,),
                 )
+                if cur.rowcount:
+                    self._release_user_promotion_for_charge(cur, cid)
             db.commit()
             logger.warning(
                 "[InventoryService] Stale paid/dispensing → dispense_failed: %s",

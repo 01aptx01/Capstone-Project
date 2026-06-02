@@ -71,7 +71,8 @@ def lookup_coupon_by_code(
                 cur.execute(
                     """
                     SELECT 1 FROM orders
-                    WHERE user_promotion_id = %s AND status = 'pending_payment'
+                    WHERE user_promotion_id = %s
+                      AND status IN ('pending_payment', 'paid', 'dispensing')
                     """,
                     (up_row["id"],),
                 )
