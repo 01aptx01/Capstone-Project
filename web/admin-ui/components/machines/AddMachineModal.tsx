@@ -125,6 +125,19 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
       setMachineId(res.machine_code);
       setPlainToken(res.secret_token);
       setPhase("success");
+      try {
+        const { logAdminActivity } = await import("@/lib/activity-log");
+        logAdminActivity({
+          icon: "fi fi-rr-plus",
+          color: "from-[var(--primary)] to-[var(--primary)]",
+          bg: "bg-orange-50",
+          title: t("profile.activity.refill") ? "เพิ่มตู้สำเร็จ" : "เพิ่มตู้ใหม่สำเร็จ",
+          machine: code,
+          time: "เมื่อครู่นี้",
+        });
+      } catch (err2) {
+        console.error(err2);
+      }
       if (typeof window !== "undefined") {
         window.dispatchEvent(new Event(ADMIN_MACHINES_REFRESH_EVENT));
       }

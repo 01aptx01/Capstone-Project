@@ -14,7 +14,7 @@ from app.api.machine_events import machine_events_api
 from app.api.members import members_api
 from app.api.products import products_api
 from app.db_config.db import init_db
-from app.db_config.schema_repair import ensure_promotions_max_uses
+from app.db_config.schema_repair import ensure_promotions_max_uses, ensure_machines_created_by
 from app.db_config.sqlalchemy_uri import build_sqlalchemy_database_uri
 from app.extensions import db, migrate
 
@@ -58,6 +58,7 @@ def create_app() -> Flask:
 
     with flask_app.app_context():
         ensure_promotions_max_uses(db.engine)
+        ensure_machines_created_by(db.engine)
 
     allowed_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
     # อนุญาต Authorization header เพื่อให้ admin-ui ส่ง Bearer JWT ได้ (CORS preflight)
