@@ -6,6 +6,8 @@ import { isAxiosError } from "axios";
 import Modal from "@/components/ui/Modal";
 import { updateProduct, deleteProduct } from "@/lib/admin-api";
 import { uiLabelToApiCategory } from "@/lib/admin-mappers";
+import { isValidProductImageUrl } from "@/lib/product-images";
+import ProductImageUrlField from "@/components/products/ProductImageUrlField";
 import { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
 import { useLang } from "@/lib/i18n/lang";
 
@@ -87,6 +89,10 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
       setFormError(t("addProduct.errorInvalid"));
       return;
     }
+    if (!isValidProductImageUrl(formData.image_url)) {
+      setFormError(t("productImage.invalidUrl"));
+      return;
+    }
     setSubmitting(true);
     try {
       await updateProduct(productId, {
@@ -149,11 +155,10 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
 
           <div className="group space-y-1.5">
             <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.imageUrl")}</label>
-            <input
-              type="url"
-              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
+            <ProductImageUrlField
               value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+              onChange={(image_url) => setFormData({ ...formData, image_url })}
+              disabled={submitting}
             />
           </div>
 

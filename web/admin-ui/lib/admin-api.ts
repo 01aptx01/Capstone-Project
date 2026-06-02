@@ -203,6 +203,22 @@ export async function deleteProduct(productId: number): Promise<void> {
   });
 }
 
+export async function uploadProductImage(
+  file: File
+): Promise<{ image_url: string }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await api.post<{ image_url: string }>(
+    "/api/admin/products/upload-image",
+    fd,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      skipGlobalErrorToast: true,
+    }
+  );
+  return data;
+}
+
 export async function listMachines(params?: {
   page?: number;
   per_page?: number;
