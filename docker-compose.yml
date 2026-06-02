@@ -57,7 +57,7 @@
       - TZ=Asia/Bangkok
       # Set comma-separated allowed origins for CORS.
       # Override via .env when running on LAN / hardware.
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://machine-ui:3000,http://admin-ui:3000,http://web-ui:3000,http://192.168.1.44:3000,http://192.168.1.172:3000}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://server:8000,http://machine-ui:3000,http://admin-ui:3000,http://web-ui:3000,http://192.168.1.44:3000,http://192.168.1.172:3000}
       - DOCKER_URL_SERVER=http://localhost:8000
       - DOCKER_URL_MACHINE_UI=http://localhost:3000
       - DOCKER_URL_ADMIN_UI=http://localhost:3001

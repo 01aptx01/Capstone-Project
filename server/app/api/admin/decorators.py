@@ -15,6 +15,34 @@ def _current_admin_id() -> int | None:
     """Return the admin user id from the decoded JWT stored on flask.g."""
     return getattr(g, "_admin_id", None)
 
+def _role_implies(required: str, actual_roles: list[str]) -> bool:
+    """
+    RBAC rule:
+    - superadmin implies admin
+    - otherwise require exact role
+    """
+    req = (required or "").strip().lower()
+    roles = [(r or "").strip().lower() for r in (actual_roles or [])]
+    if req == "admin":
+        return ("admin" in roles) or ("superadmin" in roles)
+    return req in roles
+
+
+def roles_required(*required_roles: str):
+    """Require one of the given roles (superadmin implies admin)."""
+    def decorator(f):
+        @wraps(f)
+        @admin_required
+        def wrapped(*args, **kwargs):
+            roles = (getattr(g, "admin", {}) or {}).get("roles") or []
+            if not any(_role_implies(r, roles) for r in required_roles):
+                return jsonify({"error": "Insufficient permissions."}), 403
+            return f(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
+
 
 def admin_required(f):
     """Protect an endpoint — verify JWT *and* check the admin still exists in DB."""

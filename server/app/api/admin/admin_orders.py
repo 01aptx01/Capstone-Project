@@ -7,7 +7,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import selectinload
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
 from app.models import Order, OrderItem, Transaction, User
@@ -68,7 +68,7 @@ def _order_list_item(o: Order) -> dict:
 
 
 @admin_bp.route("/orders", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_list_orders():
     page, per_page = get_pagination_params()
     status_filter = (request.args.get("status") or "").strip() or None

@@ -7,7 +7,7 @@ from flask import jsonify, request
 from sqlalchemy import func, select
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.extensions import db
 from app.models import Order
 
@@ -25,7 +25,7 @@ def _to_float(v) -> float:
 
 
 @admin_bp.route("/reports/sales", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_sales_report():
     try:
         days = min(int(request.args.get("days", 30)), 365)
