@@ -56,6 +56,7 @@ docker compose up --build
 
 - **machine-ui**: [http://localhost:3000](http://localhost:3000)
 - **admin-ui**: [http://localhost:3001](http://localhost:3001)
+- **web-ui** (member app): [http://localhost:3002](http://localhost:3002)
 - **API backend + Socket.IO**: [http://localhost:8000](http://localhost:8000)
 - **Flasgger (server)**: [http://localhost:8000/apidocs](http://localhost:8000/apidocs)
 - **Swagger UI (mounted `swagger.yaml`)**: [http://localhost:8081](http://localhost:8081)

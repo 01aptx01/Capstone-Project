@@ -71,7 +71,7 @@ class BuyController:
 
     def get_active_order(self):
         """คืนว่าตู้นี้มีออเดอร์ค้างที่ห้ามเปิดซื้อใหม่หรือไม่ (สำหรับ kiosk หลังรีเฟรช)."""
-        machine_code = request.args.get("machine_code") or request.args.get("machine_id") or "MP1-001"
+        machine_code = request.args.get("machine_code") or "MP1-001"
         exclude_charge_id = (request.args.get("exclude_charge_id") or "").strip() or None
         row = self.inventory_service.get_blocking_order(
             machine_code, exclude_charge_id=exclude_charge_id
@@ -139,19 +139,26 @@ class BuyController:
         discount = 0.0
         final = subtotal
         promotion_id = None
+        user_promotion_id = None
         raw = coupon_code
         if raw is not None and str(raw).strip():
-            reason, c = lookup_coupon_by_code(raw)
+            reason, c, user_promo_id = lookup_coupon_by_code(raw)
             if reason != "ok" or not c:
                 return None
             discount, final = discount_and_final(subtotal, c)
             promotion_id = c.promotion_id
+            user_promotion_id = user_promo_id
         return {
             "subtotal": subtotal,
             "discount": discount,
             "final": final,
             "promotion_id": promotion_id,
+            "user_promotion_id": user_promotion_id,
         }
+
+    def _handle_paid_order(self, charge_id: str, charge_obj=None) -> bool:
+        """After payment success: dispense at the machine via Socket.IO job.start."""
+        return self._execute_dispense(charge_id, charge_obj=charge_obj)
 
     # =============================================
     # INTERNAL: Dispense orchestration
@@ -173,9 +180,7 @@ class BuyController:
                 cart = json.loads(raw_cart) if isinstance(raw_cart, str) else raw_cart
                 self.pending_orders[charge_id] = {
                     "cart": cart,
-                    "machine_code": metadata.get("machine_code")
-                    or metadata.get("machine_id")
-                    or "MP1-001",
+                    "machine_code": metadata.get("machine_code") or "MP1-001",
                 }
                 logger.info(
                     f"[Dispense] Recovered order from Omise metadata for charge: {charge_id}"
@@ -327,7 +332,7 @@ class BuyController:
         )
 
         code = data.get("code") or data.get("coupon_code")
-        machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
+        machine_code = data.get("machine_code") or "MP1-001"
         cart = self._normalize_cart(data.get("cart", []))
 
         if not cart:
@@ -346,7 +351,7 @@ class BuyController:
                 {"valid": False, "reason": "pricing_failed", "message": "ไม่สามารถคำนวณยอดได้"}
             ), 200
 
-        reason, c = lookup_coupon_by_code(code)
+        reason, c, user_promo_id = lookup_coupon_by_code(code)
         if reason != "ok" or not c:
             return jsonify(
                 {
@@ -403,7 +408,7 @@ class BuyController:
         payment_id   = data.get("payment_id")
         amount       = data.get("amount")
         raw_cart     = data.get("cart", [])
-        machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
+        machine_code = data.get("machine_code") or "MP1-001"
         draft_id     = data.get("draft_id")
         coupon_code  = data.get("coupon_code") or data.get("couponCode")
 
@@ -442,6 +447,7 @@ class BuyController:
                 ), 400
             total_price = pricing["final"]
             promotion_id = pricing["promotion_id"]
+            user_promotion_id = pricing["user_promotion_id"]
 
         charge_amount_satang = int(round(float(total_price) * 100))
         client_satang = int(amount) if amount is not None else None
@@ -470,7 +476,10 @@ class BuyController:
 
         # Step 3: จัดการ Order ใน DB (อัปเกรด draft หรือสร้างใหม่)
         self.order_statuses[charge.id] = "pending_payment"
-        self.pending_orders[charge.id] = {"cart": cart, "machine_code": machine_code}
+        self.pending_orders[charge.id] = {
+            "cart": cart,
+            "machine_code": machine_code,
+        }
 
         if draft_id:
             persisted = self.inventory_service.upgrade_draft_order(draft_id, charge.id, payment_method)
@@ -484,6 +493,7 @@ class BuyController:
                 payment_method=payment_method,
                 total_price=total_price,
                 promotion_id=promotion_id,
+                user_promotion_id=user_promotion_id,
             )
 
         if not persisted:
@@ -495,8 +505,14 @@ class BuyController:
             # บัตรเครดิตผ่านทันที
             logger.info(f"[Checkout] Payment SUCCESS for charge {charge.id}")
             self.order_statuses[charge.id] = "paid"
-            self._execute_dispense(charge.id, charge_obj=charge)
-            return jsonify({"status": "paid", "charge_id": charge.id, "message": "Payment successful, dispensing..."})
+            self._handle_paid_order(charge.id, charge_obj=charge)
+            return jsonify(
+                {
+                    "status": "paid",
+                    "charge_id": charge.id,
+                    "message": "Payment successful, dispensing...",
+                }
+            )
 
         elif charge.status == "pending":
             # QR Code — รอลูกค้าสแกน
@@ -546,7 +562,7 @@ class BuyController:
                 self.order_statuses[charge_id] = "paid"
                 import omise
                 charge_obj = omise.Charge.retrieve(charge_id)
-                success = self._execute_dispense(charge_id, charge_obj=charge_obj)
+                success = self._handle_paid_order(charge_id, charge_obj=charge_obj)
                 msg = "dispense triggered" if success else "dispense skipped (already claimed or failed)"
                 return jsonify({"message": f"Webhook processed, payment successful, {msg}"}), 200
             else:
@@ -587,12 +603,16 @@ class BuyController:
 
         total_price = pricing["final"]
         promotion_id = pricing["promotion_id"]
+        user_promotion_id = pricing["user_promotion_id"]
 
         import uuid
         draft_id = f"draft_{uuid.uuid4().hex[:16]}"
         
         self.order_statuses[draft_id] = "pending_payment"
-        self.pending_orders[draft_id] = {"cart": cart, "machine_code": machine_code}
+        self.pending_orders[draft_id] = {
+            "cart": cart,
+            "machine_code": machine_code,
+        }
         
         persisted = self.inventory_service.create_pending_order(
             machine_code=machine_code,
@@ -601,6 +621,7 @@ class BuyController:
             payment_method=payment_method,
             total_price=total_price,
             promotion_id=promotion_id,
+            user_promotion_id=user_promotion_id,
         )
         
         if not persisted:
@@ -636,6 +657,22 @@ class BuyController:
 
     def mock_pay(self):
         """Development Bypass for Payment"""
+        import os
+
+        allow = os.environ.get("ALLOW_MOCK_PAY", "1").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        flask_env = os.environ.get("FLASK_ENV", "").strip().lower()
+        if flask_env == "production" or not allow:
+            return jsonify(
+                {
+                    "error": "forbidden",
+                    "message": "mock-pay is disabled in this environment",
+                }
+            ), 403
+
         data = request.get_json(silent=True)
         if not isinstance(data, dict):
             return jsonify({"status": "ERROR", "message": "Invalid JSON body"}), 400
@@ -656,7 +693,7 @@ class BuyController:
             return busy_resp
 
         self.order_statuses[charge_id] = "paid"
-        success = self._execute_dispense(charge_id)
+        success = self._handle_paid_order(charge_id)
 
         if success:
             return jsonify({"status": "paid", "message": "Payment marked as successful, dispense triggered"}), 200
@@ -705,7 +742,6 @@ class BuyController:
             if db_status == "pending_payment" and not str(charge_id).startswith("draft_"):
                 try:
                     import omise
-
                     charge = omise.Charge.retrieve(charge_id)
                     qr_uri = self._qr_uri_from_omise_charge(charge)
                     if qr_uri:
