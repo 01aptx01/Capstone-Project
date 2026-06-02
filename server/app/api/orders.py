@@ -95,7 +95,7 @@ def redeemable_promotions():
                     p.promotion_id, p.code, p.type, p.discount_amount, p.points_cost, p.expire_date, p.max_uses,
                     (SELECT COUNT(*) FROM user_promotions WHERE promotion_id = p.promotion_id) AS total_redeemed
                 FROM promotions p
-                WHERE p.is_active = 1 AND p.points_cost > 0
+                WHERE p.is_active = 1 AND p.points_cost > -1
                 ORDER BY p.points_cost ASC
                 """
             )
@@ -178,7 +178,7 @@ def redeem_coupon(phone: str):
                 return jsonify({"error": "expired", "message": "คูปองหมดอายุ"}), 400
 
             points_cost = int(promo["points_cost"] or 0)
-            if points_cost <= 0:
+            if points_cost <= -1:
                 return jsonify({"error": "invalid", "message": "คูปองนี้แลกด้วยแต้มไม่ได้"}), 400
 
             if user["points"] < points_cost:
