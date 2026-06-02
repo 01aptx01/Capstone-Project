@@ -15,6 +15,31 @@ from app.models import Product
 
 logger = logging.getLogger(__name__)
 
+MIN_PRODUCT_PRICE_THB = Decimal("20")
+
+
+def _validate_product_price(price_dec: Decimal) -> str | None:
+    if price_dec < MIN_PRODUCT_PRICE_THB:
+        return "price must be at least 20 THB"
+    if price_dec != price_dec.to_integral_value():
+        return "price must be a whole number of baht (no satang)"
+    return None
+
+
+def _parse_heating_time(raw) -> int | None:
+    """Non-negative int seconds; None if omitted/null."""
+    if raw is None or raw == "":
+        return None
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError("invalid heating_time")
+    if n < 1:
+        raise ValueError("heating_time must be at least 1 second")
+    if n > 3600:
+        raise ValueError("heating_time must be at most 3600 seconds")
+    return n
+
 
 def _dec(value):
     if value is None:
@@ -93,12 +118,21 @@ def admin_create_product():
     except Exception:
         return jsonify({"error": "invalid price"}), 400
 
+    price_err = _validate_product_price(price_dec)
+    if price_err:
+        return jsonify({"error": price_err}), 400
+
+    try:
+        heating_time = _parse_heating_time(data.get("heating_time"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     p = Product(
         name=str(name).strip(),
         price=price_dec,
         description=data.get("description"),
         image_url=data.get("image_url"),
-        heating_time=data.get("heating_time"),
+        heating_time=heating_time if heating_time is not None else 15,
         category=(data.get("category") or "meat"),
     )
     try:
@@ -124,13 +158,20 @@ def admin_update_product(product_id: int):
         if "name" in data and data["name"] is not None:
             p.name = str(data["name"]).strip()
         if "price" in data and data["price"] is not None:
-            p.price = Decimal(str(data["price"]))
+            new_price = Decimal(str(data["price"]))
+            price_err = _validate_product_price(new_price)
+            if price_err:
+                return jsonify({"error": price_err}), 400
+            p.price = new_price
         if "description" in data:
             p.description = data["description"]
         if "image_url" in data:
             p.image_url = data["image_url"]
         if "heating_time" in data:
-            p.heating_time = data["heating_time"]
+            try:
+                p.heating_time = _parse_heating_time(data.get("heating_time"))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
         if "category" in data and data["category"] is not None:
             p.category = str(data["category"])
         db.session.commit()

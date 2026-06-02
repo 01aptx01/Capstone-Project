@@ -113,6 +113,10 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
       setSubmitError(t("addMachine.errorRequired"));
       return;
     }
+    if (code.length > 20) {
+      setSubmitError(t("addMachine.errorCodeMaxLength"));
+      return;
+    }
     setSubmitError(null);
     setSubmitting(true);
     try {
@@ -284,10 +288,13 @@ export default function AddMachineModal({ open, onClose }: AddMachineModalProps)
                     <input
                       type="text"
                       required
+                      maxLength={20}
                       placeholder={t("addMachine.placeholder.machineId")}
                       className="w-full pl-14 pr-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[24px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all text-[15px] font-bold text-[var(--text)] font-mono"
                       value={formData.machine_code}
-                      onChange={(e) => setFormData({ ...formData, machine_code: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, machine_code: e.target.value.slice(0, 20) })
+                      }
                     />
                   </div>
                 </div>

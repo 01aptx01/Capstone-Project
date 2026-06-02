@@ -130,6 +130,8 @@ export type ApiCoupon = {
   max_uses?: number;
   /** นับจากออเดอร์ที่ไม่ใช่ pending/cancel/failed */
   used_count?: number;
+  /** คำนวณฝั่ง server: active | inactive | expired */
+  status?: string;
 };
 
 export type ApiCouponRedemption = {
@@ -201,6 +203,22 @@ export async function deleteProduct(productId: number): Promise<void> {
     method: "DELETE",
     skipGlobalErrorToast: true,
   });
+}
+
+export async function uploadProductImage(
+  file: File
+): Promise<{ image_url: string }> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const { data } = await api.post<{ image_url: string }>(
+    "/api/admin/products/upload-image",
+    fd,
+    {
+      headers: { "Content-Type": "multipart/form-data" },
+      skipGlobalErrorToast: true,
+    }
+  );
+  return data;
 }
 
 export async function listMachines(params?: {
@@ -478,6 +496,7 @@ export type AdminUserInfo = {
   position: string | null;
   phone: string | null;
   is_active: boolean;
+  roles?: string[];
   created_at: string | null;
 };
 
@@ -538,6 +557,30 @@ export async function revokeAdmin(
 
 export async function getMe(): Promise<{ user: AdminUserInfo }> {
   return adminFetch<{ user: AdminUserInfo }>("/auth/me");
+}
+
+export async function updateMe(body: {
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  phone?: string;
+}): Promise<{ user: AdminUserInfo }> {
+  return adminFetch<{ user: AdminUserInfo }>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
+}
+
+export async function changeAdminPassword(body: {
+  current_password: string;
+  new_password: string;
+}): Promise<{ ok: boolean; message: string }> {
+  return adminFetch<{ ok: boolean; message: string }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
 }
 
 export type AdminListItem = AdminUserInfo & { status: string };

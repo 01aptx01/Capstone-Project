@@ -9,6 +9,7 @@ from flask import Blueprint, g, jsonify, request
 
 from app.auth.member_auth import member_required, require_path_phone
 from app.db_config.db import get_db_cursor
+from app.services.promotion_catalog import compute_catalog_status
 
 logger = logging.getLogger(__name__)
 orders_api = Blueprint("orders_api", __name__)
@@ -95,7 +96,14 @@ def redeemable_promotions():
                     p.promotion_id, p.code, p.type, p.discount_amount, p.points_cost, p.expire_date, p.max_uses,
                     (SELECT COUNT(*) FROM user_promotions WHERE promotion_id = p.promotion_id) AS total_redeemed
                 FROM promotions p
-                WHERE p.is_active = 1 AND p.points_cost > 0
+                WHERE p.is_active = 1
+                  AND p.points_cost > -1
+                  AND (p.expire_date IS NULL OR p.expire_date >= UTC_TIMESTAMP())
+                  AND (
+                    p.max_uses = 0
+                    OR (SELECT COUNT(*) FROM user_promotions up WHERE up.promotion_id = p.promotion_id)
+                       < p.max_uses
+                  )
                 ORDER BY p.points_cost ASC
                 """
             )
@@ -155,7 +163,7 @@ def redeem_coupon(phone: str):
     try:
         with get_db_cursor() as (db, cur):
             cur.execute(
-                "SELECT user_id, points FROM users WHERE phone_number = %s",
+                "SELECT user_id, points FROM users WHERE phone_number = %s FOR UPDATE",
                 (phone,),
             )
             user = cur.fetchone()
@@ -166,6 +174,7 @@ def redeem_coupon(phone: str):
                 """
                 SELECT promotion_id, code, points_cost, is_active, expire_date, max_uses
                 FROM promotions WHERE promotion_id = %s
+                FOR UPDATE
                 """,
                 (promotion_id,),
             )
@@ -173,11 +182,13 @@ def redeem_coupon(phone: str):
             if not promo or not promo["is_active"]:
                 return jsonify({"error": "not_found", "message": "ไม่พบคูปอง"}), 404
 
-            if promo["expire_date"] and promo["expire_date"] < datetime.utcnow():
+            if compute_catalog_status(
+                bool(promo["is_active"]), promo["expire_date"]
+            ) == "expired":
                 return jsonify({"error": "expired", "message": "คูปองหมดอายุ"}), 400
 
             points_cost = int(promo["points_cost"] or 0)
-            if points_cost <= 0:
+            if points_cost <= -1:
                 return jsonify({"error": "invalid", "message": "คูปองนี้แลกด้วยแต้มไม่ได้"}), 400
 
             if user["points"] < points_cost:
@@ -357,8 +368,8 @@ def reveal_coupon_code(phone: str, user_promo_id: int):
                 import string
 
                 while True:
-                    rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                    generated = f"CP-{rand_str}"
+                    rand_str = ''.join(random.choices(string.digits, k=8))
+                    generated = rand_str
                     cur.execute("SELECT 1 FROM user_promotions WHERE code = %s", (generated,))
                     if not cur.fetchone():
                         code = generated

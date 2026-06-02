@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useUI } from "@/lib/context/UIContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { ADMIN_MACHINES_REFRESH_EVENT } from "@/components/machines/AddMachineModal";
 import { listProducts } from "@/lib/admin-api";
 import { enrichProductsWithStock, type UiProductRow } from "@/lib/admin-mappers";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useLang } from "@/lib/i18n/lang";
+import ProductThumb from "@/components/products/ProductThumb";
 
 const REFRESH = "admin-products-refresh";
+export const ALL_MACHINES_FILTER = "All Machines";
 
 interface ProductTableProps {
   category: string;
@@ -56,22 +59,31 @@ export default function ProductTable({
 
   useEffect(() => {
     const onRefresh = () => {
-      load();
+      void load();
     };
     window.addEventListener(REFRESH, onRefresh);
-    return () => window.removeEventListener(REFRESH, onRefresh);
+    window.addEventListener(ADMIN_MACHINES_REFRESH_EVENT, onRefresh);
+    return () => {
+      window.removeEventListener(REFRESH, onRefresh);
+      window.removeEventListener(ADMIN_MACHINES_REFRESH_EVENT, onRefresh);
+    };
   }, [load]);
 
   const filteredProducts = products.filter((p) => {
     const matchCategory = category === "All Categories" || p.category === category;
     const matchStatus = status === "All Statuses" || p.status === status;
 
-    let matchMachine = true;
-    if (machine === "Machine 1") matchMachine = (p.quantity || 0) > 50;
-    if (machine === "Machine 2") matchMachine = (p.quantity || 0) <= 150;
+    const matchMachine =
+      machine === ALL_MACHINES_FILTER ||
+      Object.prototype.hasOwnProperty.call(p.quantity_by_machine ?? {}, machine);
 
     return matchCategory && matchStatus && matchMachine;
   });
+
+  const quantityForRow = (p: UiProductRow) => {
+    if (machine === ALL_MACHINES_FILTER) return p.quantity ?? 0;
+    return p.quantity_by_machine?.[machine] ?? 0;
+  };
 
   const getStatusBadge = (st: string | undefined) => {
     switch (st) {
@@ -153,17 +165,12 @@ export default function ProductTable({
                   >
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 bg-[var(--surface-1)] rounded-2xl flex items-center justify-center text-xl shadow-sm overflow-hidden border border-[var(--border)] group-hover:border-orange-100 group-hover:scale-105 transition-all duration-500">
-                          <img
-                            src={p.image || "/product/img/pao-cream.png"}
-                            alt=""
-                            className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-700"
-                            onError={(e) => {
-                              e.currentTarget.src =
-                                "https://cdn-icons-png.flaticon.com/512/3081/3081918.png";
-                            }}
-                          />
-                        </div>
+                        <ProductThumb
+                          src={p.image || "/product/img/pao-cream.png"}
+                          alt=""
+                          size="sm"
+                          className="group-hover:border-orange-100 transition-colors duration-300"
+                        />
                         <div>
                           <div className="text-[16px] font-black text-[var(--text)] mb-0.5 group-hover:text-[var(--primary)] transition-colors">
                             {p.name}
@@ -189,7 +196,7 @@ export default function ProductTable({
                     </td>
                     <td className="px-8 py-5">
                       <span className="text-[17px] font-black text-[var(--text)]">
-                        {p.quantity}{" "}
+                        {quantityForRow(p)}{" "}
                         <span className="text-[13px] font-bold text-[var(--text-muted)] ml-1">{t("product.table.unit")}</span>
                       </span>
                     </td>
@@ -209,14 +216,6 @@ export default function ProductTable({
                           title={t("product.table.titleEdit")}
                         >
                           <i className="fi fi-rr-edit text-lg"></i>
-                        </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] hover:text-rose-500 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-100 transition-colors"
-                          title={t("product.table.titleHistory")}
-                        >
-                          <i className="fi fi-rr-time-past text-lg"></i>
                         </motion.button>
                       </div>
                     </td>

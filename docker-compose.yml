@@ -47,6 +47,7 @@
     volumes:
       - ./web/web-ui/build:/app/web-build
       - ./swagger.yaml:/app/swagger.yaml
+      - ./server/static/product/img:/app/static/product/img
     container_name: vending-server
     env_file:
       - .env
@@ -66,6 +67,7 @@
       - DOCKER_URL_AGENT=http://localhost:5000
       - DOCKER_URL_DB=mysql://localhost:3307
       - DOCKER_PUBLISHED_PORT_SERVER=8000
+      - PRODUCT_IMAGES_DIR=/app/static/product/img
       # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
       # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
     ports:

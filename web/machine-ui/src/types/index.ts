@@ -14,7 +14,8 @@ export type ModalType =
   | "processing"           // หน้าจอแสดงขั้นตอนการอุ่นร้อนและการเสิร์ฟ
   | "points_result"        // หน้าจอแสดงผลคะแนนที่ได้รับ
   | "limit_warning"        // หน้าจอเตือนเมื่อจำนวนของในตะกร้าเต็มโควตา
-  | "stock_limit_warning"; // หน้าจอเตือนเมื่อสินค้าชิ้นที่เลือกหมดสต็อกในตู้
+  | "stock_limit_warning"  // หน้าจอเตือนเมื่อสินค้าชิ้นที่เลือกหมดสต็อกในตู้
+  | "payment_min_warning"; // หน้าจอเตือนยอดชำระต่ำกว่าขั้นต่ำ Omise
 
 // PaymentMethod - ช่องทางการชำระเงินที่ระบบตู้รองรับ
 export type PaymentMethod =

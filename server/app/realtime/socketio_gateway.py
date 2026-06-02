@@ -295,6 +295,12 @@ def _auto_refund(charge_id: str) -> None:
                     """,
                     (charge_id,),
                 )
+                if cur.rowcount:
+                    from app.services.buy_service import InventoryService
+
+                    InventoryService().sync_coupon_for_order_status(
+                        charge_id, "refunded", cur=cur
+                    )
                 db.commit()
                 logger.info(
                     f"✅ [AutoRefund] Order for charge {charge_id} marked refunded "
@@ -371,6 +377,10 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
             event_id_for_socket = int(_id_row["id"])
 
         # Update status on terminal machine states
+        from app.services.buy_service import InventoryService
+
+        _inventory = InventoryService()
+
         if order_charge_id and event_type == "job.state" and state in ("DONE", "ERROR", "DISPENSING"):
             if state == "DONE":
                 # DONE = จ่ายเงินสำเร็จ + จ่ายสินค้าเสร็จ → completed ✅
@@ -378,6 +388,10 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
                     "UPDATE orders SET status = 'completed' WHERE charge_id = %s",
                     (order_charge_id,),
                 )
+                if cur.rowcount:
+                    _inventory.sync_coupon_for_order_status(
+                        order_charge_id, "completed", cur=cur
+                    )
                 logger.info(f"✅ [MachineEvent] {order_charge_id} → 'completed' (DONE)")
             elif state == "DISPENSING":
                 # อัปเดตเป็น 'dispensing' เฉพาะตอนกำลังทำงาน — อย่าทับสถานะที่จบแล้ว
@@ -422,6 +436,9 @@ def _insert_machine_event(data: Dict[str, Any]) -> None:
                     # ถือเป็นความล้มเหลวจริงก็ต่อเมื่อมีแถวถูกอัปเดต (status เปลี่ยนจริง)
                     error_is_real_failure = cur.rowcount > 0
                     if error_is_real_failure:
+                        _inventory.sync_coupon_for_order_status(
+                            order_charge_id, "dispense_failed", cur=cur
+                        )
                         logger.error(
                             f"❌ [MachineEvent] {order_charge_id} → 'dispense_failed' (ERROR จริง)"
                         )

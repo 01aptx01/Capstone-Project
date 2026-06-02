@@ -30,6 +30,19 @@ const prompt = Prompt({
 export const metadata: Metadata = {
   title: "MOD PAO - ระบบสมาชิกและสะสมคะแนน",
   description: "เช็กคะแนน แลกรับคูปอง และดูเมนูสินค้าตู้น้ำอัจฉริยะมดเปา",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "MOD PAO",
+  },
+};
+
+export const viewport = {
+  themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

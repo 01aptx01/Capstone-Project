@@ -7,6 +7,11 @@ import { createCoupon, updateCoupon, deleteCoupon } from "@/lib/admin-api";
 import type { UiCouponRow } from "@/lib/admin-mappers";
 import { ADMIN_COUPONS_REFRESH_EVENT } from "@/components/customers/coupon-constants";
 import { useLang } from "@/lib/i18n/lang";
+import {
+  blockNonIntegerKeys,
+  digitsOnly,
+  parseDigitsToOptionalNonNegativeInt,
+} from "@/lib/integer-input";
 
 export type CouponFormModalProps = {
   open: boolean;
@@ -28,29 +33,38 @@ const emptyForm = {
   isActive: true,
 };
 
+/** Send YYYY-MM-DD; server stores end-of-day Asia/Bangkok as UTC. */
 function fromDateInput(value: string): string | null {
   const s = value.trim();
   if (!s) return null;
-  const d = new Date(`${s}T23:59:59`);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function isoExpiryToDateInput(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function uiRowToFormData(row: UiCouponRow) {
   return {
     couponName: row.id,
     discountType: (row.type === "PERCENT" ? "Percentage" : "Fixed Amount") as DiscountType,
-    discountValue: String(row.discount_amount),
+    discountValue: digitsOnly(String(Math.trunc(Number(row.discount_amount) || 0))),
     pointsCost: String(row.points_cost ?? 0),
     maxUses: String(row.maxUsage ?? 0),
     validTo: isoExpiryToDateInput(row.expiry),
@@ -114,22 +128,35 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
       return;
     }
 
-    const discount = Number(formData.discountValue);
-    if (!Number.isFinite(discount) || discount <= 0) {
+    const discountRaw = digitsOnly(formData.discountValue);
+    if (!discountRaw) {
       setFormError(t("createCoupon.errorDiscount"));
+      return;
+    }
+    const discount = parseInt(discountRaw, 10);
+    if (discount <= 0) {
+      setFormError(t("createCoupon.errorDiscount"));
+      return;
+    }
+    if (formData.discountType === "Percentage" && discount > 100) {
+      setFormError(t("createCoupon.errorPercentMax"));
       return;
     }
 
     const points =
-      formData.pointsCost.trim() === "" ? 0 : Number.parseInt(formData.pointsCost, 10);
-    if (!Number.isFinite(points) || points < 0) {
+      formData.pointsCost.trim() === ""
+        ? 0
+        : parseDigitsToOptionalNonNegativeInt(formData.pointsCost);
+    if (points === null || points < 0) {
       setFormError(t("createCoupon.errorPoints"));
       return;
     }
 
     const maxUsesParsed =
-      formData.maxUses.trim() === "" ? 0 : Number.parseInt(formData.maxUses, 10);
-    if (!Number.isFinite(maxUsesParsed) || maxUsesParsed < 0) {
+      formData.maxUses.trim() === ""
+        ? 0
+        : parseDigitsToOptionalNonNegativeInt(formData.maxUses);
+    if (maxUsesParsed === null || maxUsesParsed < 0) {
       setFormError(t("createCoupon.errorMaxUses"));
       return;
     }
@@ -283,14 +310,20 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
                       <span className="absolute left-6 top-1/2 -translate-y-1/2 font-black text-[var(--primary)]">฿</span>
                     )}
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       required
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
+                      placeholder="0"
                       className={`w-full ${formData.discountType === "Fixed Amount" ? "pl-12" : "px-6"} py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all font-black text-[var(--text)]`}
                       value={formData.discountValue}
-                      onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                      onKeyDown={blockNonIntegerKeys}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          discountValue: digitsOnly(e.target.value),
+                        })
+                      }
                       disabled={submitting}
                     />
                     {formData.discountType === "Percentage" && (
@@ -312,13 +345,16 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
                     Points Cost
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder={t("createCoupon.placeholder.points")}
                     className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] transition-all font-black text-[var(--text)]"
                     value={formData.pointsCost}
-                    onChange={(e) => setFormData({ ...formData, pointsCost: e.target.value })}
+                    onKeyDown={blockNonIntegerKeys}
+                    onChange={(e) =>
+                      setFormData({ ...formData, pointsCost: digitsOnly(e.target.value) })
+                    }
                     disabled={submitting}
                   />
                 </div>
@@ -327,13 +363,16 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
                     {t("createCoupon.label.maxUses")}
                   </label>
                   <input
-                    type="number"
-                    min="0"
-                    step="1"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder={t("createCoupon.placeholder.maxUses")}
                     className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] transition-all font-black text-[var(--text)]"
                     value={formData.maxUses}
-                    onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
+                    onKeyDown={blockNonIntegerKeys}
+                    onChange={(e) =>
+                      setFormData({ ...formData, maxUses: digitsOnly(e.target.value) })
+                    }
                     disabled={submitting}
                   />
                   <p className="text-[11px] font-bold text-[var(--text-muted)] ml-2">{t("createCoupon.hint.maxUses")}</p>
@@ -342,6 +381,9 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-widest group-focus-within:text-[var(--primary)] transition-colors">
                     {t("createCoupon.label.validTo")}
                   </label>
+                  <p className="text-[11px] font-bold text-[var(--text-muted)] ml-2">
+                    {t("coupon.hint.expiryBangkok")}
+                  </p>
                   <input
                     type="date"
                     className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] transition-all font-bold text-[var(--text)]"

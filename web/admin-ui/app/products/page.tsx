@@ -3,15 +3,20 @@
 import PageWrapper from "@/components/layout/PageWrapper";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import ProductTable, { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
-import { listProductCategories, listProducts } from "@/lib/admin-api";
+import ProductTable, {
+  ADMIN_PRODUCTS_REFRESH_EVENT,
+  ALL_MACHINES_FILTER,
+} from "@/components/products/ProductTable";
+import { ADMIN_MACHINES_REFRESH_EVENT } from "@/components/machines/AddMachineModal";
+import { listMachines, listProductCategories, listProducts } from "@/lib/admin-api";
 import { apiCategoryToLabel, enrichProductsWithStock } from "@/lib/admin-mappers";
 import { useUI, ExportSection } from "@/lib/context/UIContext";
 import { useLang } from "@/lib/i18n/lang";
 
 const ALL_CATEGORIES = "All Categories";
-const ALL_MACHINES = "All Machines";
 const ALL_STATUSES = "All Statuses";
+
+type MachineFilterOption = { code: string; label: string };
 
 function ProductsPageClient() {
   const searchParams = useSearchParams();
@@ -52,7 +57,8 @@ function ProductsPageClient() {
   );
   const [category, setCategory] = useState(ALL_CATEGORIES);
   const [categoryOptions, setCategoryOptions] = useState<string[]>([ALL_CATEGORIES]);
-  const [machine, setMachine] = useState(ALL_MACHINES);
+  const [machineOptions, setMachineOptions] = useState<MachineFilterOption[]>([]);
+  const [machine, setMachine] = useState(ALL_MACHINES_FILTER);
   const [status, setStatus] = useState(ALL_STATUSES);
 
   const loadCategoryOptions = useCallback(async () => {
@@ -69,9 +75,28 @@ function ProductsPageClient() {
     }
   }, []);
 
+  const loadMachineOptions = useCallback(async () => {
+    try {
+      const { items } = await listMachines({ page: 1, per_page: 200 });
+      setMachineOptions(
+        items.map((m) => {
+          const loc = (m.location ?? "").trim();
+          return {
+            code: m.machine_code,
+            label: loc ? `${m.machine_code} — ${loc}` : m.machine_code,
+          };
+        })
+      );
+    } catch (e) {
+      console.error(e);
+      setMachineOptions([]);
+    }
+  }, []);
+
   useEffect(() => {
     void loadCategoryOptions();
-  }, [loadCategoryOptions]);
+    void loadMachineOptions();
+  }, [loadCategoryOptions, loadMachineOptions]);
 
   useEffect(() => {
     const onProductsChange = () => {
@@ -82,14 +107,31 @@ function ProductsPageClient() {
   }, [loadCategoryOptions]);
 
   useEffect(() => {
+    const onMachinesChange = () => {
+      void loadMachineOptions();
+    };
+    window.addEventListener(ADMIN_MACHINES_REFRESH_EVENT, onMachinesChange);
+    return () => window.removeEventListener(ADMIN_MACHINES_REFRESH_EVENT, onMachinesChange);
+  }, [loadMachineOptions]);
+
+  useEffect(() => {
     if (category !== ALL_CATEGORIES && !categoryOptions.includes(category)) {
       setCategory(ALL_CATEGORIES);
     }
   }, [categoryOptions, category]);
 
+  useEffect(() => {
+    if (
+      machine !== ALL_MACHINES_FILTER &&
+      !machineOptions.some((o) => o.code === machine)
+    ) {
+      setMachine(ALL_MACHINES_FILTER);
+    }
+  }, [machineOptions, machine]);
+
   const handleClear = () => {
     setCategory(ALL_CATEGORIES);
-    setMachine(ALL_MACHINES);
+    setMachine(ALL_MACHINES_FILTER);
     setStatus(ALL_STATUSES);
   };
 
@@ -156,13 +198,21 @@ function ProductsPageClient() {
             <div className="relative group">
               <i className="fi fi-rr-marker absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] group-focus-within:text-[var(--primary)] transition-colors"></i>
               <select 
-                value={machine}
+                value={
+                  machine === ALL_MACHINES_FILTER ||
+                  machineOptions.some((o) => o.code === machine)
+                    ? machine
+                    : ALL_MACHINES_FILTER
+                }
                 onChange={(e) => setMachine(e.target.value)}
                 className="w-full bg-[var(--surface-2)] border-2 border-transparent rounded-[18px] pl-11 pr-10 py-3.5 text-[14px] font-bold text-[var(--text)] outline-none appearance-none cursor-pointer hover:bg-[var(--surface-2)] focus:bg-[var(--surface-1)] focus:border-orange-100 transition-all shadow-inner"
               >
-                <option value={ALL_MACHINES}>{t("page.products.allMachines")}</option>
-                <option>Machine 1</option>
-                <option>Machine 2</option>
+                <option value={ALL_MACHINES_FILTER}>{t("page.products.allMachines")}</option>
+                {machineOptions.map((opt) => (
+                  <option key={opt.code} value={opt.code}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
               <i className="fi fi-rr-angle-small-down absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--text-muted)]"></i>
             </div>

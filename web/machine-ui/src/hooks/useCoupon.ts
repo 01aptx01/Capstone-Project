@@ -62,6 +62,7 @@ export function useCoupon(cart: CartItem[], machineCode: string, totalPrice: num
           if (!prev || prev.code !== code) return prev;
           return {
             ...prev,
+            code: (data.code as string) || prev.code,
             subtotal_thb: data.subtotal_thb,
             discount_thb: data.discount_thb,
             final_thb: data.final_thb,

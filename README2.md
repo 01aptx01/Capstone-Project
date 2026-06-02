@@ -1,817 +1,517 @@
-# Smart Vending Machine — เอกสารภาพรวมโปรเจกต์ (README2)
+# Smart Vending Machine — แฟ้มคู่มือระบบและโฟลว์การทำงานฉบับละเอียด (README2)
 
-เอกสารนี้อธิบายโปรเจกต์ **Smart Vending Machine (Capstone)** แบบครบทุกส่วน รวมถึงวิธีรันในสถานการณ์ต่างๆ อ้างอิงจากโครงสร้างและไฟล์ config จริงใน repository ณ เวลาที่เขียน
-
-> ไฟล์นี้เป็นเอกสารแยกจาก `README.md` และ `how-to-run.md` — ไม่แทนที่ไฟล์เดิม
+เอกสารนี้รวบรวมรายละเอียดเชิงลึกเกี่ยวกับสถาปัตยกรรม ตัวแปรสภาพแวดล้อม โครงสร้างไฟล์ และ**โฟลว์การทำงาน (Workflows) ทั้งหมดแบบเจาะลึก** ของโครงการ **Smart Vending Machine (Capstone)** ตามที่ได้รับการออกแบบและพัฒนารวมกันในปัจจุบัน 
 
 ---
 
 ## สารบัญ
 
-1. [โปรเจกต์คืออะไร](#1-โปรเจกต์คืออะไร)
-2. [สถาปัตยกรรมระบบ](#2-สถาปัตยกรรมระบบ)
-3. [โครงสร้างโฟลเดอร์ทั้ง repo](#3-โครงสร้างโฟลเดอร์ทั้ง-repo)
-4. [บริการ Docker Compose (รันแบบมาตรฐาน)](#4-บริการ-docker-compose-รันแบบมาตรฐาน)
-5. [Backend — `server/` (Flask + Socket.IO)](#5-backend--server-flask--socketio)
-6. [ฐานข้อมูล — `database/`](#6-ฐานข้อมูล--database)
-7. [Hardware Agent — `client/agent/`](#7-hardware-agent--clientagent)
-8. [Kiosk บน Raspberry Pi — `client/kiosk/`](#8-kiosk-บน-raspberry-pi--clientkiosk)
-9. [Frontend ลูกค้าที่ตู้ — `web/machine-ui/`](#9-frontend-ลูกค้าที่ตู้--webmachine-ui)
-10. [Frontend แอดมิน — `web/admin-ui/`](#10-frontend-แอดมิน--webadmin-ui)
-11. [Frontend สมาชิก (มือถือ) — `web/web-ui/`](#11-frontend-สมาชิก-มือถือ--webweb-ui)
-12. [API และเอกสาร OpenAPI](#12-api-และเอกสาร-openapi)
-13. [แผนภาพและ sequence ใน `docs/diagrams/`](#13-แผนภาพและ-sequence-ใน-docsdiagrams)
-14. [ตัวแปรสภาพแวดล้อม (Environment)](#14-ตัวแปรสภาพแวดล้อม-environment)
-15. [ลำดับชีวิตคำสั่งซื้อและงานฮาร์ดแวร์](#15-ลำดับชีวิตคำสั่งซื้อและงานฮาร์ดแวร์)
-16. [วิธีรันในสถานการณ์ต่างๆ](#16-วิธีรันในสถานการณ์ต่างๆ)
-17. [การทดสอบการชำระเงินและฮาร์ดแวร์](#17-การทดสอบการชำระเงินและฮาร์ดแวร์)
-18. [แก้ปัญหาเบื้องต้น](#18-แก้ปัญหาเบื้องต้น)
-19. [ไฟล์อ้างอิงสำคัญ](#19-ไฟล์อ้างอิงสำคัญ)
+1. [ภาพรวมระบบและเทคโนโลยี (System Overview & Tech Stack)](#1-ภาพรวมระบบและเทคโนโลยี)
+2. [สถาปัตยกรรมและการเชื่อมต่อ (Architecture & Port Maps)](#2-สถาปัตยกรรมและการเชื่อมต่อ)
+3. [โครงสร้างโฟลเดอร์ของ Repository](#3-โครงสร้างโฟลเดอร์ของ-repository)
+4. [ตัวแปรสภาพแวดล้อมและการตั้งค่า (.env)](#4-ตัวแปรสภาพแวดล้อมและการตั้งค่า)
+5. [โฟลว์การยืนยันตัวตนและการสมัครสมาชิก (Authentication & Onboarding Flow)](#5-โฟลว์การยืนยันตัวตนและการสมัครสมาชิก)
+6. [ระบบคะแนนสะสมและคูปองรหัสตัวเลข (Points & 8-Digit Numeric Coupon)](#6-ระบบคะแนนสะสมและคูปองรหัสตัวเลข)
+7. [โฟลว์การซื้อสินค้าและการชำระเงิน (Checkout & Omise Payment Flow)](#7-โฟลว์การซื้อสินค้าและการชำระเงิน)
+8. [ระบบจ่ายสินค้าและฮาร์ดแวร์แบบยืดหยุ่น (Resilient Hardware Dispensing & Telemetry)](#8-ระบบจ่ายสินค้าและฮาร์ดแวร์แบบยืดหยุ่น)
+9. [งานพื้นหลังอัตโนมัติ (Background Sweeper Tasks)](#9-งานพื้นหลังอัตโนมัติ)
+10. [คู่มือการรันระบบในสถานการณ์ต่างๆ (Running Scenarios)](#10-คู่มือการรันระบบในสถานการณ์ต่างๆ)
+11. [การทดสอบและการแก้ปัญหาเบื้องต้น (Troubleshooting)](#11-การทดสอบและการแก้ปัญหาเบื้องต้น)
+12. [ดัชนีไฟล์อ้างอิงหลัก (Index of Critical Files)](#12-ดัชนีไฟล์อ้างอิงหลัก)
 
 ---
 
-## 1. โปรเจกต์คืออะไร
+## 1. ภาพรวมระบบและเทคโนโลยี
 
-ระบบ **ตู้จำหน่ายอัจฉริยะ (Smart Vending)** สำหรับขายสินค้า (เช่น เปาหมูแดง/กุ้ง/เต้าหู้) ประกอบด้วย:
+ระบบตู้จำหน่ายสินค้าอัจฉริยะ (Smart Vending Machine) พัฒนาขึ้นเพื่อให้บริการแบบ End-to-End โดยมีการแลกเปลี่ยนข้อมูลแบบ Real-time และระบบรักษาความปลอดภัยสูง ประกอบด้วยส่วนประกอบหลักดังนี้:
 
-| บทบาท | เทคโนโลยี | หน้าที่หลัก |
-|--------|-----------|-------------|
-| หน้าจอลูกค้าที่ตู้ | Next.js 16 (`machine-ui`) | เลือกสินค้า, ตะกร้า, ชำระ Omise (บัตร / PromptPay), ติดตามสถานะ job ผ่าน Socket.IO |
-| แดชบอร์ดแอดมิน | Next.js (`admin-ui`) | จัดการสินค้า, ตู้, สต็อกช่อง, ออเดอร์, คูปอง, ลูกค้า, แจ้งเตือน |
-| แอปสมาชิก | Next.js (`web-ui`) | OTP login, แต้ม, แลกคูปอง, ประวัติ — **ไม่ได้อยู่ใน Docker Compose เริ่มต้น** แต่ API รองรับและ server mount build ได้ |
-| API กลาง | Flask + eventlet + python-socketio | ธุรกิจ, Omise, MySQL, dispatch งานไป agent, realtime |
-| ฐานข้อมูล | MySQL 8 | สินค้า, ตู้, สต็อก, ออเดอร์, events, admin RBAC |
-| Agent ฮาร์ดแวร์ | Flask บน Raspberry Pi (หรือจำลองใน Docker) | มอเตอร์/LED/NFC, job state machine, ส่ง events กลับ server |
-| ชำระเงิน | Omise | บัตรเครดิต, PromptPay (QR), webhook |
+| บทบาท | เทคโนโลยี | รายละเอียดและหน้าที่สำคัญ |
+| :--- | :--- | :--- |
+| **API กลาง (Backend)** | Flask (Python 3) + Eventlet + python-socketio | จัดการ Business Logic, สต็อกสินค้า, การคำนวณราคา, ระบบแลก/ลดคูปอง, การเชื่อมต่อ Omise API, และการส่งงาน (Dispatch) ให้ฮาร์ดแวร์ผ่าน Socket.IO |
+| **หน้าจอลูกค้าตู้ (Machine UI)** | Next.js 16.2.4 (React 19, Tailwind v4) | แสดงเมนูและสต็อกตามจริง, ตะกร้าสินค้า, ระบบชำระเงิน (Omise Token/Source), และหน้าจอแสดงความร้อน/การจ่ายของผ่าน Socket.IO |
+| **แอปพลิเคชันสมาชิก (Web UI)** | Next.js (PWA & Offline Support) | ระบบ OTP Login, PWA (รองรับการใช้งานออฟไลน์และติดตั้งเป็นแอป), แดชบอร์ดคะแนนสะสม, ระบบแลกโปรโมชัน, และระบบสร้างรหัสคูปอง 8 หลักสำหรับใช้กดที่หน้าตู้ |
+| **แดชบอร์ดแอดมิน (Admin UI)** | Next.js (Dashboard UI) | บริหารคลังสินค้า/ช่องสต็อกต่อตู้, CRUD สินค้าและตู้, ตรวจดูออเดอร์, จัดการคูปอง, ตรวจจับเหตุการณ์ความผิดปกติแบบ Real-time |
+| **Hardware Agent** | Flask API + Socket.IO Client (Raspberry Pi/Docker) | ควบคุม GPIO, NFC Reader (MFRC522), มอเตอร์จ่ายของ, หลอดไฟ LED, เสียง VLC และมีระบบ SQLite Outbox สำหรับเก็บ Telemetry แบบออฟไลน์ |
+| **ฐานข้อมูลหลัก** | MySQL 8 (Relational DB) | เก็บข้อมูลธุรกรรม, สต็อกช่อง, คูปอง, ประวัติสมาชิก, telemetry logs, และแอดมิน RBAC |
+| **ระบบชำระเงิน** | Omise API | รับชำระผ่านบัตรเครดิต, PromptPay (QR Scannable) และมีระบบ webhook คอยคอนเฟิร์มยอด |
 
 ---
 
-## 2. สถาปัตยกรรมระบบ
+## 2. สถาปัตยกรรมและการเชื่อมต่อ
 
-### 2.1 ภาพรวมการไหลของข้อมูล
+### 2.1 แผนภาพการไหลของข้อมูลหลัก
 
 ```mermaid
-flowchart LR
-    subgraph clients["Clients"]
-        MU[machine-ui\nNext.js :3000]
-        AU[admin-ui\nNext.js :3001]
-        WU[web-ui\nไม่ใน compose เริ่มต้น]
+flowchart TD
+    subgraph Client UIs [Client Interfaces]
+        M_UI[Machine UI\nNext.js :3000]
+        A_UI[Admin UI\nNext.js :3001]
+        W_UI[Web UI / Member\nNext.js :3002]
     end
 
-    subgraph backend["Backend"]
-        API[Flask server\n:8000 REST + Socket.IO]
+    subgraph Backend Services [Central Backend]
+        API[Flask Server\n:8000 REST + Socket.IO]
+        DB[(MySQL 8\n:3307 Host)]
     end
 
-    subgraph data["Data"]
-        DB[(MySQL :3307)]
+    subgraph External [Payment Gateway]
+        Omise[Omise payment API]
     end
 
-    subgraph external["External"]
-        OM[Omise API]
+    subgraph Hardware Edge [Pi Vending Machine]
+        Agent[Pi Agent\nFlask :5000 + WS Client]
+        HW[NFC / GPIO / Motors / VLC]
+        Lite[(SQLite Outbox\nagent.db)]
     end
 
-    subgraph edge["Edge"]
-        AG[Hardware Agent\nFlask :5000]
-        HW[มอเตอร์ / NFC / LED]
-    end
-
-    MU -->|HTTPS JSON| API
-    AU -->|HTTPS JSON| API
-    WU -->|HTTPS JSON| API
+    %% API Connections
+    M_UI -->|REST /api/buy| API
+    A_UI -->|REST /api/admin| API
+    W_UI -->|REST /api/members /auth/otp| API
+    
     API -->|SQL| DB
-    API -->|HTTPS| OM
-    API -->|Socket.IO job.start หรือ HTTP /jobs/start| AG
-    AG --> HW
-    AG -->|POST /api/machines/events หรือ Socket| API
-    MU -->|Socket.IO| API
-    AU -->|Socket.IO admin room| API
+    API -->|HTTPS| Omise
+    
+    %% Socket.IO Connections
+    M_UI -.->|Socket.IO job_event_broadcast| API
+    A_UI -.->|Socket.IO dashboard_update| API
+    Agent -.->|Socket.IO client auth + ready| API
+    API -.->|Socket.IO job.start event| Agent
+    
+    %% Hardware Interactions
+    Agent -->|Control| HW
+    Agent -->|Buffering| Lite
+    Agent -->|HTTP Telemetry Event fallback| API
 ```
 
-### 2.2 โหมด dispatch งานไปตู้
+### 2.2 การจำลองพอร์ตที่ใช้บน Host (โหมด Docker มาตรฐาน)
 
-| โหมด | ตัวแปร | พฤติกรรม |
-|------|--------|----------|
-| **socket** | (ค่าเริ่มต้น) | Server ส่ง event `job.start` ไปห้อง Socket.IO ของ `machine_code` — agent ที่ล็อกอินด้วย token รับงาน |
-
-Health ของ agent ใช้ `AGENT_BASE_URL` (GET `/health`) — ไม่มี HTTP dispatch แยก
-
-### 2.3 พอร์ตที่ publish บน host (Docker มาตรฐาน)
-
-| บริการ | Host URL / Port | ภายใน container |
-|--------|-----------------|-------------------|
-| MySQL | `localhost:3307` | `:3306` |
-| server (API + Socket.IO) | http://localhost:8000 | `:8000` |
-| client (agent) | http://localhost:5000 | `:5000` |
-| machine-ui | http://localhost:3000 | `:3000` |
-| admin-ui | http://localhost:3001 | maps → container `:3000` |
-| swagger-ui | http://localhost:8081 | `:8080` |
-| Flasgger (บน server เดียวกัน) | http://localhost:8000/apidocs | — |
+| บริการ | Host Port | Container Internal Port | หน้าที่หลัก |
+| :--- | :--- | :--- | :--- |
+| **MySQL Database** | `localhost:3307` | `:3306` | จัดเก็บข้อมูลระบบหลัก |
+| **vending-server (Backend)** | `http://localhost:8000` | `:8000` | REST API และ Gateway Socket.IO |
+| **vending-machine-ui** | `http://localhost:3000` | `:3000` | หน้าจอลูกค้าหน้าร้าน (Kiosk) |
+| **vending-admin-ui** | `http://localhost:3001` | `:3000` | แดชบอร์ดหลังบ้านของแอดมิน |
+| **vending-web-ui** | `http://localhost:3002` | `:3000` | หน้าจอของแอปพลิเคชันสมาชิก (มือถือ) |
+| **vending-pi (Agent)** | `http://localhost:5000` | `:5000` | ตัวแทนควบคุมตู้ (Mock ฮาร์ดแวร์ใน Docker) |
+| **vending-swagger-ui** | `http://localhost:8081` | `:8080` | หน้าเว็บแสดงโครงสร้าง API (OpenAPI 2.0) |
+| **Flasgger (บน server)** | `http://localhost:8000/apidocs` | — | Swagger สดบนเครื่อง Flask Server |
 
 ---
 
-## 3. โครงสร้างโฟลเดอร์ทั้ง repo
+## 3. โครงสร้างโฟลเดอร์ของ Repository
 
 ```
 Capstone-Project/
-├── .env.example              # ตัวอย่าง env รวมศูนย์ (ใช้กับ docker compose)
-├── docker-compose.yml        # สแต็กหลัก 6 บริการ + banner
-├── swagger.yaml              # OpenAPI 2.0 — ใช้ Flasgger + swagger-ui container
-├── README.md                 # ภาพรวมสั้น (ภาษาอังกฤษ)
-├── how-to-run.md             # คู่มือ Docker + ลงทะเบียนตู้
-├── README2.md                # เอกสารนี้
+├── .env.example              # ตัวอย่างคอนฟิกสภาพแวดล้อมรวมศูนย์
+├── docker-compose.yml        # สคริปต์ Docker Compose หลักแบบ 6 บริการ
+├── swagger.yaml              # สัญญา API ตามมาตรฐาน OpenAPI 2.0
+├── README.md                 # ภาพรวมและวิธีติดตั้ง (ภาษาอังกฤษ)
+├── how-to-run.md             # คู่มือการลงทะเบียนตู้และการใช้งาน Docker
+├── README2.md                # เอกสารเชิงลึกระบบนี้ (ภาษาไทย)
 │
 ├── database/
-│   └── init.sql              # schema + seed (รันครั้งแรกเมื่อ volume ใหม่)
+│   └── init.sql              # สคริปต์สร้าง Schema และลง Seed ข้อมูลเริ่มต้น
 │
-├── server/                   # Flask backend
-│   ├── main.py               # entry: eventlet + Socket.IO + background sweepers
-│   ├── wsgi.py               # WSGI สำหรับ deploy อื่น
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── migrations/           # Alembic / Flask-Migrate
-│   └── app/
-│       ├── factory.py        # สร้าง Flask app, blueprints, CORS, Swagger
-│       ├── extensions.py     # SQLAlchemy, Migrate
-│       ├── api/              # REST blueprints
-│       ├── auth/             # JWT สมาชิก
-│       ├── models/           # SQLAlchemy models
-│       ├── services/         # Omise, buy, hardware, OTP, SMS, coupon
-│       ├── realtime/         # socketio_gateway.py
-│       └── db_config/        # pool mysql.connector + SQLAlchemy URI
+├── server/                   # ซอร์สโค้ดของ Flask Backend
+│   ├── main.py               # จุดสตาร์ทระบบ: eventlet runtime + background tasks
+│   ├── app/
+│   │   ├── factory.py        # แฟคทอรีสำหรับสร้างแอป Flask, CORS, และ Flasgger
+│   │   ├── extensions.py     # ตัวจัดการ SQLAlchemy และ Alembic
+│   │   ├── auth/             # คลาสลงรหัสและถอดรหัส JWT สมาชิก (`member_auth.py`)
+│   │   ├── api/              # บลูปริ้นท์ REST API (buy, members, auth_otp, orders)
+│   │   │   └── admin/        # บลูปริ้นท์ Admin REST API และ security decorators
+│   │   ├── models/           # คลาสและโมเดล SQLAlchemy (User, Coupon, Order)
+│   │   ├── services/         # ชั้นบริการ (omise, buy, hardware, OTP, SMS, coupon)
+│   │   └── realtime/         # เกตเวย์ Socket.IO (`socketio_gateway.py`)
+│   └── migrations/           # ประวัติการปรับเปลี่ยนฐานข้อมูล (Alembic)
 │
 ├── client/
-│   ├── agent/                # Hardware agent (Flask + Socket.IO client)
-│   │   ├── agent.py          # entry
-│   │   ├── routes.py         # /jobs/start, /dispense, SSE job stream
-│   │   ├── ws_client.py      # เชื่อม server Socket.IO
-│   │   ├── machine.py        # GPIO, LED, NFC, เสียง, mock job
-│   │   ├── ws_outbox.py      # queue events เมื่อ offline
-│   │   └── sounds/           # mp3 ตาม state งาน
+│   ├── agent/                # ตัวควบคุมฮาร์ดแวร์บน Raspberry Pi (หรือ Mock ใน Docker)
+│   │   ├── agent.py          # จุดรันหลักของ Agent
+│   │   ├── routes.py         # REST Endpoint ของ Agent (เช่น /jobs/start, /nfc/arm)
+│   │   ├── ws_client.py      # ตัวเชื่อมและซิงก์ Socket.IO แบบยืดหยุ่นกลับไปยัง server
+│   │   ├── machine.py        # ตัวควบคุมเสียง, ไฟ LED, หน้าจอ, และ NFC
+│   │   ├── ws_outbox.py      # SQLite เก็บประวัติ Telemetry รอส่งกลับเมื่อออนไลน์
+│   │   └── hardware_runner.py# ตัวรันสเตทแมชชีนควบคุมความร้อนและหน่วงเวลาการจ่ายสินค้า
 │   └── kiosk/
-│       ├── autostart.service # systemd ตัวอย่างบน Pi
-│       └── chromium.sh       # เปิด machine-ui fullscreen
+│       ├── autostart.service # เทมเพลตสำหรับจดทะเบียน systemd service บน Pi
+│       └── chromium.sh       # เชลล์สคริปต์สำหรับเปิดหน้าเว็บ machine-ui แบบเต็มหน้าจอ (Kiosk)
 │
 ├── web/
-│   ├── machine-ui/           # UI หน้าจอตู้ (Next.js 16)
-│   ├── admin-ui/             # แดชบอร์ดแอดมิน
-│   └── web-ui/               # แอปสมาชิก (OTP, แต้ม, redeem)
+│   ├── machine-ui/           # Next.js ของหน้าจอลูกค้าหน้าร้าน
+│   ├── admin-ui/             # Next.js แดชบอร์ดจัดการของแอดมิน
+│   └── web-ui/               # Next.js หน้าจอของระบบสมาชิก (มือถือ)
 │
-└── docs/diagrams/            # ไฟล์ .mmd (Mermaid) — sequence, state, use case
+└── docs/diagrams/            # แฟ้มบันทึกไฟล์แผนภาพสถาปัตยกรรม (.mmd)
 ```
 
 ---
 
-## 4. บริการ Docker Compose (รันแบบมาตรฐาน)
+## 4. ตัวแปรสภาพแวดล้อมและการตั้งค่า (.env)
 
-ไฟล์: `docker-compose.yml`
+ไฟล์ `.env` ที่ root ของโปรเจกต์ทำหน้าที่ควบคุมทั้ง 6 บริการของ Docker Compose โดยกลุ่มตัวแปรที่สำคัญที่สุดที่ห้ามคลาดเคลื่อน ได้แก่:
 
-| Service | Container name | คำอธิบาย |
-|---------|----------------|----------|
-| `compose-banner` | vending-compose-banner | พิมพ์ตาราง URL ตอน start (Alpine one-shot) |
-| `db` | vending-db | MySQL 8, volume `db_data`, mount `init.sql` |
-| `server` | vending-server | Build `./server`, `env_file: .env`, healthcheck `/health` |
-| `client` | vending-pi | Agent, `privileged`, mount `/dev/gpiomem`, volume `agent_data` |
-| `machine-ui` | vending-machine-ui | Build args สำหรับ `NEXT_PUBLIC_*` |
-| `admin-ui` | vending-admin-ui | Host 3001 → container 3000 |
-| `swagger-ui` | vending-swagger-ui | แสดง `swagger.yaml` ที่พอร์ต 8081 |
-
-**Volumes**
-
-- `db_data` — ข้อมูล MySQL ถาวร; `init.sql` รันเฉพาะครั้งแรกที่ volume ว่าง
-- `agent_data` — SQLite outbox ของ agent (`AGENT_DB_PATH=/data/agent.db`)
-
-**ไม่รวมใน Compose:** `web-ui` (สมาชิก) — รันแยกด้วย `npm run dev` หรือ build แล้ว mount ไปที่ server ตาม volume `./web/web-ui/build:/app/web-build`
+1. **การเชื่อมต่อฐานข้อมูลหลัก**:
+   * `DB_HOST=db` (สำหรับ container วิ่งหากัน) หรือ `DB_HOST=127.0.0.1` (สำหรับ Local dev นอก Docker)
+   * `DB_PORT=3306` (ภายใน container) หรือ `DB_PORT=3307` (ชี้ไปที่ MySQL ของ host)
+2. **คีย์สัญญากลางและรหัสลับ**:
+   * `JWT_SECRET`: ใช้สำหรับเข้ารหัสและยืนยัน Access Token ของสมาชิกหลัง verify OTP
+   * `KIOSK_SOCKET_SECRET`: ต้องตรงกันระหว่าง server และ Next.js `machine-ui` เพื่อใช้กรองการเข้าร่วมห้อง (Room) บน Socket.IO
+   * `ADMIN_SOCKET_SECRET`: คีย์เข้าร่วมห้องแอดมินแบบความปลอดภัยสูง
+3. **การทดสอบชำระเงิน**:
+   * `OMISE_SECRET_KEY` และ `NEXT_PUBLIC_OMISE_PUBLIC_KEY`: สำหรับสร้าง charge และ Token บัตรเครดิต
+   * `ALLOW_MOCK_PAY=1`: อนุญาตให้เรียก `/api/buy/mock-pay` เพื่อข้ามการจ่ายเงินจริงขณะพัฒนา
+4. **ตัวตนของตู้สินค้า (Vending Identity)**:
+   * `MACHINE_CODE` และ `MACHINE_TOKEN`: ต้องสอดคล้องกับฐานข้อมูลเพื่อให้ Agent ผ่านด่านรักษาความปลอดภัย Socket.IO
 
 ---
 
-## 5. Backend — `server/` (Flask + Socket.IO)
+## 5. โฟลเดอร์การยืนยันตัวตนและการสมัครสมาชิก (Authentication & Onboarding Flow)
 
-### 5.1 การสตาร์ท
+เพื่อความถูกต้องในการเก็บข้อมูล โครงการนี้ได้เลือกใช้สถาปัตยกรรมแบบ **"Deferred User Registration" (ชะลอการบันทึกข้อมูล)** เพื่อป้องกันการเกิดบัญชีผี (Ghost Users) ที่ยังไม่ได้ลงทะเบียนอย่างสมบูรณ์แบบ แผนภูมิและขั้นตอนจริงมีดังนี้:
 
-- `main.py` โหลด `.env`, monkey-patch **eventlet**, สร้าง `ServerApp`
-- `create_app()` ใน `factory.py`: init DB pool, SQLAlchemy, CORS, Flasgger, blueprints
-- `make_socketio_app()` ห่อ Flask เป็น WSGI + Socket.IO
-- Background tasks (eventlet spawn):
-  - ยกเลิกออเดอร์ `pending_payment` เกิน 15 นาที
-  - suspend สมาชิกไม่ใช้งาน 1 ปี
-  - ลบ `machine_job_events` เก่ากว่า 90 วัน (batch)
+### 5.1 ขั้นตอนแบบ Sequence Diagram
 
-### 5.2 Blueprint / API สาธารณะ
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Member as ลูกค้า (Web UI)
+    participant API as Backend (Flask)
+    participant OTP_Svc as app.services.otp_service
+    participant SMS as app.services.sms_service
+    participant DB as MySQL Database
 
-| Prefix / Path | ไฟล์ | หน้าที่ |
-|---------------|------|--------|
-| `GET /health` | factory | `{ "status": "server-ok" }` |
-| `GET /api/health` | health.py | health แบบละเอียด (ถ้ามี) |
-| `GET /api/products?machine_code=` | products.py | รายการสินค้า + stock ตามตู้ |
-| `POST /api/buy/*` | buy.py | checkout, draft, webhook, mock-pay, cancel, status |
-| `POST /api/machines/events` | machine_events.py | agent ส่ง telemetry (HTTP sink) |
-| `GET/POST /api/members/*` | members.py | สมาชิก, แต้ม |
-| `POST /api/auth/otp/*` | auth_otp.py | ส่ง/ยืนยัน OTP → JWT |
-| `GET /api/members/<phone>/orders` ฯลฯ | orders.py | ประวัติ, redeem, คูปอง |
+    %% Step 1: Send OTP
+    Member->>API: POST /api/auth/otp/send { phone_number }
+    API->>OTP_Svc: send_otp(phone)
+    Note over OTP_Svc: ตรวจสอบ Rate Limits<br/>(3 ครั้ง/ชม. และ Cooldown 60s)
+    OTP_Svc->>OTP_Svc: สุ่มรหัส 6 หลัก & Hash ด้วย SHA-256
+    OTP_Svc->>DB: INSERT INTO otp_sessions (phone, code_hash, expires_at)
+    
+    alt AUTH_DEV_BYPASS == True
+        OTP_Svc-->>API: คืนค่า code สดใน Terminal / Log
+    else AUTH_DEV_BYPASS == False
+        OTP_Svc->>SMS: send SMS via Twilio
+    end
+    
+    API-->>Member: คืนสถานะ {"status": "sent", "expires_in": 300}
 
-**Buy endpoints หลัก** (`buy.py`):
+    %% Step 2: Verify OTP
+    Member->>API: POST /api/auth/otp/verify { phone_number, code }
+    API->>OTP_Svc: verify_otp(phone, code)
+    OTP_Svc->>DB: ดึง otp_sessions ล่าสุดมาล็อก (FOR UPDATE)
+    Note over OTP_Svc: ตรวจสอบหมดอายุ และ<br/>ใส่รหัสผิดสะสม (ล็อกถ้า >= 5 ครั้ง)
+    
+    alt รหัสถูกต้อง
+        OTP_Svc->>DB: UPDATE otp_sessions SET verified_at = NOW()
+        OTP_Svc-->>API: verified phone_number
+        API->>API: เจเนอเรต Access Token (JWT Bearer)
+        API-->>Member: คืน JWT + phone_number
+    else รหัสผิด
+        OTP_Svc->>DB: failed_attempts + 1
+        OTP_Svc-->>API: โยนข้อความรหัสผิด/หมดอายุ
+        API-->>Member: คืนสถานะผิดพลาด 400
+    end
 
-- `POST /api/buy/checkout` — ชำระด้วย Omise token หรือ source (QR)
-- `POST /api/buy/validate-coupon` — ตรวจคูปองก่อนจ่าย
-- `POST /api/buy/create-draft` — สร้าง draft order
-- `POST /api/buy/omise-webhook` — webhook Omise (HMAC ถ้ามี `OMISE_WEBHOOK_SECRET`)
-- `POST /api/buy/mock-pay` — dev: บังคับ paid (ต้อง `ALLOW_MOCK_PAY=1`)
-- `POST /api/buy/cancel` — ยกเลิก
-- `GET /api/buy/status/<charge_id>` — polling สถานะ
-- `POST /api/buy` — legacy buy path
-
-### 5.3 Admin API — `/api/admin/*`
-
-Blueprint: `app/api/admin/__init__.py` — auth ใช้ JWT (`Authorization: Bearer <token>`) ผ่าน `app/api/admin/decorators.py`
-
-| Path | หน้าที่ |
-|------|--------|
-| `GET/POST /api/admin/machines` | รายการตู้, สร้างตู้ + `secret_token` แสดงครั้งเดียว |
-| `GET/PUT /api/admin/machines/<code>` | รายละเอียด/แก้ตู้ |
-| `PUT /api/admin/machines/<code>/slots` | จัดช่องสินค้า |
-| `GET/POST/PUT/DELETE /api/admin/products` | CRUD สินค้า |
-| `GET /api/admin/orders` | ออเดอร์ |
-| `GET/POST /api/admin/coupons` | โปรโมชัน/คูปอง |
-| `GET /api/admin/customers` | ลูกค้า |
-| `GET /api/admin/dashboard/summary` | สรุปแดชบอร์ด |
-| `GET /api/admin/reports/sales` | รายงานยอดขาย |
-| `GET /api/admin/alerts` | แจ้งเตือนจาก machine_job_events |
-| `GET /api/admin/users` | admin users |
-
-### 5.4 Socket.IO (`realtime/socketio_gateway.py`)
-
-| ผู้เชื่อม | Auth | Room / เหตุการณ์ |
-|----------|------|------------------|
-| **Machine (agent)** | `{ "machine_code": "<code>", "token": "<plaintext>" }` | bcrypt กับ `machines.secret_token_hash`; อัปเดต `is_online`; รับ `job.start` |
-| **Admin UI** | `{ "role": "admin" }` หรือ `{ "admin_token": "..." }` ถ้ามี `ADMIN_SOCKET_SECRET` | room `admin`, event `dashboard_update` |
-| **machine-ui (browser)** | ตาม implementation ใน `useJobSocket.ts` | ติดตาม job ของ `NEXT_PUBLIC_MACHINE_CODE` |
-
-เมื่อชำระสำเร็จ server จะ dispatch งานผ่าน Socket.IO (`job.start`) และ agent รัน state machine: `TRANSFER_TO_OVEN` → `HEATING` → `DISPENSING` → `DONE` / `ERROR`
-
-### 5.5 Services ชั้นธุรกิจ
-
-| โมดูล | บทบาท |
-|--------|--------|
-| `omise_service.py` | สร้าง charge, จัดการ source QR |
-| `buy_service.py` | สต็อก, สร้าง order, claim หลังจ่าย |
-| `hardware_service.py` | ping `/health` ของ agent (dispatch ใช้ Socket.IO `job.start` เท่านั้น) |
-| `coupon_service.py` | ตรวจ/คำนวณส่วนลด |
-| `otp_service.py` + `sms_service.py` | OTP สมาชิก (console log ใน dev) |
-
-### 5.6 Migrations
-
-- `server/migrations/` — Alembic ผ่าน Flask-Migrate
-- `init.sql` สำหรับ Docker ครั้งแรก; migration เพิ่มเติมสำหรับ schema หลัง deploy (เช่น `secret_token_hash`, `is_online`, `max_uses`)
-
----
-
-## 6. ฐานข้อมูล — `database/`
-
-### 6.1 ตารางหลัก
-
-| ตาราง | ความหมาย |
-|--------|----------|
-| `users` | สมาชิก (เบอร์โทร, แต้ม, status) |
-| `otp_sessions` | OTP login |
-| `promotions` / `user_promotions` | คูปองและการแลก |
-| `machines` | ตู้ (`machine_code` PK, `secret_token_hash`, `is_online`) |
-| `products` | สินค้า (ราคา, `heating_time`, category) |
-| `machine_slots` | สต็อกต่อช่องต่อตู้ |
-| `orders` / `order_items` | คำสั่งซื้อ + สถานะชำระ/จ่ายของ |
-| `machine_job_events` | telemetry จาก agent (seq, state, JSON) |
-| `admin_users` / `roles` / `admin_user_role` | RBAC แอดมิน |
-| `transactions` | บันทึก Omise ต่อ order |
-
-### 6.2 Seed เริ่มต้น (`init.sql`)
-
-- ตู้ **`MP1-001`** ที่ KMUTT — **ไม่มี** `secret_token_hash` (ใช้ Socket auth ต้องสร้างตู้ใหม่หรืออัปเดต DB)
-- สินค้า 6 รายการ (เปาหมูแดง, หมูสับ, กุ้ง, เต้าหู้, เห็ด, ครีม)
-- ช่อง 1–6 ตู้ `MP1-001` สต็อก 20 ชิ้นต่อช่อง
-- โปรโมชัน `POINTS50`, `POINTS100`
-- สมาชิก demo เบอร์ `0631723422` แต้ม 150
-
----
-
-## 7. Hardware Agent — `client/agent/`
-
-### 7.1 บทบาท
-
-รันบน **Raspberry Pi** จริง หรือใน Docker เป็น **จำลอง Pi** (`vending-pi`):
-
-- Flask API พอร์ต 5000 (`routes.py`)
-- Socket.IO client ไป server (`ws_client.py`) — ต้องมี `MACHINE_CODE` + `MACHINE_TOKEN`
-- `machine.py` — GPIO LED, NFC MFRC522, เสียง VLC, mock job เมื่อไม่มีฮาร์ดแวร์
-
-### 7.2 HTTP endpoints สำคัญ (agent)
-
-- `POST /jobs/start` — เริ่มงานจ่ายของ (server เรียกในโหมด http หรือ agent รับจาก socket)
-- (deprecated) `POST /dispense` — legacy (ปัจจุบัน dispatch ใช้ Socket.IO `job.start`)
-- SSE/stream ติดตาม job state (ภายใน `routes.py`)
-
-### 7.3 Environment สำคัญ (agent)
-
-ดู `client/agent/.env.example`: `MACHINE_CODE`, `MACHINE_TOKEN`, `SERVER_SOCKET_URL`, `NFC_AUTO_APPROVE`, pin LED, `MACHINE_UI_URL` สำหรับ Chromium บน Pi
-
-### 7.4 Docker vs Pi จริง
-
-| สถานการณ์ | หมายเหตุ |
-|-----------|----------|
-| Docker `client` | `SERVER_SOCKET_URL=http://server:8000`, GPIO อาจไม่มี — ใช้ mock |
-| Pi จริง | ตั้ง IP LAN ใน `.env`, `privileged` + `/dev/gpiomem`, systemd `autostart.service` |
-
----
-
-## 8. Kiosk บน Raspberry Pi — `client/kiosk/`
-
-- `chromium.sh` — เปิด URL ของ `machine-ui` แบบ fullscreen
-- `autostart.service` — ตัวอย่าง systemd ให้ agent + UI ขึ้นหลัง boot
-
-Workflow บน Pi โดยทั่วไป:
-
-1. รัน MySQL + server บนเซิร์ฟเวอร์/LAN หรือ Pi ที่แรงพอ
-2. รัน `machine-ui` ให้ browser ใน Pi เข้าถึงได้ (`MACHINE_UI_URL`)
-3. รัน `agent.py` ด้วย token จาก Admin
-
----
-
-## 9. Frontend ลูกค้าที่ตู้ — `web/machine-ui/`
-
-### 9.1 เทคโนโลยี
-
-- Next.js **16.2.4**, React 19, Tailwind 4, `socket.io-client`
-- โค้ดหลัก: `src/app/page.tsx`, components ใน `src/components/`, `src/hooks/useJobSocket.ts`
-
-### 9.2 Build-time env (สำคัญ)
-
-Next.js ฝัง **`NEXT_PUBLIC_*` ตอน build** เท่านั้น — เปลี่ยนใน `.env` แล้วต้อง **rebuild image**:
-
-| ตัวแปร | ความหมาย |
-|--------|----------|
-| `NEXT_PUBLIC_OMISE_PUBLIC_KEY` | Omise public key |
-| `NEXT_PUBLIC_API_URL` | URL Flask ที่ browser เรียก (มัก `http://localhost:8000`) |
-| `NEXT_PUBLIC_MACHINE_CODE` | รหัสตู้สำหรับ API + Socket room |
-| `NEXT_PUBLIC_SERVER_SOCKET_URL` | Socket.IO (มักเท่า API URL) |
-| `NEXT_PUBLIC_AGENT_BASE_URL` | ถ้าต้องเรียก agent โดยตรงจาก browser (ไม่บ่อย) |
-
-### 9.3 ฟีเจอร์หลักบน UI
-
-- แสดงสินค้าจาก `GET /api/products?machine_code=`
-- ตะกร้า, คูปอง, ชำระ Omise (ปุ่มทดสอบ Visa test ใน dev)
-- Realtime job ผ่าน Socket.IO
-
----
-
-## 10. Frontend แอดมิน — `web/admin-ui/`
-
-### 10.1 หน้าแอป (`app/`)
-
-| Route | หน้าที่ |
-|-------|--------|
-| `/login`, `/register` | auth UI |
-| `/` | แดชบอร์ด |
-| `/products` | สินค้า |
-| `/machines`, `/machines/[id]` | ตู้ + ช่อง |
-| `/orders` | ออเดอร์ |
-| `/customers`, `/coupons` | ลูกค้า / คูปอง |
-| `/alerts` | แจ้งเตือน (API จริงจาก Flask; บาง route ยัง mock ใน Next) |
-| `/sales`, `/reports` | รายงาน |
-| `/settings`, `/security`, `/profile` | ตั้งค่า |
-
-### 10.2 การเชื่อม API
-
-- `NEXT_PUBLIC_ADMIN_API_URL` หรือ `NEXT_PUBLIC_API_URL` — URL ที่ **browser** เรียกได้ (ไม่ใช่ hostname `server` ภายใน Docker)
-- Docker: host **3001** → container 3000
-- Dev แยก: `npx next dev -p 3001` เพื่อไม่ชน machine-ui ที่ 3000
-
-### 10.3 Mock vs จริง
-
-ยังใช้ Next route handlers mock สำหรับ: `/api/dashboard`, `/api/alerts`, `/api/sales` — ส่วน products, machines, orders, coupons, customers ดึงจาก Flask `/api/admin/*`
-
----
-
-## 11. Frontend สมาชิก (มือถือ) — `web/web-ui/`
-
-### 11.1 หน้าแอป
-
-| Route | หน้าที่ |
-|-------|--------|
-| `(auth)/login` | OTP login |
-| `(main)/home` | หน้าหลัก |
-| `(main)/checkout`, `(main)/payment` | สั่งซื้อ/ชำระ |
-| `(main)/history` | ประวัติ |
-| `(main)/redeem`, `(main)/coupons` | แลกคูปอง |
-| `(main)/profile`, `(main)/help` | โปรไฟล์ / ช่วยเหลือ |
-
-### 11.2 การรัน
-
-**ไม่มี service ใน `docker-compose.yml`** — รัน local:
-
-```bash
-cd web/web-ui
-npm install
-# ตั้ง .env.local ให้ชี้ NEXT_PUBLIC_API_URL ไป server
-npm run dev
+    %% Step 3: Onboarding
+    Note over Member: ระบบตรวจสอบเบอร์ในระบบด้วย GET /api/members/:phone
+    alt ไม่พบเบอร์ (404)
+        Member->>API: POST /api/members/register { display_name } (Bearer JWT)
+        Note over API: ตรวจสอบความถูกต้องของ JWT ผ่าน @member_required
+        API->>DB: INSERT INTO users (phone, display_name, points, status)
+        API-->>Member: สมัครสำเร็จ คืน user_id เอนทิตีจริง
+    else พบเบอร์ (200)
+        Note over Member: ข้ามไปหน้าหลัก (Home) ทันที
+    end
 ```
 
-Server สามารถ serve static build ผ่าน mount `web/web-ui/build` → `/` และ `/static/*` (ดู `factory.py`)
+### 5.2 จุดควบคุมความปลอดภัยหลัก (Core Controls)
+1. **การ Hash OTP**: backend จะนำ `salt + phone + code` มาผ่านกระบวนการ SHA-256 ก่อนเก็บลง `otp_sessions.code_hash` เพื่อป้องกันการรั่วไหลหากฐานข้อมูลโดนเจาะ
+2. **Ghost User Prevention**: จะไม่มีข้อมูลใดๆ ในตาราง `users` จนกว่าขั้นตอนที่ 14 (การ onboard ด้วย `register`) จะเสร็จสิ้น
+3. **Rate Limiting ป้องกันการสุ่มค้นหา (Brute-force Enumeration)**: 
+   * `GET /api/members/<phone>` ถูกจำกัดไว้สูงสุดที่ **10 requests ต่อนาทีต่อ IP**
+   * `POST /api/members/earn` ถูกจำกัดไว้สูงสุดที่ **20 requests ต่อนาทีต่อ IP**
 
 ---
 
-## 12. API และเอกสาร OpenAPI
+## 6. ระบบคะแนนสะสมและคูปองรหัสตัวเลข (Points & 8-Digit Numeric Coupon)
 
-| แหล่ง | URL |
-|-------|-----|
-| Flasgger (live บน server) | http://localhost:8000/apidocs |
-| Swagger UI container | http://localhost:8081 (ไฟล์ `swagger.yaml`) |
-| ไฟล์ต้นฉบับ | `swagger.yaml` ที่ root |
+เพื่อลดข้อจำกัดของแผงปุ่มกดทางกายภาพของตู้จำหน่ายสินค้า (Vending physical numeric-only keypad) ซึ่งรองรับเฉพาะค่าที่เป็นตัวเลข ระบบจึงได้พัฒนา **ระบบแปลงรหัสคูปองส่วนตัวให้เป็นรหัสสุ่มตัวเลข 8 หลัก** เพื่อความเข้ากันได้ 100%
 
----
+### 6.1 แผนภาพลำดับการทำงานของคูปอง (Redeem & Reveal Flow)
 
-## 13. แผนภาพและ sequence ใน `docs/diagrams/`
+```mermaid
+flowchart TD
+    A[ลูกค้าสะสมคะแนนจากออเดอร์หน้าร้าน] -->|ชำระสำเร็จ| B( earn_points API คำนวณ 1 บาท = 1 คะแนน )
+    B --> C[ลูกค้าเปิด Web UI มือถือเพื่อดูของรางวัล]
+    C -->|GET /api/promotions/redeemable| D{เลือก Promotion ที่ถูกใจ}
+    D -->|แต้มพอ & อนุมัติ| E[POST /api/members/:phone/redeem]
+    E -->|หักแต้มในตาราง users| F[สร้าง user_promotions ใหม่ สถานะ active บันทึก coupon code แบบปกติ]
+    F --> G[หน้าจอคูปองส่วนตัวของฉัน]
+    G -->|ลูกค้ากดปุ่ม Reveal Code| H[POST /api/members/:phone/coupons/:id/reveal]
+    H -->|ระบบสุ่มตัวเลข 8 หลักแบบห้ามซ้ำ| I[สุ่ม rand_str ขนาด 8 หลัก]
+    I -->|ตรวจสอบไม่มีในระบบ| J[UPDATE user_promotions SET code = '8-digit-code']
+    J --> K[ลูกค้าคัดลอกรหัสตัวเลข 8 หลัก ไปพิมพ์บนแป้นกดที่ตู้หน้าร้าน]
+```
 
-รายการใน `docs/diagrams/FILES.txt` — เปิดด้วย [Mermaid Live](https://mermaid.live) หรือ extension VS Code
-
-| กลุ่ม | ไฟล์ตัวอย่าง |
-|------|----------------|
-| Use case | `usecase.mmd` |
-| Class | `class-domain-models.mmd`, `class-application-layer.mmd` |
-| State | `state-order-lifecycle.mmd`, `state-hardware-job-event.mmd` |
-| Sequence | `sequence-03-checkout-card`, `sequence-04-checkout-qr-webhook`, `sequence-11-socketio-connect`, `sequence-13-admin-api-surface` |
-| Context | `context-architecture.mmd` |
-
-ใช้ประกอบการอ่าน flow ชำระเงิน / จ่ายของ / admin โดยไม่ต้องไล่โค้ดทีละไฟล์
-
----
-
-## 14. ตัวแปรสภาพแวดล้อม (Environment)
-
-ไฟล์แม่: **`.env` ที่ root** (คัดลอกจาก `.env.example`) — Compose อ่าน `${VAR}` และ `env_file` ของ server
-
-### 14.1 กลุ่มตัวแปร
-
-| กลุ่ม | ตัวแปรหลัก | ใช้โดย |
-|-------|------------|--------|
-| Database | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | server (ใน Docker `DB_HOST=db`) |
-| Omise | `NEXT_PUBLIC_OMISE_PUBLIC_KEY`, `OMISE_SECRET_KEY` | machine-ui build, server |
-| API URLs | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_ADMIN_API_URL`, `RETURN_URI` | frontends, redirect 3DS |
-| Machine identity | `MACHINE_CODE`, `MACHINE_TOKEN`, `NEXT_PUBLIC_MACHINE_CODE` | agent, machine-ui build |
-| Socket | `SERVER_SOCKET_URL`, `NEXT_PUBLIC_SERVER_SOCKET_URL` | agent ภายใน Docker = `http://server:8000`; browser = `http://localhost:8000` |
-| Agent health | `AGENT_BASE_URL` | server → GET `/health` |
-| Auth สมาชิก | `JWT_SECRET`, `AUTH_DEV_BYPASS`, `OTP_TTL_SECONDS` | OTP (console) / JWT |
-| Dev | `ALLOW_MOCK_PAY`, `ADMIN_SOCKET_SECRET` | mock-pay, admin socket |
-| CORS | `CORS_ORIGINS` | server — เพิ่ม origin LAN เมื่อเข้าจาก IP |
-
-### 14.2 ค่าเริ่มต้นที่มักสับสน
-
-- **`MP1-001`**: seed มีตู้และสต็อก แต่ **ไม่มี token** → agent Socket auth ล้มเหลวจนกว่าจะสร้างตู้ใหม่ใน Admin หรือตั้ง `MACHINE_TOKEN` ของตู้ที่มี hash แล้ว
-- **`NEXT_PUBLIC_MACHINE_CODE`**: ต้อง rebuild `machine-ui` หลังเปลี่ยน
-- **`MACHINE_TOKEN`**: ใส่ใน root `.env` สำหรับ service `client` — ไม่ใช่แค่ `client/agent/.env` ใน Docker
+### 6.2 รายละเอียดการเก็บแต้มและการแลกซื้อ
+* **การสะสมแต้ม (Earn Points)**: เรียกใช้งานผ่าน `/api/members/earn` โดยคำนวณแต้มจาก `total_price` เสมอ (1 บาท = 1 แต้ม) โดยมีระบบ **Auto-Register** หากลูกค้าจ่ายเงินหน้าร้านแต่ไม่มีบัญชีมาก่อน ระบบจะสร้างบัญชีโครงร่างเบื้องต้น (Skeleton account) ให้ทันทีเพื่ออำนวยความสะดวกในการสะสมแต้มล่วงหน้า
+* **รหัสคูปอง 8 หลัก**: สร้างขึ้นโดยสุ่มเลือกค่าจากอักขระ `0-9` เท่านั้น โดยจะทำการวนลูปตรวจจับกับฐานข้อมูลตาราง `user_promotions` จนมั่นใจว่าตัวเลข 8 หลักนี้จะไม่ไปชนกับคูปองของผู้อื่นในระบบอย่างแน่นอน
 
 ---
 
-## 15. ลำดับชีวิตคำสั่งซื้อและงานฮาร์ดแวร์
+## 7. โฟลเดอร์การซื้อสินค้าและการชำระเงิน (Checkout & Omise Payment Flow)
 
-### 15.1 สถานะ order (`orders.status`)
+ขั้นตอนการชำระเงินและหักเงินผ่านเกตเวย์ Omise ถูกแบ่งออกเป็น 2 รูปแบบหลักตามแต่พฤติกรรมลูกค้า:
 
-`pending_payment` → `paid` → `dispensing` → `completed`  
-หรือ `cancelled`, `payment_failed`, `dispense_failed`, `refunded`
+### 7.1 รูปแบบปกติ (Direct Checkout)
+เกิดขึ้นเมื่อลูกค้าเลือกสินค้าหน้าร้าน หน้าตู้ และชำระผ่านระบบทันที (บัตรเครดิต หรือ PromptPay)
 
-(รายละเอียดเต็ม: `docs/diagrams/state-order-lifecycle.mmd`)
+### 7.2 รูปแบบแตะชำระ/เตรียมชำระล่วงหน้า (Draft-Based Checkout)
+ลูกค้าสร้าง Draft Order เพื่อจองคิวบนตู้หน้าร้าน (มี `charge_id` ขึ้นต้นด้วย `draft_...`) จากนั้นเมื่อมีการแตะบัตรเครดิตชำระเงินที่เครื่องอ่านของตู้หน้าร้าน ระบบจะทำการเปลี่ยนผ่าน (Upgrade) ดราฟต์ในระบบฐานข้อมูลให้กลายเป็น Charge จริงของ Omise (ผ่าน `/api/buy/checkout` โดยระบุ `draft_id` เข้าไป)
 
-### 15.2 Job ฮาร์ดแวร์
+### 7.3 sequence การป้องกันธุรกรรมแบบ Double-Spend และสภาวะแข่งขัน (Race Conditions)
 
-`TRANSFER_TO_OVEN` → `HEATING` → `DISPENSING` → `DONE` / `ERROR`  
-Events บันทึกใน `machine_job_events` และส่งกลับ server
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as ลูกค้าหน้าร้าน (Machine UI)
+    participant API as Backend Controller (Flask)
+    participant DB as MySQL Database
+    participant Omise as Omise API
 
-### 15.3 Flow ชำระเงินแบบย่อ
+    Customer->>API: POST /api/buy/checkout { cart, machine_code, coupon_code }
+    Note over API: ค้นหารายการออเดอร์ค้างคาของตู้นี้ก่อน<br/>(get_blocking_order)
+    
+    alt ตู้ติดสถานะทำงานออเดอร์ก่อนหน้า
+        API-->>Customer: คืนสถานะผิดพลาด 409 MACHINE_BUSY
+    else ตู้ว่าง
+        API->>DB: ตรวจสอบสต็อกตามจริงจากช่องสินค้า (check_stock)
+        API->>DB: ตรวจจับและล็อกคูปอง (lookup_coupon_by_code)
+        
+        alt คูปองถูกล็อกในออเดอร์ pending_payment อื่นอยู่
+            API-->>Customer: คืนสถานะ 'in_use' หรือไม่อนุมัติ (Double-Spend Protection)
+        else คูปองพร้อมใช้
+            API->>Omise: เรียกขอตัดเงิน (create_charge)
+            API->>DB: บันทึกออเดอร์ใหม่สถานะ 'pending_payment'
+            Note over DB: ล็อกความสัมพันธ์ user_promotion_id ป้องกันคูปองซ้ำ
+            
+            alt ชำระด้วยบัตรและสำเร็จทันที
+                Omise-->>API: charge successful
+                API->>API: ส่งต่อโฟลว์หักสต็อกและจ่ายของ (Dispense)
+                API-->>Customer: คืนสถานะ 'paid'
+            else ชำระด้วย PromptPay (QR Code)
+                Omise-->>API: charge pending
+                API-->>Customer: คืนรูปภาพ QR Code ให้สแกน
+            end
+        end
+    end
+```
 
-1. machine-ui โหลดสินค้า + สร้าง draft/checkout
-2. Omise tokenize (บัตร) หรือสร้าง source QR (PromptPay)
-3. server สร้าง charge, อัปเดต order
-4. Webhook หรือ polling หรือ `mock-pay` → `paid`
-5. server `emit_job_start` (socket) หรือ HTTP ไป agent
-6. agent จ่ายของ, ส่ง events → admin dashboard realtime
+### 7.4 การคอนเฟิร์มการชำระเงินแบบ Dual-Method
+ระบบยืนยันยอดเงินของ PromptPay และบัตรเครดิตจะทำงานพร้อมกันสองรูปแบบเพื่อความน่าเชื่อถือสูงสุด:
+1. **Omise Webhook Listener (`POST /api/buy/omise-webhook`)**: รับการแจ้งเตือน `charge.complete` จากฝั่ง Omise โดยระบบมีฟังก์ชัน `_verify_webhook_signature` คอยตรวจสอบความถูกต้องของ HMAC-SHA256 Signature เสมอเพื่อตรวจสอบที่มาของคำร้องขอ (เมื่อมีการระบุ `OMISE_WEBHOOK_SECRET`)
+2. **Frontend Polling (`GET /api/buy/status/<charge_id>`)**: หน้าจอ Next.js หน้าร้านจะยิงร้องขอสถานะเข้ามาทุกช่วงเวลาสั้นๆ โดยระบบจะเรียกใช้ `reconcile_pending_charge` ดึงสถานะสดตรงจาก Omise เพื่อตรวจสอบออเดอร์ค้างจ่ายที่ลูกค้าสแกนเรียบร้อยแล้วและช่วยปรับปรุงสถานะให้ตรงกันทันที
 
 ---
 
-## 16. วิธีรันในสถานการณ์ต่างๆ
+## 8. ระบบจ่ายสินค้าและฮาร์ดแวร์แบบยืดหยุ่น (Resilient Hardware Dispensing & Telemetry)
 
-### 16.1 สถานการณ์ A — รันทั้งสแต็กด้วย Docker (แนะนำครั้งแรก)
+ระบบควบคุมการจ่ายของ (Hardware Dispensing) ถือเป็นจุดสำคัญของโปรเจกต์ Capstone นี้ โดยมีกลไกรับมือกับข้อผิดพลาดระดับเครือข่ายหลุด ข้อมูลไม่สอดคล้อง และการคืนเงินลูกค้าโดยอัตโนมัติ
 
-**ขั้นตอน**
+### 8.1 สเตทแมชชีนและการเปลี่ยนสถานะในฮาร์ดแวร์ (State Machine)
 
+```mermaid
+stateDiagram-v2
+    [*] --> TRANSFER_TO_OVEN : ได้รับงาน (job.start)
+    TRANSFER_TO_OVEN --> HEATING : คีบสินค้าเข้าเตาสำเร็จ
+    HEATING --> DISPENSING : สินค้าได้อุณหภูมิตามที่คำนวณ
+    DISPENSING --> DONE : มอเตอร์ผลักสินค้าลงช่องรับเรียบร้อย
+    DISPENSING --> ERROR : มอเตอร์ขัดข้อง / ตัวตรวจจับไม่ทำงาน
+    HEATING --> ERROR : เตาอบมีอุณหภูมิผิดพลาด
+    
+    DONE --> [*] : บันทึกออเดอร์ completed
+    ERROR --> [*] : บันทึกออเดอร์ dispense_failed + ทำ Auto-Refund
+```
+
+### 8.2 แผนภูมิการจัดการงานที่มีความเสถียรสูง (Resilient Dispensing Engine)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant API as Backend (Flask)
+    participant DB as MySQL Database
+    participant Agent as Pi Agent (Raspberry Pi)
+    participant Outbox as local SQLite (Outbox)
+
+    Note over API: ชำระเงินได้รับการยืนยันเรียบร้อย (paid)
+    API->>DB: บล็อกและปรับสถานะออเดอร์ในทรานแซกชัน (deduct_stock)
+    
+    alt RC-6 Guard: อีกเธรดหักของไปก่อนแล้ว (rowcount == 0)
+        API-->>API: โยนข้อความ AlreadyClaimedError ห้ามทำซ้ำ
+    else มีสิทธิ์การจ่าย
+        Note over DB: เรียกใช้ SELECT FOR UPDATE หักจำนวนสินค้าในแต่ละช่อง (slots)
+        alt RC-7 Guard: สต็อกจริงในตู้หมดกระทันหัน (TOCTOU)
+            API->>DB: เปลี่ยนแปลงสถานะเป็น dispense_failed
+            API->>API: เริ่มกระบวนการเบื้องหลัง Auto-Refund บัญชีลูกค้า
+        else หักจำนวนสต็อกจริงสำเร็จ
+            API->>API: เรียกดึง Socket.IO ห้องตู้ (emit_job_start)
+            
+            alt Pi Agent กำลังออนไลน์
+                API->>Agent: ส่งเหตุการณ์ job.start { items, heating_time }
+                Agent->>Agent: เริ่มเดินหน้าสเตทแมชชีนควบคุมฮาร์ดแวร์จริง
+            else Pi Agent กำลังออฟไลน์ (หลุดการติดต่อ)
+                Note over API: ออเดอร์คงค้างคาในตารางสถานะ 'paid'
+                Agent->>API: (กลับมาออนไลน์ภายหลัง) ส่งสัญญาณ machine_ready
+                API->>Agent: เรียกใช้ฟังก์ชัน dispatch_pending_jobs เพื่อ Replay ยอดค้างส่งงานให้ทันที
+            end
+        end
+    end
+
+    %% Telemetry Outbox Flow
+    Note over Agent: สเตทแมชชีนทำงานเปลี่ยนสเตท
+    Agent->>Outbox: INSERT INTO outbox (event_type, state, seq, payload)
+    
+    loop ทุกๆ 0.3 วินาที (flush_outbox)
+        Agent->>API: ส่งเหตุการณ์ผ่าน Socket.IO event 'machine_event'
+        alt ส่งสำเร็จ (Server คอนเฟิร์มกลับ ok: true)
+            API->>DB: บันทึกข้อมูลลงตาราง machine_job_events และอัปเดตสถานะออเดอร์ตามขั้นตอนจริง
+            Note over API: ด่านป้องกันสเตทต้านข้อผิดพลาด (Done Guard):<br/>หาก job เคยสำเร็จเป็น DONE แล้ว<br/>ระบบจะเพิกเฉยเหตุการณ์ ERROR ที่ตามมาภายหลัง
+            Agent->>Outbox: ลบข้อมูลออกจาก SQLite
+        else ส่งไม่สำเร็จ (เน็ตหลุด)
+            Note over Agent: ข้อมูลบันทึกไว้ใน SQLite รอส่งต่อเมื่อเชื่อมต่อได้อีกครั้ง
+        end
+    end
+```
+
+### 8.3 ด่านป้องกันเชิงลึกในรายละเอียด (Detailed Core Guards)
+1. **Done Guard**: ป้องกันกรณีที่ Agent ทำงานเสร็จสมบูรณ์จนส่งสเตท `DONE` ขึ้นฐานข้อมูลแล้ว แต่อาจเกิดปัญหา Exception ตอนทำความสะอาดหรือปล่อยทรัพยากรหน่วงเวลาภายหลัง จนทำให้ระบบ Agent ยิงอีเวนต์สเตท `ERROR` ตามขึ้นไปทีหลัง ระบบ API กลางจะนำ `job_id` ไปสแกนตาราง `machine_job_events` หากพบสเตท `DONE` แล้ว จะ**เพิกเฉยสเตท ERROR นั้นโดยสิ้นเชิง** เพื่อรักษาความน่าเชื่อถือไม่ให้ออเดอร์ที่จ่ายของเรียบร้อยต้องกลายเป็นออเดอร์ล้มเหลว
+2. **NFC Flow & Card Reader Isolation**: หน้าควบคุม NFC (`/nfc/arm`, `/nfc/disarm`, `/nfc/status`) มีระบบควบคุมอายุธุรกรรม (TTL) เพื่อไม่ให้สิทธิ์บัตรที่อาจได้รับการแตะค้างอยู่ในการทำธุรกรรมก่อนหน้า ไหลเข้าไปกระทบกับการชำระเงินของธุรกรรมถัดไป
+3. **Automated Refund Trigger**: เมื่อมีการอัปเดตสเตท `ERROR` ที่เป็นข้อผิดพลาดจริง (ผ่าน `_insert_machine_event` ด่านกรองแล้ว) ระบบจะทำการตั้งหัวข้อเธรดเบื้องหลัง (Daemon Thread) เรียกใช้ `_auto_refund` คืนยอดเงินเข้าบัญชีต้นทางของ Omise ในเสี้ยววินาที และเปลี่ยนสถานะในฐานข้อมูลเป็น `refunded` โดยอัตโนมัติ
+
+---
+
+## 9. งานพื้นหลังอัตโนมัติ (Background Sweeper Tasks)
+
+ใน `server/main.py` ทำการติดตั้งเธรดเบื้องหลังโดยประสานงานร่วมกับ **Eventlet Green Threads** เพื่อปัดกวาดความเรียบร้อยของระบบทั้งหมดตามระยะเวลาที่กำหนด:
+
+```
+[Background Workers (Eventlet Loop)]
+  ├── ทุก 60 วินาที ──> ตรวจสอบออเดอร์รอยืนยันยอดเงิน (Stale Payments Sweeper)
+  │                      └─ ออเดอร์ 'pending_payment' ที่มีอายุเกิน 5 นาที จะปรับเป็น 'cancelled' เพื่อคืนคลัง
+  ├── ทุก 15 นาที ──> ตรวจสอบออเดอร์จ่ายของค้างคา (Stale Paid Jobs Sweeper)
+  │                      └─ ออเดอร์ 'paid' หรือ 'dispensing' ค้างเกิน 45 นาที จะปรับเป็น 'dispense_failed' เพื่อปลดล็อกตู้
+  ├── ทุก 24 ชั่วโมง ─> ปรับสถานะสมาชิกที่ไม่ได้ใช้งาน (Inactive Members Worker)
+  │                      └─ สมาชิกที่ไม่มีการล็อกอินเกิน 1 ปี จะเปลี่ยนสถานะตาราง 'users.status' เป็น 'suspended'
+  └── ทุก 24 ชั่วโมง ─> การเคลียร์ Event Telemetry ล้นฐานข้อมูล (Pruning Logs Sweeper)
+                         └─ ล้างประวัติแถวข้อมูลตาราง 'machine_job_events' ที่มีอายุเก่ากว่า 90 วันในลักษณะ Batch
+```
+
+---
+
+## 10. คู่มือการรันระบบในสถานการณ์ต่างๆ (Running Scenarios)
+
+### Scenario A: รันทั้งระบบแบบมาตรฐานด้วย Docker Compose (แนะนำ)
+สแต็กประกอบไปด้วยฐานข้อมูล, API กลาง, ตู้ Agent จำลอง, หน้าจอ UI หน้าร้าน และ แดชบอร์ดแอดมิน:
 ```bash
-# ที่ root โปรเจกต์
-copy .env.example .env    # Windows
-# แก้ NEXT_PUBLIC_OMISE_PUBLIC_KEY และ OMISE_SECRET_KEY
+# คัดลอกสร้างไฟล์ Environment คอนฟิกหลัก
+cp .env.example .env
 
+# แก้ไข OMISE คีย์ภายใน .env ให้เรียบร้อย
+# สตาร์ทบริการทั้งหมดพร้อมสั่ง Rebuild ทันที
 docker compose up --build
 ```
+*บริการจะพร้อมใช้งานที่เว็บ localhost ตามพอร์ตในตารางที่ 2 ทันที*
 
-**ตรวจสอบ**
+### Scenario B: ลงทะเบียนตู้จำหน่ายใหม่เข้าเครือข่ายและการ Sync โทเค็นความปลอดภัย
+1. ล็อกอินเข้าแอดมินแดชบอร์ดที่ `http://localhost:3001` เข้าไปที่เมนู **Machines** กดสร้างตู้ใหม่ เช่นรหัส `DEMO-01`
+2. คัดลอกรหัสตู้ และ **`secret_token` สด (ซึ่งจะปรากฏตัวอักษรให้เห็นเพียงแค่ครั้งเดียวตอนสร้าง)**
+3. นำค่าที่ได้มาเขียนระบุลงในไฟล์ `.env` ที่ root ของโปรเจกต์:
+   ```env
+   MACHINE_CODE=DEMO-01
+   MACHINE_TOKEN=<secret_token_ที่คัดลอกมา>
+   NEXT_PUBLIC_MACHINE_CODE=DEMO-01
+   ```
+4. สั่งสั่งงานและปรับโครงสร้างระบบ Agent และ Machine UI ที่มี build-time environment ฝังตัว:
+   ```bash
+   # สั่ง Rebuild ฝั่ง Agent
+   docker compose up -d --build client
+   
+   # สั่ง Rebuild หน้าจอ Kiosk หน้าร้านเพื่อให้จดจำรหัสตู้ DEMO-01 ใหม่
+   docker compose build --no-cache machine-ui
+   docker compose up -d machine-ui
+   ```
+5. เข้าไปตั้งค่ากำหนด **Machine Slots** สต็อกช่องวางและกำหนดปริมาณสินค้าของตู้ `DEMO-01` ในหน้าแอดมิน เพื่อเปิดการขาย
 
-- http://localhost:8000/health
-- http://localhost:3000 (machine-ui)
-- http://localhost:3001 (admin-ui)
-- `docker logs -f vending-pi` (agent)
-
-**Detached**
-
+### Scenario C: รีเซ็ตเคลียร์ฐานข้อมูลทั้งหมดเพื่อเริ่มนับหนึ่ง
 ```bash
-docker compose up --build -d
-```
-
-**Log ละเอียด (ไม่มี prefix รวม)**
-
-```bash
-docker compose up --build --no-log-prefix
-```
-
----
-
-### 16.2 สถานการณ์ B — ลงทะเบียนตู้ใหม่และให้ agent + UI ตรงกัน
-
-1. เปิด Admin http://localhost:3001 → Machines → สร้างตู้ เช่น `DEMO-01`
-2. คัดลอก `machine_code` และ **`secret_token` (ครั้งเดียว)**
-3. ใน root `.env`:
-
-```env
-MACHINE_CODE=DEMO-01
-MACHINE_TOKEN=<secret_token>
-NEXT_PUBLIC_MACHINE_CODE=DEMO-01
-```
-
-4. รีสตาร์ท agent:
-
-```bash
-docker compose up -d --build client
-```
-
-5. Rebuild machine-ui (เพราะ `NEXT_PUBLIC_MACHINE_CODE`):
-
-```bash
-docker compose build --no-cache machine-ui
-docker compose up -d machine-ui
-```
-
-6. ใน Admin เพิ่ม **machine slots** ให้ `DEMO-01` (ตู้ seed `MP1-001` มีสต็อกแล้ว ตู้ใหม่ยังไม่มี)
-
----
-
-### 16.3 สถานการณ์ C — รีเซ็ตฐานข้อมูลทั้งหมด
-
-```bash
+# ปิดและสั่งลบ Data Volume ถาวรของระบบทิ้งทั้งหมด
 docker compose down -v
+
+# รันระบบขึ้นมาใหม่ สคริปต์ init.sql จะทำงานซ้ำเป็นค่าเริ่มต้น
 docker compose up --build
 ```
 
-`-v` ลบ volume `db_data` — `init.sql` รันใหม่, ข้อมูลตู้/ออเดอร์หาย
+### Scenario D: การพัฒนา Backend (Flask) แบบเครื่องตัวเอง (Local Development)
+เหมาะสำหรับการแก้ไขโค้ด Python ที่มีการอัปเดตตลอดเวลาโดยไม่ต้องนั่งรอบิลด์ Docker:
+1. เรียกเฉพาะ MySQL ขึ้นมาในตู้ container: `docker compose up -d db`
+2. ติดตั้งเครื่องมือจำลองในโฟลเดอร์ `server/`:
+   ```bash
+   cd server
+   python -m venv .venv
+   source .venv/bin/activate       # สำหรับ macOS/Linux
+   .venv\Scripts\activate          # สำหรับ Windows
+   pip install -r requirements.txt
+   ```
+3. กำหนดค่าใน `.env` ของตนเองให้พอร์ต MySQL หันไปหา `3307` ของเครื่อง Host:
+   ```env
+   DB_HOST=127.0.0.1
+   DB_PORT=3307
+   DB_USER=root
+   DB_PASSWORD=root
+   DB_NAME=vending
+   FLASK_ENV=development
+   ALLOW_MOCK_PAY=1
+   ```
+4. สตาร์ท API: `python main.py`
 
----
-
-### 16.4 สถานการณ์ D — รันเฉพาะบาง service
-
+### Scenario E: การพัฒนาหน้าเว็บ Web UI (สมาชิก) หรือ Admin UI แบบ Hot Reload
+สำหรับผู้พัฒนาที่ต้องการแก้ไขหน้าเว็บแบบ Hot Reload นอกโหมด Docker:
 ```bash
-docker compose up -d db server
-docker compose up -d machine-ui admin-ui
-docker compose up -d --build client
-```
-
-แก้ Omise หรือ API URL ของ frontend → rebuild image ที่เกี่ยวข้อง
-
----
-
-### 16.5 สถานการณ์ E — พัฒนา Backend แบบ local (ไม่ใช้ Docker สำหรับ server)
-
-**สมมติ MySQL รันที่ localhost:3307** (จาก Docker `db` อย่างเดียว):
-
-```bash
-docker compose up -d db
-```
-
-ที่ `server/`:
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-pip install -r requirements.txt
-```
-
-ตั้ง `.env` (หรือ export):
-
-```env
-DB_HOST=127.0.0.1
-DB_PORT=3307
-DB_USER=root
-DB_PASSWORD=root
-DB_NAME=vending
-OMISE_SECRET_KEY=...
-SOCKETIO_ENABLED=1
-```
-
-```bash
-cd server
-python main.py
-```
-
-API: http://localhost:8000
-
-**Migration (ถ้าต้องการ schema ล่าสุดนอก init.sql)**
-
-```bash
-cd server
-flask db upgrade   # ตามที่โปรเจกต์ตั้ง Flask-Migrate CLI
-```
-
----
-
-### 16.6 สถานการณ์ F — พัฒนา machine-ui แบบ hot reload
-
-```bash
-docker compose up -d db server
-cd web/machine-ui
+cd web/web-ui # หรือ web/admin-ui
 npm install
-```
 
-สร้าง `.env.local` (ดู `.env.example`):
+# กำหนดปลายทางเซิร์ฟเวอร์ API ในไฟล์เครื่อง (.env.local)
+echo "NEXT_PUBLIC_API_URL=http://localhost:8000" > .env.local
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_SERVER_SOCKET_URL=http://localhost:8000
-NEXT_PUBLIC_OMISE_PUBLIC_KEY=pkey_test_...
-NEXT_PUBLIC_MACHINE_CODE=MP1-001
-```
-
-```bash
+# รันหน้าจอพัฒนาสด
 npm run dev
 ```
 
-เปิด http://localhost:3000 — **ไม่ต้อง rebuild Docker** ขณะแก้ UI
+---
+
+## 11. การทดสอบและการแก้ปัญหาเบื้องต้น (Troubleshooting)
+
+| ปัญหา / อาการที่เกิด | สาเหตุยอดนิยมที่เป็นไปได้ | ขั้นตอนการคลี่คลายปัญหา |
+| :--- | :--- | :--- |
+| **Agent ฟ้องปัญหา `Authentication failed`** | คีย์ที่ป้อนใน `MACHINE_TOKEN` ไม่ตรงกัน หรือตู้เริ่มต้น `MP1-001` ไม่มี hash บันทึก | สร้างตู้จำหน่ายสินค้าใหม่ในแผง Admin นำค่า token ที่เจเนอเรตมาลงใน `.env` ตามแนวทาง Scenario B |
+| **กดชำระสินค้าหน้าร้านแล้วขึ้นข้อความตู้สินค้ากำลังทำงาน (Busy)** | มีทรานแซกชันก่อนหน้าค้างอยู่ในระบบฐานข้อมูล (มีสถานะ paid หรือ pending) | ปล่อยให้ background sweeper ดับทรานแซกชันทิ้งไป (5 นาที) หรือใช้ Postman สั่งยิงยกเลิก `/api/buy/cancel` หรือเข้าไปแก้ไขสถานะออเดอร์ใน SQL |
+| **คะแนนของสมาชิกลูกค้าหน้าร้านพิมพ์แล้วตรวจสอบไม่เจอ** | คิวแอดมินหรือ browser ถูกบล็อกด้วยระบบ rate limit ของ IP | รอเป็นเวลา 60 วินาที หรือเปลี่ยนค่า IP จำลองในการทดสอบ |
+| **หักเงินผ่าน Omise สำเร็จแล้วแต่มอเตอร์จริงไม่ยอมจ่ายของ** | ปัญหาเกิดจาก Agent หลุดขาดการติดต่อ (Offline) | ตรวจสอบ logs ผ่าน `docker logs -f vending-pi` ตรวจจับสถานะการเชื่อมต่อ และเมื่อเชื่อมต่อได้ระบบจะทำการส่งรายการซ้ำทันที |
+| **แก้ไขประวัติหรือคำสั่ง seed ใน `init.sql` แล้วข้อมูลไม่เปลี่ยน** | ตัวข้อมูลในโฟลเดอร์ volume เดิมยังคงค้างอยู่ในเครื่อง host | จัดการลบ Docker volume ด้วยสัญญาสั่ง `docker compose down -v` |
 
 ---
 
-### 16.7 สถานการณ์ G — พัฒนา admin-ui แบบ hot reload
+## 12. ดัชนีไฟล์อ้างอิงหลัก (Index of Critical Files)
 
-```bash
-docker compose up -d db server
-cd web/admin-ui
-npm install
-```
+หากมีความจำเป็นต้องทำการขยายขีดความสามารถของระบบตู้หรือตรวจสอบความมั่นคงปลอดภัย ไฟล์หลักที่สมควรเข้าเยี่ยมชมก่อนคือ:
 
-`.env.local`:
-
-```env
-NEXT_PUBLIC_ADMIN_API_URL=http://localhost:8000
-```
-
-```bash
-npx next dev -p 3001
-```
-
-CORS ใน compose รวม `http://localhost:3001` อยู่แล้ว
+* **ระบบหักสต็อกป้องกันสภาวะแข่งขัน**: `server/app/services/buy_service.py` ── ฟังก์ชัน `deduct_stock` ล็อกสัญญาสต็อก `SELECT FOR UPDATE` และ RC-6/RC-7 guards
+* **ระบบความปลอดภัยและการยืนยัน Token Agent**: `server/app/realtime/socketio_gateway.py` ── การ verifybcrypt token และดัก ERROR ด้วย Done Guard
+* **การชำระเงินและ API สั่งซื้อ**: `server/app/api/buy.py` ── จุดทำธุรกรรม checkout, create-draft, mock-pay และ reconciliation
+* **สเตทแมชชีนควบคุมฮาร์ดแวร์ Pi**: `client/agent/hardware_runner.py` ── รายละเอียดสเตทและการจำลองการคีบสินค้าและการคำนวณไทม์ไลน์
+* **ระบบการยืนยันตัวตนสมาชิกผ่าน OTP**: `server/app/services/otp_service.py` ── รายละเอียด Salt/SHA-256 การส่ง และล็อกเอาต์ผิด 5 ครั้ง
 
 ---
-
-### 16.8 สถานการณ์ H — พัฒนา web-ui (สมาชิก)
-
-```bash
-docker compose up -d db server
-cd web/web-ui
-npm install
-npm run dev
-```
-
-ตั้ง API URL ชี้ `http://localhost:8000`  
-ทดสอบ OTP: รหัส OTP โผล่ที่ console ของ server; `AUTH_DEV_BYPASS=1` รับ OTP 6 หลักใดๆ (dev เท่านั้น)
-
----
-
-### 16.9 สถานการณ์ I — Agent บน Raspberry Pi (LAN)
-
-1. Server รันที่ IP เช่น `192.168.1.44:8000` (Docker หรือ bare metal)
-2. บน Pi: `client/agent/.env` จาก `.env.example`
-
-```env
-MACHINE_CODE=DEMO-01
-MACHINE_TOKEN=<จาก Admin>
-SERVER_SOCKET_URL=http://192.168.1.44:8000
-MACHINE_UI_URL=http://192.168.1.44:3000
-NFC_AUTO_APPROVE=false
-```
-
-3. บน **server** root `.env` / compose override:
-
-```env
-CORS_ORIGINS=http://localhost:3000,http://192.168.1.44:3000,...
-```
-
-4. `pip install -r requirements.txt` แล้ว `python agent.py`
-5. ติดตั้ง systemd จาก `client/kiosk/autostart.service` (แก้ path ให้ตรง Pi)
-
-**machine-ui บน LAN:** build ด้วย `NEXT_PUBLIC_API_URL=http://<server-ip>:8000` แล้ว deploy หรือรัน Next บน Pi/เครื่องที่ browser เข้าถึง API ได้
-
----
-
-### 16.10 สถานการณ์ J — ทดสอบ agent อย่างเดียว (HTTP job)
-
-```bash
-curl -X POST http://localhost:5000/jobs/start \
-  -H "Content-Type: application/json" \
-  -d "{\"machine_code\": \"MP1-001\", \"items\": [{\"product_id\": 1, \"quantity\": 1}]}"
-```
-
-ดู log `vending-pi` ว่า state เปลี่ยน
-
----
-
-### 16.11 สถานการณ์ K — พอร์ตชนกับโปรแกรมอื่น
-
-แก้ mapping ซ้ายใน `docker-compose.yml` เช่น `"8001:8000"` แล้วอัปเดต `.env`:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8001
-```
-
-Rebuild frontend ที่ bake URL
-
----
-
-### 16.12 สถานการณ์ L — ดู MySQL จากเครื่อง host
-
-- Host: `127.0.0.1`
-- Port: `3307`
-- User/Pass: `root` / `root` (ตาม compose)
-- Database: `vending`
-
----
-
-## 17. การทดสอบการชำระเงินและฮาร์ดแวร์
-
-### 17.1 Omise Test
-
-1. ใส่ keys จาก [Omise Dashboard](https://dashboard.omise.co/) ใน `.env`
-2. machine-ui: ปุ่ม **[Test] Simulate Visa Tap** (บัตรทดสอบ 4242...)
-3. PromptPay: แสดง QR → จำลองด้วย webhook ไป `/api/buy/omise-webhook` หรือ dev:
-
-```bash
-curl -X POST http://localhost:8000/api/buy/mock-pay \
-  -H "Content-Type: application/json" \
-  -d "{\"charge_id\": \"<charge_id>\"}"
-```
-
-(ต้อง `ALLOW_MOCK_PAY=1`)
-
-### 17.2 ตรวจว่าจ่ายของทำงาน
-
-- agent มี `MACHINE_CODE` + `MACHINE_TOKEN` ถูกต้อง และเชื่อม Socket.IO ได้
-- Log `vending-pi`: `[Dispense]` / state transitions
-- Admin alerts / `machine_job_events` มีแถวใหม่
-
-### 17.3 NFC บน Pi
-
-- `NFC_AUTO_APPROVE=true` — จำลองอนุมัติทันที
-- `false` — รออ่าน tag MFRC522 จริง
-
----
-
-## 18. แก้ปัญหาเบื้องต้น
-
-| อาการ | สาเหตุที่พบบ่อย | แนวทาง |
-|--------|-----------------|--------|
-| Agent `Authentication failed` | ไม่มี token / ผิดตู้ / `MP1-001` ไม่มี hash | สร้างตู้ใหม่ใน Admin หรือตั้ง `MACHINE_CODE` + `MACHINE_TOKEN` |
-| Agent ไม่ retry หลัง auth fail | ออกแบบใน `ws_client.py` | แก้ token แล้ว restart container |
-| machine-ui ผิดตู้ / ไม่ได้รับ socket | `NEXT_PUBLIC_MACHINE_CODE` เก่าใน image | rebuild `machine-ui` |
-| สต็อกว่างหลังสร้างตู้ใหม่ | seed มีแค่ `MP1-001` | Admin → ใส่ slots |
-| แก้ `init.sql` แล้ว DB ไม่เปลี่ยน | volume เก่า | `docker compose down -v` |
-| CORS จาก IP LAN | origin ไม่ใน list | เพิ่มใน `CORS_ORIGINS` แล้ว restart server |
-| Build machine-ui ล้ม | ไม่มี Omise public key | ใส่ใน `.env` ก่อน build |
-| Admin สร้าง machine ไม่ได้ | duplicate `machine_code` | ใช้รหัสใหม่ |
-| Port ถูกใช้แล้ว | Jenkins 8080 ฯลฯ | swagger ใช้ 8081 แล้ว; แก้ mapping อื่นตามต้องการ |
-
----
-
-## 19. ไฟล์อ้างอิงสำคัญ
-
-| ไฟล์ | เนื้อหา |
-|------|---------|
-| `docker-compose.yml` | บริการ, พอร์ต, build args, healthcheck |
-| `.env.example` | รายการตัวแปรครบ + คอมเมนต์ |
-| `database/init.sql` | Schema + seed |
-| `swagger.yaml` | สัญญา API + คำอธิบาย Socket.IO |
-| `server/app/realtime/socketio_gateway.py` | Auth ตู้ + admin + job dispatch |
-| `server/app/api/buy.py` | ชำระเงิน |
-| `client/agent/ws_client.py` | Agent Socket.IO |
-| `client/agent/routes.py` | Job manager HTTP |
-| `web/machine-ui/Dockerfile` | Build-time `NEXT_PUBLIC_*` |
-| `how-to-run.md` | คู่มือ Docker + ลงทะเบียนตู้ (ภาษาอังกฤษ) |
-| `README.md` | ภาพรวมสั้น + badges |
-
----
-
-## สรุปสั้น
-
-โปรเจกต์นี้คือ **สแต็กตู้จำหน่ายอัจฉริยะ** ที่แยกชั้น UI (ตู้ / แอดมิน / สมาชิก), API กลาง (Flask + Socket.IO + Omise), MySQL และ agent ฮาร์ดแวร์บน Pi วิธีรันที่ตรงกับ repo มากที่สุดคือ **`docker compose up --build` ที่ root พร้อม `.env`** จากนั้นสร้างตู้ใน Admin แล้ว sync `MACHINE_CODE`, `MACHINE_TOKEN`, และ rebuild `machine-ui` เมื่อเปลี่ยน `NEXT_PUBLIC_MACHINE_CODE` สำหรับพัฒนาแยกส่วน ใช้ MySQL จาก container `db` แล้วรัน `python main.py` / `npm run dev` ตามโฟลเดอร์ในหัวข้อ 16.5–16.8
-
----
-
-*เอกสารนี้สร้างเป็น `README2.md` ตามคำขอ — ไม่ได้แก้ไขไฟล์อื่นใน repository*
+*จัดเตรียมเอกสารภาพรวมระบบฉบับอัปเดตและปรับปรุงตามความเปลี่ยนแปลงของโครงสร้างข้อมูลจริงและ Flow ทรานแซกชันแบบละเอียดสูงสุด*

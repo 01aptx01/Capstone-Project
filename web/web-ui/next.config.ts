@@ -1,7 +1,43 @@
 import type { NextConfig } from "next";
 
+const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(
+  /\/$/,
+  ""
+);
+
+function productImageRemotePatterns() {
+  try {
+    const u = new URL(apiBase);
+    const protocol = u.protocol === "https:" ? "https" : "http";
+    return [
+      {
+        protocol: protocol as "http" | "https",
+        hostname: u.hostname,
+        ...(u.port ? { port: u.port } : {}),
+        pathname: "/product/img/**",
+      },
+    ];
+  } catch {
+    return [
+      {
+        protocol: "http" as const,
+        hostname: "localhost",
+        port: "8000",
+        pathname: "/product/img/**",
+      },
+    ];
+  }
+}
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: "/product/img/:path*",
+        destination: `${apiBase}/product/img/:path*`,
+      },
+    ];
+  },
 
   // Allow HMR from local network IPs
   logging: {
@@ -18,6 +54,7 @@ const nextConfig: NextConfig = {
     formats: ["image/webp", "image/avif"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    remotePatterns: productImageRemotePatterns(),
     unoptimized: process.env.NODE_ENV === "development", // ปิด optimization ใน dev
   },
 

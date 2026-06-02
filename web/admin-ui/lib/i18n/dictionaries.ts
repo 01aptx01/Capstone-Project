@@ -202,6 +202,7 @@ export type DictKey =
   | "coupon.label.discountPercent"
   | "coupon.label.points"
   | "coupon.label.expiry"
+  | "coupon.hint.expiryBangkok"
   | "coupon.label.active"
   | "coupon.option.fixed"
   | "coupon.option.percent"
@@ -244,11 +245,11 @@ export type DictKey =
   | "machine.detail.stat.status"
   | "machine.detail.toastSaved"
   | "machine.detail.toastSaveFail"
+  | "machine.detail.errorDuplicateSlot"
   | "machine.detail.locationUnknown"
   | "machine.detail.refreshing"
   | "machine.detail.refresh"
   | "machine.detail.stockBySlot"
-  | "machine.detail.addSlot"
   | "machine.detail.cancelEdit"
   | "machine.detail.saveStock"
   | "machine.detail.saving"
@@ -258,10 +259,12 @@ export type DictKey =
   | "machine.detail.col.product"
   | "machine.detail.col.qty"
   | "machine.detail.col.price"
-  | "machine.detail.emptySlots"
   | "machine.detail.notInList"
   | "machine.detail.removeSlot"
   | "machine.detail.saveHint"
+  | "machine.detail.slotEmpty"
+  | "machine.detail.slotActivate"
+  | "machine.detail.errorDuplicateProduct"
   | "page.alerts.export.errorsIncl"
   | "page.alerts.export.errorsOnly"
   | "page.alerts.export.lowThreshold"
@@ -303,10 +306,21 @@ export type DictKey =
   | "profile.save"
   | "profile.accountTitle"
   | "profile.label.name"
+  | "profile.label.firstName"
+  | "profile.label.lastName"
   | "profile.label.role"
+  | "profile.label.systemRole"
   | "profile.label.email"
   | "profile.label.phone"
   | "profile.label.bio"
+  | "profile.loading"
+  | "profile.loadError"
+  | "profile.saving"
+  | "profile.saveSuccess"
+  | "profile.saveFailed"
+  | "profile.emailReadonly"
+  | "profile.positionPlaceholder"
+  | "profile.activityEmpty"
   | "profile.recentActivity"
   | "profile.viewAll"
   | "profile.completionHint"
@@ -388,6 +402,7 @@ export type DictKey =
   | "machine.card.socketOn"
   | "machine.card.socketOff"
   | "addMachine.errorRequired"
+  | "addMachine.errorCodeMaxLength"
   | "addMachine.errorFailed"
   | "addMachine.modalTitleNew"
   | "addMachine.modalTitleSuccess"
@@ -424,6 +439,7 @@ export type DictKey =
   | "editMachine.save"
   | "addProduct.title"
   | "addProduct.errorInvalid"
+  | "addProduct.errorPriceMin"
   | "addProduct.toastCreated"
   | "addProduct.label.name"
   | "addProduct.placeholder.name"
@@ -431,11 +447,20 @@ export type DictKey =
   | "addProduct.placeholder.imageUrl"
   | "addProduct.label.category"
   | "addProduct.label.unitPrice"
+  | "addProduct.label.heatingTime"
+  | "addProduct.hint.heatingTime"
+  | "addProduct.errorHeatingTime"
   | "addProduct.label.description"
   | "addProduct.placeholder.description"
   | "addProduct.note"
   | "addProduct.creating"
   | "addProduct.confirm"
+  | "productImage.upload"
+  | "productImage.uploading"
+  | "productImage.previewAlt"
+  | "productImage.invalidUrl"
+  | "productImage.uploadFailed"
+  | "productImage.uploadSuccess"
   | "editProduct.title"
   | "editProduct.errorNotFound"
   | "editProduct.toastSaved"
@@ -446,6 +471,7 @@ export type DictKey =
   | "createCoupon.subtitle"
   | "createCoupon.errorRequired"
   | "createCoupon.errorDiscount"
+  | "createCoupon.errorPercentMax"
   | "createCoupon.errorPoints"
   | "createCoupon.errorFailed"
   | "createCoupon.placeholder.code"
@@ -501,6 +527,12 @@ export type DictKey =
   | "settings.password.new"
   | "settings.password.confirm"
   | "settings.password.submit"
+  | "settings.password.submitting"
+  | "settings.password.hintMinLength"
+  | "settings.password.success"
+  | "settings.password.errorMismatch"
+  | "settings.password.errorMinLength"
+  | "settings.password.errorFailed"
   | "settings.phone.title"
   | "settings.phone.successTitle"
   | "settings.phone.newLabel"
@@ -819,6 +851,7 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.label.discountPercent": "เปอร์เซ็นต์ส่วนลด",
     "coupon.label.points": "แต้มที่ใช้แลก (points_cost)",
     "coupon.label.expiry": "หมดอายุ (เว้นว่าง = ไม่หมดอายุ)",
+    "coupon.hint.expiryBangkok": "วันหมดอายุนับถึงสิ้นวัน (23:59) ตามเวลาไทย",
     "coupon.label.active": "เปิดใช้งาน (active)",
     "coupon.option.fixed": "จำนวนเงิน (fixed_amount)",
     "coupon.option.percent": "เปอร์เซ็นต์ (percent)",
@@ -861,11 +894,11 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.stat.status": "สถานะปฏิบัติการ (status)",
     "machine.detail.toastSaved": "บันทึกสต็อกแล้ว",
     "machine.detail.toastSaveFail": "บันทึกสต็อกไม่สำเร็จ",
+    "machine.detail.errorDuplicateSlot": "มีหมายเลขช่อง (slot) ซ้ำกัน กรุณาแก้ไขก่อนบันทึก",
     "machine.detail.locationUnknown": "ไม่ระบุสถานที่",
     "machine.detail.refreshing": "กำลังรีเฟรช…",
     "machine.detail.refresh": "รีเฟรชจากระบบ",
     "machine.detail.stockBySlot": "สต็อกตามช่อง",
-    "machine.detail.addSlot": "เพิ่มช่อง",
     "machine.detail.cancelEdit": "ยกเลิกการแก้ไข",
     "machine.detail.saveStock": "บันทึกสต็อก",
     "machine.detail.saving": "กำลังบันทึก…",
@@ -875,11 +908,13 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.col.product": "สินค้า",
     "machine.detail.col.qty": "จำนวน",
     "machine.detail.col.price": "ราคา",
-    "machine.detail.emptySlots": "ยังไม่มีช่องสต็อก — กด \"เพิ่มช่อง\" เพื่อเริ่มต้น",
     "machine.detail.notInList": "(ไม่พบในรายการ)",
     "machine.detail.removeSlot": "ลบช่อง",
     "machine.detail.saveHint":
-      "ตู้: {code} — บันทึกจะแทนที่สต็อกทั้งหมดของตู้นี้ (สูงสุด {max} ช่อง)",
+      "ตู้: {code} — บันทึกจะแทนที่สต็อกทั้งหมดของตู้นี้ (สูงสุด {max} ช่อง) · จำนวน 0 = ตู้แสดง「สินค้าหมด」และซื้อไม่ได้",
+    "machine.detail.slotEmpty": "ว่าง",
+    "machine.detail.slotActivate": "+ เพิ่มสินค้า",
+    "machine.detail.errorDuplicateProduct": "สินค้าในแต่ละช่องต้องไม่ซ้ำกัน กรุณาแก้ไขก่อนบันทึก",
     "page.alerts.export.errorsIncl": "รวมที่ resolve แล้ว",
     "page.alerts.export.errorsOnly": "เฉพาะที่ยังไม่ resolve",
     "page.alerts.export.lowThreshold": "เกณฑ์ quantity < {n}",
@@ -921,10 +956,21 @@ export const DICTS: Record<Lang, Dict> = {
     "profile.save": "บันทึกข้อมูล",
     "profile.accountTitle": "ข้อมูลบัญชี",
     "profile.label.name": "ชื่อ-นามสกุล",
+    "profile.label.firstName": "ชื่อ",
+    "profile.label.lastName": "นามสกุล",
     "profile.label.role": "ตำแหน่ง",
+    "profile.label.systemRole": "สิทธิ์ระบบ",
     "profile.label.email": "อีเมล",
     "profile.label.phone": "เบอร์โทรศัพท์",
     "profile.label.bio": "เกี่ยวกับฉัน",
+    "profile.loading": "กำลังโหลดโปรไฟล์...",
+    "profile.loadError": "โหลดข้อมูลโปรไฟล์ไม่สำเร็จ",
+    "profile.saving": "กำลังบันทึก...",
+    "profile.saveSuccess": "บันทึกโปรไฟล์สำเร็จ",
+    "profile.saveFailed": "บันทึกโปรไฟล์ไม่สำเร็จ",
+    "profile.emailReadonly": "อีเมลใช้สำหรับเข้าสู่ระบบ ไม่สามารถแก้ไขได้",
+    "profile.positionPlaceholder": "เช่น ผู้จัดการคลังสินค้า",
+    "profile.activityEmpty": "ยังไม่มีกิจกรรมที่บันทึกไว้ในเครื่องนี้",
     "profile.recentActivity": "กิจกรรมล่าสุด",
     "profile.viewAll": "ดูทั้งหมด",
     "profile.completionHint": "เพิ่มรูปหน้าปกเพื่อเพิ่มความสมบูรณ์เป็น 100% และรับเหรียญตรา \"Admin Elite\"",
@@ -1006,6 +1052,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.card.socketOn": "เชื่อมต่อ",
     "machine.card.socketOff": "ไม่เชื่อมต่อ",
     "addMachine.errorRequired": "กรุณากรอกรหัสตู้ (Machine ID)",
+    "addMachine.errorCodeMaxLength": "รหัสตู้ต้องไม่เกิน 20 ตัวอักษร",
     "addMachine.errorFailed": "สร้างตู้ไม่สำเร็จ",
     "addMachine.modalTitleNew": "เพิ่มตู้สินค้าใหม่",
     "addMachine.modalTitleSuccess": "สร้างตู้สำเร็จ",
@@ -1043,6 +1090,7 @@ export const DICTS: Record<Lang, Dict> = {
     "editMachine.save": "บันทึกการแก้ไข",
     "addProduct.title": "เพิ่มสินค้าใหม่ในคลัง",
     "addProduct.errorInvalid": "กรอกชื่อและราคาให้ถูกต้อง",
+    "addProduct.errorPriceMin": "ราคาต้องเป็นจำนวนเต็มไม่น้อยกว่า {min} บาท",
     "addProduct.toastCreated": "เพิ่มสินค้าสำเร็จ",
     "addProduct.label.name": "ชื่อสินค้า",
     "addProduct.placeholder.name": "ชื่อสินค้า",
@@ -1050,11 +1098,20 @@ export const DICTS: Record<Lang, Dict> = {
     "addProduct.placeholder.imageUrl": "https://... หรือ /product/img/...",
     "addProduct.label.category": "หมวดหมู่",
     "addProduct.label.unitPrice": "ราคาต่อชิ้น (฿)",
+    "addProduct.label.heatingTime": "เวลาอุ่น (วินาที)",
+    "addProduct.hint.heatingTime": "จำนวนเต็ม 1–3600 วินาที (ค่าเริ่มต้น 15)",
+    "addProduct.errorHeatingTime": "เวลาอุ่นต้องเป็นจำนวนเต็ม 1–3600 วินาที",
     "addProduct.label.description": "รายละเอียด",
     "addProduct.placeholder.description": "รายละเอียดสินค้า...",
     "addProduct.note": "สต็อกต่อตู้แก้ที่เมนูตู้จำหน่าย — API สินค้าไม่เก็บจำนวนคงเหลือรวม",
     "addProduct.creating": "กำลังบันทึก...",
     "addProduct.confirm": "ยืนยันการเพิ่มสินค้า",
+    "productImage.upload": "อัปโหลด",
+    "productImage.uploading": "กำลังอัปโหลด...",
+    "productImage.previewAlt": "ตัวอย่างรูปสินค้า",
+    "productImage.invalidUrl": "ลิงก์รูปไม่ถูกต้อง (ใช้ /product/img/... หรือ https://...)",
+    "productImage.uploadFailed": "อัปโหลดรูปไม่สำเร็จ",
+    "productImage.uploadSuccess": "อัปโหลดรูปแล้ว",
     "editProduct.title": "แก้ไขข้อมูลสินค้า",
     "editProduct.errorNotFound": "ไม่พบรหัสสินค้า",
     "editProduct.toastSaved": "บันทึกการแก้ไขสินค้าสำเร็จ",
@@ -1065,6 +1122,7 @@ export const DICTS: Record<Lang, Dict> = {
     "createCoupon.subtitle": "สร้างคูปองใหม่ผ่าน API",
     "createCoupon.errorRequired": "กรุณากรอกรหัสคูปอง (Coupon Code)",
     "createCoupon.errorDiscount": "จำนวนส่วนลดต้องมากกว่า 0",
+    "createCoupon.errorPercentMax": "ส่วนลดแบบเปอร์เซ็นต์ต้องไม่เกิน 100%",
     "createCoupon.errorPoints": "แต้มที่ใช้แลกต้องเป็นจำนวนเต็มไม่น้อยกว่า 0",
     "createCoupon.errorFailed": "สร้างคูปองไม่สำเร็จ",
     "createCoupon.placeholder.code": "เช่น PAO2026",
@@ -1120,6 +1178,12 @@ export const DICTS: Record<Lang, Dict> = {
     "settings.password.new": "รหัสผ่านใหม่",
     "settings.password.confirm": "ยืนยันรหัสผ่านใหม่",
     "settings.password.submit": "เปลี่ยนรหัสผ่าน",
+    "settings.password.submitting": "กำลังบันทึก...",
+    "settings.password.hintMinLength": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+    "settings.password.success": "เปลี่ยนรหัสผ่านสำเร็จ",
+    "settings.password.errorMismatch": "รหัสผ่านใหม่กับยืนยันไม่ตรงกัน",
+    "settings.password.errorMinLength": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+    "settings.password.errorFailed": "เปลี่ยนรหัสผ่านไม่สำเร็จ",
     "settings.phone.title": "อัปเดตเบอร์โทรศัพท์",
     "settings.phone.successTitle": "อัปเดตเบอร์โทรศัพท์สำเร็จ",
     "settings.phone.newLabel": "เบอร์ใหม่:",
@@ -1435,6 +1499,7 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.label.discountPercent": "Discount percent",
     "coupon.label.points": "Points cost (points_cost)",
     "coupon.label.expiry": "Expiry (empty = none)",
+    "coupon.hint.expiryBangkok": "Expiry is end of that calendar day (23:59) in Thailand time",
     "coupon.label.active": "Active",
     "coupon.option.fixed": "Fixed amount (fixed_amount)",
     "coupon.option.percent": "Percent (percent)",
@@ -1477,11 +1542,11 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.stat.status": "Operational status",
     "machine.detail.toastSaved": "Stock saved",
     "machine.detail.toastSaveFail": "Failed to save stock",
+    "machine.detail.errorDuplicateSlot": "Duplicate slot numbers — fix before saving",
     "machine.detail.locationUnknown": "Location not set",
     "machine.detail.refreshing": "Refreshing…",
     "machine.detail.refresh": "Refresh from server",
     "machine.detail.stockBySlot": "Stock by slot",
-    "machine.detail.addSlot": "Add slot",
     "machine.detail.cancelEdit": "Cancel edits",
     "machine.detail.saveStock": "Save stock",
     "machine.detail.saving": "Saving…",
@@ -1491,11 +1556,13 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.col.product": "Product",
     "machine.detail.col.qty": "Qty",
     "machine.detail.col.price": "Price",
-    "machine.detail.emptySlots": "No slots yet — click “Add slot” to start.",
     "machine.detail.notInList": "(not in catalog)",
     "machine.detail.removeSlot": "Remove slot",
     "machine.detail.saveHint":
-      "Machine: {code} — saving replaces all stock for this machine (max {max} slots).",
+      "Machine: {code} — saving replaces all stock for this machine (max {max} slots). Qty 0 shows as sold out on the kiosk and cannot be purchased.",
+    "machine.detail.slotEmpty": "Empty",
+    "machine.detail.slotActivate": "+ Add product",
+    "machine.detail.errorDuplicateProduct": "Each slot must have a unique product. Please fix duplicates before saving.",
     "page.alerts.export.errorsIncl": "Including resolved",
     "page.alerts.export.errorsOnly": "Unresolved only",
     "page.alerts.export.lowThreshold": "Threshold: quantity < {n}",
@@ -1537,10 +1604,21 @@ export const DICTS: Record<Lang, Dict> = {
     "profile.save": "Save changes",
     "profile.accountTitle": "Account info",
     "profile.label.name": "Full name",
-    "profile.label.role": "Role",
+    "profile.label.firstName": "First name",
+    "profile.label.lastName": "Last name",
+    "profile.label.role": "Position",
+    "profile.label.systemRole": "System role",
     "profile.label.email": "Email",
     "profile.label.phone": "Phone",
     "profile.label.bio": "About me",
+    "profile.loading": "Loading profile...",
+    "profile.loadError": "Could not load profile",
+    "profile.saving": "Saving...",
+    "profile.saveSuccess": "Profile saved",
+    "profile.saveFailed": "Could not save profile",
+    "profile.emailReadonly": "Email is used to sign in and cannot be changed here",
+    "profile.positionPlaceholder": "e.g. Inventory manager",
+    "profile.activityEmpty": "No activity recorded on this device yet",
     "profile.recentActivity": "Recent activity",
     "profile.viewAll": "View all",
     "profile.completionHint": "Add a cover photo to reach 100% and earn the \"Admin Elite\" badge.",
@@ -1622,6 +1700,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.card.socketOn": "Connected",
     "machine.card.socketOff": "Disconnected",
     "addMachine.errorRequired": "Please enter the Machine ID",
+    "addMachine.errorCodeMaxLength": "Machine ID must be at most 20 characters",
     "addMachine.errorFailed": "Failed to create machine",
     "addMachine.modalTitleNew": "Add new machine",
     "addMachine.modalTitleSuccess": "Machine created",
@@ -1659,6 +1738,7 @@ export const DICTS: Record<Lang, Dict> = {
     "editMachine.save": "Save changes",
     "addProduct.title": "Add new product",
     "addProduct.errorInvalid": "Please enter a valid name and price",
+    "addProduct.errorPriceMin": "Price must be a whole number of at least {min} THB",
     "addProduct.toastCreated": "Product created",
     "addProduct.label.name": "Product name",
     "addProduct.placeholder.name": "Product name",
@@ -1666,11 +1746,20 @@ export const DICTS: Record<Lang, Dict> = {
     "addProduct.placeholder.imageUrl": "https://… or /product/img/…",
     "addProduct.label.category": "Category",
     "addProduct.label.unitPrice": "Unit price (฿)",
+    "addProduct.label.heatingTime": "Heating time (seconds)",
+    "addProduct.hint.heatingTime": "Whole seconds 1–3600 (default 15)",
+    "addProduct.errorHeatingTime": "Heating time must be a whole number from 1 to 3600 seconds",
     "addProduct.label.description": "Description",
     "addProduct.placeholder.description": "Product description…",
     "addProduct.note": "Adjust per-machine stock from the machine page — the product API does not track total qty.",
     "addProduct.creating": "Saving…",
     "addProduct.confirm": "Confirm",
+    "productImage.upload": "Upload",
+    "productImage.uploading": "Uploading…",
+    "productImage.previewAlt": "Product preview",
+    "productImage.invalidUrl": "Invalid image URL (use /product/img/… or https://…)",
+    "productImage.uploadFailed": "Image upload failed",
+    "productImage.uploadSuccess": "Image uploaded",
     "editProduct.title": "Edit product",
     "editProduct.errorNotFound": "Product ID not found",
     "editProduct.toastSaved": "Product saved",
@@ -1681,6 +1770,7 @@ export const DICTS: Record<Lang, Dict> = {
     "createCoupon.subtitle": "Create a coupon via API",
     "createCoupon.errorRequired": "Please enter the Coupon Code",
     "createCoupon.errorDiscount": "Discount value must be greater than 0",
+    "createCoupon.errorPercentMax": "Percentage discount cannot exceed 100%",
     "createCoupon.errorPoints": "Points must be a non-negative integer",
     "createCoupon.errorFailed": "Failed to create coupon",
     "createCoupon.placeholder.code": "e.g., PAO2026",
@@ -1736,6 +1826,12 @@ export const DICTS: Record<Lang, Dict> = {
     "settings.password.new": "New password",
     "settings.password.confirm": "Confirm new password",
     "settings.password.submit": "Change password",
+    "settings.password.submitting": "Saving...",
+    "settings.password.hintMinLength": "Password must be at least 6 characters",
+    "settings.password.success": "Password changed successfully",
+    "settings.password.errorMismatch": "New password and confirmation do not match",
+    "settings.password.errorMinLength": "Password must be at least 6 characters",
+    "settings.password.errorFailed": "Could not change password",
     "settings.phone.title": "Update phone number",
     "settings.phone.successTitle": "Phone number updated",
     "settings.phone.newLabel": "New number:",

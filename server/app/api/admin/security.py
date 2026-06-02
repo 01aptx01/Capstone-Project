@@ -45,6 +45,18 @@ def _invite_expires_hours() -> int:
 
 # ─────────────────────────── Password ───────────────────────────
 
+MIN_ADMIN_PASSWORD_LENGTH = 6
+
+
+def validate_new_password(plain: str) -> str | None:
+    """Return an error message if password is invalid, else None."""
+    if not plain or len(plain) < MIN_ADMIN_PASSWORD_LENGTH:
+        return (
+            f"Password must be at least {MIN_ADMIN_PASSWORD_LENGTH} characters."
+        )
+    return None
+
+
 def hash_password(plain: str) -> str:
     """คืน bcrypt hash (utf-8 string) ของรหัสผ่าน."""
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")

@@ -16,6 +16,10 @@ from app.extensions import db
 from app.models import Coupon, Order
 
 from app.services.coupon_service import count_promotion_redemptions
+from app.services.promotion_catalog import (
+    compute_catalog_status,
+    parse_expire_date_input,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +38,7 @@ def _coupon_to_dict(c: Coupon) -> dict:
         pc = 0
     mu = int(getattr(c, "max_uses", 0) or 0)
     used = count_promotion_redemptions(c.promotion_id)
+    status = compute_catalog_status(bool(c.is_active), c.expire_date)
     return {
         "promotion_id": c.promotion_id,
         "code": c.code,
@@ -44,21 +49,8 @@ def _coupon_to_dict(c: Coupon) -> dict:
         "points_cost": int(pc),
         "max_uses": mu,
         "used_count": used,
+        "status": status,
     }
-
-
-def _parse_expire_date(raw):
-    if raw is None:
-        return None
-    if isinstance(raw, str):
-        s = raw.strip()
-        if not s:
-            return None
-        try:
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
-        except ValueError:
-            raise ValueError("invalid expire_date")
-    raise ValueError("expire_date must be a string or null")
 
 
 def _parse_points_cost(raw):
@@ -85,6 +77,15 @@ def _parse_max_uses(raw):
     if n < 0:
         raise ValueError("max_uses must be >= 0")
     return n
+
+
+def _validate_discount_amount(ctype: str, amount_dec: Decimal) -> str | None:
+    """Return error message if invalid, else None."""
+    if amount_dec <= 0:
+        return "discount_amount must be greater than 0"
+    if ctype == "percent" and amount_dec > Decimal("100"):
+        return "percent discount cannot exceed 100"
+    return None
 
 
 @admin_bp.route("/coupons/<int:promotion_id>/redemptions", methods=["GET"])
@@ -163,8 +164,12 @@ def admin_create_coupon():
     except Exception:
         return jsonify({"error": "invalid discount_amount"}), 400
 
+    discount_err = _validate_discount_amount(ctype, amount_dec)
+    if discount_err:
+        return jsonify({"error": discount_err}), 400
+
     try:
-        expire_date = _parse_expire_date(data.get("expire_date"))
+        expire_date = parse_expire_date_input(data.get("expire_date"))
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -237,7 +242,7 @@ def admin_update_coupon(promotion_id: int):
 
     if "expire_date" in data:
         try:
-            new_expire = _parse_expire_date(data.get("expire_date"))
+            new_expire = parse_expire_date_input(data.get("expire_date"))
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
     else:
@@ -254,9 +259,20 @@ def admin_update_coupon(promotion_id: int):
         if "expire_date" in data:
             c.expire_date = new_expire
         if "discount_amount" in data and data["discount_amount"] is not None:
-            c.discount_amount = Decimal(str(data["discount_amount"]))
+            new_amount = Decimal(str(data["discount_amount"]))
+            new_type = (
+                data["type"] if "type" in data and data["type"] is not None else c.type
+            )
+            discount_err = _validate_discount_amount(new_type, new_amount)
+            if discount_err:
+                return jsonify({"error": discount_err}), 400
+            c.discount_amount = new_amount
         if "type" in data and data["type"] is not None:
-            c.type = data["type"]
+            new_type = data["type"]
+            discount_err = _validate_discount_amount(new_type, c.discount_amount)
+            if discount_err:
+                return jsonify({"error": discount_err}), 400
+            c.type = new_type
         if "code" in data and data["code"] is not None:
             c.code = str(data["code"]).strip()
         if "max_uses" in data:

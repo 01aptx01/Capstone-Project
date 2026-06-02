@@ -7,6 +7,7 @@ import "./globals.css";
 // Types & Constants
 import type { ModalType } from "../types";
 import { DEFAULT_MACHINE_CODE, NUMPAD_COUNTDOWN_SECONDS } from "../constants";
+import { isBelowMinimumPayment, MIN_PAYMENT_MESSAGE_TH } from "../constants/payment";
 
 // Components
 import ProductCard from "../components/ProductCard";
@@ -191,6 +192,10 @@ export default function VendingPage() {
 
   const handleCheckout = () => {
     if (!isAgentOnline || isMachineBusy) return;
+    if (isBelowMinimumPayment(payableTotal)) {
+      setActiveModal("payment_min_warning");
+      return;
+    }
     heating.heatingTimelineStartedRef.current = false;
     payment.handleCheckout();
   };
@@ -418,6 +423,14 @@ export default function VendingPage() {
             <LimitWarningModal
               type="stock_limit"
               message={stockLimitMessage}
+              onClose={() => setActiveModal("none")}
+            />
+          )}
+
+          {activeModal === "payment_min_warning" && (
+            <LimitWarningModal
+              type="min_payment"
+              message={MIN_PAYMENT_MESSAGE_TH}
               onClose={() => setActiveModal("none")}
             />
           )}

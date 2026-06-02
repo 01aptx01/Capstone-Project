@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from app.extensions import db
 from app.models import Coupon, Order
 
-CouponReason = Literal["ok", "not_found", "inactive", "expired", "exhausted"]
+CouponReason = Literal["ok", "not_found", "inactive", "expired", "exhausted", "in_use"]
 
 _STATUSES_EXCLUDE_FROM_USE_COUNT = (
     "pending_payment",
@@ -40,46 +40,73 @@ def _is_expired(expire_date) -> bool:
     return exp < now
 
 
-def lookup_coupon_by_code(raw_code: str) -> tuple[CouponReason, Coupon | None, int | None]:
-    """Return (status, coupon, user_promotion_id). Only status ok means coupon may be applied."""
+def lookup_coupon_by_code(
+    raw_code: str,
+) -> tuple[CouponReason, Coupon | None, int | None, str | None]:
+    """
+    Return (status, promotion, user_promotion_id, user_coupon_code).
+    user_coupon_code is the code stored on user_promotions (what the member uses at the machine).
+    Only status ok means the coupon may be applied.
+    """
     if raw_code is None or not str(raw_code).strip():
-        return "not_found", None, None
+        return "not_found", None, None, None
     code_norm = str(raw_code).strip().upper()
-    
+
     from app.db_config.db import get_db_cursor
+
+    up_row = None
     try:
         with get_db_cursor() as (_, cur):
             cur.execute(
                 """
-                SELECT id, promotion_id, status 
-                FROM user_promotions 
+                SELECT id, promotion_id, status, code
+                FROM user_promotions
                 WHERE UPPER(code) = %s
                 """,
                 (code_norm,),
             )
             up_row = cur.fetchone()
+
+            if up_row:
+                cur.execute(
+                    """
+                    SELECT 1 FROM orders
+                    WHERE user_promotion_id = %s
+                      AND status IN ('pending_payment', 'paid', 'dispensing')
+                    """,
+                    (up_row["id"],),
+                )
+                if cur.fetchone():
+                    return "in_use", None, None, None
     except Exception as e:
         import logging
-        logging.getLogger(__name__).error(f"[CouponService] Error looking up user coupon: {e}")
-        return "not_found", None, None
+
+        logging.getLogger(__name__).error(
+            "[CouponService] Error looking up user coupon: %s", e
+        )
+        return "not_found", None, None, None
 
     if not up_row:
-        return "not_found", None, None
+        return "not_found", None, None, None
 
     if up_row["status"] != "active":
         if up_row["status"] == "used":
-            return "exhausted", None, None
-        return "expired", None, None
+            return "exhausted", None, None, None
+        return "expired", None, None, None
+
+    user_code = (up_row.get("code") or "").strip()
+    if not user_code:
+        return "not_found", None, None, None
 
     c = db.session.get(Coupon, up_row["promotion_id"])
     if not c:
-        return "not_found", None, None
+        return "not_found", None, None, None
     if not c.is_active:
-        return "inactive", c, None
+        return "inactive", c, None, user_code
     if _is_expired(c.expire_date):
-        return "expired", c, None
-    
-    return "ok", c, up_row["id"]
+        return "expired", c, None, user_code
+
+    return "ok", c, up_row["id"], user_code
 
 
 def discount_and_final(subtotal: float, coupon: Coupon) -> tuple[float, float]:
@@ -108,4 +135,6 @@ def reason_message_th(reason: CouponReason) -> str:
         return "คูปองหมดอายุแล้ว"
     if reason == "exhausted":
         return "คูปองนี้ถูกใช้ครบจำนวนแล้ว"
+    if reason == "in_use":
+        return "คูปองนี้กำลังถูกใช้งานในรายการสั่งซื้ออื่น กรุณารอสักครู่หรือยกเลิกรายการเดิม"
     return ""

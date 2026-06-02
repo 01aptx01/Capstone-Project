@@ -22,7 +22,7 @@ info:
     | machine-ui | `http://localhost:3000` |
     | admin-ui | `http://localhost:3001` |
     | web-ui (member app) | `http://localhost:3002` |
-    | swagger-ui (this spec in UI) | `http://localhost:8081` (host; avoids Jenkins on 8080) |
+    | swagger-ui (this spec in UI) | `http://localhost:8081` |
     | Flasgger (same server) | `http://localhost:8000/apidocs` |
   version: 3.0.0
 servers:
@@ -40,13 +40,13 @@ tags:
 - name: Members
   description: Member lookup, registration, and points
 - name: Orders
-  description: Member order history and redeem (web-ui)
+  description: Member order history, coupon redemption, and reveal
 - name: Promotions
   description: Redeemable coupons catalog
-- name: Machines
-  description: Hardware agent (Socket.IO only; no REST event ingest)
+- name: Admin Auth
+  description: Admin role-based authentication and user invitations (/api/admin/auth/*)
 - name: Admin
-  description: "Admin dashboard API (/api/admin/*). Auth uses JWT via Authorization header: Bearer <token> (see /api/admin/auth/login)."
+  description: "Admin dashboard CRUD & telemetry API (/api/admin/*). Auth uses JWT via Authorization header: Bearer <token>"
 paths:
   /health:
     get:
@@ -304,7 +304,7 @@ paths:
       tags:
       - Members
       summary: Update member display name (web-ui profile)
-      security: &id001
+      security:
       - bearerAuth: []
       parameters:
       - name: phone
@@ -360,6 +360,218 @@ paths:
           description: Invalid body
         '429':
           description: Rate limited
+  /api/admin/auth/login:
+    post:
+      tags:
+      - Admin Auth
+      summary: Authenticate admin with email + password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@modpao.com
+                password:
+                  type: string
+                  format: password
+                  example: admin1234
+      responses:
+        '200':
+          description: Successfully authenticated or redirects to complete registration
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT Bearer Access Token (if active)
+                  user:
+                    $ref: '#/components/schemas/AdminProfile'
+                  needs_registration:
+                    type: boolean
+                    description: True if admin has not completed onboarding
+                  registration_token:
+                    type: string
+                    description: One-time token used to invoke /auth/register
+                  email:
+                    type: string
+        '400':
+          description: Email and password are required
+        '401':
+          description: Invalid credentials
+  /api/admin/auth/register:
+    post:
+      tags:
+      - Admin Auth
+      summary: Complete onboarding for invited admin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - registration_token
+              - new_password
+              properties:
+                registration_token:
+                  type: string
+                new_password:
+                  type: string
+                  format: password
+                first_name:
+                  type: string
+                last_name:
+                  type: string
+                position:
+                  type: string
+                phone:
+                  type: string
+      responses:
+        '200':
+          description: Registration completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/AdminProfile'
+        '400':
+          description: Missing parameters or account already active
+        '401':
+          description: Invalid/expired registration token
+        '404':
+          description: Admin user not found
+  /api/admin/auth/invite:
+    post:
+      tags:
+      - Admin Auth
+      summary: Invite a new administrator (Superadmin only)
+      security:
+      - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              - temp_password
+              properties:
+                email:
+                  type: string
+                  format: email
+                temp_password:
+                  type: string
+      responses:
+        '201':
+          description: Invitation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  admin:
+                    $ref: '#/components/schemas/AdminProfile'
+                  invite_link:
+                    type: string
+                  message:
+                    type: string
+        '400':
+          description: Email and temporary password required
+        '401':
+          description: Unauthorized
+        '403':
+          description: Requires Superadmin privileges
+        '409':
+          description: Email already exists
+  /api/admin/auth/revoke/{admin_id}:
+    delete:
+      tags:
+      - Admin Auth
+      summary: Revoke admin access and delete account (Superadmin only)
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: admin_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Access revoked successfully
+        '400':
+          description: Cannot revoke your own account
+        '401':
+          description: Unauthorized
+        '403':
+          description: Requires Superadmin privileges
+        '404':
+          description: Admin not found
+  /api/admin/auth/me:
+    get:
+      tags:
+      - Admin Auth
+      summary: Fetch current logged-in admin profile
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: Active profile details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/AdminProfile'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Admin not found
+  /api/admin/auth/admins:
+    get:
+      tags:
+      - Admin Auth
+      summary: List all administrator accounts (Superadmin only)
+      security:
+      - bearerAuth: []
+      responses:
+        '200':
+          description: List of admins
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  admins:
+                    type: array
+                    items:
+                      allOf:
+                      - $ref: '#/components/schemas/AdminProfile'
+                      - type: object
+                        properties:
+                          status:
+                            type: string
+                            example: Active
+        '401':
+          description: Unauthorized
+        '403':
+          description: Requires Superadmin privileges
   /api/admin/users:
     get:
       tags:
@@ -1155,7 +1367,8 @@ paths:
       tags:
       - Members
       summary: Register member after OTP (web-ui onboarding)
-      security: *id001
+      security:
+      - bearerAuth: []
       requestBody:
         content:
           application/json:
@@ -1177,7 +1390,8 @@ paths:
       tags:
       - Orders
       summary: Member order history (web-ui)
-      security: *id001
+      security:
+      - bearerAuth: []
       parameters:
       - name: phone
         in: path
@@ -1198,7 +1412,8 @@ paths:
       tags:
       - Orders
       summary: List coupons owned by member (web-ui)
-      security: *id001
+      security:
+      - bearerAuth: []
       parameters:
       - name: phone
         in: path
@@ -1253,7 +1468,8 @@ paths:
       tags:
       - Orders
       summary: Redeem promotion with points (web-ui)
-      security: *id001
+      security:
+      - bearerAuth: []
       parameters:
       - name: phone
         in: path
@@ -1282,6 +1498,48 @@ paths:
           description: not_found
         '409':
           description: already_owned or sold_out
+  /api/members/{phone}/coupons/{user_promo_id}/reveal:
+    post:
+      tags:
+      - Orders
+      summary: Generate and reveal individual 8-digit random code for physical machine input
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: phone
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: user_promo_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Code successfully generated or revealed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  code:
+                    type: string
+                    example: '82046193'
+        '400':
+          description: Invalid phone, invalid status (coupon already used or expired)
+        '401':
+          description: Unauthorized
+        '403':
+          description: Phone mismatch with member token
+        '404':
+          description: Coupon or user not found
+        '500':
+          description: Server error
   /api/promotions/redeemable:
     get:
       tags:
@@ -1321,7 +1579,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: Member JWT from POST /api/auth/otp/verify
+      description: Bearer JWT token (Member JWT or Admin JWT based on endpoint)
   schemas:
     Product:
       type: object
@@ -1430,6 +1688,26 @@ components:
           type: string
           nullable: true
         last_use:
+          type: string
+          nullable: true
+    AdminProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        first_name:
+          type: string
+        last_name:
+          type: string
+        position:
+          type: string
+        phone:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
           type: string
           nullable: true
     AdminCoupon:

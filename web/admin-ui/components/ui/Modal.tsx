@@ -39,24 +39,23 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
         backdropFilter: "blur(8px)",
         WebkitBackdropFilter: "blur(8px)",
       }}
-      className="animate-in fade-in duration-200"
+      className="animate-in fade-in duration-200 overflow-y-auto"
       onClick={onClose}
     >
-      {/* Modal card — stopPropagation so clicking inside doesn't close */}
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-lg rounded-[32px] overflow-hidden animate-in zoom-in-95 duration-300 surface-card"
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-lg max-h-[calc(100vh-2rem)] flex flex-col rounded-[32px] overflow-hidden animate-in zoom-in-95 duration-300 surface-card my-auto"
         style={{ boxShadow: "var(--shadow-card)" }}
       >
-        {/* Header */}
-        <div className="px-8 pt-8 pb-4 flex items-center justify-between">
-          <h3 className="text-[22px] font-black text-[var(--text)]">{title}</h3>
+        <div className="shrink-0 px-8 pt-8 pb-4 flex items-center justify-between border-b border-[var(--border)]/60">
+          <h3 className="text-[22px] font-black text-[var(--text)] pr-4">{title}</h3>
           <button
+            type="button"
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full border transition-colors"
+            className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full border transition-colors"
             style={{
               background: "var(--surface-2)",
               color: "var(--text-muted)",
@@ -70,8 +69,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
           </button>
         </div>
 
-        {/* Content */}
-        <div className="px-8 pb-8">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-8 py-6">
           {children}
         </div>
       </div>

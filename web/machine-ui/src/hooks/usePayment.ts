@@ -11,6 +11,7 @@ import {
   getPublicAgentBaseUrl,
   getPublicApiUrl,
 } from "../constants";
+import { isBelowMinimumPayment, MIN_PAYMENT_MESSAGE_TH } from "../constants/payment";
 import {
   clearPendingPaymentSession,
   paymentMethodFromDb,
@@ -486,6 +487,10 @@ export function usePayment({
   // - สร้างบิลและรับคิวอาร์โค้ด PromptPay จ่ายเงินสดผ่าน Omise.js SDK
   const handleDirectPromptPay = async () => {
     if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
+    if (isBelowMinimumPayment(payableTotalRef.current)) {
+      setPaymentErrorMsg(MIN_PAYMENT_MESSAGE_TH);
+      return;
+    }
     if (!(window as any).Omise) {
       setPaymentErrorMsg("ระบบชำระเงินยังไม่พร้อม กรุณารอสักครู่แล้วลองใหม่");
       return;
@@ -516,6 +521,10 @@ export function usePayment({
   // - จัดเตรียมสเปกของคิวอาร์สำหรับช่องทาง TrueMoney Wallet
   const handleDirectTrueMoney = async () => {
     if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
+    if (isBelowMinimumPayment(payableTotalRef.current)) {
+      setPaymentErrorMsg(MIN_PAYMENT_MESSAGE_TH);
+      return;
+    }
     setPaymentStep(2);
     setRealQrCode(null);
     processPayment({
@@ -529,6 +538,11 @@ export function usePayment({
   // - ทำการจองสินค้าชั่วคราว (Create Draft Order ใน DB)
   const handleProceedToTap = async () => {
     if (!isAgentOnlineRef.current || isMachineBusyRef.current) return;
+    if (isBelowMinimumPayment(payableTotalRef.current)) {
+      setPaymentErrorMsg(MIN_PAYMENT_MESSAGE_TH);
+      setPaymentStep(1);
+      return;
+    }
     setPaymentCountdown(PAYMENT_COUNTDOWN_SECONDS);
     setPaymentStep(2);
     setPaymentErrorMsg(null);

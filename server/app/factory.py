@@ -19,6 +19,7 @@ from app.db_config.db import init_db
 from app.db_config.schema_repair import ensure_promotions_max_uses, ensure_machines_created_by
 from app.db_config.sqlalchemy_uri import build_sqlalchemy_database_uri
 from app.extensions import db, migrate
+from app.services.product_image_storage import product_images_dir
 
 logger = logging.getLogger(__name__)
 
@@ -116,5 +117,10 @@ def create_app() -> Flask:
     @flask_app.route("/health")
     def health():
         return {"status": "server-ok"}
+
+    @flask_app.route("/product/img/<path:filename>")
+    def serve_product_image(filename: str):
+        directory = product_images_dir()
+        return send_from_directory(directory, filename)
 
     return flask_app

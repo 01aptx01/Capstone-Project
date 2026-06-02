@@ -14,8 +14,10 @@ import {
 } from "@/lib/admin-api";
 import Modal from "@/components/ui/Modal";
 import { useLang } from "@/lib/i18n/lang";
+import { blockNonIntegerKeys, digitsOnly } from "@/lib/integer-input";
 
-const MAX_SLOTS_PER_MACHINE = 24;
+const MAX_SLOTS = 6;
+const ALL_SLOT_NUMBERS = [1, 2, 3, 4, 5, 6] as const;
 
 type SlotDraftRow = {
   rowKey: string;
@@ -233,22 +235,28 @@ export default function MachineDetailPage({ params }: PageProps) {
       ]
     : [];
 
-  const addSlotRow = () => {
-    const nextNum =
-      slotDraft.length === 0
-        ? 1
-        : Math.max(...slotDraft.map((r) => r.slot_number), 0) + 1;
-    if (nextNum > MAX_SLOTS_PER_MACHINE) return;
-    const defaultPid = products[0]?.product_id ?? 1;
+  const activateSlot = (slotNum: number) => {
+    const usedProductIds = new Set(slotDraft.map((r) => r.product_id));
+    const firstUnused = products.find((p) => !usedProductIds.has(p.product_id));
+    const pid = firstUnused?.product_id ?? products[0]?.product_id ?? 1;
     setSlotDraft((prev) => [
       ...prev,
       {
-        rowKey: `new-${nextNum}-${Date.now()}`,
-        slot_number: nextNum,
-        product_id: defaultPid,
+        rowKey: `slot-${slotNum}-${Date.now()}`,
+        slot_number: slotNum,
+        product_id: pid,
         quantity: 0,
       },
     ]);
+  };
+
+  const getAvailableProducts = (rowKey: string, currentProductId: number) => {
+    const usedByOthers = new Set(
+      slotDraft.filter((r) => r.rowKey !== rowKey).map((r) => r.product_id)
+    );
+    return products.filter(
+      (p) => !usedByOthers.has(p.product_id) || p.product_id === currentProductId
+    );
   };
 
   const removeSlotRow = (rowKey: string) => {
@@ -295,6 +303,21 @@ export default function MachineDetailPage({ params }: PageProps) {
     if (!machine) return;
     setSaving(true);
     setError(null);
+
+    const slotNumbers = slotDraft.map((r) => r.slot_number);
+    if (new Set(slotNumbers).size !== slotNumbers.length) {
+      setError(t("machine.detail.errorDuplicateSlot"));
+      setSaving(false);
+      return;
+    }
+
+    const productIds = slotDraft.map((r) => r.product_id);
+    if (new Set(productIds).size !== productIds.length) {
+      setError(t("machine.detail.errorDuplicateProduct"));
+      setSaving(false);
+      return;
+    }
+
     const payload: ApiMachineSlotInput[] = slotDraft
       .slice()
       .sort((a, b) => a.slot_number - b.slot_number)
@@ -437,19 +460,6 @@ export default function MachineDetailPage({ params }: PageProps) {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={addSlotRow}
-                  disabled={
-                    saving ||
-                    productsLoading ||
-                    slotDraft.length >= MAX_SLOTS_PER_MACHINE ||
-                    products.length === 0
-                  }
-                  className="px-4 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] text-[13px] font-bold text-[var(--text-muted)] hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {t("machine.detail.addSlot")}
-                </button>
-                <button
-                  type="button"
                   onClick={() => {
                     if (machine) setSlotDraft(slotsToDraft(machine.slots));
                   }}
@@ -486,81 +496,102 @@ export default function MachineDetailPage({ params }: PageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {slotDraft.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-8 px-2 text-center font-bold text-[var(--text-muted)]">
-                        {t("machine.detail.emptySlots")}
-                      </td>
-                    </tr>
-                  )}
-                  {slotDraft
-                    .slice()
-                    .sort((a, b) => a.slot_number - b.slot_number)
-                    .map((row) => {
-                      const prod = productById.get(row.product_id);
+                  {ALL_SLOT_NUMBERS.map((slotNum) => {
+                    const activeRow = slotDraft.find((r) => r.slot_number === slotNum);
+
+                    if (!activeRow) {
                       return (
-                        <tr key={row.rowKey} className="border-b border-[var(--border)]">
-                          <td className="py-3 px-2 font-bold align-middle">{row.slot_number}</td>
-                          <td className="py-3 px-2 align-middle">
-                            <select
-                              className="w-full max-w-[280px] rounded-lg border border-[var(--border)] px-2 py-1.5 font-bold text-[var(--text)] bg-[var(--surface-1)]"
-                              value={row.product_id}
-                              onChange={(e) =>
-                                updateDraftRow(row.rowKey, {
-                                  product_id: Number(e.target.value),
-                                })
-                              }
-                              disabled={saving || products.length === 0}
-                            >
-                              {!products.some((p) => p.product_id === row.product_id) && (
-                                <option value={row.product_id}>
-                                  #{row.product_id} {t("machine.detail.notInList")}
-                                </option>
-                              )}
-                              {products.map((p) => (
-                                <option key={p.product_id} value={p.product_id}>
-                                  {p.name}
-                                </option>
-                              ))}
-                            </select>
+                        <tr key={slotNum} className="border-b border-[var(--border)] bg-[var(--surface-2)]/40">
+                          <td className="py-3 px-2 font-bold align-middle text-[var(--text-muted)]">
+                            {slotNum}
                           </td>
-                          <td className="py-3 px-2 align-middle">
-                            <input
-                              type="number"
-                              min={0}
-                              className="w-24 rounded-lg border border-[var(--border)] px-2 py-1.5 font-black text-[var(--text)]"
-                              value={row.quantity}
-                              onChange={(e) =>
-                                updateDraftRow(row.rowKey, {
-                                  quantity: Number(e.target.value),
-                                })
-                              }
-                              disabled={saving}
-                            />
-                          </td>
-                          <td className="py-3 px-2 align-middle font-bold">
-                            {prod != null ? `฿${Number(prod.price).toFixed(2)}` : "—"}
+                          <td colSpan={3} className="py-3 px-2 align-middle">
+                            <span className="text-[13px] font-bold text-[var(--text-muted)] italic">
+                              — {t("machine.detail.slotEmpty")} —
+                            </span>
                           </td>
                           <td className="py-3 px-2 align-middle">
                             <button
                               type="button"
-                              onClick={() => removeSlotRow(row.rowKey)}
-                              disabled={saving}
-                              className="text-[12px] font-bold text-rose-600 hover:underline disabled:opacity-50"
+                              onClick={() => activateSlot(slotNum)}
+                              disabled={saving || productsLoading || products.length === 0}
+                              className="text-[12px] font-bold text-[var(--primary)] hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {t("machine.detail.removeSlot")}
+                              {t("machine.detail.slotActivate")}
                             </button>
                           </td>
                         </tr>
                       );
-                    })}
+                    }
+
+                    const availableProducts = getAvailableProducts(activeRow.rowKey, activeRow.product_id);
+                    const prod = productById.get(activeRow.product_id);
+                    return (
+                      <tr key={activeRow.rowKey} className="border-b border-[var(--border)]">
+                        <td className="py-3 px-2 font-bold align-middle">{slotNum}</td>
+                        <td className="py-3 px-2 align-middle">
+                          <select
+                            className="w-full max-w-[280px] rounded-lg border border-[var(--border)] px-2 py-1.5 font-bold text-[var(--text)] bg-[var(--surface-1)]"
+                            value={activeRow.product_id}
+                            onChange={(e) =>
+                              updateDraftRow(activeRow.rowKey, {
+                                product_id: Number(e.target.value),
+                              })
+                            }
+                            disabled={saving || products.length === 0}
+                          >
+                            {!availableProducts.some((p) => p.product_id === activeRow.product_id) && (
+                              <option value={activeRow.product_id}>
+                                #{activeRow.product_id} {t("machine.detail.notInList")}
+                              </option>
+                            )}
+                            {availableProducts.map((p) => (
+                              <option key={p.product_id} value={p.product_id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-3 px-2 align-middle">
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            className="w-24 rounded-lg border border-[var(--border)] px-2 py-1.5 font-black text-[var(--text)]"
+                            value={String(activeRow.quantity)}
+                            onKeyDown={blockNonIntegerKeys}
+                            onChange={(e) => {
+                              const v = digitsOnly(e.target.value);
+                              updateDraftRow(activeRow.rowKey, {
+                                quantity: v === "" ? 0 : parseInt(v, 10),
+                              });
+                            }}
+                            disabled={saving}
+                          />
+                        </td>
+                        <td className="py-3 px-2 align-middle font-bold">
+                          {prod != null ? `฿${Number(prod.price).toFixed(2)}` : "—"}
+                        </td>
+                        <td className="py-3 px-2 align-middle">
+                          <button
+                            type="button"
+                            onClick={() => removeSlotRow(activeRow.rowKey)}
+                            disabled={saving}
+                            className="text-[12px] font-bold text-rose-600 hover:underline disabled:opacity-50"
+                          >
+                            {t("machine.detail.removeSlot")}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
             <p className="mt-4 text-[12px] font-bold text-[var(--text-muted)]">
               {t("machine.detail.saveHint")
                 .replace("{code}", machineCode)
-                .replace("{max}", String(MAX_SLOTS_PER_MACHINE))}
+                .replace("{max}", String(MAX_SLOTS))}
             </p>
           </div>
         </>

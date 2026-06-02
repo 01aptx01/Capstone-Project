@@ -16,6 +16,29 @@ from app.realtime.socketio_gateway import emit_job_start, is_machine_agent_onlin
 # Configure logger
 logger = logging.getLogger(__name__)
 
+# Omise Thailand minimum charge (see https://www.omise.co/currency-and-amount)
+MIN_OMISE_CHARGE_THB = 20
+MIN_OMISE_CHARGE_SATANG = 2000
+
+
+def _below_omise_minimum_response(total_price_thb: float):
+    satang = int(round(float(total_price_thb) * 100))
+    if satang >= MIN_OMISE_CHARGE_SATANG:
+        return None
+    return (
+        jsonify(
+            {
+                "status": "ERROR",
+                "message": (
+                    f"ยอดชำระขั้นต่ำ {MIN_OMISE_CHARGE_THB} บาท "
+                    "(ตามเงื่อนไขผู้ให้บริการชำระเงิน)"
+                ),
+            }
+        ),
+        400,
+    )
+
+
 class BuyController:
     def __init__(self, payment_service: OmisePaymentService, inventory_service: InventoryService):
         self.payment_service = payment_service
@@ -142,7 +165,7 @@ class BuyController:
         user_promotion_id = None
         raw = coupon_code
         if raw is not None and str(raw).strip():
-            reason, c, user_promo_id = lookup_coupon_by_code(raw)
+            reason, c, user_promo_id, _user_code = lookup_coupon_by_code(raw)
             if reason != "ok" or not c:
                 return None
             discount, final = discount_and_final(subtotal, c)
@@ -351,13 +374,15 @@ class BuyController:
                 {"valid": False, "reason": "pricing_failed", "message": "ไม่สามารถคำนวณยอดได้"}
             ), 200
 
-        reason, c, user_promo_id = lookup_coupon_by_code(code)
-        if reason != "ok" or not c:
+        reason, c, user_promo_id, user_code = lookup_coupon_by_code(code)
+        if reason != "ok" or not c or not user_code:
             return jsonify(
                 {
                     "valid": False,
-                    "reason": reason,
-                    "message": reason_message_th(reason),
+                    "reason": reason if reason != "ok" else "not_found",
+                    "message": reason_message_th(
+                        reason if reason != "ok" else "not_found"
+                    ),
                 }
             ), 200
 
@@ -386,7 +411,8 @@ class BuyController:
             {
                 "valid": True,
                 "promotion_id": c.promotion_id,
-                "code": c.code,
+                "user_promotion_id": user_promo_id,
+                "code": user_code,
                 "type": c.type,
                 "discount_amount": float(c.discount_amount),
                 "points_cost": pc,
@@ -448,6 +474,10 @@ class BuyController:
             total_price = pricing["final"]
             promotion_id = pricing["promotion_id"]
             user_promotion_id = pricing["user_promotion_id"]
+
+        min_resp = _below_omise_minimum_response(total_price)
+        if min_resp:
+            return min_resp
 
         charge_amount_satang = int(round(float(total_price) * 100))
         client_satang = int(amount) if amount is not None else None
@@ -604,6 +634,10 @@ class BuyController:
         total_price = pricing["final"]
         promotion_id = pricing["promotion_id"]
         user_promotion_id = pricing["user_promotion_id"]
+
+        min_resp = _below_omise_minimum_response(total_price)
+        if min_resp:
+            return min_resp
 
         import uuid
         draft_id = f"draft_{uuid.uuid4().hex[:16]}"

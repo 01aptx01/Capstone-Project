@@ -6,6 +6,19 @@ import { isAxiosError } from "axios";
 import Modal from "@/components/ui/Modal";
 import { createProduct } from "@/lib/admin-api";
 import { uiLabelToApiCategory } from "@/lib/admin-mappers";
+import { isValidProductImageUrl } from "@/lib/product-images";
+import {
+  isValidProductPriceThb,
+  MIN_PRODUCT_PRICE_THB,
+  parseProductPriceThb,
+} from "@/lib/product-price";
+import { blockNonIntegerKeys, digitsOnly } from "@/lib/integer-input";
+import {
+  DEFAULT_HEATING_TIME_SEC,
+  isValidHeatingTimeSeconds,
+  parseHeatingTimeSeconds,
+} from "@/lib/product-heating";
+import ProductImageUrlField from "@/components/products/ProductImageUrlField";
 import { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
 import { useLang } from "@/lib/i18n/lang";
 
@@ -22,6 +35,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
     name: "",
     category: "meat",
     unit_price: "",
+    heating_time: String(DEFAULT_HEATING_TIME_SEC),
     description: "",
     image_url: "",
   });
@@ -29,9 +43,26 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    const price = parseFloat(formData.unit_price);
-    if (!formData.name.trim() || Number.isNaN(price)) {
+    const price = parseProductPriceThb(formData.unit_price);
+    if (!formData.name.trim() || price === null) {
       setFormError(t("addProduct.errorInvalid"));
+      return;
+    }
+    if (!isValidProductPriceThb(price)) {
+      setFormError(t("addProduct.errorPriceMin").replace("{min}", String(MIN_PRODUCT_PRICE_THB)));
+      return;
+    }
+    if (!isValidProductImageUrl(formData.image_url)) {
+      setFormError(t("productImage.invalidUrl"));
+      return;
+    }
+    const heatingParsed = parseHeatingTimeSeconds(formData.heating_time);
+    const heatingTime =
+      heatingParsed === null
+        ? DEFAULT_HEATING_TIME_SEC
+        : heatingParsed;
+    if (!isValidHeatingTimeSeconds(heatingTime)) {
+      setFormError(t("addProduct.errorHeatingTime"));
       return;
     }
     setSubmitting(true);
@@ -42,6 +73,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
         category: uiLabelToApiCategory(formData.category),
         description: formData.description.trim() || null,
         image_url: formData.image_url.trim() || null,
+        heating_time: heatingTime,
       });
       toast.success(t("addProduct.toastCreated"));
       window.dispatchEvent(new Event(ADMIN_PRODUCTS_REFRESH_EVENT));
@@ -49,6 +81,7 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
         name: "",
         category: "meat",
         unit_price: "",
+        heating_time: String(DEFAULT_HEATING_TIME_SEC),
         description: "",
         image_url: "",
       });
@@ -98,12 +131,10 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
 
           <div className="group space-y-1.5">
             <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.imageUrl")}</label>
-            <input
-              type="url"
-              placeholder={t("addProduct.placeholder.imageUrl")}
-              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
+            <ProductImageUrlField
               value={formData.image_url}
-              onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+              onChange={(image_url) => setFormData({ ...formData, image_url })}
+              disabled={submitting}
             />
           </div>
 
@@ -123,16 +154,41 @@ export default function AddProductModal({ open, onClose }: AddProductModalProps)
             <div className="group space-y-1.5">
               <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.unitPrice")}</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 required
-                step="0.01"
-                min="0"
-                placeholder="0.00"
+                placeholder={String(MIN_PRODUCT_PRICE_THB)}
                 className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
                 value={formData.unit_price}
-                onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
+                onKeyDown={blockNonIntegerKeys}
+                onChange={(e) =>
+                  setFormData({ ...formData, unit_price: digitsOnly(e.target.value) })
+                }
               />
             </div>
+          </div>
+
+          <div className="group space-y-1.5">
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">
+              {t("addProduct.label.heatingTime")}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              required
+              placeholder={String(DEFAULT_HEATING_TIME_SEC)}
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
+              value={formData.heating_time}
+              onKeyDown={blockNonIntegerKeys}
+              onChange={(e) =>
+                setFormData({ ...formData, heating_time: digitsOnly(e.target.value) })
+              }
+            />
+            <p className="text-[11px] font-bold text-[var(--text-muted)] ml-1">
+              {t("addProduct.hint.heatingTime")}
+            </p>
           </div>
 
           <div className="group space-y-1.5">

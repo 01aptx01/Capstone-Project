@@ -195,12 +195,12 @@ def earn_points():
 
             if member:
                 # เบอร์เก่า → บวกแต้ม
-                new_points = member["points"] + points_earned
                 user_id = member["user_id"]
                 cur.execute(
-                    "UPDATE users SET points = %s, last_use = NOW() WHERE user_id = %s",
-                    (new_points, user_id),
+                    "UPDATE users SET points = points + %s, last_use = NOW() WHERE user_id = %s",
+                    (points_earned, user_id),
                 )
+                new_points = member["points"] + points_earned
                 is_new = False
             else:
                 # เบอร์ใหม่ → สร้าง user
