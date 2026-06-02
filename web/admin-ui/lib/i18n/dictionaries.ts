@@ -304,10 +304,21 @@ export type DictKey =
   | "profile.save"
   | "profile.accountTitle"
   | "profile.label.name"
+  | "profile.label.firstName"
+  | "profile.label.lastName"
   | "profile.label.role"
+  | "profile.label.systemRole"
   | "profile.label.email"
   | "profile.label.phone"
   | "profile.label.bio"
+  | "profile.loading"
+  | "profile.loadError"
+  | "profile.saving"
+  | "profile.saveSuccess"
+  | "profile.saveFailed"
+  | "profile.emailReadonly"
+  | "profile.positionPlaceholder"
+  | "profile.activityEmpty"
   | "profile.recentActivity"
   | "profile.viewAll"
   | "profile.completionHint"
@@ -940,10 +951,21 @@ export const DICTS: Record<Lang, Dict> = {
     "profile.save": "บันทึกข้อมูล",
     "profile.accountTitle": "ข้อมูลบัญชี",
     "profile.label.name": "ชื่อ-นามสกุล",
+    "profile.label.firstName": "ชื่อ",
+    "profile.label.lastName": "นามสกุล",
     "profile.label.role": "ตำแหน่ง",
+    "profile.label.systemRole": "สิทธิ์ระบบ",
     "profile.label.email": "อีเมล",
     "profile.label.phone": "เบอร์โทรศัพท์",
     "profile.label.bio": "เกี่ยวกับฉัน",
+    "profile.loading": "กำลังโหลดโปรไฟล์...",
+    "profile.loadError": "โหลดข้อมูลโปรไฟล์ไม่สำเร็จ",
+    "profile.saving": "กำลังบันทึก...",
+    "profile.saveSuccess": "บันทึกโปรไฟล์สำเร็จ",
+    "profile.saveFailed": "บันทึกโปรไฟล์ไม่สำเร็จ",
+    "profile.emailReadonly": "อีเมลใช้สำหรับเข้าสู่ระบบ ไม่สามารถแก้ไขได้",
+    "profile.positionPlaceholder": "เช่น ผู้จัดการคลังสินค้า",
+    "profile.activityEmpty": "ยังไม่มีกิจกรรมที่บันทึกไว้ในเครื่องนี้",
     "profile.recentActivity": "กิจกรรมล่าสุด",
     "profile.viewAll": "ดูทั้งหมด",
     "profile.completionHint": "เพิ่มรูปหน้าปกเพื่อเพิ่มความสมบูรณ์เป็น 100% และรับเหรียญตรา \"Admin Elite\"",
@@ -1574,10 +1596,21 @@ export const DICTS: Record<Lang, Dict> = {
     "profile.save": "Save changes",
     "profile.accountTitle": "Account info",
     "profile.label.name": "Full name",
-    "profile.label.role": "Role",
+    "profile.label.firstName": "First name",
+    "profile.label.lastName": "Last name",
+    "profile.label.role": "Position",
+    "profile.label.systemRole": "System role",
     "profile.label.email": "Email",
     "profile.label.phone": "Phone",
     "profile.label.bio": "About me",
+    "profile.loading": "Loading profile...",
+    "profile.loadError": "Could not load profile",
+    "profile.saving": "Saving...",
+    "profile.saveSuccess": "Profile saved",
+    "profile.saveFailed": "Could not save profile",
+    "profile.emailReadonly": "Email is used to sign in and cannot be changed here",
+    "profile.positionPlaceholder": "e.g. Inventory manager",
+    "profile.activityEmpty": "No activity recorded on this device yet",
     "profile.recentActivity": "Recent activity",
     "profile.viewAll": "View all",
     "profile.completionHint": "Add a cover photo to reach 100% and earn the \"Admin Elite\" badge.",

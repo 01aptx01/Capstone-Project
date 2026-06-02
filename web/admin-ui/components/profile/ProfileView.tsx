@@ -1,160 +1,350 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { isAxiosError } from "axios";
 import { useLang } from "@/lib/i18n/lang";
+import { getMe, updateMe } from "@/lib/admin-api";
+import type { AdminUserInfo } from "@/lib/admin-api";
+import { getAdminActivities, type AdminActivity } from "@/lib/activity-log";
+import {
+  formatAdminRoles,
+  profileDisplayName,
+  profileDisplaySubtitle,
+  userToProfileForm,
+  type ProfileFormState,
+} from "@/lib/profile-utils";
+
+const EMPTY_FORM: ProfileFormState = {
+  first_name: "",
+  last_name: "",
+  email: "",
+  phone: "",
+  position: "",
+  roles: [],
+  joined: "—",
+};
 
 export default function ProfileView() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [activities, setActivities] = useState<any[]>([]);
-  const [formData, setFormData] = useState({
-    name: "Mod Pao Admin",
-    email: "admin@modpao.vending",
-    phone: "081-234-5678",
-    role: "System Administrator",
-    bio: "Managing the next generation of smart vending machines with focus on reliability and user experience.",
-    location: "Bangkok, Thailand",
-    joined: "May 2024"
-  });
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(
+    null,
+  );
+  const [activities, setActivities] = useState<AdminActivity[]>([]);
+  const [formData, setFormData] = useState<ProfileFormState>(EMPTY_FORM);
+  const savedSnapshot = useRef<ProfileFormState>(EMPTY_FORM);
+
+  const applyUser = useCallback(
+    (u: AdminUserInfo) => {
+      const next = userToProfileForm(u, lang);
+      savedSnapshot.current = next;
+      setFormData(next);
+      setActivities(getAdminActivities());
+    },
+    [lang],
+  );
+
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const res = await getMe();
+      if (res?.user) {
+        applyUser(res.user);
+      }
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+      setLoadError(
+        isAxiosError(err)
+          ? String(
+              (err.response?.data as { error?: string })?.error ||
+                t("profile.loadError"),
+            )
+          : t("profile.loadError"),
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [applyUser, t]);
 
   useEffect(() => {
-    let active = true;
-    const fetchProfile = async () => {
-      try {
-        const { getMe } = await import("@/lib/admin-api");
-        const { getAdminActivities } = await import("@/lib/activity-log");
-        const res = await getMe();
-        if (active) {
-          setActivities(getAdminActivities());
-        }
-        if (active && res && res.user) {
-          const u = res.user;
-          setFormData({
-            name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Mod Pao Admin",
-            email: u.email || "",
-            phone: u.phone || "—",
-            role: u.position || "System Administrator",
-            bio: "Managing the next generation of smart vending machines with focus on reliability and user experience.",
-            location: "Bangkok, Thailand",
-            joined: u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "May 2024"
-          });
-        }
-      } catch (err) {
-        console.error("Failed to load profile:", err);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    fetchProfile();
-    return () => { active = false; };
-  }, []);
+    void loadProfile();
+  }, [loadProfile]);
 
-  const handleSave = () => {
+  const handleCancel = () => {
+    setFormData(savedSnapshot.current);
     setIsEditing(false);
+    setSaveMsg(null);
   };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const res = await updateMe({
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        position: formData.position.trim(),
+        phone: formData.phone.trim(),
+      });
+      applyUser(res.user);
+      setIsEditing(false);
+      setSaveMsg({ type: "success", text: t("profile.saveSuccess") });
+    } catch (err) {
+      setSaveMsg({
+        type: "error",
+        text: isAxiosError(err)
+          ? String(
+              (err.response?.data as { error?: string })?.error ||
+                t("profile.saveFailed"),
+            )
+          : t("profile.saveFailed"),
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const inputCls =
+    "glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full";
+
+  if (loading) {
+    return (
+      <div className="profile-container animate-in opacity-100 flex items-center justify-center min-h-[320px]">
+        <p className="text-[var(--text-muted)] font-bold">{t("profile.loading")}</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="profile-container animate-in opacity-100 max-w-lg mx-auto p-10">
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-6 font-bold text-center">
+          {loadError}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="profile-container animate-in opacity-0">
-      {/* Upper Section: Cover & Identity */}
       <div className="profile-hero animate-scale-in">
         <div className="hero-bg">
           <div className="mesh-gradient"></div>
           <div className="hero-pattern"></div>
         </div>
-        
+
         <div className="hero-content">
           <div className="avatar-section animate-float">
             <div className="avatar-container glass !p-1.5 !rounded-[42px] border-[var(--border)]/50">
               <div className="relative overflow-hidden rounded-[38px] bg-[var(--surface-2)]">
-                <Image src="/Pao.png" alt="Admin" width={140} height={140} className="avatar-img transition-transform duration-700 hover:scale-110" />
+                <Image
+                  src="/Pao.png"
+                  alt="Admin"
+                  width={140}
+                  height={140}
+                  className="avatar-img transition-transform duration-700 hover:scale-110"
+                />
               </div>
               <div className="status-indicator online animate-pulse"></div>
-              <button className="edit-avatar-btn">
-                <i className="fi fi-rr-camera"></i>
-              </button>
             </div>
             <div className="identity-text">
               <div className="name-row">
-                <h1 className="text-[var(--text)] drop-shadow-sm">{formData.name}</h1>
-                <span className="verified-badge bg-[var(--border)]/50 backdrop-blur-md p-1.5 rounded-full border border-[var(--border)] text-[var(--primary)]" title="Verified Staff">
+                <h1 className="text-[var(--text)] drop-shadow-sm">
+                  {profileDisplayName(formData)}
+                </h1>
+                <span
+                  className="verified-badge bg-[var(--border)]/50 backdrop-blur-md p-1.5 rounded-full border border-[var(--border)] text-[var(--primary)]"
+                  title="Verified Staff"
+                >
                   <i className="fi fi-rr-badge-check"></i>
                 </span>
               </div>
               <div className="meta-row">
-                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-briefcase !text-[var(--text-muted)]"></i> {formData.role}</span>
+                <span className="meta-item text-[var(--text)]">
+                  <i className="fi fi-rr-briefcase !text-[var(--text-muted)]"></i>{" "}
+                  {profileDisplaySubtitle(formData)}
+                </span>
+                <span className="meta-item text-[var(--text-muted)]">
+                  <i className="fi fi-rr-calendar"></i> {t("profile.joinedPrefix")}{" "}
+                  {formData.joined}
+                </span>
+                <span className="meta-item text-[var(--text-muted)]">
+                  <i className="fi fi-rr-shield-check"></i>{" "}
+                  {formatAdminRoles(formData.roles)}
+                </span>
               </div>
             </div>
           </div>
 
           <div className="hero-actions">
             {!isEditing ? (
-              <button className="btn-edit !bg-[var(--surface-1)] !text-[var(--text)] hover:!bg-[var(--primary)] hover:!text-[var(--primary-contrast)] transition-all duration-300 shadow-xl" onClick={() => setIsEditing(true)}>
+              <button
+                type="button"
+                className="btn-edit !bg-[var(--surface-1)] !text-[var(--text)] hover:!bg-[var(--primary)] hover:!text-[var(--primary-contrast)] transition-all duration-300 shadow-xl"
+                onClick={() => setIsEditing(true)}
+              >
                 <i className="fi fi-rr-settings-sliders"></i>
                 {t("profile.editProfile")}
               </button>
             ) : (
               <div className="edit-buttons">
-                <button className="btn-cancel glass !bg-[var(--surface-2)] !text-[var(--text)] !border-[var(--border)] hover:!bg-[var(--border)]" onClick={() => setIsEditing(false)}>{t("profile.cancel")}</button>
-                <button className="btn-save !bg-[var(--primary)] !text-[var(--primary-contrast)] hover:!bg-[var(--primary)]" onClick={handleSave}>{t("profile.save")}</button>
+                <button
+                  type="button"
+                  className="btn-cancel glass !bg-[var(--surface-2)] !text-[var(--text)] !border-[var(--border)] hover:!bg-[var(--border)]"
+                  onClick={handleCancel}
+                  disabled={saving}
+                >
+                  {t("profile.cancel")}
+                </button>
+                <button
+                  type="button"
+                  className="btn-save !bg-[var(--primary)] !text-[var(--primary-contrast)] hover:!bg-[var(--primary)] disabled:opacity-60"
+                  onClick={() => void handleSave()}
+                  disabled={saving}
+                >
+                  {saving ? t("profile.saving") : t("profile.save")}
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
 
+      {saveMsg && (
+        <div
+          className={`max-w-[900px] mx-auto mb-6 px-4 py-3 rounded-xl text-[13px] font-bold flex items-center gap-2 ${
+            saveMsg.type === "success"
+              ? "bg-[var(--success-bg)] border border-emerald-200 text-emerald-700"
+              : "bg-rose-50 border border-rose-200 text-rose-600"
+          }`}
+        >
+          <i
+            className={`fi ${saveMsg.type === "success" ? "fi-rr-check" : "fi-rr-exclamation"}`}
+          />
+          {saveMsg.text}
+        </div>
+      )}
+
       <div className="profile-grid">
-        {/* Left: Detailed Info */}
         <div className="grid-left animate-slide-left opacity-0 delay-150">
           <div className="glass info-card !rounded-[40px] p-10 mb-8 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
             <div className="card-header border-b border-[var(--border)]/50 pb-6 mb-8">
               <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
-                <i className="fi fi-rr-info text-[var(--primary)] text-[28px]"></i> {t("profile.accountTitle")}
+                <i className="fi fi-rr-info text-[var(--primary)] text-[28px]"></i>{" "}
+                {t("profile.accountTitle")}
               </h3>
             </div>
             <div className="info-form">
               <div className="form-row">
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.name")}</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">
+                    {t("profile.label.firstName")}
+                  </label>
                   {isEditing ? (
-                    <input type="text" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={formData.first_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, first_name: e.target.value })
+                      }
+                    />
                   ) : (
-                    <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.name}</div>
+                    <div className="static-value text-[18px] font-bold text-[var(--text)]">
+                      {formData.first_name || "—"}
+                    </div>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.role")}</label>
-                  <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.role}</div>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">
+                    {t("profile.label.lastName")}
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={formData.last_name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, last_name: e.target.value })
+                      }
+                    />
+                  ) : (
+                    <div className="static-value text-[18px] font-bold text-[var(--text)]">
+                      {formData.last_name || "—"}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.email")}</label>
-                  {isEditing ? (
-                    <input type="email" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
-                  ) : (
-                    <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.email}</div>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">
+                    {t("profile.label.email")}
+                  </label>
+                  <div className="static-value text-[18px] font-bold text-[var(--text)]">
+                    {formData.email || "—"}
+                  </div>
+                  {isEditing && (
+                    <p className="text-[11px] text-[var(--text-muted)] font-bold mt-1">
+                      {t("profile.emailReadonly")}
+                    </p>
                   )}
                 </div>
                 <div className="form-group">
-                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.phone")}</label>
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">
+                    {t("profile.label.phone")}
+                  </label>
                   {isEditing ? (
-                    <input type="text" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-4 w-full" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={formData.phone}
+                      onChange={(e) =>
+                        setFormData({ ...formData, phone: e.target.value })
+                      }
+                    />
                   ) : (
-                    <div className="static-value text-[18px] font-bold text-[var(--text)]">{formData.phone}</div>
+                    <div className="static-value text-[18px] font-bold text-[var(--text)]">
+                      {formData.phone || "—"}
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="form-group full mt-4">
-                <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("profile.label.bio")}</label>
-                {isEditing ? (
-                  <textarea rows={4} className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !p-4 w-full" value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} />
-                ) : (
-                  <p className="bio-text text-[16px] text-[var(--text)] leading-relaxed font-medium">{formData.bio}</p>
-                )}
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">
+                    {t("profile.label.role")}
+                  </label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className={inputCls}
+                      value={formData.position}
+                      onChange={(e) =>
+                        setFormData({ ...formData, position: e.target.value })
+                      }
+                      placeholder={t("profile.positionPlaceholder")}
+                    />
+                  ) : (
+                    <div className="static-value text-[18px] font-bold text-[var(--text)]">
+                      {formData.position || "—"}
+                    </div>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">
+                    {t("profile.label.systemRole")}
+                  </label>
+                  <div className="static-value text-[18px] font-bold text-[var(--text)]">
+                    {formatAdminRoles(formData.roles)}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -162,28 +352,36 @@ export default function ProfileView() {
           <div className="glass activity-card !rounded-[40px] p-10 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
             <div className="card-header border-b border-[var(--border)]/50 pb-6 mb-8 flex justify-between items-center">
               <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
-                <i className="fi fi-rr-time-past text-[var(--primary)] text-[28px]"></i> {t("profile.recentActivity")}
+                <i className="fi fi-rr-time-past text-[var(--primary)] text-[28px]"></i>{" "}
+                {t("profile.recentActivity")}
               </h3>
             </div>
-            <div className="timeline space-y-8">
-              {(activities.length > 0 ? activities : [
-                { icon: "fi fi-rr-box", color: "from-[var(--primary)] to-[var(--primary)]", bg: "bg-orange-50", title: t("profile.activity.refill") || "เติมสินค้าสำเร็จ", machine: "Vending Central Ladprao", time: "10 นาทีที่แล้ว" },
-                { icon: "fi fi-rr-refresh", color: "from-[var(--chart-series-1)] to-[var(--chart-series-1)]", bg: "bg-[var(--surface-2)]", title: t("profile.activity.firmware") || "อัพเดตเฟิร์มแวร์", machine: "#M-045", time: "3 ชั่วโมงที่แล้ว" },
-                { icon: "fi fi-rr-coins", color: "from-[var(--success)] to-[var(--success)]", bg: "bg-[var(--success-bg)]", title: t("profile.activity.cashCheck") || "ตรวจสอบยอดเงินสำเร็จ", machine: "", time: "เมื่อวานนี้ 18:30" }
-              ]).map((item, idx) => (
-                <div key={idx} className="timeline-item flex gap-6 group">
-                  <div className={`w-14 h-14 rounded-[20px] bg-gradient-to-br ${item.color} flex items-center justify-center text-[var(--primary-contrast)] text-xl shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}>
-                    <i className={item.icon}></i>
+            {activities.length === 0 ? (
+              <p className="text-[var(--text-muted)] font-medium">{t("profile.activityEmpty")}</p>
+            ) : (
+              <div className="timeline space-y-8">
+                {activities.map((item, idx) => (
+                  <div key={idx} className="timeline-item flex gap-6 group">
+                    <div
+                      className={`w-14 h-14 rounded-[20px] bg-gradient-to-br ${item.color} flex items-center justify-center text-[var(--primary-contrast)] text-xl shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}
+                    >
+                      <i className={item.icon}></i>
+                    </div>
+                    <div className="timeline-info py-1">
+                      <p className="text-[17px] font-bold text-[var(--text)] mb-1">
+                        {item.title}{" "}
+                        {item.machine && (
+                          <strong className="text-[var(--primary)]">{item.machine}</strong>
+                        )}
+                      </p>
+                      <span className="text-[14px] font-semibold text-[var(--text-muted)]">
+                        {item.formattedTime || item.time}
+                      </span>
+                    </div>
                   </div>
-                  <div className="timeline-info py-1">
-                    <p className="text-[17px] font-bold text-[var(--text)] mb-1">
-                      {item.title} {item.machine && <strong className="text-[var(--primary)]">{item.machine}</strong>}
-                    </p>
-                    <span className="text-[14px] font-semibold text-[var(--text-muted)]">{item.time || item.formattedTime}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -200,7 +398,7 @@ export default function ProfileView() {
           border-radius: 48px;
           overflow: hidden;
           background: var(--surface-2);
-          box-shadow: 0 20px 50px rgba(0,0,0,0.05);
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
           margin-bottom: 40px;
           height: 380px;
           display: flex;
@@ -217,9 +415,12 @@ export default function ProfileView() {
         .mesh-gradient {
           position: absolute;
           inset: 0;
-          background-image: 
-            radial-gradient(at 0% 0%, rgba(244, 123, 42, 0.15) 0, transparent 50%), 
-            radial-gradient(at 50% 0%, rgba(203, 213, 225, 0.4) 0, transparent 50%), 
+          background-image: radial-gradient(
+              at 0% 0%,
+              rgba(244, 123, 42, 0.15) 0,
+              transparent 50%
+            ),
+            radial-gradient(at 50% 0%, rgba(203, 213, 225, 0.4) 0, transparent 50%),
             radial-gradient(at 100% 0%, rgba(244, 123, 42, 0.1) 0, transparent 50%);
           opacity: 0.8;
         }
@@ -247,7 +448,7 @@ export default function ProfileView() {
 
         .avatar-container {
           position: relative;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
           transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
         .avatar-container:hover {
@@ -265,26 +466,10 @@ export default function ProfileView() {
           z-index: 10;
         }
 
-        .status-indicator.online { background: var(--success); box-shadow: 0 0 20px rgba(16, 185, 129, 0.3); }
-
-        .edit-avatar-btn {
-          position: absolute;
-          inset: 0;
-          background: rgba(0,0,0,0.4);
-          color: white;
-          border: none;
-          border-radius: 38px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 1.8rem;
-          cursor: pointer;
-          opacity: 0;
-          transition: 0.3s;
-          z-index: 5;
+        .status-indicator.online {
+          background: var(--success);
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
         }
-
-        .avatar-container:hover .edit-avatar-btn { opacity: 1; }
 
         .identity-text h1 {
           font-size: 3.5rem;
@@ -326,7 +511,6 @@ export default function ProfileView() {
           font-size: 1.1rem;
         }
 
-        /* Grid Layout */
         .profile-grid {
           display: grid;
           grid-template-columns: 1fr;
@@ -346,7 +530,8 @@ export default function ProfileView() {
           gap: 15px;
         }
 
-        .btn-cancel, .btn-save {
+        .btn-cancel,
+        .btn-save {
           padding: 14px 28px;
           border-radius: 18px;
           font-weight: 800;
@@ -356,16 +541,35 @@ export default function ProfileView() {
         }
 
         @media (max-width: 1100px) {
-          .profile-grid { grid-template-columns: 1fr; }
-          .hero-content { flex-direction: column; align-items: center; text-align: center; height: auto; padding-top: 100px; }
-          .avatar-section { flex-direction: column; align-items: center; gap: 20px; }
-          .hero-actions { margin-top: 30px; }
-          .profile-hero { height: auto; }
-          .identity-text h1 { font-size: 2.5rem; }
-          .meta-row { justify-content: center; }
+          .profile-grid {
+            grid-template-columns: 1fr;
+          }
+          .hero-content {
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            height: auto;
+            padding-top: 100px;
+          }
+          .avatar-section {
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+          }
+          .hero-actions {
+            margin-top: 30px;
+          }
+          .profile-hero {
+            height: auto;
+          }
+          .identity-text h1 {
+            font-size: 2.5rem;
+          }
+          .meta-row {
+            justify-content: center;
+          }
         }
       `}</style>
     </div>
   );
 }
-

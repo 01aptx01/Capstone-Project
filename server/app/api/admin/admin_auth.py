@@ -36,6 +36,7 @@ def _admin_to_dict(admin: AdminUser) -> dict:
         "position": admin.position,
         "phone": admin.phone,
         "is_active": admin.is_active,
+        "roles": _roles_for(admin),
         "created_at": admin.created_at.isoformat() if admin.created_at else None,
     }
 
@@ -244,14 +245,30 @@ def admin_change_password():
     return jsonify({"ok": True, "message": "Password updated successfully."}), 200
 
 
-@admin_bp.route("/auth/me", methods=["GET"])
+@admin_bp.route("/auth/me", methods=["GET", "PATCH"])
 @roles_required("admin")
 def admin_me():
-    """Return current authenticated admin profile."""
+    """Get or update the current authenticated admin profile."""
     admin_id = _current_admin_id()
     admin = AdminUser.query.get(admin_id)
     if not admin:
         return jsonify({"error": "Admin not found."}), 404
+
+    if request.method == "GET":
+        return jsonify({"user": _admin_to_dict(admin)}), 200
+
+    data = request.get_json(silent=True) or {}
+    if "first_name" in data:
+        admin.first_name = (data.get("first_name") or "").strip()
+    if "last_name" in data:
+        admin.last_name = (data.get("last_name") or "").strip()
+    if "position" in data:
+        admin.position = (data.get("position") or "").strip()
+    if "phone" in data:
+        admin.phone = (data.get("phone") or "").strip()
+
+    db.session.commit()
+    logger.info("📝 Admin profile updated: %s (id=%s)", admin.email, admin.id)
     return jsonify({"user": _admin_to_dict(admin)}), 200
 
 
