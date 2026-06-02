@@ -36,9 +36,7 @@ def _resolve_swagger_path() -> str:
             return ap
     return os.path.abspath(candidates[0])
 
-
 _SWAGGER_FILE = _resolve_swagger_path()
-
 
 def _validate_socket_env() -> None:
     if os.getenv("SOCKETIO_ENABLED", "1") == "0":

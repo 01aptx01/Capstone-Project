@@ -247,6 +247,11 @@ CREATE TABLE transactions (
 -- SEED DATA
 -- =====================
 
+-- Admin roles (RBAC)
+INSERT INTO roles (name, description) VALUES
+('superadmin', 'Full administrative access'),
+('admin', 'Standard administrative access');
+
 -- Machine (dev token plaintext: dev-machine-token — bcrypt hash below; production: create via Admin)
 INSERT INTO machines (machine_code, secret_token_hash, location, status) VALUES (
   'MP1-001',

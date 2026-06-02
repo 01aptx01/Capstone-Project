@@ -1,52 +1,29 @@
-"""Admin authentication endpoints — login, invite, register, me."""
+"""Admin authentication endpoints — login, invite, register, me.
+
+RBAC source of truth is the database (roles + admin_user_role mapping).
+"""
 
 import os
-import datetime
 import logging
 
-import bcrypt
-import jwt
 from flask import jsonify, request
 
 from app.api.admin import admin_bp
 from app.api.admin.decorators import admin_required, _current_admin_id
 from app.extensions import db
 from app.models.admin_rbac import AdminUser, Role, admin_user_role
+from app.api.admin.security import (
+    create_access_token,
+    create_registration_token,
+    decode_registration_token,
+    hash_password,
+    verify_password,
+)
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _get_jwt_secret() -> str:
-    return (os.environ.get("ADMIN_JWT_SECRET") or "dev-change-me-to-a-long-random-secret").strip()
-
-_JWT_EXPIRES_H = int(os.environ.get("ADMIN_JWT_EXPIRES_HOURS", "12"))
-_INVITE_EXPIRES_H = int(os.environ.get("ADMIN_INVITE_EXPIRES_HOURS", "168"))
-
-
-def _hash_password(plain: str) -> str:
-    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(12)).decode("utf-8")
-
-
-def _check_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
-
-
-def _make_token(admin: AdminUser, expires_hours: int | None = None) -> str:
-    exp_h = expires_hours or _JWT_EXPIRES_H
-    roles = [r.name for r in admin.roles] if getattr(admin, "roles", None) else ["admin"]
-    payload = {
-        "sub": str(admin.id),
-        "email": admin.email,
-        "roles": roles,
-        "type": "admin_access",
-        "is_active": admin.is_active,
-        "iat": datetime.datetime.utcnow(),
-        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=exp_h),
-    }
-    return jwt.encode(payload, _get_jwt_secret(), algorithm="HS256")
+def _roles_for(admin: AdminUser) -> list[str]:
+    return [r.name for r in (admin.roles or [])]
 
 
 def _admin_to_dict(admin: AdminUser) -> dict:
@@ -77,14 +54,14 @@ def admin_login():
         return jsonify({"error": "Email and password are required."}), 400
 
     admin = AdminUser.query.filter_by(email=email).first()
-    if not admin or not _check_password(password, admin.password_hash):
+    if not admin or not verify_password(password, admin.password_hash):
         return jsonify({"error": "Invalid email or password."}), 401
 
     if admin.is_active:
-        token = _make_token(admin)
+        token = create_access_token(admin_id=admin.id, email=admin.email, roles=_roles_for(admin))
         return jsonify({"token": token, "user": _admin_to_dict(admin)}), 200
 
-    reg_token = _make_token(admin, expires_hours=_INVITE_EXPIRES_H)
+    reg_token = create_registration_token(admin_id=admin.id)
     return jsonify({
         "needs_registration": True,
         "registration_token": reg_token,
@@ -111,10 +88,8 @@ def admin_register():
         return jsonify({"error": "Registration token and new password are required."}), 400
 
     try:
-        payload = jwt.decode(reg_token, _get_jwt_secret(), algorithms=["HS256"])
-    except jwt.ExpiredSignatureError:
-        return jsonify({"error": "Registration link has expired."}), 401
-    except jwt.InvalidTokenError:
+        payload = decode_registration_token(reg_token)
+    except Exception:
         return jsonify({"error": "Invalid registration token."}), 401
 
     admin_id = payload.get("sub")
@@ -125,7 +100,7 @@ def admin_register():
     if admin.is_active:
         return jsonify({"error": "This account is already active. Please log in."}), 400
 
-    admin.password_hash = _hash_password(new_password)
+    admin.password_hash = hash_password(new_password)
     admin.first_name = first_name or admin.first_name
     admin.last_name = last_name or admin.last_name
     admin.position = position or admin.position
@@ -133,7 +108,7 @@ def admin_register():
     admin.is_active = True
     db.session.commit()
 
-    token = _make_token(admin)
+    token = create_access_token(admin_id=admin.id, email=admin.email, roles=_roles_for(admin))
     return jsonify({"token": token, "user": _admin_to_dict(admin)}), 200
 
 
@@ -158,10 +133,20 @@ def admin_invite():
 
     new_admin = AdminUser(
         email=email,
-        password_hash=_hash_password(temp_password),
+        password_hash=hash_password(temp_password),
         is_active=False,
     )
     db.session.add(new_admin)
+    db.session.flush()
+
+    # Default role mapping: invited admins start as 'admin'
+    role_admin = Role.query.filter_by(name="admin").first()
+    if not role_admin:
+        role_admin = Role(name="admin", description="Standard administrative access")
+        db.session.add(role_admin)
+        db.session.flush()
+    new_admin.roles.append(role_admin)
+
     db.session.commit()
 
     frontend_url = os.environ.get("ADMIN_FRONTEND_URL", "http://localhost:3001")
@@ -261,13 +246,33 @@ def seed_first_admin(app):
             password = os.environ.get("ADMIN_DEFAULT_PASSWORD", "admin1234")
             first_admin = AdminUser(
                 email=email,
-                password_hash=_hash_password(password),
+                password_hash=hash_password(password),
                 first_name="Admin",
                 last_name="",
                 is_active=True,
             )
             db.session.add(first_admin)
+            db.session.flush()
+
+            # Ensure base roles exist
+            role_admin = Role.query.filter_by(name="admin").first()
+            if not role_admin:
+                role_admin = Role(name="admin", description="Standard administrative access")
+                db.session.add(role_admin)
+                db.session.flush()
+
+            role_super = Role.query.filter_by(name="superadmin").first()
+            if not role_super:
+                role_super = Role(name="superadmin", description="Full administrative access")
+                db.session.add(role_super)
+                db.session.flush()
+
+            # Seed first admin as superadmin (+ admin for convenience)
+            first_admin.roles.append(role_super)
+            if role_admin not in first_admin.roles:
+                first_admin.roles.append(role_admin)
+
             db.session.commit()
-            logger.info("👤 First admin seeded: %s (id=%s)", email, first_admin.id)
+            logger.info("👤 First admin seeded: %s (id=%s) as superadmin", email, first_admin.id)
         except Exception as e:
             logger.warning("⚠️  Could not seed first admin: %s", e)
