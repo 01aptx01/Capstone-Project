@@ -971,7 +971,7 @@ body,
   filter: grayscale(0);
 }
 
-/* Product thumbnails — fixed frame, tall/wide images stay inside (table + form) */
+/* Product thumbnails — fixed frame, fill with cover (table + form) */
 .product-thumb-wrap {
   display: flex;
   align-items: center;
@@ -1004,7 +1004,7 @@ body,
   height: 100%;
   max-width: 100%;
   max-height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   display: block;
 }
