@@ -156,6 +156,12 @@ export type DictKey =
   | "page.alerts.remain"
   | "page.alerts.slotLine"
   | "page.alerts.machinePrefix"
+  | "page.alerts.sectionChanges"
+  | "page.alerts.emptyChanges"
+  | "page.alerts.changeBy"
+  | "page.alerts.action.updated_slots"
+  | "page.alerts.action.updated_metadata"
+  | "page.alerts.action.unknown"
   | "alerts.toast.resolved"
   | "coupon.tab.all"
   | "coupon.tab.active"
@@ -582,6 +588,27 @@ export type DictKey =
   | "salesByFlavor.f5"
   | "salesByFlavor.f6"
   | "page.orders.itemsLabel"
+  | "deleteMachine.button"
+  | "deleteMachine.confirmTitle"
+  | "deleteMachine.confirmBody"
+  | "deleteMachine.confirmYes"
+  | "deleteMachine.deleting"
+  | "deleteMachine.toastDeleted"
+  | "deleteMachine.toastFailed"
+  | "deleteCoupon.button"
+  | "deleteCoupon.confirmTitle"
+  | "deleteCoupon.confirmBody"
+  | "deleteCoupon.confirmYes"
+  | "deleteCoupon.deleting"
+  | "deleteCoupon.toastDeleted"
+  | "deleteCoupon.toastFailed"
+  | "deleteProduct.button"
+  | "deleteProduct.confirmTitle"
+  | "deleteProduct.confirmBody"
+  | "deleteProduct.confirmYes"
+  | "deleteProduct.deleting"
+  | "deleteProduct.toastDeleted"
+  | "deleteProduct.toastFailed"
 
 type Dict = Record<DictKey, string>;
 
@@ -746,6 +773,12 @@ export const DICTS: Record<Lang, Dict> = {
     "page.alerts.remain": "คงเหลือ {n}",
     "page.alerts.slotLine": "({machine} · ช่อง {slot})",
     "page.alerts.machinePrefix": "· ตู้ ",
+    "page.alerts.sectionChanges": "การเปลี่ยนแปลงโดยแอดมิน",
+    "page.alerts.emptyChanges": "ยังไม่มีการเปลี่ยนแปลงจากแอดมินคนอื่น",
+    "page.alerts.changeBy": "โดย {admin}",
+    "page.alerts.action.updated_slots": "แก้ไขสต็อก/สินค้าในช่อง",
+    "page.alerts.action.updated_metadata": "แก้ไขข้อมูลตู้ (ตำแหน่ง/สถานะ)",
+    "page.alerts.action.unknown": "เปลี่ยนแปลงข้อมูลตู้",
     "alerts.toast.resolved": "ทำเครื่องหมายว่าแก้ไขแล้ว",
     "coupon.tab.all": "ทั้งหมด",
     "coupon.tab.active": "กำลังใช้งาน (Active)",
@@ -769,7 +802,7 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.usageNotInApi": "นับจากออเดอร์ที่ชำระแล้ว",
     "coupon.redemptionsOpen": "ผู้ใช้คูปอง",
     "coupon.redemptionsTitle": "การใช้คูปอง",
-    "coupon.redemptionsSubtitle": "สมาชิก = เบอร์โทรหลังสแกนรับแต้ม · ไม่มีสมาชิก = unknown",
+    "coupon.redemptionsSubtitle": "สมาชิก = เบอร์โทรหลังสแกนรับแต้ม",
     "coupon.redemptionsEmpty": "ยังไม่มีการใช้คูปองนี้",
     "coupon.redemptionsClose": "ปิด",
     "coupon.redemptionsColUser": "ผู้ใช้",
@@ -1175,6 +1208,27 @@ export const DICTS: Record<Lang, Dict> = {
     "salesByFlavor.f5": "เปาเห็ดหอม",
     "salesByFlavor.f6": "เปาเต้าหู้",
     "page.orders.itemsLabel": "{lines} รายการ ({qty} ชิ้น)",
+    "deleteMachine.button": "ลบตู้นี้",
+    "deleteMachine.confirmTitle": "ยืนยันการลบตู้",
+    "deleteMachine.confirmBody": "คุณกำลังจะลบตู้ {code} ออกจากระบบ การดำเนินการนี้ไม่สามารถย้อนกลับได้",
+    "deleteMachine.confirmYes": "ใช่, ลบตู้นี้",
+    "deleteMachine.deleting": "กำลังลบ…",
+    "deleteMachine.toastDeleted": "ลบตู้สำเร็จ",
+    "deleteMachine.toastFailed": "ลบตู้ไม่สำเร็จ",
+    "deleteCoupon.button": "ลบคูปอง",
+    "deleteCoupon.confirmTitle": "ยืนยันการลบคูปอง",
+    "deleteCoupon.confirmBody": "คุณกำลังจะลบคูปอง {code} ออกจากระบบ การดำเนินการนี้ไม่สามารถย้อนกลับได้",
+    "deleteCoupon.confirmYes": "ใช่, ลบคูปอง",
+    "deleteCoupon.deleting": "กำลังลบ…",
+    "deleteCoupon.toastDeleted": "ลบคูปองสำเร็จ",
+    "deleteCoupon.toastFailed": "ลบคูปองไม่สำเร็จ",
+    "deleteProduct.button": "ลบสินค้านี้",
+    "deleteProduct.confirmTitle": "ยืนยันการลบสินค้า",
+    "deleteProduct.confirmBody": "คุณกำลังจะลบสินค้า \"{name}\" ออกจากระบบ การดำเนินการนี้ไม่สามารถย้อนกลับได้",
+    "deleteProduct.confirmYes": "ใช่, ลบสินค้านี้",
+    "deleteProduct.deleting": "กำลังลบ…",
+    "deleteProduct.toastDeleted": "ลบสินค้าสำเร็จ",
+    "deleteProduct.toastFailed": "ลบสินค้าไม่สำเร็จ",
   },
   en: {
     "nav.dashboard": "Dashboard",
@@ -1335,6 +1389,12 @@ export const DICTS: Record<Lang, Dict> = {
     "page.alerts.remain": "Remaining {n}",
     "page.alerts.slotLine": "({machine} · slot {slot})",
     "page.alerts.machinePrefix": "· Machine ",
+    "page.alerts.sectionChanges": "Admin changes",
+    "page.alerts.emptyChanges": "No changes from other admins yet",
+    "page.alerts.changeBy": "by {admin}",
+    "page.alerts.action.updated_slots": "Updated slot inventory/products",
+    "page.alerts.action.updated_metadata": "Updated machine info (location/status)",
+    "page.alerts.action.unknown": "Modified machine data",
     "alerts.toast.resolved": "Marked as resolved",
     "coupon.tab.all": "All",
     "coupon.tab.active": "Active",
@@ -1764,6 +1824,27 @@ export const DICTS: Record<Lang, Dict> = {
     "salesByFlavor.f5": "Shiitake Bun",
     "salesByFlavor.f6": "Tofu Bun",
     "page.orders.itemsLabel": "{lines} lines ({qty} pcs)",
+    "deleteMachine.button": "Delete machine",
+    "deleteMachine.confirmTitle": "Confirm machine deletion",
+    "deleteMachine.confirmBody": "You are about to delete machine {code}. This action cannot be undone.",
+    "deleteMachine.confirmYes": "Yes, delete machine",
+    "deleteMachine.deleting": "Deleting…",
+    "deleteMachine.toastDeleted": "Machine deleted",
+    "deleteMachine.toastFailed": "Failed to delete machine",
+    "deleteCoupon.button": "Delete coupon",
+    "deleteCoupon.confirmTitle": "Confirm coupon deletion",
+    "deleteCoupon.confirmBody": "You are about to delete coupon {code}. This action cannot be undone.",
+    "deleteCoupon.confirmYes": "Yes, delete coupon",
+    "deleteCoupon.deleting": "Deleting…",
+    "deleteCoupon.toastDeleted": "Coupon deleted",
+    "deleteCoupon.toastFailed": "Failed to delete coupon",
+    "deleteProduct.button": "Delete product",
+    "deleteProduct.confirmTitle": "Confirm product deletion",
+    "deleteProduct.confirmBody": "You are about to delete \"{name}\". This action cannot be undone.",
+    "deleteProduct.confirmYes": "Yes, delete product",
+    "deleteProduct.deleting": "Deleting…",
+    "deleteProduct.toastDeleted": "Product deleted",
+    "deleteProduct.toastFailed": "Failed to delete product",
   },
 };
 

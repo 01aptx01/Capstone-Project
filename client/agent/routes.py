@@ -174,6 +174,18 @@ class JobManager:
 job_manager = JobManager()
 
 
+def _safe_hw(label: str, fn, *args, **kwargs):
+    """เรียก hardware/LED/audio call แบบปลอดภัย — ถ้า throw จะ log แล้วเดินต่อ
+    ไม่ให้ exception จาก hardware (เช่นไฟ LED/เสียง ใน environment ที่ไม่มี GPIO จริง)
+    ทำให้ทั้ง job ล้มเหลวกลายเป็น ERROR ทั้งที่การจ่ายสินค้า (timeline) เสร็จปกติ
+    """
+    try:
+        return fn(*args, **kwargs)
+    except Exception as e:
+        logger.warning(f"[MockJob] hardware call '{label}' failed (ignored): {e!r}")
+        return None
+
+
 def _mk_event(job: Job, *, event_type: str, state: Optional[str] = None, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     job.seq += 1
     return {

@@ -6,14 +6,8 @@ export const metadata = {
 
 export default function RegisterPage() {
   return (
-    <div style={{
-      position: "fixed", inset: 0, display: "flex",
-      alignItems: "center", justifyContent: "center",
-      background: "var(--bg)", zIndex: 9999, padding: "24px",
-    }}>
-      <div style={{ width: "100%", maxWidth: "520px", minHeight: "700px", flexShrink: 0 }}>
-        <RegisterCard />
-      </div>
+    <div style={{ width: "100%", maxWidth: "520px", flexShrink: 0 }}>
+      <RegisterCard />
     </div>
   );
 }

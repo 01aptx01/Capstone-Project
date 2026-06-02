@@ -8,7 +8,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
 from app.models import Product
@@ -35,7 +35,7 @@ def _product_to_dict(p: Product) -> dict:
 
 
 @admin_bp.route("/products", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_list_products():
     page, per_page = get_pagination_params()
     q = (request.args.get("q") or "").strip()
@@ -70,7 +70,7 @@ def admin_list_products():
 
 
 @admin_bp.route("/products/categories", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_list_product_categories():
     """Distinct `products.category` values present in the database (for admin filters)."""
     stmt = select(Product.category).distinct().order_by(Product.category)
@@ -80,7 +80,7 @@ def admin_list_product_categories():
 
 
 @admin_bp.route("/products", methods=["POST"])
-@admin_required
+@roles_required("admin")
 def admin_create_product():
     data = request.get_json(silent=True) or {}
     name = data.get("name")
@@ -113,7 +113,7 @@ def admin_create_product():
 
 
 @admin_bp.route("/products/<int:product_id>", methods=["PUT"])
-@admin_required
+@roles_required("admin")
 def admin_update_product(product_id: int):
     p = db.session.get(Product, product_id)
     if not p:
@@ -143,7 +143,7 @@ def admin_update_product(product_id: int):
 
 
 @admin_bp.route("/products/<int:product_id>", methods=["DELETE"])
-@admin_required
+@roles_required("admin")
 def admin_delete_product(product_id: int):
     p = db.session.get(Product, product_id)
     if not p:
