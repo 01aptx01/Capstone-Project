@@ -6,6 +6,7 @@
 // จัดการให้สามารถรองรับทั้งรูปภาพจริงผ่านลิงก์ URL หรือหากไม่มีรูป ให้วาดรูปการ์ตูนซาลาเปาเป็น SVG ด้วยสีพื้นหลังดีฟอลต์
 
 import Image from "next/image";
+import { resolveProductImageSrc } from "@/lib/resolve-product-image";
 
 interface BaoImageProps {
   item: { name: string; image: string }; // ออบเจกต์ที่มีข้อมูลชื่อและที่อยู่ของรูปภาพ (หรือสี)
@@ -31,15 +32,16 @@ export function BaoImage({ item, className = "" }: BaoImageProps) {
     item.image &&
     (item.image.startsWith("http") || item.image.startsWith("/"))
   ) {
+    const imageSrc = resolveProductImageSrc(item.image);
     return (
       <div className={`relative w-full h-full overflow-hidden ${className}`}>
         <Image
-          src={item.image}
+          src={imageSrc}
           alt={item.name}
           fill
-          className="object-cover"
+          className="object-cover object-center"
           sizes="(max-width: 768px) 100vw, 300px"
-          unoptimized // ข้ามขั้นตอนบีบอัดรูปภาพใน Dev Mode
+          unoptimized
         />
       </div>
     );

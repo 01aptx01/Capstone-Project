@@ -1,6 +1,7 @@
 "use client";
 import Image from 'next/image';
 import { Timer } from 'lucide-react';
+import { resolveProductImageSrc } from '../lib/resolve-product-image';
 
 export interface Product {
     id: number;
@@ -29,14 +30,17 @@ export default function ProductCard({ name, desc, price, heatingTime, image, cat
         <div className="product-card">
             {/* รูปภาพ */}
             <div className="product-image">
-                <Image
-                    src={image}
-                    alt={name}
-                    width={110}
-                    height={110}
-                    style={{ objectFit: 'cover' }}
-                    priority // โหลดรูปภาพด้วยความสำคัญสูงสุด (LCP Optimization)
-                />
+                <div className="product-image-media">
+                    <Image
+                        src={resolveProductImageSrc(image)}
+                        alt={name}
+                        fill
+                        sizes="110px"
+                        className="!object-cover !object-center"
+                        unoptimized
+                        priority
+                    />
+                </div>
                 {categoryLabel && (
                     <div className={`category-badge category-${category || 'meat'}`}>
                         {categoryLabel}
