@@ -16,6 +16,10 @@ from app.extensions import db
 from app.models import Coupon, Order
 
 from app.services.coupon_service import count_promotion_redemptions
+from app.services.promotion_catalog import (
+    compute_catalog_status,
+    parse_expire_date_input,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +38,7 @@ def _coupon_to_dict(c: Coupon) -> dict:
         pc = 0
     mu = int(getattr(c, "max_uses", 0) or 0)
     used = count_promotion_redemptions(c.promotion_id)
+    status = compute_catalog_status(bool(c.is_active), c.expire_date)
     return {
         "promotion_id": c.promotion_id,
         "code": c.code,
@@ -44,21 +49,8 @@ def _coupon_to_dict(c: Coupon) -> dict:
         "points_cost": int(pc),
         "max_uses": mu,
         "used_count": used,
+        "status": status,
     }
-
-
-def _parse_expire_date(raw):
-    if raw is None:
-        return None
-    if isinstance(raw, str):
-        s = raw.strip()
-        if not s:
-            return None
-        try:
-            return datetime.fromisoformat(s.replace("Z", "+00:00"))
-        except ValueError:
-            raise ValueError("invalid expire_date")
-    raise ValueError("expire_date must be a string or null")
 
 
 def _parse_points_cost(raw):
@@ -177,7 +169,7 @@ def admin_create_coupon():
         return jsonify({"error": discount_err}), 400
 
     try:
-        expire_date = _parse_expire_date(data.get("expire_date"))
+        expire_date = parse_expire_date_input(data.get("expire_date"))
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
@@ -250,7 +242,7 @@ def admin_update_coupon(promotion_id: int):
 
     if "expire_date" in data:
         try:
-            new_expire = _parse_expire_date(data.get("expire_date"))
+            new_expire = parse_expire_date_input(data.get("expire_date"))
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
     else:

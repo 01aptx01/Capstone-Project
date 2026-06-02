@@ -202,6 +202,7 @@ export type DictKey =
   | "coupon.label.discountPercent"
   | "coupon.label.points"
   | "coupon.label.expiry"
+  | "coupon.hint.expiryBangkok"
   | "coupon.label.active"
   | "coupon.option.fixed"
   | "coupon.option.percent"
@@ -830,6 +831,7 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.label.discountPercent": "เปอร์เซ็นต์ส่วนลด",
     "coupon.label.points": "แต้มที่ใช้แลก (points_cost)",
     "coupon.label.expiry": "หมดอายุ (เว้นว่าง = ไม่หมดอายุ)",
+    "coupon.hint.expiryBangkok": "วันหมดอายุนับถึงสิ้นวัน (23:59) ตามเวลาไทย",
     "coupon.label.active": "เปิดใช้งาน (active)",
     "coupon.option.fixed": "จำนวนเงิน (fixed_amount)",
     "coupon.option.percent": "เปอร์เซ็นต์ (percent)",
@@ -1457,6 +1459,7 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.label.discountPercent": "Discount percent",
     "coupon.label.points": "Points cost (points_cost)",
     "coupon.label.expiry": "Expiry (empty = none)",
+    "coupon.hint.expiryBangkok": "Expiry is end of that calendar day (23:59) in Thailand time",
     "coupon.label.active": "Active",
     "coupon.option.fixed": "Fixed amount (fixed_amount)",
     "coupon.option.percent": "Percent (percent)",

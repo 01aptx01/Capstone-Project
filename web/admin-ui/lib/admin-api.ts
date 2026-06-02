@@ -130,6 +130,8 @@ export type ApiCoupon = {
   max_uses?: number;
   /** นับจากออเดอร์ที่ไม่ใช่ pending/cancel/failed */
   used_count?: number;
+  /** คำนวณฝั่ง server: active | inactive | expired */
+  status?: string;
 };
 
 export type ApiCouponRedemption = {
