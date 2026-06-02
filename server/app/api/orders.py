@@ -1,5 +1,5 @@
 """
-orders.py — Customer order history and pickup (web-ui pre-order flow).
+orders.py — Customer order history, coupons, and redeem (web-ui).
 """
 
 import logging
@@ -16,16 +16,6 @@ orders_api = Blueprint("orders_api", __name__)
 
 def _validate_phone(phone: str) -> bool:
     return bool(phone and len(phone) == 10 and phone.isdigit())
-
-
-def _map_ui_status(db_status: str) -> str:
-    if db_status in ("ready_to_scan", "paid"):
-        return "ready_to_scan"
-    if db_status == "completed":
-        return "completed"
-    if db_status in ("dispensing",):
-        return "ready_to_scan"
-    return "completed"
 
 
 @orders_api.route("/api/members/<phone>/orders", methods=["GET"])
@@ -385,71 +375,3 @@ def reveal_coupon_code(phone: str, user_promo_id: int):
     except Exception as e:
         logger.error(f"[Orders] reveal_coupon_code error for {phone}/{user_promo_id}: {e}")
         return jsonify({"error": "server_error", "message": "ไม่สามารถดึงรหัสคูปองได้"}), 500
-
-
-@orders_api.route("/api/orders/<charge_id>/pickup", methods=["POST"])
-@member_required
-def pickup_order(charge_id: str):
-    data = request.get_json(silent=True) or {}
-    phone = (data.get("phone_number") or g.member_phone or "").strip()
-
-    if not _validate_phone(phone):
-        return jsonify({"error": "invalid_phone", "message": "เบอร์โทรไม่ถูกต้อง"}), 400
-
-    if phone != g.member_phone:
-        return jsonify({"error": "forbidden", "message": "ไม่มีสิทธิ์เข้าถึงออเดอร์นี้"}), 403
-
-    try:
-        with get_db_cursor() as (_, cur):
-            cur.execute(
-                """
-                SELECT o.order_id, o.status, o.user_id, u.phone_number
-                FROM orders o
-                LEFT JOIN users u ON u.user_id = o.user_id
-                WHERE o.charge_id = %s
-                """,
-                (charge_id,),
-            )
-            order = cur.fetchone()
-
-        if not order:
-            return jsonify({"error": "not_found", "message": "ไม่พบออเดอร์"}), 404
-
-        if order["status"] != "ready_to_scan":
-            return jsonify(
-                {
-                    "error": "invalid_status",
-                    "message": f"ออเดอร์ไม่พร้อมรับ (สถานะ: {order['status']})",
-                }
-            ), 409
-
-        if order["user_id"] and order["phone_number"] != phone:
-            return jsonify({"error": "forbidden", "message": "ออเดอร์ไม่ตรงกับบัญชี"}), 403
-
-        from app.api.buy import buy_controller
-
-        details = buy_controller.inventory_service.get_order_details_by_charge_id(
-            charge_id
-        )
-        if not details:
-            return jsonify({"error": "not_found", "message": "ไม่พบรายการสินค้า"}), 404
-
-        buy_controller.pending_orders[charge_id] = {
-            "cart": details["cart"],
-            "machine_code": details["machine_code"],
-            "fulfillment_mode": "pickup",
-        }
-        buy_controller.order_statuses[charge_id] = "paid"
-        success = buy_controller._execute_dispense(charge_id)
-
-        if success:
-            return jsonify(
-                {"status": "ok", "message": "กำลังจ่ายสินค้า กรุณารอรับที่ช่องรับ"}
-            ), 200
-        return jsonify(
-            {"error": "dispense_failed", "message": "ไม่สามารถจ่ายสินค้าได้ กรุณาติดต่อเจ้าหน้าที่"}
-        ), 500
-
-    except Exception as e:
-        logger.error(f"[Orders] pickup_order error for {charge_id}: {e}")
-        return jsonify({"error": "server_error", "message": "เกิดข้อผิดพลาดในระบบ"}), 500

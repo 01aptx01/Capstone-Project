@@ -112,29 +112,18 @@ Compose อ่าน `${VAR}` จาก **root `.env`** ตอน parse compose;
 | `NEXT_PUBLIC_SERVER_SOCKET_URL` | machine-ui browser   | มัก `http://localhost:8000`                                         |
 | `NEXT_PUBLIC_ADMIN_API_URL`     | build admin-ui       | มัก `http://localhost:8000`                                         |
 | `JWT_SECRET`                    | web-ui runtime       | ต้องตรงกับ server — middleware ตรวจ JWT สมาชิก                       |
-| `NEXT_PUBLIC_FULFILLMENT_MODE`  | build web-ui         | `immediate` (default) หรือ `pickup`                                 |
+| `AUTH_DEV_BYPASS`               | server (dev)         | `1` = รับ OTP 6 หลักใดๆ (ห้าม production)                           |
 
 - `SERVER_SOCKET_URL=http://server:8000` — agent → server Socket.IO (ภายใน Docker)
 - `NEXT_PUBLIC_API_URL=http://localhost:8000` — REST API จาก browser บน host
-- หลังชำระเงิน จ่ายของผ่าน **Socket.IO เท่านั้น** (`job.start`); ทดสอบมือ: `POST http://localhost:5000/jobs/start`
+- หลังชำระเงิน จ่ายของผ่าน **Socket.IO เท่านั้น** (`job.start`); health ของ agent ใช้ `AGENT_BASE_URL`
+- OTP สมาชิก: ไม่ตั้ง SMS provider ภายนอก — รหัส OTP โผล่ที่ **console ของ server** (หรือใช้ `AUTH_DEV_BYPASS=1` ตอนทดสอบ)
 
-### 3.4 ค่าใน `.env` vs ค่าบังคับใน `docker-compose.yml`
+### 3.4 ค่าใน `docker-compose.yml` ที่ควรรู้
 
-ใน [docker-compose.yml](docker-compose.yml) ส่วน `server.environment` **เขียนทับ** บางค่าจาก `.env`:
-
-
-| ค่าใน compose                                  | ผลต่อการรัน                                                                                                          |
-| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `DISPATCH_MODE=http`                           | server ส่งงานไป agent ผ่าน **HTTP** (`AGENT_URL`) ไม่ใช่ Socket `job.start`                                          |
-| `AGENT_URL=http://192.168.1.172:5000/dispense` | ชี้ IP LAN — บนเครื่อง dev เดียวอาจต้องแก้เป็น `http://client:5000/dispense` หรือ `http://host.docker.internal:5000` |
-
-
-ค่าใน `.env.example`: `DISPATCH_MODE=socket` — **จะไม่มีผลกับ server ใน Docker** จนกว่าจะเอา override ออกจาก compose หรือเปลี่ยนเป็น `${DISPATCH_MODE:-socket}`
-
-แนะนำสำหรับ dev บนเครื่องเดียว (agent ใน Docker):
-
-- ตั้ง root `.env`: `DISPATCH_MODE=socket`, `AGENT_URL=http://client:5000/dispense`
-- แก้ `docker-compose.yml` ให้ใช้ตัวแปรจาก `.env` แทน hardcode (ถ้าต้องการให้ socket dispatch ทำงานจริง)
+- `server.environment` ตั้ง `AGENT_BASE_URL`, `KIOSK_SOCKET_SECRET`, `CORS_ORIGINS` (มี default ใน compose)
+- `client` อ่าน `MACHINE_CODE` / `MACHINE_TOKEN` จาก root `.env` — **ไม่ใช้** `MACHINE_ID`
+- เปลี่ยน `NEXT_PUBLIC_*` ของ machine-ui / web-ui แล้วต้อง **rebuild** image (`docker compose up --build`)
 
 ---
 
@@ -383,7 +372,7 @@ DB_NAME=vending
 # เชื่อมพอร์ต 3307 — บางโค้ดใช้ DB_HOST+พอร์ตใน URI ผ่าน sqlalchemy_uri
 OMISE_SECRET_KEY=skey_test_...
 SOCKETIO_ENABLED=1
-DISPATCH_MODE=socket
+AGENT_BASE_URL=http://localhost:5000
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002
 ```
 
@@ -478,7 +467,7 @@ npm install
 npm run dev
 ```
 
-- OTP: ไม่ตั้ง Twilio → OTP โผล่ที่ **console ของ server**
+- OTP: รหัส OTP โผล่ที่ **console ของ server** (Mock SMS)
 - Dev: `AUTH_DEV_BYPASS=1` ใน root `.env` (server) รับ OTP 6 หลักใดๆ — **ห้ามใช้ production**
 
 Serve build ผ่าน server (legacy): mount `web/web-ui/build` ใน compose แล้วเปิด [http://localhost:8000/](http://localhost:8000/)
@@ -534,7 +523,7 @@ NEXT_PUBLIC_MACHINE_CODE=DEMO-01
 
 ## 16. สถานการณ์ J — ทดสอบ agent ด้วย HTTP
 
-เมื่อ `DISPATCH_MODE=http` หรือทดสอบมอเตอร์โดยตรง:
+ทดสอบมอเตอร์โดยตรงที่ agent (ไม่ผ่าน Omise):
 
 ```bash
 curl -X POST http://localhost:5000/jobs/start \
@@ -590,8 +579,7 @@ curl -X POST http://localhost:8000/api/buy/mock-pay \
 | `NEXT_PUBLIC_MACHINE_CODE` / kiosk secrets | แก้ `.env` → **rebuild** `machine-ui`                                |
 | Omise keys / `NEXT_PUBLIC_API_URL`      | rebuild `machine-ui`, `admin-ui`, `web-ui` (ถ้าเกี่ยว)             |
 | `JWT_SECRET`                            | แก้ root `.env` → restart `web-ui` (runtime, ไม่ต้อง rebuild)      |
-| `NEXT_PUBLIC_FULFILLMENT_MODE`          | rebuild `web-ui`                                                     |
-| `DISPATCH_MODE` / `AGENT_URL` ใน Docker | แก้ compose หรือ override ใน `server.environment` → restart `server` |
+| `AGENT_BASE_URL` / `KIOSK_SOCKET_SECRET` | แก้ root `.env` → restart `server` (และ rebuild machine-ui ถ้าเปลี่ยน kiosk secret) |
 
 
 ---
@@ -620,7 +608,7 @@ docker compose down -v
 
 ### Agent: `Connection refused by server` (Socket.IO) ซ้ำๆ
 
-**อาการ (server log):** รับ auth `{"machine_id":"DEMO-01","token":"..."}` แล้วส่ง packet `4` + `"Connection refused by server"`
+**อาการ (server log):** รับ auth `{"machine_code":"MP1-001","token":"..."}` แล้วส่ง packet `4` + `"Connection refused by server"`
 
 **สาเหตุ:** `_verify_machine_token_auth` ไม่ผ่าน — token ไม่ตรง bcrypt ใน DB, ตู้ไม่มี `secret_token_hash`, หรือ `machine_code` ผิด
 
@@ -658,8 +646,8 @@ docker compose down -v
 
 ### ชำระแล้วไม่จ่ายของ
 
-- Agent ไม่ได้ connect Socket (ข้างบน)
-- `DISPATCH_MODE=http` แต่ `AGENT_URL` ชี้ IP ผิด (compose hardcode `192.168.1.172`) — แก้ URL หรือใช้ `socket` + token ถูกต้อง
+- Agent ไม่ได้ connect Socket (ข้างบน) หรือ `MACHINE_TOKEN` ไม่ตรงตู้
+- `AGENT_BASE_URL` ชี้ agent ผิด (ใน Docker มัก `http://client:5000` จาก compose default)
 - ตู้ไม่มี slots / สต็อกหมด
 - `machine_code` ใน UI ไม่ตรงตู้ที่มีสต็อก
 

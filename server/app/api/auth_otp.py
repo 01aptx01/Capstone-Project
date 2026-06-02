@@ -1,5 +1,5 @@
 """
-auth_otp.py — OTP send/verify for web-ui member login (Twilio SMS or console fallback).
+auth_otp.py — OTP send/verify for web-ui member login (console SMS in dev).
 """
 
 import logging
