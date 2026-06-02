@@ -30,11 +30,18 @@ export function mapAdminAlertsToHeaderNotifications(
   const out: HeaderNotification[] = [];
 
   for (const ev of errs) {
-    const title =
+    let title =
       [ev.event_type, ev.state].filter(Boolean).join(" · ") || t("page.alerts.sectionErrors");
-    const body =
+    let body =
       `${t("page.alerts.machinePrefix")}${ev.machine_code}`.trim() +
       (ev.job_id ? ` · job ${ev.job_id}` : "");
+
+    if (ev.event_type === "Machine Modified") {
+      title = "การเปลี่ยนแปลงตู้สินค้า";
+      const adminName = ev.payload?.admin_name || "Admin";
+      body = `${adminName} ได้มีการเปลี่ยนแปลงตู้ ${ev.machine_code}`;
+    }
+
     out.push({
       id: `err-${ev.id}`,
       title,

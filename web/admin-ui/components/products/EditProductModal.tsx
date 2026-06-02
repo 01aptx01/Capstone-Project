@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { isAxiosError } from "axios";
 import Modal from "@/components/ui/Modal";
-import { updateProduct } from "@/lib/admin-api";
+import { updateProduct, deleteProduct } from "@/lib/admin-api";
 import { uiLabelToApiCategory } from "@/lib/admin-mappers";
 import { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
 import { useLang } from "@/lib/i18n/lang";
@@ -19,6 +19,8 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
   const { t } = useLang();
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     category: "meat",
@@ -33,6 +35,10 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
       : product && typeof product.product_id === "string"
         ? parseInt(product.product_id, 10)
         : NaN;
+
+  useEffect(() => {
+    if (!open) setShowDeleteConfirm(false);
+  }, [open]);
 
   useEffect(() => {
     if (product) {
@@ -51,6 +57,23 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
       });
     }
   }, [product]);
+
+  const handleDelete = async () => {
+    if (!Number.isFinite(productId)) return;
+    setDeleting(true);
+    try {
+      await deleteProduct(productId);
+      toast.success(t("deleteProduct.toastDeleted"));
+      window.dispatchEvent(new Event(ADMIN_PRODUCTS_REFRESH_EVENT));
+      onClose();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : t("deleteProduct.toastFailed");
+      toast.error(msg);
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +117,7 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
   };
 
   return (
+    <>
     <Modal open={open} onClose={onClose} title={t("editProduct.title")}>
       <div className="absolute top-0 right-0 -z-10 p-12 opacity-5 pointer-events-none">
         <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="text-[var(--primary)]">
@@ -187,7 +211,55 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
             {submitting ? t("editProduct.saving") : t("editProduct.save")}
           </button>
         </div>
+
+        <div className="pt-2 border-t border-[var(--border)]">
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={submitting || !Number.isFinite(productId)}
+            className="w-full px-6 py-4 rounded-[20px] text-[14px] font-black text-white bg-rose-500 hover:bg-rose-600 border-2 border-rose-600 shadow-[0_4px_14px_rgba(225,29,72,0.3)] hover:shadow-[0_6px_20px_rgba(225,29,72,0.4)] transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <i className="fi fi-rr-trash"></i>
+            {t("deleteProduct.button")}
+          </button>
+        </div>
       </form>
     </Modal>
+
+    <Modal
+      open={showDeleteConfirm}
+      onClose={() => setShowDeleteConfirm(false)}
+      title={t("deleteProduct.confirmTitle")}
+    >
+      <div className="space-y-6">
+        <div className="flex items-start gap-4 p-4 rounded-2xl bg-rose-50 border border-rose-200">
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+            <i className="fi fi-rr-triangle-warning text-rose-600 text-lg"></i>
+          </div>
+          <p className="text-[14px] font-bold text-rose-800 leading-relaxed">
+            {t("deleteProduct.confirmBody").replace("{name}", formData.name)}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(false)}
+            disabled={deleting}
+            className="flex-1 py-4 rounded-[20px] bg-[var(--surface-2)] text-[var(--text-muted)] font-black text-[14px] hover:bg-[var(--border)] transition-all disabled:opacity-50"
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleDelete()}
+            disabled={deleting}
+            className="flex-[2] py-4 rounded-[20px] bg-rose-600 text-white font-black text-[14px] hover:bg-rose-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {deleting ? t("deleteProduct.deleting") : t("deleteProduct.confirmYes")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  </>
   );
 }

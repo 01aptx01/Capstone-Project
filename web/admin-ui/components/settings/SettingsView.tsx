@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { applyDarkModeClass, getStoredDarkMode, setStoredDarkMode } from "@/lib/theme";
 import { useLang } from "@/lib/i18n/lang";
 import type { Lang } from "@/lib/i18n/dictionaries";
+import { inviteAdmin, listAdmins, revokeAdmin, type AdminListItem } from "@/lib/admin-api";
 
 // ── Portal wrapper ────────────────────────────────────────────────────────────
 function Portal({ children }: { children: React.ReactNode }) {
@@ -28,6 +29,24 @@ export default function SettingsView() {
   const { lang, setLang, t } = useLang();
   const [activeTab, setActiveTab] = useState("general");
   const [mounted, setMounted] = useState(false);
+  const [isAdminSuper, setIsAdminSuper] = useState(false);
+
+  // Decode JWT to check for superadmin email on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("admin_token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          if (payload && payload.email === "admin@modpao.com") {
+            setIsAdminSuper(true);
+          }
+        } catch (err) {
+          console.error("Error decoding admin token:", err);
+        }
+      }
+    }
+  }, []);
 
   // General
   const [notifications, setNotifications] = useState({ inventory: true, system: true });
@@ -41,15 +60,32 @@ export default function SettingsView() {
   // Admin Permissions
   const [isFirstAdmin] = useState(true);
   const [inviteForm, setInviteForm] = useState({ email: "", tempPassword: "" });
-  const [admins, setAdmins] = useState([
-    { id: 1, email: "manager@example.com", status: "Active" },
-    { id: 2, email: "newhire@example.com",  status: "Pending" },
-  ]);
+  const [admins, setAdmins] = useState<AdminListItem[]>([]);
+  const [loadingAdmins, setLoadingAdmins] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<{ id: number; email: string } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
   // Mount fade-in
   useEffect(() => { setMounted(true); }, []);
+
+  // Fetch admins list from DB when tab changes to admin
+  useEffect(() => {
+    if (activeTab !== "admin") return;
+    let active = true;
+    const fetchList = async () => {
+      setLoadingAdmins(true);
+      try {
+        const res = await listAdmins();
+        if (active) setAdmins(res.admins);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (active) setLoadingAdmins(false);
+      }
+    };
+    fetchList();
+    return () => { active = false; };
+  }, [activeTab]);
 
   // Init theme from storage
   useEffect(() => {
@@ -97,19 +133,33 @@ export default function SettingsView() {
     }
   };
 
-  const handleInvite = (e: React.FormEvent) => {
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteForm.email) return;
-    setAdmins(prev => [...prev, { id: Date.now(), email: inviteForm.email, status: "Pending" }]);
-    showToast(`Invitation sent to ${inviteForm.email}`);
-    setInviteForm({ email: "", tempPassword: "" });
+    if (!inviteForm.email || !inviteForm.tempPassword) return;
+    try {
+      await inviteAdmin(inviteForm.email, inviteForm.tempPassword);
+      showToast(`Invitation sent to ${inviteForm.email}`);
+      setInviteForm({ email: "", tempPassword: "" });
+      const updated = await listAdmins();
+      setAdmins(updated.admins);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      showToast(axiosErr?.response?.data?.error || "Failed to send invitation.");
+    }
   };
 
-  const confirmRevoke = () => {
+  const confirmRevoke = async () => {
     if (!revokeTarget) return;
-    setAdmins(prev => prev.filter(a => a.id !== revokeTarget.id));
-    showToast(`Access revoked for ${revokeTarget.email}`);
-    setRevokeTarget(null);
+    try {
+      await revokeAdmin(revokeTarget.id);
+      showToast(`Access revoked for ${revokeTarget.email}`);
+      setRevokeTarget(null);
+      const updated = await listAdmins();
+      setAdmins(updated.admins);
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      showToast(axiosErr?.response?.data?.error || "Failed to revoke access.");
+    }
   };
 
   const inputCls = "w-full px-4 py-3 border border-[var(--border)] rounded-xl focus:border-[var(--primary)] outline-none transition-all text-[14px] font-medium";
@@ -117,7 +167,7 @@ export default function SettingsView() {
   const tabs = [
     { id: "general", label: t("settings.tabs.general") },
     { id: "security", label: t("settings.tabs.security") },
-    { id: "admin", label: t("settings.tabs.admin") },
+    ...(isAdminSuper ? [{ id: "admin", label: t("settings.tabs.admin") }] : []),
   ];
 
   return (
@@ -216,8 +266,8 @@ export default function SettingsView() {
 
         {/* ── SECURITY TAB ── */}
         {activeTab === "security" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-left-4 duration-300">
-            <div className={`${cardCls} h-max`}>
+          <div className="max-w-[600px] animate-in slide-in-from-left-4 duration-300">
+            <div className={cardCls}>
               <h3 className="text-[18px] font-black text-[var(--text)] mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-orange-50 text-[var(--primary)] flex items-center justify-center text-xl">                <i className="fi fi-rr-lock" /></div>
                 {t("settings.password.title")}
@@ -246,50 +296,11 @@ export default function SettingsView() {
                 </button>
               </form>
             </div>
-
-            <div className={`${cardCls} h-max`}>
-              <h3 className="text-[18px] font-black text-[var(--text)] mb-6 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 text-[var(--primary)] flex items-center justify-center text-xl">                <i className="fi fi-rr-smartphone" /></div>
-                {t("settings.phone.title")}
-              </h3>
-              {phoneState.step === "success" ? (
-                <div className="bg-[var(--success-bg)] border border-emerald-200 text-emerald-700 p-6 rounded-2xl flex flex-col items-center gap-3 animate-in zoom-in-95">
-                  <i className="fi fi-rr-check-circle text-4xl" />
-                  <div className="font-bold">{t("settings.phone.successTitle")}</div>
-                  <div className="text-[14px]">{t("settings.phone.newLabel")} {phoneState.current}</div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl">
-                    <div className="text-[12px] font-bold text-[var(--text-muted)]">{t("settings.phone.currentLabel")}</div>
-                    <div className="font-black text-[var(--text)] text-[16px]">{phoneState.current}</div>
-                  </div>
-                  {phoneState.step === "input" && (
-                    <div className="animate-in slide-in-from-right-4">
-                      <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.phone.newField")}</label>
-                      <input type="text" placeholder={t("settings.phone.placeholder")} value={phoneState.newPhone} onChange={e => setPhoneState(s => ({ ...s, newPhone: e.target.value }))} className={`${inputCls} mb-4`} />
-                      <button onClick={handlePhoneSubmit} className="w-full py-3.5 bg-[var(--text)] text-[var(--primary-contrast)] font-bold rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">{t("settings.phone.sendOtp")}</button>
-                    </div>
-                  )}
-                  {phoneState.step === "otp" && (
-                    <div className="animate-in slide-in-from-right-4">
-                      <div className="text-[13px] text-[var(--text)] mb-4 font-medium">{t("settings.phone.otpHint")} <span className="font-bold text-[var(--primary)]">{phoneState.newPhone}</span></div>
-                      <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.phone.otpLabel")}</label>
-                      <input type="text" maxLength={6} value={phoneState.otp} onChange={e => setPhoneState(s => ({ ...s, otp: e.target.value }))} className={`${inputCls} text-center tracking-[0.5em] font-black text-xl mb-4`} />
-                      <div className="flex gap-3">
-                        <button onClick={() => setPhoneState(s => ({ ...s, step: "input" }))} className="px-6 py-3.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] font-bold rounded-xl hover:bg-[var(--surface-2)] transition-all">{t("common.cancel")}</button>
-                        <button onClick={handlePhoneSubmit} className="flex-1 py-3.5 bg-[var(--primary)] text-[var(--primary-contrast)] font-bold rounded-xl shadow-lg  hover:-translate-y-0.5 transition-all">{t("settings.phone.confirmOtp")}</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
         {/* ── ADMIN PERMISSIONS TAB ── */}
-        {activeTab === "admin" && (
+        {activeTab === "admin" && isAdminSuper && (
           <div className="animate-in slide-in-from-left-4 duration-300">
             {!isFirstAdmin ? (
               <div className="bg-rose-50 border border-rose-200 text-rose-700 p-8 rounded-2xl flex flex-col items-center gap-3">
@@ -334,31 +345,39 @@ export default function SettingsView() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-[var(--border)]">
-                          {admins.map(admin => (
-                            <tr key={admin.id} className="hover:bg-[var(--surface-2)] transition-colors">
-                              <td className="px-6 py-4 font-bold text-[var(--text)]">{admin.email}</td>
-                              <td className="px-6 py-4">
-                                {admin.status === "Active" ? (
-                                  <span className="px-3 py-1 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[12px] font-bold">Active</span>
-                                ) : (
-                                  <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[12px] font-bold">Pending</span>
-                                )}
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <button
-                                  onClick={() => setRevokeTarget({ id: admin.id, email: admin.email })}
-                                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--surface-1)] border border-rose-200 text-rose-500 hover:bg-rose-50 rounded-lg text-[13px] font-bold transition-all"
-                                >
-                                  <i className="fi fi-rr-ban text-[12px]" />
-                                  {t("settings.admin.revoke")}
-                                </button>
+                          {loadingAdmins ? (
+                            <tr>
+                              <td colSpan={3} className="px-6 py-8 text-center text-[var(--text-muted)] font-bold">
+                                <i className="fi fi-rr-spinner animate-spin mr-2" />
+                                Loading admins...
                               </td>
                             </tr>
-                          ))}
-                          {admins.length === 0 && (
+                          ) : admins.length === 0 ? (
                             <tr>
                               <td colSpan={3} className="px-6 py-8 text-center text-[var(--text-muted)] font-bold">{t("settings.admin.empty")}</td>
                             </tr>
+                          ) : (
+                            admins.map(admin => (
+                              <tr key={admin.id} className="hover:bg-[var(--surface-2)] transition-colors">
+                                <td className="px-6 py-4 font-bold text-[var(--text)]">{admin.email}</td>
+                                <td className="px-6 py-4">
+                                  {admin.status === "Active" ? (
+                                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[12px] font-bold">Active</span>
+                                  ) : (
+                                    <span className="px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[12px] font-bold">Pending</span>
+                                  )}
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <button
+                                    onClick={() => setRevokeTarget({ id: admin.id, email: admin.email })}
+                                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-[var(--surface-1)] border border-rose-200 text-rose-500 hover:bg-rose-50 rounded-lg text-[13px] font-bold transition-all"
+                                  >
+                                    <i className="fi fi-rr-ban text-[12px]" />
+                                    {t("settings.admin.revoke")}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))
                           )}
                         </tbody>
                       </table>
