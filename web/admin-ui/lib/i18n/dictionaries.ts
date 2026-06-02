@@ -424,6 +424,7 @@ export type DictKey =
   | "editMachine.save"
   | "addProduct.title"
   | "addProduct.errorInvalid"
+  | "addProduct.errorPriceMin"
   | "addProduct.toastCreated"
   | "addProduct.label.name"
   | "addProduct.placeholder.name"
@@ -455,6 +456,7 @@ export type DictKey =
   | "createCoupon.subtitle"
   | "createCoupon.errorRequired"
   | "createCoupon.errorDiscount"
+  | "createCoupon.errorPercentMax"
   | "createCoupon.errorPoints"
   | "createCoupon.errorFailed"
   | "createCoupon.placeholder.code"
@@ -888,7 +890,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.notInList": "(ไม่พบในรายการ)",
     "machine.detail.removeSlot": "ลบช่อง",
     "machine.detail.saveHint":
-      "ตู้: {code} — บันทึกจะแทนที่สต็อกทั้งหมดของตู้นี้ (สูงสุด {max} ช่อง)",
+      "ตู้: {code} — บันทึกจะแทนที่สต็อกทั้งหมดของตู้นี้ (สูงสุด {max} ช่อง) · จำนวน 0 = ตู้แสดง「สินค้าหมด」และซื้อไม่ได้",
     "page.alerts.export.errorsIncl": "รวมที่ resolve แล้ว",
     "page.alerts.export.errorsOnly": "เฉพาะที่ยังไม่ resolve",
     "page.alerts.export.lowThreshold": "เกณฑ์ quantity < {n}",
@@ -1052,6 +1054,7 @@ export const DICTS: Record<Lang, Dict> = {
     "editMachine.save": "บันทึกการแก้ไข",
     "addProduct.title": "เพิ่มสินค้าใหม่ในคลัง",
     "addProduct.errorInvalid": "กรอกชื่อและราคาให้ถูกต้อง",
+    "addProduct.errorPriceMin": "ราคาต้องเป็นจำนวนเต็มไม่น้อยกว่า {min} บาท",
     "addProduct.toastCreated": "เพิ่มสินค้าสำเร็จ",
     "addProduct.label.name": "ชื่อสินค้า",
     "addProduct.placeholder.name": "ชื่อสินค้า",
@@ -1083,6 +1086,7 @@ export const DICTS: Record<Lang, Dict> = {
     "createCoupon.subtitle": "สร้างคูปองใหม่ผ่าน API",
     "createCoupon.errorRequired": "กรุณากรอกรหัสคูปอง (Coupon Code)",
     "createCoupon.errorDiscount": "จำนวนส่วนลดต้องมากกว่า 0",
+    "createCoupon.errorPercentMax": "ส่วนลดแบบเปอร์เซ็นต์ต้องไม่เกิน 100%",
     "createCoupon.errorPoints": "แต้มที่ใช้แลกต้องเป็นจำนวนเต็มไม่น้อยกว่า 0",
     "createCoupon.errorFailed": "สร้างคูปองไม่สำเร็จ",
     "createCoupon.placeholder.code": "เช่น PAO2026",
@@ -1513,7 +1517,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.notInList": "(not in catalog)",
     "machine.detail.removeSlot": "Remove slot",
     "machine.detail.saveHint":
-      "Machine: {code} — saving replaces all stock for this machine (max {max} slots).",
+      "Machine: {code} — saving replaces all stock for this machine (max {max} slots). Qty 0 shows as sold out on the kiosk and cannot be purchased.",
     "page.alerts.export.errorsIncl": "Including resolved",
     "page.alerts.export.errorsOnly": "Unresolved only",
     "page.alerts.export.lowThreshold": "Threshold: quantity < {n}",
@@ -1677,6 +1681,7 @@ export const DICTS: Record<Lang, Dict> = {
     "editMachine.save": "Save changes",
     "addProduct.title": "Add new product",
     "addProduct.errorInvalid": "Please enter a valid name and price",
+    "addProduct.errorPriceMin": "Price must be a whole number of at least {min} THB",
     "addProduct.toastCreated": "Product created",
     "addProduct.label.name": "Product name",
     "addProduct.placeholder.name": "Product name",
@@ -1708,6 +1713,7 @@ export const DICTS: Record<Lang, Dict> = {
     "createCoupon.subtitle": "Create a coupon via API",
     "createCoupon.errorRequired": "Please enter the Coupon Code",
     "createCoupon.errorDiscount": "Discount value must be greater than 0",
+    "createCoupon.errorPercentMax": "Percentage discount cannot exceed 100%",
     "createCoupon.errorPoints": "Points must be a non-negative integer",
     "createCoupon.errorFailed": "Failed to create coupon",
     "createCoupon.placeholder.code": "e.g., PAO2026",
