@@ -17,6 +17,7 @@ from app.api.admin.security import (
     create_registration_token,
     decode_registration_token,
     hash_password,
+    validate_new_password,
     verify_password,
 )
 
@@ -87,6 +88,10 @@ def admin_register():
     if not reg_token or not new_password:
         return jsonify({"error": "Registration token and new password are required."}), 400
 
+    pw_err = validate_new_password(new_password)
+    if pw_err:
+        return jsonify({"error": pw_err}), 400
+
     try:
         payload = decode_registration_token(reg_token)
     except Exception:
@@ -126,6 +131,10 @@ def admin_invite():
 
     if not email or not temp_password:
         return jsonify({"error": "Email and temporary password are required."}), 400
+
+    pw_err = validate_new_password(temp_password)
+    if pw_err:
+        return jsonify({"error": pw_err}), 400
 
     existing = AdminUser.query.filter_by(email=email).first()
     if existing:
@@ -199,6 +208,41 @@ def admin_revoke(admin_id: int):
 # ---------------------------------------------------------------------------
 # GET /api/admin/auth/me (requires active admin)
 # ---------------------------------------------------------------------------
+
+@admin_bp.route("/auth/change-password", methods=["POST"])
+@roles_required("admin")
+def admin_change_password():
+    """Change password for the currently authenticated admin."""
+    data = request.get_json(silent=True) or {}
+    current_password = data.get("current_password") or ""
+    new_password = data.get("new_password") or ""
+
+    if not current_password:
+        return jsonify({"error": "Current password is required."}), 400
+
+    pw_err = validate_new_password(new_password)
+    if pw_err:
+        return jsonify({"error": pw_err}), 400
+
+    admin_id = _current_admin_id()
+    admin = AdminUser.query.get(admin_id)
+    if not admin:
+        return jsonify({"error": "Admin not found."}), 404
+
+    if not verify_password(current_password, admin.password_hash):
+        return jsonify({"error": "Current password is incorrect."}), 401
+
+    if verify_password(new_password, admin.password_hash):
+        return jsonify(
+            {"error": "New password must be different from the current password."}
+        ), 400
+
+    admin.password_hash = hash_password(new_password)
+    db.session.commit()
+
+    logger.info("🔑 Admin password changed: %s (id=%s)", admin.email, admin.id)
+    return jsonify({"ok": True, "message": "Password updated successfully."}), 200
+
 
 @admin_bp.route("/auth/me", methods=["GET"])
 @roles_required("admin")

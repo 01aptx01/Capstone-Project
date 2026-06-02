@@ -513,6 +513,12 @@ export type DictKey =
   | "settings.password.new"
   | "settings.password.confirm"
   | "settings.password.submit"
+  | "settings.password.submitting"
+  | "settings.password.hintMinLength"
+  | "settings.password.success"
+  | "settings.password.errorMismatch"
+  | "settings.password.errorMinLength"
+  | "settings.password.errorFailed"
   | "settings.phone.title"
   | "settings.phone.successTitle"
   | "settings.phone.newLabel"
@@ -1144,6 +1150,12 @@ export const DICTS: Record<Lang, Dict> = {
     "settings.password.new": "รหัสผ่านใหม่",
     "settings.password.confirm": "ยืนยันรหัสผ่านใหม่",
     "settings.password.submit": "เปลี่ยนรหัสผ่าน",
+    "settings.password.submitting": "กำลังบันทึก...",
+    "settings.password.hintMinLength": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+    "settings.password.success": "เปลี่ยนรหัสผ่านสำเร็จ",
+    "settings.password.errorMismatch": "รหัสผ่านใหม่กับยืนยันไม่ตรงกัน",
+    "settings.password.errorMinLength": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+    "settings.password.errorFailed": "เปลี่ยนรหัสผ่านไม่สำเร็จ",
     "settings.phone.title": "อัปเดตเบอร์โทรศัพท์",
     "settings.phone.successTitle": "อัปเดตเบอร์โทรศัพท์สำเร็จ",
     "settings.phone.newLabel": "เบอร์ใหม่:",
@@ -1772,6 +1784,12 @@ export const DICTS: Record<Lang, Dict> = {
     "settings.password.new": "New password",
     "settings.password.confirm": "Confirm new password",
     "settings.password.submit": "Change password",
+    "settings.password.submitting": "Saving...",
+    "settings.password.hintMinLength": "Password must be at least 6 characters",
+    "settings.password.success": "Password changed successfully",
+    "settings.password.errorMismatch": "New password and confirmation do not match",
+    "settings.password.errorMinLength": "Password must be at least 6 characters",
+    "settings.password.errorFailed": "Could not change password",
     "settings.phone.title": "Update phone number",
     "settings.phone.successTitle": "Phone number updated",
     "settings.phone.newLabel": "New number:",
