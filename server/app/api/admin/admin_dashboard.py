@@ -11,6 +11,12 @@ from app.api.admin.decorators import admin_required
 from app.extensions import db
 from app.models import Machine, Order, OrderItem, Product
 
+# สถานะที่ถือว่า "เงินเข้าจริง" — ใช้คิดยอดขาย/รายได้
+# เงินถูกตัดผ่าน Omise ตั้งแต่ order เป็น 'paid' แล้ว ดังนั้นต้องนับรวม
+# ทั้ง paid (จ่ายแล้ว รอจ่ายสินค้า), dispensing (กำลังจ่ายสินค้า) และ
+# completed (จ่ายสินค้าเสร็จ) — ไม่นับ refunded/cancelled/payment_failed/dispense_failed
+SALE_STATUSES = ("paid", "dispensing", "completed")
+
 
 def _to_float(v) -> float:
     if v is None:
@@ -27,11 +33,14 @@ def admin_dashboard_summary():
 
     total_sales_today = db.session.scalar(
         select(func.coalesce(func.sum(Order.total_price), 0))
-        .where(Order.status == "completed")
+        .where(Order.status.in_(SALE_STATUSES))
         .where(func.date(Order.created_at) == today)
     )
     active_machines = db.session.scalar(
         select(func.count(Machine.machine_code)).where(Machine.status == "online")
+    )
+    total_machines = db.session.scalar(
+        select(func.count(Machine.machine_code))
     )
     top_products = db.session.execute(
         select(
@@ -41,7 +50,7 @@ def admin_dashboard_summary():
         )
         .join(OrderItem, OrderItem.product_id == Product.product_id)
         .join(Order, Order.order_id == OrderItem.order_id)
-        .where(Order.status == "completed")
+        .where(Order.status.in_(SALE_STATUSES))
         .group_by(Product.product_id, Product.name)
         .order_by(func.sum(OrderItem.quantity).desc())
         .limit(5)
@@ -52,6 +61,7 @@ def admin_dashboard_summary():
             {
                 "total_sales_today": _to_float(total_sales_today),
                 "active_machines": int(active_machines or 0),
+                "total_machines": int(total_machines or 0),
                 "top_products": [
                     {
                         "product_id": int(r.product_id),

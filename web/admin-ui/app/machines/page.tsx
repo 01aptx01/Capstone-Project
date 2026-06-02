@@ -142,15 +142,15 @@ function MachinesPageClient() {
           {
             label: t("page.machines.stat.total"),
             value: loading ? "…" : machines.length,
-            icon: "fi-rr-vending-machine",
-            color: "bg-[var(--surface-2)]0",
+            icon: "fi-rr-box-alt",
+            color: "bg-blue-500",
             shadow: "shadow-blue-200",
           },
           {
             label: t("page.machines.stat.online"),
             value: loading ? "…" : operationalOnlineCount,
             icon: "fi-rr-check-circle",
-            color: "bg-[var(--success-bg)]0",
+            color: "bg-emerald-500",
             shadow: "shadow-emerald-200",
           },
           {
@@ -171,10 +171,10 @@ function MachinesPageClient() {
         ].map((stat, i) => (
           <div
             key={i}
-            className="vibrant-card p-6 flex items-center gap-5 hover:translate-y-[-4px] transition-transform duration-300"
+            className="vibrant-card p-6 flex items-center gap-5"
           >
             <div
-              className={`w-14 h-14 rounded-full ${stat.color} flex items-center justify-center text-xl text-[var(--primary-contrast)] shadow-lg ${stat.shadow}`}
+              className={`w-14 h-14 rounded-full ${stat.color} flex items-center justify-center text-xl text-white shadow-lg ${stat.shadow}`}
             >
               <i className={`fi ${stat.icon}`}></i>
             </div>

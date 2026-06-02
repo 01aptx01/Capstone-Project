@@ -39,6 +39,29 @@ export default function Header() {
   const { href, t, lang } = useLang();
   const [open, setOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{
+    first_name: string | null;
+    last_name: string | null;
+    email: string;
+    position: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const fetchUser = async () => {
+      try {
+        const { getMe } = await import("@/lib/admin-api");
+        const res = await getMe();
+        if (active && res && res.user) {
+          setCurrentUser(res.user);
+        }
+      } catch (err) {
+        console.error("Failed to load user in header:", err);
+      }
+    };
+    fetchUser();
+    return () => { active = false; };
+  }, []);
   const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
   const [loading, setLoading] = useState(false);
   const notificationReadIdsRef = useRef<Set<string>>(new Set());
@@ -427,8 +450,12 @@ export default function Header() {
               <Image src="/Pao.png" alt="Admin" width={32} height={32} />
             </div>
             <div className="name-wrapper">
-              <div className="name">Mod Pao</div>
-              <div className="role">Administrator</div>
+              <div className="name">
+                {currentUser
+                  ? `${currentUser.first_name || ""} ${currentUser.last_name || ""}`.trim() || "Mod Pao"
+                  : "Mod Pao"}
+              </div>
+              <div className="role">{currentUser?.position || "Administrator"}</div>
             </div>
             <i className={`fi fi-rr-angle-small-down transition-transform duration-300 ${profileOpen ? "rotate-180" : ""}`}></i>
           </div>
@@ -440,8 +467,12 @@ export default function Header() {
                   <Image src="/Pao.png" alt="Admin" width={48} height={48} />
                 </div>
                 <div className="info">
-                  <div className="full-name">Mod Pao Admin</div>
-                  <div className="email">admin@modpao.vending</div>
+                  <div className="full-name">
+                    {currentUser
+                      ? `${currentUser.first_name || ""} ${currentUser.last_name || ""}`.trim() || "Mod Pao Admin"
+                      : "Mod Pao Admin"}
+                  </div>
+                  <div className="email">{currentUser?.email || "admin@modpao.com"}</div>
                 </div>
               </div>
               

@@ -24,3 +24,22 @@ def ensure_promotions_max_uses(engine: sa.Engine) -> None:
         return
     with engine.begin() as conn:
         conn.execute(sa.text(stmt))
+
+
+def ensure_machines_created_by(engine: sa.Engine) -> None:
+    """Add machines.created_by if missing (e.g. volume created before migration)."""
+    insp = sa.inspect(engine)
+    if not insp.has_table("machines"):
+        return
+    col_names = {c["name"] for c in insp.get_columns("machines")}
+    if "created_by" in col_names:
+        return
+    dialect = engine.dialect.name
+    if dialect == "mysql":
+        stmt = "ALTER TABLE machines ADD COLUMN created_by INT NULL, ADD CONSTRAINT fk_machines_created_by FOREIGN KEY (created_by) REFERENCES admin_users(id) ON DELETE SET NULL"
+    elif dialect == "sqlite":
+        stmt = "ALTER TABLE machines ADD COLUMN created_by INTEGER NULL"
+    else:
+        return
+    with engine.begin() as conn:
+        conn.execute(sa.text(stmt))

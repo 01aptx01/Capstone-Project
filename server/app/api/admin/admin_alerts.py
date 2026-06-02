@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 
-from flask import jsonify, request
+from flask import jsonify, request, g
 from sqlalchemy import select
 
 from app.api.admin import admin_bp
@@ -41,9 +41,28 @@ def admin_alerts():
         .order_by(MachineSlot.quantity)
     ).all()
 
+    from sqlalchemy import or_
+    from app.models.admin_rbac import AdminUser
+    from app.models.machine import Machine
+
+    current_admin = AdminUser.query.get(g._admin_id)
+    is_super = current_admin and current_admin.email == "admin@modpao.com"
+    
+    if is_super:
+        my_machine_codes = None
+    else:
+        my_machine_codes = set(db.session.scalars(
+            select(Machine.machine_code).where(Machine.created_by == g._admin_id)
+        ).all())
+
     err_stmt = (
         select(MachineEvent)
-        .where(MachineEvent.state == "ERROR")
+        .where(
+            or_(
+                MachineEvent.state == "ERROR",
+                MachineEvent.event_type == "Machine Modified"
+            )
+        )
         .order_by(MachineEvent.created_at.desc())
         .limit(50)
     )
@@ -77,8 +96,10 @@ def admin_alerts():
                         "created_at": e.created_at.isoformat() if e.created_at else None,
                         "is_resolved": bool(e.is_resolved),
                         "resolved_at": e.resolved_at.isoformat() if e.resolved_at else None,
+                        "payload": e.payload_json,
                     }
                     for e in error_events
+                    if not (e.event_type == "Machine Modified" and e.payload_json and e.payload_json.get("admin_id") == g._admin_id)
                 ],
             }
         ),
