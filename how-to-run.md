@@ -1,58 +1,77 @@
-# How to run (Docker) — Smart Vending Capstone
+# วิธีรันโปรเจกต์ Smart Vending (ล่าสุด)
 
-This guide walks you through running the full stack with **Docker Compose**, configuring **environment variables**, **registering a vending machine** in the admin UI, and aligning the **hardware agent** and **machine UI** with that machine. It is written for developers on Windows, macOS, or Linux.
+คู่มือนี้เป็นจุดอ้างอิงหลักสำหรับ **วิธีรันทุกสถานการณ์** — Docker เต็มสแต็ก, พัฒนาแยกส่วน, ลงทะเบียนตู้, LAN/Raspberry Pi, ทดสอบชำระเงิน และแก้ปัญหา
 
----
-
-## Table of contents
-
-1. [What runs in Docker](#1-what-runs-in-docker)
-2. [Prerequisites](#2-prerequisites)
-3. [One-time environment setup](#3-one-time-environment-setup)
-4. [Start the stack](#4-start-the-stack)
-5. [Published URLs and ports](#5-published-urls-and-ports)
-6. [Verify the stack](#6-verify-the-stack)
-7. [Adding a new machine (“ตู้”) end-to-end](#7-adding-a-new-machine-ตู้-end-to-end)
-8. [Important notes about seeded data `MP1-001`](#8-important-notes-about-seeded-data-mp1-001)
-9. [Changing machine code after the first build](#9-changing-machine-code-after-the-first-build)
-10. [Stopping and cleaning up](#10-stopping-and-cleaning-up)
-11. [Raspberry Pi agent only](#11-raspberry-pi-agent-only-hardware-on-the-board)
-12. [Troubleshooting](#12-troubleshooting)
-13. [Reference files](#13-reference-files)
+ภาพรวมสถาปัตยกรรมและรายละเอียดโมดูล: [README2.md](README2.md) · ภาพรวมสั้น: [README.md](README.md)
 
 ---
 
-## 1. What runs in Docker
+## สารบัญ
 
-From [docker-compose.yml](docker-compose.yml), the default stack includes:
-
-| Service       | Role |
-|---------------|------|
-| `db`          | MySQL 8, schema + seed from [database/init.sql](database/init.sql) on **first** volume init |
-| `server`      | Flask API, Socket.IO gateway, Swagger; reads root [.env](.env) via `env_file` |
-| `client`      | Python hardware **agent** (simulated Pi in Docker); connects to `server` over the internal network |
-| `machine-ui`  | Next.js customer touchscreen UI (built with `NEXT_PUBLIC_*` inlined at **image build** time) |
-| `admin-ui`    | Next.js admin dashboard |
-| `swagger-ui`  | Swagger UI container pointing at [swagger.yaml](swagger.yaml) |
+1. [สิ่งที่รันในระบบ](#1-สิ่งที่รันในระบบ)
+2. [สิ่งที่ต้องมีก่อนเริ่ม](#2-สิ่งที่ต้องมีก่อนเริ่ม)
+3. [ตั้งค่า Environment ครั้งแรก](#3-ตั้งค่า-environment-ครั้งแรก)
+4. [สถานการณ์ A — Docker เต็มสแต็ก (แนะนำ)](#4-สถานการณ์-a--docker-เต็มสแต็ก-แนะนำ)
+5. [URL และพอร์ต](#5-url-และพอร์ต)
+6. [ตรวจว่าระบบขึ้นครบ](#6-ตรวจว่าระบบขึ้นครบ)
+7. [สถานการณ์ B — ลงทะเบียนตู้ใหม่ (agent + machine-ui)](#7-สถานการณ์-b--ลงทะเบียนตู้ใหม่-agent--machine-ui)
+8. [ข้อมูล seed `MP1-001`](#8-ข้อมูล-seed-mp1-001)
+9. [สถานการณ์ C — รีเซ็ตฐานข้อมูล](#9-สถานการณ์-c--รีเซ็ตฐานข้อมูล)
+10. [สถานการณ์ D — รันเฉพาะบาง service](#10-สถานการณ์-d--รันเฉพาะบาง-service)
+11. [สถานการณ์ E — พัฒนา Backend (Flask) แบบ local](#11-สถานการณ์-e--พัฒนา-backend-flask-แบบ-local)
+12. [สถานการณ์ F — พัฒนา machine-ui (hot reload)](#12-สถานการณ์-f--พัฒนา-machine-ui-hot-reload)
+13. [สถานการณ์ G — พัฒนา admin-ui (hot reload)](#13-สถานการณ์-g--พัฒนา-admin-ui-hot-reload)
+14. [สถานการณ์ H — พัฒนา web-ui สมาชิก](#14-สถานการณ์-h--พัฒนา-web-ui-สมาชิก)
+15. [สถานการณ์ I — Agent บน Raspberry Pi / LAN](#15-สถานการณ์-i--agent-บน-raspberry-pi--lan)
+16. [สถานการณ์ J — ทดสอบ agent ด้วย HTTP](#16-สถานการณ์-j--ทดสอบ-agent-ด้วย-http)
+17. [สถานการณ์ K — เปลี่ยนพอร์ต / หลายเครื่อง](#17-สถานการณ์-k--เปลี่ยนพอร์ต--หลายเครื่อง)
+18. [ทดสอบการชำระเงิน (Omise)](#18-ทดสอบการชำระเงิน-omise)
+19. [เปลี่ยนค่าหลัง build แล้ว](#19-เปลี่ยนค่าหลัง-build-แล้ว)
+20. [หยุดและลบข้อมูล](#20-หยุดและลบข้อมูล)
+21. [แก้ปัญหา (Troubleshooting)](#21-แก้ปัญหา-troubleshooting)
+22. [ไฟล์อ้างอิง](#22-ไฟล์อ้างอิง)
 
 ---
 
-## 2. Prerequisites
+## 1. สิ่งที่รันในระบบ
 
-- **Docker Desktop** (Windows/macOS) or **Docker Engine + Compose plugin** (Linux).
-- **Git** (to clone the repository).
-- **Omise test keys** if you want payments to work in test mode ([Omise dashboard](https://dashboard.omise.co/)).
-- Enough free RAM/disk for MySQL + Node builds (first `docker compose up --build` can take several minutes).
+จาก [docker-compose.yml](docker-compose.yml):
+
+
+| Service          | Container              | บทบาท                                                                                    |
+| ---------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| `db`             | vending-db             | MySQL 8 — schema/seed จาก [database/init.sql](database/init.sql) ครั้งแรกที่ volume ว่าง |
+| `server`         | vending-server         | Flask API + Socket.IO + Flasgger                                                         |
+| `client`         | vending-pi             | Hardware agent (จำลอง Pi ใน Docker)                                                      |
+| `machine-ui`     | vending-machine-ui     | Next.js หน้าจอลูกค้าที่ตู้                                                               |
+| `admin-ui`       | vending-admin-ui       | Next.js แดชบอร์ดแอดมิน                                                                   |
+| `web-ui`         | vending-web-ui         | Next.js แอปสมาชิก (OTP, แต้ม, redeem)                                                    |
+| `swagger-ui`     | vending-swagger-ui     | Swagger UI จาก [swagger.yaml](swagger.yaml)                                              |
+| `compose-banner` | vending-compose-banner | พิมพ์ตาราง URL ตอน start                                                                 |
+
+
+**รันแยก (hot reload):** `web/web-ui` — ใช้ `npm run dev` ตาม [§14](#14-สถานการณ์-h--พัฒนา-web-ui-สมาชิก) แทน container
 
 ---
 
-## 3. One-time environment setup
+## 2. สิ่งที่ต้องมีก่อนเริ่ม
 
-### 3.1 Create the root `.env`
+- **Docker Desktop** (Windows/macOS) หรือ **Docker Engine + Compose** (Linux)
+- **Git**
+- **Node.js 22+** และ **npm** — ถ้ารัน frontend แบบ `npm run dev`
+- **Python 3.10+** — ถ้ารัน server/agent แบบ local
+- **Omise test keys** — ถ้าต้องการทดสอบชำระเงิน ([Omise Dashboard](https://dashboard.omise.co/))
+- RAM/ดิสก์พอสำหรับ MySQL + build Next.js ครั้งแรก (อาจใช้เวลาหลายนาที)
 
-At the **repository root** (same folder as [docker-compose.yml](docker-compose.yml)):
+---
 
-**Windows (PowerShell or CMD):**
+## 3. ตั้งค่า Environment ครั้งแรก
+
+### 3.1 สร้าง `.env` ที่ root
+
+โฟลเดอร์เดียวกับ [docker-compose.yml](docker-compose.yml):
+
+**Windows (PowerShell / CMD):**
 
 ```bat
 copy .env.example .env
@@ -64,89 +83,99 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-Compose substitutes `${VARIABLE}` values from this **root** `.env` when parsing [docker-compose.yml](docker-compose.yml). The agent container does **not** automatically load `client/agent/.env` for Compose overrides unless you wire that yourself; for Docker, **prefer the root `.env`**.
+Compose อ่าน `${VAR}` จาก **root `.env`** ตอน parse compose; service `server` โหลด `.env` ผ่าน `env_file` ด้วย
 
-### 3.2 Minimum variables to edit
+> ใน Docker **ไม่ใช้** `client/agent/.env` เป็นหลัก — ใส่ `MACHINE_CODE` / `MACHINE_TOKEN` ที่ **root `.env`**
 
-Open `.env` in an editor and set at least:
+### 3.2 ค่าขั้นต่ำที่ต้องแก้
 
-| Variable | Purpose |
-|----------|---------|
-| `NEXT_PUBLIC_OMISE_PUBLIC_KEY` | Omise public key (browser / Next.js builds) |
-| `OMISE_SECRET_KEY` | Omise secret key (Flask server) |
 
-Database defaults in [.env.example](.env.example) match Compose (`DB_HOST=db`, `DB_USER=root`, `DB_PASSWORD=root`, `DB_NAME=vending`). Change them only if you change MySQL in [docker-compose.yml](docker-compose.yml).
+| ตัวแปร                         | ใช้กับ                              |
+| ------------------------------ | ----------------------------------- |
+| `NEXT_PUBLIC_OMISE_PUBLIC_KEY` | build machine-ui + Omise ใน browser |
+| `OMISE_SECRET_KEY`             | Flask server                        |
 
-### 3.3 Machine-related variables (after you create a machine in Admin)
 
-You will set these in **Section 7**. Summary:
+ค่า DB ใน [.env.example](.env.example) ตรงกับ Compose: `DB_HOST=db`, user/pass `root`, `DB_NAME=vending`
 
-| Variable | Used by | Purpose |
-|----------|---------|---------|
-| `MACHINE_CODE` | `client` service | Must equal `machines.machine_code` in MySQL |
-| `MACHINE_TOKEN` | `client` service | Plaintext token returned once from Admin “Create machine”; server stores bcrypt hash |
-| `NEXT_PUBLIC_MACHINE_CODE` | **machine-ui image build** | Socket.IO room for the kiosk UI; baked at **build** time |
-| `KIOSK_SOCKET_SECRET` | **server** | Required — locks kiosk Socket.IO connections |
-| `NEXT_PUBLIC_KIOSK_SOCKET_SECRET` | **machine-ui build** | Must match `KIOSK_SOCKET_SECRET` exactly |
+### 3.3 ตัวแปรเกี่ยวกับตู้ (หลังสร้างตู้ใน Admin)
 
-Other useful entries (see [.env.example](.env.example)):
+| ตัวแปร                          | ใช้โดย               | หมายเหตุ                                                            |
+| ------------------------------- | -------------------- | ------------------------------------------------------------------- |
+| `MACHINE_CODE`                  | service `client`     | ต้องตรง `machines.machine_code` (compose ส่งเป็น env ให้ agent)     |
+| `MACHINE_TOKEN`                 | service `client`     | plaintext จาก Admin ตอนสร้างตู้ (**แสดงครั้งเดียว**)                |
+| `NEXT_PUBLIC_MACHINE_CODE`      | **build** machine-ui | เปลี่ยนแล้วต้อง **rebuild** image                                   |
+| `KIOSK_SOCKET_SECRET`           | **server**           | บังคับเมื่อเปิด Socket.IO — ล็อก kiosk Socket                      |
+| `NEXT_PUBLIC_KIOSK_SOCKET_SECRET` | **build** machine-ui | ต้องตรง `KIOSK_SOCKET_SECRET`                                      |
+| `SERVER_SOCKET_URL`             | agent ใน Docker      | ค่าแนะนำ: `http://server:8000`                                      |
+| `NEXT_PUBLIC_API_URL`           | build machine-ui     | URL ที่ **browser บน host** เรียก API (มัก `http://localhost:8000`) |
+| `NEXT_PUBLIC_SERVER_SOCKET_URL` | machine-ui browser   | มัก `http://localhost:8000`                                         |
+| `NEXT_PUBLIC_ADMIN_API_URL`     | build admin-ui       | มัก `http://localhost:8000`                                         |
+| `JWT_SECRET`                    | web-ui runtime       | ต้องตรงกับ server — middleware ตรวจ JWT สมาชิก                       |
+| `AUTH_DEV_BYPASS`               | server (dev)         | `1` = รับ OTP 6 หลักใดๆ (ห้าม production)                           |
 
-- `SERVER_SOCKET_URL=http://server:8000` — agent → server Socket.IO (inside Docker).
-- `NEXT_PUBLIC_API_URL=http://localhost:8000` — REST API from the host browser.
-- `NEXT_PUBLIC_SERVER_SOCKET_URL` — optional; defaults to `NEXT_PUBLIC_API_URL`.
-- Dispense after payment uses **Socket.IO only** (`job.start`); manual test: `POST http://localhost:5000/jobs/start`.
+- `SERVER_SOCKET_URL=http://server:8000` — agent → server Socket.IO (ภายใน Docker)
+- `NEXT_PUBLIC_API_URL=http://localhost:8000` — REST API จาก browser บน host
+- หลังชำระเงิน จ่ายของผ่าน **Socket.IO เท่านั้น** (`job.start`); health ของ agent ใช้ `AGENT_BASE_URL`
+- OTP สมาชิก: ไม่ตั้ง SMS provider ภายนอก — รหัส OTP โผล่ที่ **console ของ server** (หรือใช้ `AUTH_DEV_BYPASS=1` ตอนทดสอบ)
+
+### 3.4 ค่าใน `docker-compose.yml` ที่ควรรู้
+
+- `server.environment` ตั้ง `AGENT_BASE_URL`, `KIOSK_SOCKET_SECRET`, `CORS_ORIGINS` (มี default ใน compose)
+- `client` อ่าน `MACHINE_CODE` / `MACHINE_TOKEN` จาก root `.env` — **ไม่ใช้** `MACHINE_ID`
+- เปลี่ยน `NEXT_PUBLIC_*` ของ machine-ui / web-ui แล้วต้อง **rebuild** image (`docker compose up --build`)
 
 ---
 
-## 4. Start the stack
+## 4. สถานการณ์ A — Docker เต็มสแต็ก (แนะนำ)
 
-From the repository root:
+ที่ root โปรเจกต์:
 
 ```bash
 docker compose up --build
 ```
 
-- First run: MySQL initializes from [database/init.sql](database/init.sql); the `db` service exposes **host port `3307`** → container `3306`.
-- Wait until logs show the database healthy and the server responding (Compose defines healthchecks for `db` and `server`).
+- ครั้งแรก: MySQL init จาก `init.sql`, พอร์ต host **3307** → container 3306
+- รอ healthcheck ของ `db` และ `server` ผ่าน
 
-**Detached mode** (background):
+**รันเบื้องหลัง:**
 
 ```bash
 docker compose up --build -d
 ```
 
-**Follow agent logs:**
+**ดู log agent:**
 
 ```bash
 docker logs -f vending-pi
 ```
 
----
+**Log แยกบรรทัด (ไม่รวม prefix):**
 
-## 5. Published URLs and ports
-
-These are the **host** URLs (from your machine running Docker):
-
-| Resource | URL |
-|----------|-----|
-| Customer UI (machine-ui) | [http://localhost:3000](http://localhost:3000) |
-| Admin UI | [http://localhost:3001](http://localhost:3001) |
-| API + Socket.IO | [http://localhost:8000](http://localhost:8000) |
-| API docs (Flasgger) | [http://localhost:8000/apidocs](http://localhost:8000/apidocs) |
-| Hardware agent (Docker) | [http://localhost:5000](http://localhost:5000) |
-| Swagger UI (static OpenAPI) | [http://localhost:8081](http://localhost:8081) |
-| MySQL (from host) | `localhost:3307` (user `root`, password from compose / `.env`) |
-
-Internal-only hostname **`server`** is reachable from other containers (e.g. agent uses `http://server:8000` for Socket.IO).
+```bash
+docker compose up --build --no-log-prefix
+```
 
 ---
 
-## 6. Verify the stack
+## 5. URL และพอร์ต
 
-1. **API health:** open [http://localhost:8000/health](http://localhost:8000/health) — expect a small JSON OK payload.
-2. **Customer UI:** open [http://localhost:3000](http://localhost:3000).
-3. **Admin UI:** open [http://localhost:3001](http://localhost:3001).
-4. **Database:** optional — connect with any MySQL client to `127.0.0.1:3307` using credentials from `.env` / compose.
+จาก **เครื่อง host** ที่รัน Docker:
+
+
+| ทรัพยากร                  | URL                                                            |
+| ------------------------- | -------------------------------------------------------------- |
+| machine-ui (ลูกค้าที่ตู้) | [http://localhost:3000](http://localhost:3000)                 |
+| admin-ui                  | [http://localhost:3001](http://localhost:3001)                 |
+| web-ui (สมาชิก)           | [http://localhost:3002](http://localhost:3002)                 |
+| API + Socket.IO           | [http://localhost:8000](http://localhost:8000)                 |
+| Flasgger                  | [http://localhost:8000/apidocs](http://localhost:8000/apidocs) |
+| Hardware agent            | [http://localhost:5000](http://localhost:5000)                 |
+| Swagger UI                | [http://localhost:8081](http://localhost:8081)                 |
+| MySQL                     | `127.0.0.1:3307` (user `root`, password ตาม compose)           |
+
+
+ภายใน Docker network: hostname `**server`** (เช่น agent ใช้ `http://server:8000` สำหรับ Socket.IO)
 
 ### 6.1 End-to-end purchase checklist (Socket-only flow)
 
@@ -194,52 +223,60 @@ Use this after [.env](.env) matches [.env.example](.env.example) and you complet
 
 ---
 
-## 7. Adding a new machine (“ตู้”) end-to-end
+## 6. ตรวจว่าระบบขึ้นครบ
 
-A **machine** is a row in the `machines` table (`machine_code` primary key). The admin API creates the row and a **one-time `secret_token`**; the server stores **only** `secret_token_hash` (bcrypt). Socket.IO machine auth is implemented in [server/app/realtime/socketio_gateway.py](server/app/realtime/socketio_gateway.py).
+1. [http://localhost:8000/health](http://localhost:8000/health) — JSON OK
+2. [http://localhost:3000](http://localhost:3000) — machine-ui
+3. [http://localhost:3001](http://localhost:3001) — admin-ui
+4. [http://localhost:3002](http://localhost:3002) — web-ui (สมาชิก)
+5. (ถ้ามี token ตู้) `docker logs vending-pi` — ควรเห็น `✅ [WS] connected` หรือ `[SocketIO] machine connected: <code>` ที่ฝั่ง server
 
-### Step 1 — Start the stack
+**ตรวจ agent + Socket.IO สำเร็จ:**
 
-Ensure `docker compose up --build` is running and services are healthy (Section 4–6).
+- Server log: `✅ [SocketIO] machine connected: DEMO-01 ...`
+- ไม่มี loop `Connection refused by server` ซ้ำๆ (ดู [§21](#21-แก้ปัญหา-troubleshooting))
 
-### Step 2 — Open Admin and create a machine
+---
 
-1. Go to [http://localhost:3001](http://localhost:3001).
-2. **Login:** the current admin login UI is a **placeholder** (see [web/admin-ui/components/auth/LoginCard.tsx](web/admin-ui/components/auth/LoginCard.tsx)); submit the form to enter the app.
-3. Navigate to **Machines**.
-4. Use **Create / Add machine** (calls `POST /api/admin/machines` — see [server/app/api/admin/admin_machines.py](server/app/api/admin/admin_machines.py)).
-5. Enter a **`machine_code`** (max 20 characters, must **not** already exist). Example: `DEMO-01`.
-6. After success, the UI shows:
-   - `machine_code`
-   - **`secret_token`** (plaintext, **shown once**)
+## 7. สถานการณ์ B — ลงทะเบียนตู้ใหม่ (agent + machine-ui)
 
-**Copy both values to a safe place immediately.**
+ตู้ = แถวใน `machines` (`machine_code` เป็น PK). Admin สร้างแถว + `**secret_token` แสดงครั้งเดียว**; server เก็บแค่ `secret_token_hash` (bcrypt) — ดู [socketio_gateway.py](server/app/realtime/socketio_gateway.py)
 
-### Step 3 — Configure the Docker agent (`client` / `vending-pi`)
+### ขั้นที่ 1 — สตาร์ทสแต็ก
 
-In the **root** `.env` set:
+ตาม [§4](#4-สถานการณ์-a--docker-เต็มสแต็ก-แนะนำ) ให้ service พร้อม
+
+### ขั้นที่ 2 — สร้างตู้ใน Admin
+
+1. เปิด [http://localhost:3001](http://localhost:3001)
+2. Login: UI ยังเป็น **placeholder** — ส่งฟอร์มเพื่อเข้าแอป
+3. ไป **Machines** → **Create / Add machine** (`POST /api/admin/machines`)
+4. ใส่ `machine_code` (สูงสุด 20 ตัวอักษร, ห้ามซ้ำ) เช่น `DEMO-01`
+5. **คัดลอกทันที:** `machine_code` + `**secret_token` (plaintext)**
+
+### ขั้นที่ 3 — ตั้ง agent
+
+ใน **root `.env`:**
 
 ```env
 MACHINE_CODE=DEMO-01
-MACHINE_TOKEN=<paste secret_token from Admin>
+MACHINE_TOKEN=<วาง secret_token จาก Admin>
 ```
 
-Apply changes by rebuilding/restarting the agent:
+รีสตาร์ท agent (โหลด env ใหม่):
 
 ```bash
 docker compose up -d --build client
 ```
 
-Or restart the full stack.
+**สำเร็จ:** log server มี `machine connected: DEMO-01`; log agent มี `[WS] connected`
 
-**Expected behavior:**
+**ล้มเหลว:** server ส่ง `Connection refused by server` — token ผิด / ตู้ไม่มี hash / ไม่ได้ restart client หลังแก้ `.env`  
+ถ้า credentials ผิด agent จะ **retry ทุก 30 วินาที** จนกว่า `MACHINE_TOKEN` จะถูก
 
-- On success, agent logs should indicate a WebSocket / Socket.IO connection to the server.
-- On bad credentials, agent logs authentication failure and **retries every 30s** until `MACHINE_TOKEN` is fixed.
+### ขั้นที่ 4 — ตั้ง Kiosk secret + machine-ui ให้ตรงตู้
 
-### Step 4 — Kiosk secret + machine-ui `machine_code`
-
-In the **root** `.env` (generate once: `openssl rand -hex 32`):
+ใน **root `.env`:** (สร้างครั้งเดียว เช่น `openssl rand -hex 32`)
 
 ```env
 KIOSK_SOCKET_SECRET=<your-secret>
@@ -247,141 +284,388 @@ NEXT_PUBLIC_KIOSK_SOCKET_SECRET=<same-value>
 NEXT_PUBLIC_MACHINE_CODE=DEMO-01
 ```
 
-Because Next.js inlines `NEXT_PUBLIC_*` at **build** time, you must **rebuild** the machine-ui image after changing this value:
+Rebuild (Next ฝัง `NEXT_PUBLIC_*` ตอน build):
 
 ```bash
 docker compose build --no-cache machine-ui
 docker compose up -d machine-ui
 ```
 
-Or:
+หรือ `docker compose up --build` ทั้งสแต็ก
+
+### ขั้นที่ 5 — สต็อกช่อง
+
+Seed มีสต็อกเฉพาะ `**MP1-001**` — ตู้ใหม่ต้องเพิ่ม **machine slots** ใน Admin ก่อนซื้อจริง
+
+---
+
+## 8. ข้อมูล seed `MP1-001`
+
+- [database/init.sql](database/init.sql) ใส่ตู้ `MP1-001` พร้อม **bcrypt hash** สำหรับ dev token **`dev-machine-token`** (ตั้ง `MACHINE_TOKEN=dev-machine-token` ใน root `.env` หรือ Pi)
+- volume เก่าอาจยังมี hash ไม่ถูกต้อง (เช่น `'001'`) — Socket auth ล้มเหลวจนกว่าจะสร้างตู้ใหม่ใน Admin, `docker compose down -v`, หรืออัปเดต hash เอง
+- สร้างตู้ชื่อ `MP1-001` ซ้ำใน Admin ไม่ได้ (409)
+- ค่า default ใน compose/Dockerfile: `MACHINE_CODE` / `NEXT_PUBLIC_MACHINE_CODE` = `MP1-001` — เปลี่ยน `KIOSK_SOCKET_SECRET` ใน production
+
+---
+
+## 9. สถานการณ์ C — รีเซ็ตฐานข้อมูล
 
 ```bash
+docker compose down -v
 docker compose up --build
 ```
 
-(which rebuilds services whose build context changed).
-
-### Step 5 — Inventory (slots)
-
-The seed in [database/init.sql](database/init.sql) only pre-fills slots for **`MP1-001`**. A **new** `machine_code` has **no slots** until you add them in Admin (inventory / machine slots, depending on your UI). Add products to slots before expecting a full purchase flow.
+`-v` ลบ volume `db_data` — ข้อมูล MySQL หาย, `init.sql` รันใหม่ครั้งถัดไป
 
 ---
 
-## 8. Important notes about seeded data `MP1-001`
+## 10. สถานการณ์ D — รันเฉพาะบาง service
 
-- Fresh DB from [database/init.sql](database/init.sql) stores a **bcrypt** hash for dev plaintext token **`dev-machine-token`** (set `MACHINE_TOKEN=dev-machine-token` on Pi or Docker `client`).
-- Older volumes may still have invalid hash `'001'` — Pi Socket auth will fail until you **recreate the machine in Admin**, run `docker compose down -v` for a fresh DB, or update `secret_token_hash` manually.
-- You **cannot** create another machine with the same `machine_code` via Admin (duplicate / 409).
-- Default Compose uses **`MP1-001`** for `MACHINE_CODE` / `NEXT_PUBLIC_MACHINE_CODE` and a dev `KIOSK_SOCKET_SECRET` default — change both secrets in production.
+```bash
+# เฉพาะ DB + API
+docker compose up -d db server
+
+# Frontend
+docker compose up -d machine-ui admin-ui web-ui
+
+# Agent (หลังตั้ง MACHINE_CODE / MACHINE_TOKEN)
+docker compose up -d --build client
+
+# Swagger
+docker compose up -d swagger-ui
+```
+
+แก้ Omise หรือ URL ของ frontend → **rebuild** image ที่เกี่ยวข้อง
 
 ---
 
-## 9. Changing machine code after the first build
+## 11. สถานการณ์ E — พัฒนา Backend (Flask) แบบ local
 
-| Change | Action |
-|--------|--------|
-| `MACHINE_CODE` / `MACHINE_TOKEN` | Edit root `.env`, then `docker compose up -d --build client` |
-| `NEXT_PUBLIC_MACHINE_CODE` / kiosk secrets | Edit root `.env`, then **rebuild** `machine-ui` (Section 7 Step 4) |
-| Omise or API URL build args | Rebuild affected frontend images |
+### 11.1 MySQL จาก Docker อย่างเดียว
+
+```bash
+docker compose up -d db
+```
+
+### 11.2 รัน server บน host
+
+```bash
+cd server
+python -m venv .venv
+```
+
+**Windows:** `.venv\Scripts\activate`  
+**macOS/Linux:** `source .venv/bin/activate`
+
+```bash
+pip install -r requirements.txt
+```
+
+ตั้ง env (หรือใช้ root `.env` แต่แก้ host):
+
+```env
+DB_HOST=127.0.0.1
+DB_USER=root
+DB_PASSWORD=root
+DB_NAME=vending
+# ถ้า MySQL จาก compose บน host:
+# เชื่อมพอร์ต 3307 — บางโค้ดใช้ DB_HOST+พอร์ตใน URI ผ่าน sqlalchemy_uri
+OMISE_SECRET_KEY=skey_test_...
+SOCKETIO_ENABLED=1
+AGENT_BASE_URL=http://localhost:5000
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,http://localhost:3002
+```
+
+```bash
+python main.py
+```
+
+API: [http://localhost:8000](http://localhost:8000)
+
+### 11.3 Migration (schema หลัง init.sql)
+
+```bash
+cd server
+flask db upgrade
+```
+
+(ต้องตั้ง `FLASK_APP` ตามที่โปรเจกต์ใช้ — มัก `wsgi.py` หรือ factory)
 
 ---
 
-## 10. Stopping and cleaning up
+## 12. สถานการณ์ F — พัฒนา machine-ui (hot reload)
 
-**Stop containers (keep volumes):**
+```bash
+docker compose up -d db server
+cd web/machine-ui
+npm install
+```
+
+สร้าง `web/machine-ui/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_SERVER_SOCKET_URL=http://localhost:8000
+NEXT_PUBLIC_OMISE_PUBLIC_KEY=pkey_test_...
+NEXT_PUBLIC_MACHINE_CODE=DEMO-01
+```
+
+```bash
+npm run dev
+```
+
+เปิด [http://localhost:3000](http://localhost:3000) — แก้โค้ดแล้ว refresh ได้ **ไม่ต้อง rebuild Docker**
+
+---
+
+## 13. สถานการณ์ G — พัฒนา admin-ui (hot reload)
+
+```bash
+docker compose up -d db server
+cd web/admin-ui
+npm install
+```
+
+`.env.local`:
+
+```env
+NEXT_PUBLIC_ADMIN_API_URL=http://localhost:8000
+```
+
+```bash
+npx next dev -p 3001
+```
+
+เปิด [http://localhost:3001](http://localhost:3001) — ไม่ชน machine-ui ที่พอร์ต 3000
+
+---
+
+## 14. สถานการณ์ H — พัฒนา web-ui สมาชิก
+
+### 14.1 Docker (production build ใน Compose)
+
+รวมใน `docker compose up --build` — เปิด [http://localhost:3002](http://localhost:3002)
+
+- Build args ฝัง `NEXT_PUBLIC_*` ตอน build (เปลี่ยนแล้ว rebuild: `docker compose build --no-cache web-ui`)
+- Runtime: `JWT_SECRET` ใน root `.env` ต้องตรงกับ server (middleware ตรวจ JWT)
+
+```bash
+docker compose up -d --build web-ui
+```
+
+### 14.2 Local dev (hot reload)
+
+```bash
+docker compose up -d db server
+cd web/web-ui
+npm install
+```
+
+`.env.local` — ชี้ `NEXT_PUBLIC_API_URL=http://localhost:8000` และ `JWT_SECRET` ให้ตรง server
+
+```bash
+npm run dev
+```
+
+- OTP: รหัส OTP โผล่ที่ **console ของ server** (Mock SMS)
+- Dev: `AUTH_DEV_BYPASS=1` ใน root `.env` (server) รับ OTP 6 หลักใดๆ — **ห้ามใช้ production**
+
+Serve build ผ่าน server (legacy): mount `web/web-ui/build` ใน compose แล้วเปิด [http://localhost:8000/](http://localhost:8000/)
+
+---
+
+## 15. สถานการณ์ I — Agent บน Raspberry Pi / LAN
+
+### 15.1 Server บนเครื่อง/LAN (เช่น `192.168.1.44`)
+
+1. รัน stack หรือ server ให้ API ที่ `:8000` เข้าถึงได้จาก Pi
+2. สร้างตู้ใน Admin ตาม [§7](#7-สถานการณ์-b--ลงทะเบียนตู้ใหม่-agent--machine-ui)
+3. บน Pi: คัดลอก [client/agent/.env.example](client/agent/.env.example) → `.env`
+
+```env
+MACHINE_CODE=DEMO-01
+MACHINE_TOKEN=<secret_token>
+SERVER_SOCKET_URL=http://192.168.1.44:8000
+MACHINE_UI_URL=http://192.168.1.44:3000
+NFC_AUTO_APPROVE=false
+```
+
+```bash
+cd client/agent
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+python agent.py
+```
+
+1. **CORS:** เพิ่ม origin ของ machine-ui ใน root `.env`:
+
+```env
+CORS_ORIGINS=http://localhost:3000,http://192.168.1.44:3000,...
+```
+
+แล้ว restart `server`
+
+1. Kiosk: [client/kiosk/chromium.sh](client/kiosk/chromium.sh) + [autostart.service](client/kiosk/autostart.service) (แก้ path ให้ตรง Pi)
+
+### 15.2 machine-ui ให้ Pi เปิด browser ได้
+
+Build/deploy โดย bake URL ที่ Pi เข้าถึงได้:
+
+```env
+NEXT_PUBLIC_API_URL=http://<server-ip>:8000
+NEXT_PUBLIC_SERVER_SOCKET_URL=http://<server-ip>:8000
+NEXT_PUBLIC_MACHINE_CODE=DEMO-01
+```
+
+จากนั้น build image หรือ `npm run build && npm start` บนเครื่องที่ Pi เปิดได้
+
+---
+
+## 16. สถานการณ์ J — ทดสอบ agent ด้วย HTTP
+
+ทดสอบมอเตอร์โดยตรงที่ agent (ไม่ผ่าน Omise):
+
+```bash
+curl -X POST http://localhost:5000/jobs/start \
+  -H "Content-Type: application/json" \
+  -d "{\"machine_code\": \"DEMO-01\", \"items\": [{\"product_id\": 1, \"quantity\": 1}]}"
+```
+
+ดู `docker logs -f vending-pi`
+
+---
+
+## 17. สถานการณ์ K — เปลี่ยนพอร์ต / หลายเครื่อง
+
+ถ้าพอร์ต `8000`, `3000`, `3001`, `3002`, `5000`, `3307`, `8081` ถูกใช้:
+
+1. แก้ **ซ้าย** ของ mapping ใน [docker-compose.yml](docker-compose.yml) เช่น `"8001:8000"`
+2. อัปเดต `.env`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8001
+NEXT_PUBLIC_ADMIN_API_URL=http://localhost:8001
+```
+
+1. **Rebuild** `machine-ui`, `admin-ui`, และ `web-ui`
+
+---
+
+## 18. ทดสอบการชำระเงิน (Omise)
+
+1. ใส่ test keys ใน root `.env`
+2. machine-ui: ปุ่ม **[Test] Simulate Visa Tap** (บัตรทดสอบ)
+3. **PromptPay:** สแกน QR หรือตั้ง webhook → `POST /api/buy/omise-webhook`
+4. **Dev bypass สถานะ paid:**
+
+```bash
+curl -X POST http://localhost:8000/api/buy/mock-pay \
+  -H "Content-Type: application/json" \
+  -d "{\"charge_id\": \"<charge_id>\"}"
+```
+
+ต้อง `ALLOW_MOCK_PAY=1` ใน `.env`
+
+หลัง `paid` + agent online + มีสต็อก → ควรเห็น job / จ่ายของใน log agent
+
+---
+
+## 19. เปลี่ยนค่าหลัง build แล้ว
+
+
+| สิ่งที่เปลี่ยน                          | สิ่งที่ต้องทำ                                                        |
+| --------------------------------------- | -------------------------------------------------------------------- |
+| `MACHINE_CODE` / `MACHINE_TOKEN`          | แก้ root `.env` → `docker compose up -d --build client`              |
+| `NEXT_PUBLIC_MACHINE_CODE` / kiosk secrets | แก้ `.env` → **rebuild** `machine-ui`                                |
+| Omise keys / `NEXT_PUBLIC_API_URL`      | rebuild `machine-ui`, `admin-ui`, `web-ui` (ถ้าเกี่ยว)             |
+| `JWT_SECRET`                            | แก้ root `.env` → restart `web-ui` (runtime, ไม่ต้อง rebuild)      |
+| `AGENT_BASE_URL` / `KIOSK_SOCKET_SECRET` | แก้ root `.env` → restart `server` (และ rebuild machine-ui ถ้าเปลี่ยน kiosk secret) |
+
+
+---
+
+## 20. หยุดและลบข้อมูล
+
+**หยุด เก็บ volume:**
 
 ```bash
 docker compose down
 ```
 
-**Stop and remove named volumes** (this **deletes MySQL data** including all machines and orders):
+**หยุด + ลบ DB และ agent data:**
 
 ```bash
 docker compose down -v
 ```
 
-Use `-v` only when you intentionally want a fresh database; the next `up` will re-run `init.sql` on a new volume.
-
 ---
 
-## 11. Raspberry Pi agent only (hardware on the board)
+## 21. แก้ปัญหา (Troubleshooting)
 
-Use this when the **browser** opens Machine UI on the Pi (or another PC) but **`python agent.py` runs on the Pi** — not the Docker `client` service.
+### พอร์ตถูกใช้แล้ว
 
-### 11.1 Which `.env` file?
+ดู [§17](#17-สถานการณ์-k--เปลี่ยนพอร์ต--หลายเครื่อง)
 
-| File | Used by |
-|------|---------|
-| Root [`.env`](.env) | Docker Compose (`server`, optional `client` container) |
-| [`client/agent/.env`](client/agent/.env) | Pi when you run `python agent.py` locally |
+### Agent: `Connection refused by server` (Socket.IO) ซ้ำๆ
 
-Compose does **not** load `client/agent/.env` for the Pi process. Copy from [`client/agent/.env.example`](client/agent/.env.example).
+**อาการ (server log):** รับ auth `{"machine_code":"MP1-001","token":"..."}` แล้วส่ง packet `4` + `"Connection refused by server"`
 
-### 11.2 Required variables on the Pi
+**สาเหตุ:** `_verify_machine_token_auth` ไม่ผ่าน — token ไม่ตรง bcrypt ใน DB, ตู้ไม่มี `secret_token_hash`, หรือ `machine_code` ผิด
 
-```env
-MACHINE_CODE=MP1-001
-MACHINE_TOKEN=<plaintext secret from Admin — once>
-SERVER_SOCKET_URL=http://<IP-of-PC-running-docker-server>:8000
-```
+**แก้:**
 
-- **`SERVER_SOCKET_URL` must not be `http://server:8000`** on the Pi (that hostname only works inside Docker).
-- **`MACHINE_TOKEN`** must match the bcrypt hash stored in MySQL (`machines.secret_token_hash`). The seed value `001` in old databases is **invalid** — create the machine in Admin or use dev token below.
+1. ใช้ `MACHINE_TOKEN` **ตัวเดียวกับ** `secret_token` ตอนสร้างตู้ใน Admin (ไม่ใช่ hash)
+2. หลังแก้ root `.env`: `docker compose up -d --build client`
+3. ถ้าเสีย token แล้ว — สร้างตู้ใหม่ (รหัสใหม่) หรืออัปเดต DB (ขั้นสูง); **ไม่มี** API rotate token ใน repo ปัจจุบัน
+4. ตรวจ MySQL: `SELECT machine_code, secret_token_hash IS NOT NULL FROM machines WHERE machine_code='DEMO-01';`
 
-### 11.3 Admin “Socket connected” vs kiosk UI
+**สำเร็จเมื่อเห็น:** `✅ [SocketIO] machine connected: DEMO-01` ใน log server
 
-| Indicator | Meaning |
-|-----------|---------|
-| Admin `machines.is_online` | **Pi agent** authenticated to Socket.IO (`machine_code` + `token`) |
-| Machine UI full-screen gate (main screen) | **Pi agent** must be online (`machine_presence`) — blocks entire UI **before** payment only |
-| Machine UI “internet reconnect” banner | **Kiosk** Socket to server (`KIOSK_SOCKET_SECRET`) — processing modal only |
-| Machine UI “connecting to hardware…” banner | Pi agent presence during **processing** modal — post-payment flow |
+### Agent: `websocket disabled`
 
-No rows in `machine_job_events` until the Pi receives `job.start` and sends `machine_event`.
+- ว่าง `MACHINE_CODE` หรือ `MACHINE_TOKEN` — ดู [ws_client.py](client/agent/ws_client.py)
+- ใน Docker: `SERVER_SOCKET_URL=http://server:8000`
+- บน Pi จริง: ใช้ [`client/agent/.env`](client/agent/.env) — **`SERVER_SOCKET_URL` ต้องไม่เป็น `http://server:8000`** (ใช้ได้แค่ใน Docker) ให้ชี้ IP ของเครื่องที่รัน server เช่น `http://192.168.1.44:8000`
 
-### 11.4 Verify Pi agent (in order)
+### Kiosk Socket / machine-ui ไม่เชื่อม
 
-1. On the Pi: `curl http://127.0.0.1:5000/health` → JSON with `machine_code` and `ws.connected`.
-2. Agent logs: `✅ [WS] connected to server` — not `Authentication failed` every 30s.
-3. On the PC: `docker logs vending-server 2>&1 | findstr "machine connected"` → `machine connected: MP1-001`.
-4. Admin → Machines → Socket shows **connected**.
-5. After a test purchase: MySQL table `machine_job_events` has new rows.
+- ยืนยัน **`KIOSK_SOCKET_SECRET`** = **`NEXT_PUBLIC_KIOSK_SOCKET_SECRET`** แล้ว **rebuild** `machine-ui`
+- ถ้าเห็น overlay “สัญญาณขัดข้องชั่วคราว” = kiosk Socket ล้ม; “ระบบขัดข้องชั่วคราว” = Pi agent offline
 
-### 11.5 Dev token (fresh DB from fixed `init.sql`)
+### ตรวจ Pi agent (ลำดับแนะนำ)
 
-For local dev only, seed machine `MP1-001` can use plaintext token **`dev-machine-token`** (see [database/init.sql](database/init.sql)). Set the same value in root `.env` / Pi `client/agent/.env` as `MACHINE_TOKEN=dev-machine-token`.
+1. บน Pi: `curl http://127.0.0.1:5000/health` → JSON มี `machine_code` และ `ws.connected`
+2. Log agent: `✅ [WS] connected to server` — ไม่ใช่ `Authentication failed` ทุก 30s
+3. บนเครื่อง server: `docker logs vending-server 2>&1 | findstr "machine connected"`
+4. Admin → Machines → Socket **connected**
+5. หลังทดสอบซื้อ: ตาราง `machine_job_events` มีแถวใหม่
 
----
+### Dev token (DB ใหม่จาก `init.sql`)
 
-## 12. Troubleshooting
+สำหรับ dev local เท่านั้น: seed ตู้ `MP1-001` ใช้ plaintext **`dev-machine-token`** — ตั้ง `MACHINE_TOKEN=dev-machine-token` ใน root `.env` / Pi `client/agent/.env`
 
-### Port already in use
+### ชำระแล้วไม่จ่ายของ
 
-If `8000`, `3000`, `3001`, `5000`, `3307`, or `8081` is taken, either stop the conflicting process or change the **left** side of port mappings in [docker-compose.yml](docker-compose.yml) (e.g. `"8001:8000"`) and update `.env` URLs accordingly.
+- Agent ไม่ได้ connect Socket (ข้างบน) หรือ `MACHINE_TOKEN` ไม่ตรงตู้
+- `AGENT_BASE_URL` ชี้ agent ผิด (ใน Docker มัก `http://client:5000` จาก compose default)
+- ตู้ไม่มี slots / สต็อกหมด
+- `machine_code` ใน UI ไม่ตรงตู้ที่มีสต็อก
 
-### Agent never connects / “websocket disabled”
+### machine-ui ผิดตู้ / Socket room ผิด
 
-- **Docker `client` container:** root `.env` needs **`MACHINE_CODE` and `MACHINE_TOKEN`**; `SERVER_SOCKET_URL=http://server:8000`.
-- **Pi `python agent.py`:** use [`client/agent/.env`](client/agent/.env) with **`SERVER_SOCKET_URL=http://<PC-LAN-IP>:8000`** and token from Admin (see Section 11).
-- If logs show **Authentication failed**: token does not match `secret_token_hash` in DB (re-create machine in Admin or use dev token from Section 11.5).
-- Confirm **`KIOSK_SOCKET_SECRET`** and **`NEXT_PUBLIC_KIOSK_SOCKET_SECRET`** match, then rebuild `machine-ui`.
+- Rebuild หลังเปลี่ยน `NEXT_PUBLIC_MACHINE_CODE` — [§7 ขั้นที่ 4](#ขั้นที่-4--ตั้ง-machine-ui-ให้ตรงตู้)
 
-### Admin API returns errors
+### แก้ `init.sql` แล้ว DB ไม่เปลี่ยน
 
-- `@admin_required` is currently a **no-op placeholder** ([server/app/api/admin/decorators.py](server/app/api/admin/decorators.py)); if you add real auth later, you must log in for real before creating machines.
+- `init.sql` รันแค่ครั้งแรกของ volume — ใช้ `docker compose down -v` หรือรัน SQL/migration เอง
 
-### machine-ui shows wrong machine / wrong Socket room
+### Build machine-ui ล้ม
 
-- Re-read Section 7 Step 4: **`NEXT_PUBLIC_MACHINE_CODE` requires rebuilding `machine-ui`**.
+- ตั้ง `NEXT_PUBLIC_OMISE_PUBLIC_KEY` ใน root `.env` ก่อน build
 
-### MySQL data looks stale after editing `init.sql`
+### Admin API error
 
-- `init.sql` runs only on **first initialization** of the `db_data` volume. To re-apply seed, use `docker compose down -v` (destructive) or run migrations / SQL manually.
-
-### Build failures on machine-ui
-
-- Ensure `NEXT_PUBLIC_OMISE_PUBLIC_KEY` is set at build time (passed as build arg in Compose). Empty key can break or warn depending on app code.
+- `@admin_required` ยังเป็น placeholder — ไม่ต้อง login จริงในปัจจุบัน
 
 ### NFC tap does not start payment
 
@@ -403,29 +687,27 @@ If `8000`, `3000`, `3001`, `5000`, `3307`, or `8081` is taken, either stop the c
 
 ### Machine UI stuck on “ระบบขัดข้องชั่วคราว” (cannot buy)
 
-- Expected when the **Pi agent** is not connected to Socket.IO — start `client` / `vending-pi` in Docker or run `python agent.py` on the Pi (Section 11).
+- Expected when the **Pi agent** is not connected to Socket.IO — start `client` / `vending-pi` in Docker or run `python agent.py` on the Pi ([§15](#15-สถานการณ์-i--agent-บน-raspberry-pi--lan)).
 - Confirm server log: `machine connected: <MACHINE_CODE>`.
 - `MACHINE_CODE` / `MACHINE_TOKEN` must match Admin; kiosk `NEXT_PUBLIC_MACHINE_CODE` must match after rebuild.
 - If only the **internet** variant shows, fix kiosk Socket (`KIOSK_SOCKET_SECRET` + rebuild `machine-ui`).
 
 ---
 
-## 13. Reference files
+## 22. ไฟล์อ้างอิง
 
-| File | Why it matters |
-|------|----------------|
-| [docker-compose.yml](docker-compose.yml) | Services, ports, build args, agent env |
-| [.env.example](.env.example) | Full list of variables and comments |
-| [database/init.sql](database/init.sql) | Schema + seed `MP1-001` and products |
-| [server/app/realtime/socketio_gateway.py](server/app/realtime/socketio_gateway.py) | Socket.IO connect auth (`machine_id` + `token`) |
-| [client/agent/ws_client.py](client/agent/ws_client.py) | Agent Socket.IO client and env |
-| [web/machine-ui/Dockerfile](web/machine-ui/Dockerfile) | `NEXT_PUBLIC_*` build-time embedding |
-| [README.md](README.md) | High-level overview and badges |
 
----
+| ไฟล์                                                                               | ความสำคัญ                    |
+| ---------------------------------------------------------------------------------- | ---------------------------- |
+| [docker-compose.yml](docker-compose.yml)                                           | services, ports, overrides   |
+| [.env.example](.env.example)                                                       | ตัวแปรครบ                    |
+| [database/init.sql](database/init.sql)                                             | schema + seed                |
+| [server/app/realtime/socketio_gateway.py](server/app/realtime/socketio_gateway.py) | Socket auth ตู้ + kiosk      |
+| [server/app/api/admin/admin_machines.py](server/app/api/admin/admin_machines.py)   | สร้างตู้ + token             |
+| [client/agent/ws_client.py](client/agent/ws_client.py)                             | agent Socket client          |
+| [web/machine-ui/Dockerfile](web/machine-ui/Dockerfile)                             | build-time `NEXT_PUBLIC_*`   |
+| [web/web-ui/Dockerfile](web/web-ui/Dockerfile)                                     | build-time `NEXT_PUBLIC_*` + runtime `JWT_SECRET` |
+| [README2.md](README2.md)                                                           | ภาพรวมโปรเจกต์ + สถาปัตยกรรม |
+| [README.md](README.md)                                                             | สรุปสั้น                     |
 
-## Optional: run without Docker
-
-Local development (Node `npm run dev`, Flask `flask run`, MySQL elsewhere) varies by machine; use this document for the **Docker** path. The main [README.md](README.md) still points to `docker compose up --build` as the primary way to run the system.
-
-If anything in this guide drifts from the repo, prefer the actual [docker-compose.yml](docker-compose.yml) and [.env.example](.env.example) in your checkout.
+ถ้าเนื้อหาใน repo เปลี่ยน ให้ยึด [docker-compose.yml](docker-compose.yml) และ [.env.example](.env.example) ใน checkout ของคุณเป็นหลัก

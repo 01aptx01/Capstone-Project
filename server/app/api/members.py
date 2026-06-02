@@ -12,7 +12,9 @@ import logging
 import time
 from collections import defaultdict
 from threading import Lock
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
+
+from app.auth.member_auth import member_required, require_path_phone
 from app.db_config.db import get_db_cursor
 
 logger = logging.getLogger(__name__)
@@ -58,7 +60,7 @@ def get_member(phone: str):
     try:
         with get_db_cursor() as (_, cur):
             cur.execute(
-                "SELECT user_id, phone_number, points, registered_at, last_use, status "
+                "SELECT user_id, phone_number, display_name, points, registered_at, last_use, status "
                 "FROM users WHERE phone_number = %s",
                 (phone,),
             )
@@ -71,6 +73,7 @@ def get_member(phone: str):
             "found": True,
             "user_id": member["user_id"],
             "phone_number": member["phone_number"],
+            "display_name": member.get("display_name"),
             "points": member["points"],
             "registered_at": str(member["registered_at"]),
             "last_use": str(member["last_use"]) if member["last_use"] else None,
@@ -79,6 +82,76 @@ def get_member(phone: str):
     except Exception as e:
         logger.error(f"[Members] Error fetching member {phone}: {e}")
         return jsonify({"found": False, "message": "เกิดข้อผิดพลาดในระบบ"}), 500
+
+
+@members_api.route("/api/members/register", methods=["POST"])
+@member_required
+def register_member():
+    """สร้างสมาชิกใหม่หลัง OTP (web-ui onboarding)."""
+    phone = g.member_phone
+    data = request.get_json(silent=True) or {}
+    display_name = (data.get("display_name") or "").strip() or None
+
+    try:
+        with get_db_cursor() as (db, cur):
+            cur.execute(
+                "SELECT user_id FROM users WHERE phone_number = %s",
+                (phone,),
+            )
+            if cur.fetchone():
+                return jsonify(
+                    {"error": "already_exists", "message": "สมาชิกมีอยู่แล้ว"}
+                ), 409
+
+            cur.execute(
+                "INSERT INTO users (phone_number, display_name, points, last_use, status) "
+                "VALUES (%s, %s, 0, NOW(), 'active')",
+                (phone, display_name),
+            )
+            user_id = cur.lastrowid
+            db.commit()
+
+        return jsonify(
+            {
+                "status": "ok",
+                "user_id": user_id,
+                "phone_number": phone,
+                "display_name": display_name,
+                "points": 0,
+            }
+        ), 201
+    except Exception as e:
+        logger.error(f"[Members] register error for {phone}: {e}")
+        return jsonify({"error": "server_error", "message": "สมัครสมาชิกไม่สำเร็จ"}), 500
+
+
+@members_api.route("/api/members/<phone>", methods=["PATCH"])
+@member_required
+def update_member(phone: str):
+    err = require_path_phone(phone)
+    if err:
+        return err
+
+    data = request.get_json(silent=True) or {}
+    display_name = (data.get("display_name") or "").strip()
+    if not display_name:
+        return jsonify({"error": "invalid", "message": "ต้องระบุ display_name"}), 400
+
+    try:
+        with get_db_cursor() as (db, cur):
+            cur.execute(
+                "UPDATE users SET display_name = %s, last_use = NOW() WHERE phone_number = %s",
+                (display_name, phone),
+            )
+            if cur.rowcount == 0:
+                return jsonify({"error": "not_found", "message": "ไม่พบสมาชิก"}), 404
+            db.commit()
+        return jsonify(
+            {"status": "ok", "phone_number": phone, "display_name": display_name}
+        ), 200
+    except Exception as e:
+        logger.error(f"[Members] update error for {phone}: {e}")
+        return jsonify({"error": "server_error", "message": "อัปเดตไม่สำเร็จ"}), 500
 
 
 @members_api.route("/api/members/earn", methods=["POST"])

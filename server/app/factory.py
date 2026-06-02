@@ -11,13 +11,17 @@ load_dotenv()
 from app.api.buy import buy_api
 from app.api.health import health_api
 from app.api.members import members_api
+from app.api.orders import orders_api
+from app.api.auth_otp import auth_otp_api
 from app.api.products import products_api
+from app.cors_config import cors_allow_headers, cors_allow_methods, cors_origins_list
 from app.db_config.db import init_db
 from app.db_config.schema_repair import ensure_promotions_max_uses
 from app.db_config.sqlalchemy_uri import build_sqlalchemy_database_uri
 from app.extensions import db, migrate
 
 logger = logging.getLogger(__name__)
+
 
 def _resolve_swagger_path() -> str:
     """Docker: /app/swagger.yaml. Local dev: repo root next to server/."""
@@ -49,7 +53,6 @@ def _validate_socket_env() -> None:
 def create_app() -> Flask:
     """Flask application factory (used by ServerApp, wsgi.py, and Flask-Migrate CLI)."""
     _validate_socket_env()
-    # Use flask_app (not app): `import app.models` would shadow a local named `app`.
     flask_app = Flask(__name__)
 
     if os.getenv("DEFER_DB_POOL") == "1":
@@ -69,14 +72,31 @@ def create_app() -> Flask:
     with flask_app.app_context():
         ensure_promotions_max_uses(db.engine)
 
-    allowed_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    CORS(flask_app, origins=allowed_origins)
+    origins = cors_origins_list()
+    logger.info("🔧 [create_app] CORS allowed origins: %s", origins)
+    CORS(
+        flask_app,
+        resources={r"/api/*": {"origins": origins}},
+        supports_credentials=True,
+        allow_headers=cors_allow_headers(),
+        methods=cors_allow_methods(),
+    )
+
+    flask_app.config.setdefault(
+        "SWAGGER",
+        {
+            "openapi": "3.0.3",
+            "uiversion": 3,
+        },
+    )
     Swagger(flask_app, template_file=_SWAGGER_FILE)
 
     flask_app.register_blueprint(buy_api)
     flask_app.register_blueprint(products_api)
     flask_app.register_blueprint(health_api)
     flask_app.register_blueprint(members_api)
+    flask_app.register_blueprint(orders_api)
+    flask_app.register_blueprint(auth_otp_api)
 
     from app.api.admin import admin_bp
 
