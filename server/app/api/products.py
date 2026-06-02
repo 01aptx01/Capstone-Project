@@ -61,6 +61,37 @@ class ProductService:
             cur.close()
             db.close()
 
+    # New method to fetch a single product by ID
+    def get_product_by_id(self, product_id: int) -> dict | None:
+        db = self.get_db()
+        cur = db.cursor(dictionary=True)
+        try:
+            cur.execute(
+                """
+                SELECT
+                    product_id,
+                    name,
+                    description,
+                    price,
+                    heating_time,
+                    image_url,
+                    category
+                FROM products
+                WHERE product_id = %s
+                """,
+                (product_id,)
+            )
+            product = cur.fetchone()
+            if product:
+                product["price"] = float(product["price"])
+            return product
+        except Exception as e:
+            logger.error(f"❌ [ProductService] Database Error: {e}")
+            raise e
+        finally:
+            cur.close()
+            db.close()
+
 # =============================================
 # CONTROLLER LAYER
 # =============================================
@@ -76,10 +107,15 @@ class ProductController:
             view_func=self.get_products, 
             methods=["GET"]
         )
+        self.blueprint.add_url_rule(
+            "/api/products/<int:product_id>",
+            view_func=self.get_product_detail,
+            methods=["GET"]
+        )
 
     def get_products(self):
         """List available products with stock"""
-        machine_code = request.args.get("machine_code") or request.args.get("machine_id", "MP1-001")
+        machine_code = request.args.get("machine_code") or "MP1-001"
         logger.info(f"[ProductController] Fetching products for machine: {machine_code}")
 
         try:
@@ -89,6 +125,17 @@ class ProductController:
         except Exception as e:
             logger.error(f"❌ [ProductController] Failed to fetch products: {e}")
             return jsonify({"error": "Failed to fetch products"}), 500
+
+    def get_product_detail(self, product_id: int):
+        """Get single product detail by ID"""
+        try:
+            product = self.product_service.get_product_by_id(product_id)
+            if not product:
+                return jsonify({"error": "Product not found"}), 404
+            return jsonify(product), 200
+        except Exception as e:
+            logger.error(f"❌ [ProductController] Failed to fetch product {product_id}: {e}")
+            return jsonify({"error": "Failed to fetch product"}), 500
 
 
 # =============================================
