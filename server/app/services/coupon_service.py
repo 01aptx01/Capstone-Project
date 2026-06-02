@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from app.extensions import db
 from app.models import Coupon, Order
 
-CouponReason = Literal["ok", "not_found", "inactive", "expired", "exhausted"]
+CouponReason = Literal["ok", "not_found", "inactive", "expired", "exhausted", "in_use"]
 
 _STATUSES_EXCLUDE_FROM_USE_COUNT = (
     "pending_payment",
@@ -58,6 +58,18 @@ def lookup_coupon_by_code(raw_code: str) -> tuple[CouponReason, Coupon | None, i
                 (code_norm,),
             )
             up_row = cur.fetchone()
+
+            if up_row:
+                # Prevent Double-Spend: Check if coupon is locked by a pending order
+                cur.execute(
+                    """
+                    SELECT 1 FROM orders 
+                    WHERE user_promotion_id = %s AND status = 'pending_payment'
+                    """,
+                    (up_row["id"],)
+                )
+                if cur.fetchone():
+                    return "in_use", None, None
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"[CouponService] Error looking up user coupon: {e}")
@@ -108,4 +120,6 @@ def reason_message_th(reason: CouponReason) -> str:
         return "คูปองหมดอายุแล้ว"
     if reason == "exhausted":
         return "คูปองนี้ถูกใช้ครบจำนวนแล้ว"
+    if reason == "in_use":
+        return "คูปองนี้กำลังถูกใช้งานในรายการสั่งซื้ออื่น กรุณารอสักครู่หรือยกเลิกรายการเดิม"
     return ""
