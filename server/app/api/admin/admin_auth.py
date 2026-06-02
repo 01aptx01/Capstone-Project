@@ -9,9 +9,9 @@ import logging
 from flask import jsonify, request
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required, _current_admin_id
+from app.api.admin.decorators import admin_required, roles_required, _current_admin_id
 from app.extensions import db
-from app.models.admin_rbac import AdminUser, Role, admin_user_role
+from app.models.admin_rbac import AdminUser, Role
 from app.api.admin.security import (
     create_access_token,
     create_registration_token,
@@ -117,7 +117,7 @@ def admin_register():
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/auth/invite", methods=["POST"])
-@admin_required
+@roles_required("superadmin")
 def admin_invite():
     """Invite a new admin — create AdminUser with temp password (inactive)."""
     data = request.get_json(silent=True) or {}
@@ -166,7 +166,7 @@ def admin_invite():
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/auth/revoke/<int:admin_id>", methods=["DELETE"])
-@admin_required
+@roles_required("superadmin")
 def admin_revoke(admin_id: int):
     """Revoke (deactivate) an admin account and force-kick via Socket.IO."""
     caller_id = _current_admin_id()
@@ -201,7 +201,7 @@ def admin_revoke(admin_id: int):
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/auth/me", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_me():
     """Return current authenticated admin profile."""
     admin_id = _current_admin_id()
@@ -216,7 +216,7 @@ def admin_me():
 # ---------------------------------------------------------------------------
 
 @admin_bp.route("/auth/admins", methods=["GET"])
-@admin_required
+@roles_required("superadmin")
 def list_admins():
     """List all admin accounts (for the Settings → Admin Permissions tab)."""
     admins = AdminUser.query.order_by(AdminUser.created_at.asc()).all()
@@ -267,10 +267,8 @@ def seed_first_admin(app):
                 db.session.add(role_super)
                 db.session.flush()
 
-            # Seed first admin as superadmin (+ admin for convenience)
+            # Seed first admin as superadmin only
             first_admin.roles.append(role_super)
-            if role_admin not in first_admin.roles:
-                first_admin.roles.append(role_admin)
 
             db.session.commit()
             logger.info("👤 First admin seeded: %s (id=%s) as superadmin", email, first_admin.id)

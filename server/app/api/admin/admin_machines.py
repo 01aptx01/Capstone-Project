@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
 from app.models import Machine, MachineSlot, Product
@@ -62,7 +62,7 @@ def _machine_summary(m: Machine) -> dict:
 
 
 @admin_bp.route("/machines", methods=["GET", "POST"])
-@admin_required
+@roles_required("admin")
 def admin_machines_collection():
     if request.method == "POST":
         return _admin_create_machine()
@@ -173,7 +173,7 @@ def _machine_detail_payload(m: Machine) -> dict:
 
 
 @admin_bp.route("/machines/<machine_code>/slots", methods=["PUT"])
-@admin_required
+@roles_required("admin")
 def admin_put_machine_slots(machine_code: str):
     """Replace all inventory slots for a machine (full snapshot)."""
     m = db.session.get(Machine, machine_code)
@@ -330,7 +330,7 @@ def _admin_delete_machine(machine_code: str):
 
 
 @admin_bp.route("/machines/<machine_code>", methods=["GET", "PUT", "DELETE"])
-@admin_required
+@roles_required("admin")
 def admin_machine_detail(machine_code: str):
     if request.method == "DELETE":
         return _admin_delete_machine(machine_code)

@@ -7,7 +7,7 @@ from flask import jsonify
 from sqlalchemy import func, select
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.extensions import db
 from app.models import Machine, Order, OrderItem, Product
 
@@ -27,7 +27,7 @@ def _to_float(v) -> float:
 
 
 @admin_bp.route("/dashboard/summary", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_dashboard_summary():
     today = date.today()
 

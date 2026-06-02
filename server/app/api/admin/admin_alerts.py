@@ -6,7 +6,7 @@ from flask import jsonify, request, g
 from sqlalchemy import select
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.extensions import db
 from app.models import MachineEvent, MachineSlot, Product
 
@@ -20,7 +20,7 @@ def _truthy_query(val: str | None) -> bool:
 
 
 @admin_bp.route("/alerts", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_alerts():
     threshold = request.args.get("stock_threshold", LOW_STOCK_THRESHOLD, type=int)
     if threshold is None or threshold < 0:
@@ -108,7 +108,7 @@ def admin_alerts():
 
 
 @admin_bp.route("/alerts/resolve/<int:event_id>", methods=["POST"])
-@admin_required
+@roles_required("admin")
 def admin_resolve_alert(event_id: int):
     ev = db.session.get(MachineEvent, event_id)
     if ev is None:
