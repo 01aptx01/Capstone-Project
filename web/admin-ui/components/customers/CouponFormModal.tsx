@@ -18,7 +18,7 @@ export type CouponFormModalProps = {
 type DiscountType = "Percentage" | "Fixed Amount";
 
 const emptyForm = {
-  couponCode: "",
+  couponName: "",
   discountType: "Percentage" as DiscountType,
   discountValue: "",
   pointsCost: "0",
@@ -47,7 +47,7 @@ function isoExpiryToDateInput(iso: string | null | undefined): string {
 
 function uiRowToFormData(row: UiCouponRow) {
   return {
-    couponCode: row.id,
+    couponName: row.id,
     discountType: (row.type === "PERCENT" ? "Percentage" : "Fixed Amount") as DiscountType,
     discountValue: String(row.discount_amount),
     pointsCost: String(row.points_cost ?? 0),
@@ -104,7 +104,7 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
     e.preventDefault();
     setFormError(null);
 
-    const code = formData.couponCode.trim();
+    const code = formData.couponName.trim();
     if (!code) {
       setFormError(t("createCoupon.errorRequired"));
       return;
@@ -227,15 +227,15 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="group space-y-2 md:col-span-2">
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-widest group-focus-within:text-[var(--primary)] transition-colors">
-                    Coupon Code <span className="text-rose-500">*</span>
+                    Coupon Name (ชื่อคูปอง) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder={t("createCoupon.placeholder.code")}
-                    className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all font-black text-[var(--text)] tracking-widest"
-                    value={formData.couponCode}
-                    onChange={(e) => setFormData({ ...formData, couponCode: e.target.value.toUpperCase() })}
+                    placeholder="เช่น คูปองส่วนลดปีใหม่ 50 บาท"
+                    className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] focus:shadow-[0_10px_30px_rgba(244,123,42,0.08)] transition-all font-black text-[var(--text)] tracking-normal"
+                    value={formData.couponName}
+                    onChange={(e) => setFormData({ ...formData, couponName: e.target.value })}
                     disabled={submitting}
                   />
                 </div>
