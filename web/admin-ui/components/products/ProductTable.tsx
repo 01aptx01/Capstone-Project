@@ -8,6 +8,7 @@ import { listProducts } from "@/lib/admin-api";
 import { enrichProductsWithStock, type UiProductRow } from "@/lib/admin-mappers";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useLang } from "@/lib/i18n/lang";
+import ProductThumb from "@/components/products/ProductThumb";
 
 const REFRESH = "admin-products-refresh";
 export const ALL_MACHINES_FILTER = "All Machines";
@@ -164,17 +165,12 @@ export default function ProductTable({
                   >
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 bg-[var(--surface-1)] rounded-2xl flex items-center justify-center text-xl shadow-sm overflow-hidden border border-[var(--border)] group-hover:border-orange-100 group-hover:scale-105 transition-all duration-500">
-                          <img
-                            src={p.image || "/product/img/pao-cream.png"}
-                            alt=""
-                            className="w-10 h-10 object-contain group-hover:scale-110 transition-transform duration-700"
-                            onError={(e) => {
-                              e.currentTarget.src =
-                                "https://cdn-icons-png.flaticon.com/512/3081/3081918.png";
-                            }}
-                          />
-                        </div>
+                        <ProductThumb
+                          src={p.image || "/product/img/pao-cream.png"}
+                          alt=""
+                          size="sm"
+                          className="group-hover:border-orange-100 transition-colors duration-300"
+                        />
                         <div>
                           <div className="text-[16px] font-black text-[var(--text)] mb-0.5 group-hover:text-[var(--primary)] transition-colors">
                             {p.name}

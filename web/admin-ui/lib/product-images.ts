@@ -14,9 +14,26 @@ export function isValidProductImageUrl(value: string): boolean {
   }
 }
 
-/** Preview src for <img> (relative paths work via Next rewrite to API). */
+/** Trim image path/URL for preview (use resolveProductImageSrc for <img src>). */
 export function productImagePreviewSrc(value: string): string {
   const v = value.trim();
   if (!v) return "";
+  return v;
+}
+
+/** Absolute URL for catalogue paths (browser → Flask API, not Next container localhost). */
+export function resolveProductImageSrc(value: string): string {
+  const v = value.trim();
+  if (!v) return "";
+  if (v.startsWith("http://") || v.startsWith("https://")) return v;
+  if (v.startsWith("/")) {
+    const base =
+      (typeof process !== "undefined" &&
+        process.env.NEXT_PUBLIC_ADMIN_API_URL?.replace(/\/$/, "")) ||
+      (typeof process !== "undefined" &&
+        process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "")) ||
+      "http://localhost:8000";
+    return `${base}${v}`;
+  }
   return v;
 }
