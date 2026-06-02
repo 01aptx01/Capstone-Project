@@ -2,7 +2,200 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #FF6B00;
-  --color-primary-light: #FF8C33;
-  --color-primary-dark: #CC5500;
+  /* Brand — MOD PAO orange */
+  --brand: #f97316;
+  --brand-hover: #ea580c;
+  --brand-light: #ff8a33;
+  --brand-muted: #fff3e8;
+  --brand-grad: linear-gradient(135deg, #FF9646 0%, #F4661B 60%, #E85709 100%);
+  --brand-glow: 0 14px 34px -12px rgba(233, 95, 8, .55);
+
+  /* Surfaces */
+  --background: #F9FAFB;
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+
+  /* Text */
+  --foreground: #1c1917;
+  --muted-foreground: rgba(71, 71, 71, 0.72);
+  --subtle-foreground: #78716c;
+
+  /* Borders & feedback */
+  --border: #f3f4f6;
+  --border-strong: #e7e5e4;
+  --destructive: #ef4444;
+  --success: #16a34a;
+  --info: #0ea5e9;
+
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-card: 1rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06);
+  --shadow-md: 0 4px 14px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 8px 24px rgba(249, 115, 22, 0.18);
+  --shadow-brand: 0 8px 20px rgba(249, 115, 22, 0.28);
+
+  /* Layout */
+  --header-height: 4rem;
+  --sidebar-width: 16.5rem;
+  --topbar-height: 3.5rem;
+  --bottom-nav-height: 4.25rem;
+  --cart-inset: 5.5rem;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --page-padding-x: 1.25rem;
+
+  /* Z-index */
+  --z-header: 80;
+  --z-drawer: 70;
+  --z-cart: 90;
+  --z-modal: 120;
+  --z-toast: 200;
+}
+
+@theme inline {
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-light: var(--brand-light);
+  --color-brand-muted: var(--brand-muted);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted-foreground);
+  --color-subtle: var(--subtle-foreground);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-info: var(--info);
+  --font-display: var(--font-prompt), var(--font-noto), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-noto), ui-sans-serif, system-ui, sans-serif;
+  --radius-card: var(--radius-card);
+  --shadow-brand: var(--shadow-brand);
+  --breakpoint-md: 56.25rem;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-5px);
+  }
+  40%,
+  80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out both;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+.animate-skeleton {
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-shake,
+  .animate-skeleton {
+    animation: none;
+  }
+}
+
+.page-container {
+  width: 100%;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding-inline: var(--page-padding-x);
+}
+
+@media (min-width: 56.25rem) {
+  .page-container {
+    padding-inline: 2.5rem;
+  }
+}
+
+.touch-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+.main-with-mobile-chrome {
+  padding-bottom: calc(
+    var(--bottom-nav-height) + var(--safe-bottom) + 1rem
+  );
+}
+
+@media (min-width: 56.25rem) {
+  .main-with-mobile-chrome {
+    padding-bottom: 2.5rem;
+  }
+}
+
+.floating-cart-offset {
+  bottom: calc(var(--bottom-nav-height) + var(--safe-bottom) + 0.75rem);
+}
+
+@media (min-width: 56.25rem) {
+  .floating-cart-offset {
+    bottom: 1rem;
+  }
+}
+
+.chip-scroll {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.chip-scroll::-webkit-scrollbar {
+  display: none;
 }
