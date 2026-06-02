@@ -2,11 +2,11 @@
 
 from datetime import datetime, timezone
 
-from flask import jsonify, request
+from flask import jsonify, request, g
 from sqlalchemy import select
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.extensions import db
 from app.models import MachineEvent, MachineSlot, Product
 
@@ -20,7 +20,7 @@ def _truthy_query(val: str | None) -> bool:
 
 
 @admin_bp.route("/alerts", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_alerts():
     threshold = request.args.get("stock_threshold", LOW_STOCK_THRESHOLD, type=int)
     if threshold is None or threshold < 0:
@@ -41,9 +41,28 @@ def admin_alerts():
         .order_by(MachineSlot.quantity)
     ).all()
 
+    from sqlalchemy import or_
+    from app.models.admin_rbac import AdminUser
+    from app.models.machine import Machine
+
+    current_admin = AdminUser.query.get(g._admin_id)
+    is_super = current_admin and current_admin.email == "admin@modpao.com"
+    
+    if is_super:
+        my_machine_codes = None
+    else:
+        my_machine_codes = set(db.session.scalars(
+            select(Machine.machine_code).where(Machine.created_by == g._admin_id)
+        ).all())
+
     err_stmt = (
         select(MachineEvent)
-        .where(MachineEvent.state == "ERROR")
+        .where(
+            or_(
+                MachineEvent.state == "ERROR",
+                MachineEvent.event_type == "Machine Modified"
+            )
+        )
         .order_by(MachineEvent.created_at.desc())
         .limit(50)
     )
@@ -77,8 +96,10 @@ def admin_alerts():
                         "created_at": e.created_at.isoformat() if e.created_at else None,
                         "is_resolved": bool(e.is_resolved),
                         "resolved_at": e.resolved_at.isoformat() if e.resolved_at else None,
+                        "payload": e.payload_json,
                     }
                     for e in error_events
+                    if not (e.event_type == "Machine Modified" and e.payload_json and e.payload_json.get("admin_id") == g._admin_id)
                 ],
             }
         ),
@@ -87,7 +108,7 @@ def admin_alerts():
 
 
 @admin_bp.route("/alerts/resolve/<int:event_id>", methods=["POST"])
-@admin_required
+@roles_required("admin")
 def admin_resolve_alert(event_id: int):
     ev = db.session.get(MachineEvent, event_id)
     if ev is None:

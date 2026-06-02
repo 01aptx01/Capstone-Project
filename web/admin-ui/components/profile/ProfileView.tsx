@@ -1,12 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLang } from "@/lib/i18n/lang";
 
 export default function ProfileView() {
   const { t } = useLang();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     name: "Mod Pao Admin",
     email: "admin@modpao.vending",
@@ -16,6 +18,38 @@ export default function ProfileView() {
     location: "Bangkok, Thailand",
     joined: "May 2024"
   });
+
+  useEffect(() => {
+    let active = true;
+    const fetchProfile = async () => {
+      try {
+        const { getMe } = await import("@/lib/admin-api");
+        const { getAdminActivities } = await import("@/lib/activity-log");
+        const res = await getMe();
+        if (active) {
+          setActivities(getAdminActivities());
+        }
+        if (active && res && res.user) {
+          const u = res.user;
+          setFormData({
+            name: `${u.first_name || ""} ${u.last_name || ""}`.trim() || "Mod Pao Admin",
+            email: u.email || "",
+            phone: u.phone || "—",
+            role: u.position || "System Administrator",
+            bio: "Managing the next generation of smart vending machines with focus on reliability and user experience.",
+            location: "Bangkok, Thailand",
+            joined: u.created_at ? new Date(u.created_at).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "May 2024"
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load profile:", err);
+      } finally {
+        if (active) setLoading(false);
+      }
+    };
+    fetchProfile();
+    return () => { active = false; };
+  }, []);
 
   const handleSave = () => {
     setIsEditing(false);
@@ -50,8 +84,6 @@ export default function ProfileView() {
               </div>
               <div className="meta-row">
                 <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-briefcase !text-[var(--text-muted)]"></i> {formData.role}</span>
-                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-marker !text-[var(--text-muted)]"></i> {formData.location}</span>
-                <span className="meta-item text-[var(--text)]"><i className="fi fi-rr-calendar !text-[var(--text-muted)]"></i> {t("profile.joinedPrefix")} {formData.joined}</span>
               </div>
             </div>
           </div>
@@ -132,14 +164,13 @@ export default function ProfileView() {
               <h3 className="text-[24px] font-black tracking-tight flex items-center gap-3">
                 <i className="fi fi-rr-time-past text-[var(--primary)] text-[28px]"></i> {t("profile.recentActivity")}
               </h3>
-              <button className="text-[14px] font-bold text-[var(--primary)] hover:underline px-4 py-2 rounded-full hover:bg-[var(--primary)]/5 transition-all">{t("profile.viewAll")}</button>
             </div>
             <div className="timeline space-y-8">
-              {[
-                { icon: "fi fi-rr-box", color: "from-[var(--primary)] to-[var(--primary)]", bg: "bg-orange-50", title: t("profile.activity.refill"), machine: "Vending Central Ladprao", time: t("profile.activity.minutesAgo").replace("{n}", "10") },
-                { icon: "fi fi-rr-refresh", color: "from-[var(--chart-series-1)] to-[var(--chart-series-1)]", bg: "bg-[var(--surface-2)]", title: t("profile.activity.firmware"), machine: "#M-045", time: t("profile.activity.hoursAgo").replace("{n}", "3") },
-                { icon: "fi fi-rr-coins", color: "from-[var(--success)] to-[var(--success)]", bg: "bg-[var(--success-bg)]", title: t("profile.activity.cashCheck"), machine: "", time: t("profile.activity.yesterdayAt").replace("{time}", "18:30") }
-              ].map((item, idx) => (
+              {(activities.length > 0 ? activities : [
+                { icon: "fi fi-rr-box", color: "from-[var(--primary)] to-[var(--primary)]", bg: "bg-orange-50", title: t("profile.activity.refill") || "เติมสินค้าสำเร็จ", machine: "Vending Central Ladprao", time: "10 นาทีที่แล้ว" },
+                { icon: "fi fi-rr-refresh", color: "from-[var(--chart-series-1)] to-[var(--chart-series-1)]", bg: "bg-[var(--surface-2)]", title: t("profile.activity.firmware") || "อัพเดตเฟิร์มแวร์", machine: "#M-045", time: "3 ชั่วโมงที่แล้ว" },
+                { icon: "fi fi-rr-coins", color: "from-[var(--success)] to-[var(--success)]", bg: "bg-[var(--success-bg)]", title: t("profile.activity.cashCheck") || "ตรวจสอบยอดเงินสำเร็จ", machine: "", time: "เมื่อวานนี้ 18:30" }
+              ]).map((item, idx) => (
                 <div key={idx} className="timeline-item flex gap-6 group">
                   <div className={`w-14 h-14 rounded-[20px] bg-gradient-to-br ${item.color} flex items-center justify-center text-[var(--primary-contrast)] text-xl shadow-lg group-hover:scale-110 transition-transform duration-300 shrink-0`}>
                     <i className={item.icon}></i>
@@ -148,49 +179,8 @@ export default function ProfileView() {
                     <p className="text-[17px] font-bold text-[var(--text)] mb-1">
                       {item.title} {item.machine && <strong className="text-[var(--primary)]">{item.machine}</strong>}
                     </p>
-                    <span className="text-[14px] font-semibold text-[var(--text-muted)]">{item.time}</span>
+                    <span className="text-[14px] font-semibold text-[var(--text-muted)]">{item.time || item.formattedTime}</span>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right: Stats & Progress */}
-        <div className="grid-right animate-slide-right opacity-0 delay-300">
-          <div className="vibrant-card completion-card !rounded-[40px] !border-none !bg-gradient-to-br from-[var(--surface-2)] to-[var(--surface-2)] text-[var(--text)] p-10 mb-8 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[var(--primary)] blur-[100px] opacity-10 pointer-events-none group-hover:opacity-20 transition-opacity"></div>
-            <div className="relative z-10">
-              <div className="progress-header flex justify-between items-end mb-4">
-                <div className="flex flex-col">
-                  <span className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-1">Profile Completion</span>
-                  <span className="text-[32px] font-black leading-none text-[var(--text)]">85%</span>
-                </div>
-                <div className="w-12 h-12 rounded-full border-2 border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] group-hover:border-[var(--primary)] group-hover:text-[var(--primary)] transition-colors">
-                  <i className="fi fi-rr-star"></i>
-                </div>
-              </div>
-              <div className="progress-bar h-3 bg-[var(--surface-2)] rounded-full mb-6 overflow-hidden">
-                <div className="progress-fill h-full bg-gradient-to-r from-[var(--primary)] to-[var(--primary)] shadow-[0_0_20px_rgba(244,123,42,0.3)] rounded-full" style={{ width: '85%' }}></div>
-              </div>
-              <p className="text-[14px] font-medium text-[var(--text-muted)] leading-relaxed">{t("profile.completionHint")}</p>
-            </div>
-          </div>
-
-          <div className="glass stats-card !rounded-[40px] p-2 shadow-2xl border-[var(--border)]/40 bg-[var(--surface-1)]">
-            <div className="grid grid-cols-2 gap-2">
-              {[
-                { val: "12", lbl: t("profile.stat.machines"), icon: "fi fi-rr-box", color: "text-blue-500", bg: "bg-[var(--surface-2)]" },
-                { val: "4.8", lbl: t("profile.stat.rating"), icon: "fi fi-rr-star", color: "text-amber-500", bg: "bg-amber-50" },
-                { val: "1.2k", lbl: t("profile.stat.totalSales"), icon: "fi fi-rr-bank", color: "text-[var(--primary)]", bg: "bg-orange-50" },
-                { val: "100%", lbl: "Uptime", icon: "fi fi-rr-bolt", color: "text-emerald-500", bg: "bg-[var(--success-bg)]" }
-              ].map((stat, idx) => (
-                <div key={idx} className="vibrant-card !rounded-[32px] !border-none !bg-[var(--surface-1)] p-8 flex flex-col items-center justify-center group hover:!bg-[var(--surface-2)] transition-all duration-500">
-                  <div className={`w-12 h-12 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center text-xl mb-4 group-hover:scale-110 transition-transform`}>
-                    <i className={stat.icon}></i>
-                  </div>
-                  <span className="stat-val text-[28px] font-black text-[var(--text)]">{stat.val}</span>
-                  <span className="stat-lbl text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest">{stat.lbl}</span>
                 </div>
               ))}
             </div>
@@ -339,8 +329,10 @@ export default function ProfileView() {
         /* Grid Layout */
         .profile-grid {
           display: grid;
-          grid-template-columns: 1.7fr 1fr;
+          grid-template-columns: 1fr;
           gap: 35px;
+          max-width: 900px;
+          margin: 0 auto;
         }
 
         .form-row {

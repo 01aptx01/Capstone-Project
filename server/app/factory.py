@@ -16,7 +16,7 @@ from app.api.auth_otp import auth_otp_api
 from app.api.products import products_api
 from app.cors_config import cors_allow_headers, cors_allow_methods, cors_origins_list
 from app.db_config.db import init_db
-from app.db_config.schema_repair import ensure_promotions_max_uses
+from app.db_config.schema_repair import ensure_promotions_max_uses, ensure_machines_created_by
 from app.db_config.sqlalchemy_uri import build_sqlalchemy_database_uri
 from app.extensions import db, migrate
 
@@ -36,9 +36,7 @@ def _resolve_swagger_path() -> str:
             return ap
     return os.path.abspath(candidates[0])
 
-
 _SWAGGER_FILE = _resolve_swagger_path()
-
 
 def _validate_socket_env() -> None:
     if os.getenv("SOCKETIO_ENABLED", "1") == "0":
@@ -71,6 +69,7 @@ def create_app() -> Flask:
 
     with flask_app.app_context():
         ensure_promotions_max_uses(db.engine)
+        ensure_machines_created_by(db.engine)
 
     origins = cors_origins_list()
     logger.info("🔧 [create_app] CORS allowed origins: %s", origins)
@@ -101,6 +100,10 @@ def create_app() -> Flask:
     from app.api.admin import admin_bp
 
     flask_app.register_blueprint(admin_bp)
+
+    # Auto-seed the first admin account when admin_users table is empty
+    from app.api.admin.admin_auth import seed_first_admin
+    seed_first_admin(flask_app)
 
     @flask_app.route("/")
     def react_index():

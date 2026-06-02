@@ -197,6 +197,10 @@ CREATE TABLE admin_users (
   email VARCHAR(255) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  first_name VARCHAR(100) DEFAULT '',
+  last_name VARCHAR(100) DEFAULT '',
+  position VARCHAR(100) DEFAULT '',
+  phone VARCHAR(20) DEFAULT '',
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_admin_users_email (email)
@@ -242,6 +246,11 @@ CREATE TABLE transactions (
 -- =====================
 -- SEED DATA
 -- =====================
+
+-- Admin roles (RBAC)
+INSERT INTO roles (name, description) VALUES
+('superadmin', 'Full administrative access'),
+('admin', 'Standard administrative access');
 
 -- Machine (dev token plaintext: dev-machine-token — bcrypt hash below; production: create via Admin)
 INSERT INTO machines (machine_code, secret_token_hash, location, status) VALUES (

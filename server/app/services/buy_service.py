@@ -399,7 +399,7 @@ class InventoryService:
 
     def update_order_status(self, charge_id: str, status: str) -> None:
         """อัปเดต status ของออเดอร์ตาม Unified State Machine
-        
+
         Valid statuses:
           pending_payment | cancelled | payment_failed | paid |
           dispensing | completed | dispense_failed | refunded

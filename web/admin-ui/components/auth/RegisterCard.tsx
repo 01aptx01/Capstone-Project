@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthCardWrapper from "./AuthCardWrapper";
 import { Suspense } from "react";
+import { registerAdmin } from "@/lib/admin-api";
 
 function RegisterCardContent() {
   const [formData, setFormData] = useState({
@@ -19,14 +20,13 @@ function RegisterCardContent() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Read pre-authorized email from URL (passed by the invitation flow)
-  const authorizedEmail = searchParams?.get("email") || "newhire@example.com";
+  const authorizedEmail = searchParams?.get("email") || "";
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(s => ({ ...s, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
@@ -35,12 +35,40 @@ function RegisterCardContent() {
       return;
     }
 
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    const regToken = sessionStorage.getItem("reg_token");
+    if (!regToken) {
+      setError("Registration session expired. Please go back to login and try again.");
+      return;
+    }
+
     setLoading(true);
-    // Simulate registration — email is locked to the invited address
-    setTimeout(() => {
+
+    try {
+      const res = await registerAdmin({
+        registration_token: regToken,
+        new_password: formData.password,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        position: formData.position,
+        phone: formData.phone,
+      });
+
+      localStorage.setItem("admin_token", res.token);
+      sessionStorage.removeItem("reg_token");
+      router.push("/");
+    } catch (err: unknown) {
+      const axiosErr = err as { response?: { data?: { error?: string } } };
+      setError(
+        axiosErr?.response?.data?.error || "Registration failed. Please try again."
+      );
+    } finally {
       setLoading(false);
-      router.push(`/verify-otp?phone=${encodeURIComponent(formData.phone)}`);
-    }, 1000);
+    }
   };
 
   return (

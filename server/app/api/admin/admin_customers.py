@@ -6,7 +6,7 @@ from flask import jsonify, request
 from sqlalchemy import func, select
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
 from app.models import Order, User
@@ -32,7 +32,7 @@ def _user_to_dict(u: User) -> dict:
 
 
 @admin_bp.route("/customers", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_list_customers():
     page, per_page = get_pagination_params()
     q = (request.args.get("q") or "").strip()
@@ -72,7 +72,7 @@ def _order_summary(o: Order) -> dict:
 
 
 @admin_bp.route("/customers/<int:user_id>", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_get_customer(user_id: int):
     u = db.session.get(User, user_id)
     if not u:
