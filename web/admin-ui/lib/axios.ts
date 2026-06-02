@@ -57,10 +57,15 @@ api.interceptors.response.use(
 
     if (typeof window !== "undefined") {
       if (status === 401 || status === 403) {
-        localStorage.removeItem("admin_token");
-        const path = window.location.pathname || "";
-        if (!path.startsWith("/login")) {
-          window.location.assign("/login");
+        // Don't auto-redirect for auth endpoints (login/register handle their own errors)
+        const reqUrl = err.config?.url || "";
+        const isAuthEndpoint = reqUrl.includes("/auth/login") || reqUrl.includes("/auth/register");
+        if (!isAuthEndpoint) {
+          localStorage.removeItem("admin_token");
+          const path = window.location.pathname || "";
+          if (!path.startsWith("/login")) {
+            window.location.assign("/login");
+          }
         }
         return Promise.reject(err);
       }

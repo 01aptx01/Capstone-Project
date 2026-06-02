@@ -4,7 +4,7 @@ import secrets
 from decimal import Decimal
 
 import bcrypt
-from flask import jsonify, request
+from flask import jsonify, request, g
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -16,6 +16,33 @@ from app.extensions import db
 from app.models import Machine, MachineSlot, Product
 
 _MAX_SLOTS_PER_MACHINE = 24
+
+
+def _log_machine_modification_event(machine_code: str, action: str):
+    import random
+    from flask import g
+    from app.models.machine import MachineEvent
+    from app.models.admin_rbac import AdminUser
+    try:
+        current_admin = AdminUser.query.get(g._admin_id)
+        if current_admin:
+            admin_name = f"{current_admin.first_name or ''} {current_admin.last_name or ''}".strip() or current_admin.email
+            ev = MachineEvent(
+                machine_code=machine_code,
+                job_id="manual_mod",
+                event_type="Machine Modified",
+                state="INFO",
+                seq=random.randint(1, 2000000000),
+                payload_json={
+                    "admin_id": g._admin_id,
+                    "admin_name": admin_name,
+                    "action": action
+                }
+            )
+            db.session.add(ev)
+            db.session.commit()
+    except Exception as e:
+        print(f"Error logging machine modification event: {e}")
 
 
 def _dec(value):
@@ -44,6 +71,12 @@ def admin_machines_collection():
     q = (request.args.get("q") or "").strip()
 
     filters = []
+    
+    from app.models.admin_rbac import AdminUser
+    current_admin = AdminUser.query.get(g._admin_id)
+    if current_admin and current_admin.email != "admin@modpao.com":
+        filters.append(Machine.created_by == g._admin_id)
+
     if status:
         filters.append(Machine.status == status)
     if q:
@@ -100,6 +133,7 @@ def _admin_create_machine():
         status=status,
         secret_token_hash=token_hash,
         is_online=False,
+        created_by=g._admin_id,
     )
     db.session.add(machine)
     try:
@@ -202,6 +236,7 @@ def admin_put_machine_slots(machine_code: str):
                 )
             )
         db.session.commit()
+        _log_machine_modification_event(machine_code, "updated_slots")
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "failed to save slots"}), 400
@@ -248,6 +283,7 @@ def _admin_put_machine_metadata(machine_code: str):
 
     try:
         db.session.commit()
+        _log_machine_modification_event(machine_code, "updated_metadata")
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "update failed"}), 400
@@ -264,9 +300,40 @@ def _admin_put_machine_metadata(machine_code: str):
     return jsonify(_machine_detail_payload(m2)), 200
 
 
-@admin_bp.route("/machines/<machine_code>", methods=["GET", "PUT"])
+def _admin_delete_machine(machine_code: str):
+    m = db.session.get(Machine, machine_code)
+    if not m:
+        return jsonify({"error": "not found"}), 404
+
+    from app.models.order_and_payment import Order
+    order_count = db.session.scalar(
+        select(func.count()).select_from(Order).where(Order.machine_code == machine_code)
+    ) or 0
+    if order_count > 0:
+        return jsonify(
+            {"error": f"ไม่สามารถลบตู้ได้ มีออเดอร์ที่เกี่ยวข้องอยู่ {order_count} รายการ"}
+        ), 409
+
+    from app.models.machine import MachineEvent
+    db.session.query(MachineEvent).filter_by(machine_code=machine_code).delete(
+        synchronize_session=False
+    )
+
+    db.session.delete(m)
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": "ลบตู้ไม่สำเร็จ"}), 500
+
+    return jsonify({"ok": True, "machine_code": machine_code}), 200
+
+
+@admin_bp.route("/machines/<machine_code>", methods=["GET", "PUT", "DELETE"])
 @admin_required
 def admin_machine_detail(machine_code: str):
+    if request.method == "DELETE":
+        return _admin_delete_machine(machine_code)
     if request.method == "PUT":
         return _admin_put_machine_metadata(machine_code)
     stmt = (

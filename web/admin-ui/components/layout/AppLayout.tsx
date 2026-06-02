@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
@@ -8,9 +8,11 @@ import { applyDarkModeClass, getStoredDarkMode } from "@/lib/theme";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [isChecking, setIsChecking] = useState(true);
   
-  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/verify-otp";
+  const isAuthPage = pathname === "/login" || pathname === "/register";
+  const isLogoutPage = pathname === "/logout";
 
   useEffect(() => {
     const stored = getStoredDarkMode();
@@ -18,15 +20,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Simulate auth check/loading state on route change
-    setIsChecking(true);
-    const timer = setTimeout(() => {
+    if (isAuthPage || isLogoutPage) {
       setIsChecking(false);
-    }, 400); // 400ms splash screen to prevent UI leaking
-    return () => clearTimeout(timer);
-  }, [pathname]);
+      return;
+    }
 
-  if (isChecking) {
+    const token = localStorage.getItem("admin_token");
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
+
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const exp = payload.exp * 1000;
+      if (Date.now() > exp) {
+        localStorage.removeItem("admin_token");
+        router.replace("/login");
+        return;
+      }
+    } catch {
+      localStorage.removeItem("admin_token");
+      router.replace("/login");
+      return;
+    }
+
+    setIsChecking(false);
+  }, [pathname, isAuthPage, isLogoutPage, router]);
+
+  if (isChecking && !isAuthPage && !isLogoutPage) {
     return (
       <div className="flex h-screen w-screen items-center justify-center fixed inset-0 z-[9999]" style={{ background: "var(--bg)" }}>
         <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
@@ -42,7 +64,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isAuthPage) {
     return (
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "var(--bg)" }}>
-        {/* Background decorative elements for Auth Pages */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
           <div className="absolute -top-[10%] -right-[5%] w-[50%] h-[50%] rounded-full opacity-10 blur-[100px]" style={{ background: "var(--primary)" }}></div>
           <div className="absolute top-[60%] -left-[10%] w-[40%] h-[40%] rounded-full opacity-5 blur-[100px]" style={{ background: "var(--chart-series-1)" }}></div>

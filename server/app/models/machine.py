@@ -12,6 +12,7 @@ class Machine(db.Model):
     last_active = db.Column(db.DateTime, nullable=True)
     secret_token_hash = db.Column(db.String(255), nullable=True)
     is_online = db.Column(db.Boolean, nullable=False, default=False)
+    created_by = db.Column(db.Integer, db.ForeignKey("admin_users.id", ondelete="SET NULL"), nullable=True)
 
     slots = db.relationship("MachineSlot", back_populates="machine", cascade="all, delete-orphan")
     orders = db.relationship("Order", back_populates="machine")

@@ -26,6 +26,10 @@ class AdminUser(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    first_name = db.Column(db.String(100), nullable=True, default="")
+    last_name = db.Column(db.String(100), nullable=True, default="")
+    position = db.Column(db.String(100), nullable=True, default="")
+    phone = db.Column(db.String(20), nullable=True, default="")
     created_at = db.Column(db.DateTime, server_default=db.func.now(), nullable=False)
     updated_at = db.Column(
         db.DateTime,

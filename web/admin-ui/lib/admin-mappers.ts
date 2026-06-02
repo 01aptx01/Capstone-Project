@@ -320,7 +320,7 @@ export function mapDashboardStats(params: {
     salesTodayLabel: formatBaht(params.summary.total_sales_today ?? 0),
     ordersToday,
     machinesOnline: params.summary.active_machines ?? 0,
-    machinesTotal: params.machinesTotal,
+    machinesTotal: params.summary.total_machines ?? params.machinesTotal,
     lowStockCount: params.lowStockCount,
   };
 }
