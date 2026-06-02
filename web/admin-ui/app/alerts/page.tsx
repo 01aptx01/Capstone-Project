@@ -63,8 +63,28 @@ function AlertsPageClient() {
     }
   };
 
+  // Backend mixes admin-modification events into machine_errors; split them out
+  // so real ERROR events and "who changed what" each get their own section.
+  const machineErrors = useMemo(
+    () => (data?.machine_errors ?? []).filter((e) => e.event_type !== "Machine Modified"),
+    [data]
+  );
+  const adminChanges = useMemo(
+    () => (data?.machine_errors ?? []).filter((e) => e.event_type === "Machine Modified"),
+    [data]
+  );
+
+  const changeActionLabel = useCallback(
+    (action: unknown) => {
+      if (action === "updated_slots") return t("page.alerts.action.updated_slots");
+      if (action === "updated_metadata") return t("page.alerts.action.updated_metadata");
+      return t("page.alerts.action.unknown");
+    },
+    [t]
+  );
+
   const alertSections: ExportSection[] = useMemo(() => {
-    const errs = data?.machine_errors ?? [];
+    const errs = (data?.machine_errors ?? []).filter((e) => e.event_type !== "Machine Modified");
     const low = data?.low_stock ?? [];
     const threshold = data?.stock_threshold ?? 5;
     return [
@@ -159,11 +179,11 @@ function AlertsPageClient() {
 
         {loading && !data ? (
           <p className="text-[var(--text-muted)] font-bold">{t("page.alerts.loading")}</p>
-        ) : (data?.machine_errors?.length ?? 0) === 0 ? (
+        ) : machineErrors.length === 0 ? (
           <p className="text-[var(--text-muted)] font-medium">{t("page.alerts.empty")}</p>
         ) : (
           <div className="space-y-4">
-            {data!.machine_errors.map((ev, index) => (
+            {machineErrors.map((ev, index) => (
               <div
                 key={ev.id}
                 className="p-5 rounded-2xl bg-[var(--surface-1)]/50 border border-[var(--border)]/80 hover:border-orange-200 hover:bg-[var(--surface-1)]/80 transition-all animate-slide-left opacity-0"
@@ -208,6 +228,55 @@ function AlertsPageClient() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </div>
+
+      <div className="glass !rounded-[32px] p-8 shadow-[0_20px_50px_rgba(0,0,0,0.03)] border-[var(--border)] animate-in opacity-0 delay-150 mb-8">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+            <i className="fi fi-rr-user-pen text-lg"></i>
+          </div>
+          <h2 className="text-xl font-extrabold text-[var(--text)]">{t("page.alerts.sectionChanges")}</h2>
+        </div>
+
+        {loading && !data ? (
+          <p className="text-[var(--text-muted)] font-bold">{t("page.alerts.loading")}</p>
+        ) : adminChanges.length === 0 ? (
+          <p className="text-[var(--text-muted)] font-medium">{t("page.alerts.emptyChanges")}</p>
+        ) : (
+          <div className="space-y-3">
+            {adminChanges.map((ev, index) => {
+              const adminName =
+                (ev.payload && (ev.payload.admin_name as string)) || `#${ev.payload?.admin_id ?? "?"}`;
+              return (
+                <div
+                  key={ev.id}
+                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 animate-slide-left opacity-0"
+                  style={{ animationDelay: `${100 + index * 60}ms` }}
+                >
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-indigo-600 bg-indigo-100">
+                    <i className="fi fi-rr-user-pen"></i>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-[var(--text)]">
+                        {changeActionLabel(ev.payload?.action)}
+                      </span>
+                      <span className="text-xs font-black uppercase px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">
+                        {t("page.alerts.machinePrefix")}{ev.machine_code}
+                      </span>
+                    </div>
+                    <div className="text-sm text-[var(--text-muted)] font-semibold mt-0.5">
+                      {t("page.alerts.changeBy").replace("{admin}", adminName)}
+                    </div>
+                  </div>
+                  <div className="text-sm font-semibold text-[var(--text-muted)] shrink-0">
+                    {ev.created_at ? new Date(ev.created_at).toLocaleString() : "—"}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

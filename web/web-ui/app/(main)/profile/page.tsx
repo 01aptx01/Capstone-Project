@@ -118,7 +118,7 @@ export default function ProfilePage() {
           >
             แก้ไข
           </button>
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-brand-muted flex items-center justify-center mb-4 border-4 border-brand-muted">
+          <div className="w-24 h-24 rounded-full overflow-hidden flex items-center justify-center mb-4 border-4 border-brand">
             {renderAvatar(avatar)}
           </div>
           <h2 className="font-display text-xl font-bold text-foreground">

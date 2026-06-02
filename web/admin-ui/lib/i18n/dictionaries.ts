@@ -156,6 +156,12 @@ export type DictKey =
   | "page.alerts.remain"
   | "page.alerts.slotLine"
   | "page.alerts.machinePrefix"
+  | "page.alerts.sectionChanges"
+  | "page.alerts.emptyChanges"
+  | "page.alerts.changeBy"
+  | "page.alerts.action.updated_slots"
+  | "page.alerts.action.updated_metadata"
+  | "page.alerts.action.unknown"
   | "alerts.toast.resolved"
   | "coupon.tab.all"
   | "coupon.tab.active"
@@ -767,6 +773,12 @@ export const DICTS: Record<Lang, Dict> = {
     "page.alerts.remain": "คงเหลือ {n}",
     "page.alerts.slotLine": "({machine} · ช่อง {slot})",
     "page.alerts.machinePrefix": "· ตู้ ",
+    "page.alerts.sectionChanges": "การเปลี่ยนแปลงโดยแอดมิน",
+    "page.alerts.emptyChanges": "ยังไม่มีการเปลี่ยนแปลงจากแอดมินคนอื่น",
+    "page.alerts.changeBy": "โดย {admin}",
+    "page.alerts.action.updated_slots": "แก้ไขสต็อก/สินค้าในช่อง",
+    "page.alerts.action.updated_metadata": "แก้ไขข้อมูลตู้ (ตำแหน่ง/สถานะ)",
+    "page.alerts.action.unknown": "เปลี่ยนแปลงข้อมูลตู้",
     "alerts.toast.resolved": "ทำเครื่องหมายว่าแก้ไขแล้ว",
     "coupon.tab.all": "ทั้งหมด",
     "coupon.tab.active": "กำลังใช้งาน (Active)",
@@ -790,7 +802,7 @@ export const DICTS: Record<Lang, Dict> = {
     "coupon.usageNotInApi": "นับจากออเดอร์ที่ชำระแล้ว",
     "coupon.redemptionsOpen": "ผู้ใช้คูปอง",
     "coupon.redemptionsTitle": "การใช้คูปอง",
-    "coupon.redemptionsSubtitle": "สมาชิก = เบอร์โทรหลังสแกนรับแต้ม · ไม่มีสมาชิก = unknown",
+    "coupon.redemptionsSubtitle": "สมาชิก = เบอร์โทรหลังสแกนรับแต้ม",
     "coupon.redemptionsEmpty": "ยังไม่มีการใช้คูปองนี้",
     "coupon.redemptionsClose": "ปิด",
     "coupon.redemptionsColUser": "ผู้ใช้",
@@ -1377,6 +1389,12 @@ export const DICTS: Record<Lang, Dict> = {
     "page.alerts.remain": "Remaining {n}",
     "page.alerts.slotLine": "({machine} · slot {slot})",
     "page.alerts.machinePrefix": "· Machine ",
+    "page.alerts.sectionChanges": "Admin changes",
+    "page.alerts.emptyChanges": "No changes from other admins yet",
+    "page.alerts.changeBy": "by {admin}",
+    "page.alerts.action.updated_slots": "Updated slot inventory/products",
+    "page.alerts.action.updated_metadata": "Updated machine info (location/status)",
+    "page.alerts.action.unknown": "Modified machine data",
     "alerts.toast.resolved": "Marked as resolved",
     "coupon.tab.all": "All",
     "coupon.tab.active": "Active",
