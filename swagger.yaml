@@ -6,7 +6,7 @@ info:
     Interactive docs (Flasgger) are also served by the server at `/apidocs` when the app is running.
 
     **Socket.IO (same host/port as HTTP, e.g. http://localhost:8000):**
-    - Pi agent: auth with `{ "machine_id": "<code>", "token": "<secret>" }` (bcrypt on server). Server emits `job.start` after checkout; agent replies via machine_event RPC (persisted and `job_event_broadcast` to kiosk).
+    - Pi agent: auth with `{ "machine_code": "<code>", "token": "<secret>" }` (bcrypt on server). Server emits `job.start` after checkout; agent replies via machine_event RPC (persisted and `job_event_broadcast` to kiosk).
     - Kiosk (machine-ui): auth `{ "role": "kiosk", "kiosk_secret": "..." }` — required in production. Listens for `job_event_broadcast`.
     - Admin dashboard: `{ "role": "admin" }` or `{ "admin_token": "..." }` when `ADMIN_SOCKET_SECRET` is set. Receives `dashboard_update` on machine events.
 
@@ -40,7 +40,7 @@ tags:
 - name: Members
   description: Member lookup, registration, and points
 - name: Orders
-  description: Member order history, redeem, pickup (web-ui)
+  description: Member order history and redeem (web-ui)
 - name: Promotions
   description: Redeemable coupons catalog
 - name: Machines
@@ -88,12 +88,6 @@ paths:
         schema:
           type: string
         description: Machine identifier (default MP1-001)
-      - name: machine_id
-        in: query
-        required: false
-        schema:
-          type: string
-        description: Legacy alias for machine_code
       responses:
         '200':
           description: Product rows
@@ -157,9 +151,6 @@ paths:
                     $ref: '#/components/schemas/CartItem'
                 machine_code:
                   type: string
-                machine_id:
-                  type: string
-                  description: Legacy alias
                 draft_id:
                   type: string
                   description: Optional draft from create-draft
@@ -1063,7 +1054,7 @@ paths:
     post:
       tags:
       - Auth
-      summary: Send OTP to member phone (Twilio or console fallback)
+      summary: Send OTP to member phone (console log in dev)
       requestBody:
         required: true
         content:
@@ -1308,37 +1299,6 @@ paths:
                     type: array
                     items:
                       type: object
-  /api/orders/{charge_id}/pickup:
-    post:
-      tags:
-      - Orders
-      summary: Trigger pickup dispense for ready order (web-ui QR scan flow)
-      security: *id001
-      parameters:
-      - name: charge_id
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                phone_number:
-                  type: string
-      responses:
-        '200':
-          description: Dispense started
-        '403':
-          description: forbidden
-        '404':
-          description: not_found
-        '409':
-          description: invalid_status
-        '500':
-          description: dispense_failed or server_error
   /api/admin/coupons/{promotion_id}/redemptions:
     get:
       tags:

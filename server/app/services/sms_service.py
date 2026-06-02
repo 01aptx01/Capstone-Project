@@ -1,9 +1,8 @@
-"""SMS delivery — Twilio when configured, console fallback otherwise."""
+"""SMS delivery — console (dev) only; OTP is printed in server logs."""
 
 from __future__ import annotations
 
 import logging
-import os
 from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
@@ -12,7 +11,7 @@ logger = logging.getLogger(__name__)
 class SmsService(ABC):
     @abstractmethod
     def send(self, to_e164: str, body: str) -> str:
-        """Send SMS. Returns delivery mode: 'twilio' or 'console'."""
+        """Send SMS. Returns delivery mode identifier."""
 
 
 class ConsoleSmsService(SmsService):
@@ -20,18 +19,6 @@ class ConsoleSmsService(SmsService):
         logger.warning("[SMS:console] to=%s body=%s", to_e164, body)
         print(f"[OTP SMS console] to={to_e164} {body}", flush=True)
         return "console"
-
-
-class TwilioSmsService(SmsService):
-    def __init__(self, account_sid: str, auth_token: str, from_number: str):
-        from twilio.rest import Client
-
-        self._client = Client(account_sid, auth_token)
-        self._from = from_number
-
-    def send(self, to_e164: str, body: str) -> str:
-        self._client.messages.create(to=to_e164, from_=self._from, body=body)
-        return "twilio"
 
 
 def phone_to_e164(phone_th: str) -> str:

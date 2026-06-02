@@ -8,6 +8,7 @@ from typing import Any, Dict, Optional, Tuple
 import bcrypt
 import socketio
 
+from app.cors_config import cors_origins_list
 from app.db_config.db import get_db
 
 logger = logging.getLogger(__name__)
@@ -26,10 +27,10 @@ def _json_dumps_safe(payload: Any) -> Optional[str]:
         return json.dumps({"unserializable": True})
 
 
-def _verify_machine_token_auth(machine_id: str, raw_token: str) -> Tuple[bool, str]:
+def _verify_machine_token_auth(machine_code: str, raw_token: str) -> Tuple[bool, str]:
     """Validate raw token against ``machines.secret_token_hash`` (bcrypt)."""
-    if not machine_id or not raw_token:
-        return False, "machine_id and token required"
+    if not machine_code or not raw_token:
+        return False, "machine_code and token required"
 
     db = get_db()
     cur = db.cursor(dictionary=True)
@@ -41,11 +42,11 @@ def _verify_machine_token_auth(machine_id: str, raw_token: str) -> Tuple[bool, s
             WHERE machine_code = %s
             LIMIT 1
             """,
-            (machine_id,),
+            (machine_code,),
         )
         row = cur.fetchone()
         if not row:
-            return False, "unknown machine_id"
+            return False, "unknown machine_code"
         stored = row.get("secret_token_hash")
         if not stored:
             return False, "machine has no enrolled token"
@@ -66,7 +67,7 @@ def _verify_machine_token_auth(machine_id: str, raw_token: str) -> Tuple[bool, s
 
 sio = socketio.Server(
     async_mode="eventlet",
-    cors_allowed_origins="*",
+    cors_allowed_origins=cors_origins_list(),
     logger=True,
     engineio_logger=True,
 )

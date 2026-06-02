@@ -47,5 +47,5 @@ export interface OrderHistory {
   datetime: string; // วันและเวลาที่สั่งซื้อ
   items: string; // สรุปรายการสินค้าที่ซื้อ (เช่น "หมูสับ x 1, ครีม x 2")
   total: number; // ราคารวมสุทธิ
-  status: "ready_to_scan" | "completed"; // สถานะการรับสินค้า
+  status: string; // สถานะจาก API (เช่น completed, paid, pending_payment)
 }

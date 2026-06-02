@@ -91,10 +91,9 @@ flowchart LR
 
 | โหมด | ตัวแปร | พฤติกรรม |
 |------|--------|----------|
-| **socket** (แนะนำ) | `DISPATCH_MODE=socket` | Server ส่ง event `job.start` ไปห้อง Socket.IO ของ `machine_code` — agent ที่ล็อกอินด้วย token รับงาน |
-| **http** (legacy) | `DISPATCH_MODE=http` | Server POST ไป `AGENT_URL` / `/jobs/start` โดยตรง |
+| **socket** | (ค่าเริ่มต้น) | Server ส่ง event `job.start` ไปห้อง Socket.IO ของ `machine_code` — agent ที่ล็อกอินด้วย token รับงาน |
 
-ค่าเริ่มต้นใน `.env.example`: `DISPATCH_MODE=socket`
+Health ของ agent ใช้ `AGENT_BASE_URL` (GET `/health`) — ไม่มี HTTP dispatch แยก
 
 ### 2.3 พอร์ตที่ publish บน host (Docker มาตรฐาน)
 
@@ -208,7 +207,7 @@ Capstone-Project/
 | `POST /api/machines/events` | machine_events.py | agent ส่ง telemetry (HTTP sink) |
 | `GET/POST /api/members/*` | members.py | สมาชิก, แต้ม |
 | `POST /api/auth/otp/*` | auth_otp.py | ส่ง/ยืนยัน OTP → JWT |
-| `GET /api/members/<phone>/orders` ฯลฯ | orders.py | ประวัติ, redeem, pickup |
+| `GET /api/members/<phone>/orders` ฯลฯ | orders.py | ประวัติ, redeem, คูปอง |
 
 **Buy endpoints หลัก** (`buy.py`):
 
@@ -243,11 +242,11 @@ Blueprint: `app/api/admin/__init__.py` — **auth ปัจจุบันเป
 
 | ผู้เชื่อม | Auth | Room / เหตุการณ์ |
 |----------|------|------------------|
-| **Machine (agent)** | `{ "machine_id": "<code>", "token": "<plaintext>" }` | bcrypt กับ `machines.secret_token_hash`; อัปเดต `is_online`; รับ `job.start` |
+| **Machine (agent)** | `{ "machine_code": "<code>", "token": "<plaintext>" }` | bcrypt กับ `machines.secret_token_hash`; อัปเดต `is_online`; รับ `job.start` |
 | **Admin UI** | `{ "role": "admin" }` หรือ `{ "admin_token": "..." }` ถ้ามี `ADMIN_SOCKET_SECRET` | room `admin`, event `dashboard_update` |
 | **machine-ui (browser)** | ตาม implementation ใน `useJobSocket.ts` | ติดตาม job ของ `NEXT_PUBLIC_MACHINE_CODE` |
 
-เมื่อชำระสำเร็จ server จะ dispatch งาน (socket หรือ HTTP ตาม `DISPATCH_MODE`) และ agent รัน state machine: `TRANSFER_TO_OVEN` → `HEATING` → `DISPENSING` → `DONE` / `ERROR`
+เมื่อชำระสำเร็จ server จะ dispatch งานผ่าน Socket.IO (`job.start`) และ agent รัน state machine: `TRANSFER_TO_OVEN` → `HEATING` → `DISPENSING` → `DONE` / `ERROR`
 
 ### 5.5 Services ชั้นธุรกิจ
 
@@ -257,7 +256,7 @@ Blueprint: `app/api/admin/__init__.py` — **auth ปัจจุบันเป
 | `buy_service.py` | สต็อก, สร้าง order, claim หลังจ่าย |
 | `hardware_service.py` | เรียก agent `/jobs/start` หรือ legacy `/dispense` |
 | `coupon_service.py` | ตรวจ/คำนวณส่วนลด |
-| `otp_service.py` + `sms_service.py` | OTP สมาชิก (Twilio หรือ log console) |
+| `otp_service.py` + `sms_service.py` | OTP สมาชิก (console log ใน dev) |
 
 ### 5.6 Migrations
 
@@ -300,7 +299,7 @@ Blueprint: `app/api/admin/__init__.py` — **auth ปัจจุบันเป
 รันบน **Raspberry Pi** จริง หรือใน Docker เป็น **จำลอง Pi** (`vending-pi`):
 
 - Flask API พอร์ต 5000 (`routes.py`)
-- Socket.IO client ไป server (`ws_client.py`) — ต้องมี `MACHINE_ID` + `MACHINE_TOKEN`
+- Socket.IO client ไป server (`ws_client.py`) — ต้องมี `MACHINE_CODE` + `MACHINE_TOKEN`
 - `machine.py` — GPIO LED, NFC MFRC522, เสียง VLC, mock job เมื่อไม่มีฮาร์ดแวร์
 
 ### 7.2 HTTP endpoints สำคัญ (agent)
@@ -311,7 +310,7 @@ Blueprint: `app/api/admin/__init__.py` — **auth ปัจจุบันเป
 
 ### 7.3 Environment สำคัญ (agent)
 
-ดู `client/agent/.env.example`: `MACHINE_ID`, `MACHINE_TOKEN`, `SERVER_SOCKET_URL`, `NFC_AUTO_APPROVE`, pin LED, `MACHINE_UI_URL` สำหรับ Chromium บน Pi
+ดู `client/agent/.env.example`: `MACHINE_CODE`, `MACHINE_TOKEN`, `SERVER_SOCKET_URL`, `NFC_AUTO_APPROVE`, pin LED, `MACHINE_UI_URL` สำหรับ Chromium บน Pi
 
 ### 7.4 Docker vs Pi จริง
 
@@ -455,10 +454,10 @@ Server สามารถ serve static build ผ่าน mount `web/web-ui/buil
 | Database | `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` | server (ใน Docker `DB_HOST=db`) |
 | Omise | `NEXT_PUBLIC_OMISE_PUBLIC_KEY`, `OMISE_SECRET_KEY` | machine-ui build, server |
 | API URLs | `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_ADMIN_API_URL`, `RETURN_URI` | frontends, redirect 3DS |
-| Machine identity | `MACHINE_ID`, `MACHINE_TOKEN`, `NEXT_PUBLIC_MACHINE_CODE` | agent, machine-ui build |
+| Machine identity | `MACHINE_CODE`, `MACHINE_TOKEN`, `NEXT_PUBLIC_MACHINE_CODE` | agent, machine-ui build |
 | Socket | `SERVER_SOCKET_URL`, `NEXT_PUBLIC_SERVER_SOCKET_URL` | agent ภายใน Docker = `http://server:8000`; browser = `http://localhost:8000` |
-| Dispatch | `DISPATCH_MODE`, `AGENT_URL`, `AGENT_BASE_URL` | server → agent |
-| Auth สมาชิก | `JWT_SECRET`, `TWILIO_*`, `AUTH_DEV_BYPASS`, `OTP_TTL_SECONDS` | OTP / JWT |
+| Agent health | `AGENT_BASE_URL` | server → GET `/health` |
+| Auth สมาชิก | `JWT_SECRET`, `AUTH_DEV_BYPASS`, `OTP_TTL_SECONDS` | OTP (console) / JWT |
 | Dev | `ALLOW_MOCK_PAY`, `ADMIN_SOCKET_SECRET` | mock-pay, admin socket |
 | CORS | `CORS_ORIGINS` | server — เพิ่ม origin LAN เมื่อเข้าจาก IP |
 
@@ -537,7 +536,7 @@ docker compose up --build --no-log-prefix
 3. ใน root `.env`:
 
 ```env
-MACHINE_ID=DEMO-01
+MACHINE_CODE=DEMO-01
 MACHINE_TOKEN=<secret_token>
 NEXT_PUBLIC_MACHINE_CODE=DEMO-01
 ```
@@ -683,7 +682,7 @@ npm run dev
 ```
 
 ตั้ง API URL ชี้ `http://localhost:8000`  
-ทดสอบ OTP: ถ้าไม่ตั้ง Twilio จะ log OTP ที่ console ของ server; `AUTH_DEV_BYPASS=1` รับ OTP 6 หลักใดๆ (dev เท่านั้น)
+ทดสอบ OTP: รหัส OTP โผล่ที่ console ของ server; `AUTH_DEV_BYPASS=1` รับ OTP 6 หลักใดๆ (dev เท่านั้น)
 
 ---
 
@@ -693,7 +692,7 @@ npm run dev
 2. บน Pi: `client/agent/.env` จาก `.env.example`
 
 ```env
-MACHINE_ID=DEMO-01
+MACHINE_CODE=DEMO-01
 MACHINE_TOKEN=<จาก Admin>
 SERVER_SOCKET_URL=http://192.168.1.44:8000
 MACHINE_UI_URL=http://192.168.1.44:3000
@@ -764,7 +763,7 @@ curl -X POST http://localhost:8000/api/buy/mock-pay \
 
 ### 17.2 ตรวจว่าจ่ายของทำงาน
 
-- `DISPATCH_MODE=socket` + agent มี `MACHINE_TOKEN` ถูกต้อง
+- agent มี `MACHINE_CODE` + `MACHINE_TOKEN` ถูกต้อง และเชื่อม Socket.IO ได้
 - Log `vending-pi`: `[Dispense]` / state transitions
 - Admin alerts / `machine_job_events` มีแถวใหม่
 
@@ -779,7 +778,7 @@ curl -X POST http://localhost:8000/api/buy/mock-pay \
 
 | อาการ | สาเหตุที่พบบ่อย | แนวทาง |
 |--------|-----------------|--------|
-| Agent `Authentication failed` | ไม่มี token / ผิดตู้ / `MP1-001` ไม่มี hash | สร้างตู้ใหม่ใน Admin หรือตั้ง `MACHINE_ID` + `MACHINE_TOKEN` |
+| Agent `Authentication failed` | ไม่มี token / ผิดตู้ / `MP1-001` ไม่มี hash | สร้างตู้ใหม่ใน Admin หรือตั้ง `MACHINE_CODE` + `MACHINE_TOKEN` |
 | Agent ไม่ retry หลัง auth fail | ออกแบบใน `ws_client.py` | แก้ token แล้ว restart container |
 | machine-ui ผิดตู้ / ไม่ได้รับ socket | `NEXT_PUBLIC_MACHINE_CODE` เก่าใน image | rebuild `machine-ui` |
 | สต็อกว่างหลังสร้างตู้ใหม่ | seed มีแค่ `MP1-001` | Admin → ใส่ slots |
@@ -811,7 +810,7 @@ curl -X POST http://localhost:8000/api/buy/mock-pay \
 
 ## สรุปสั้น
 
-โปรเจกต์นี้คือ **สแต็กตู้จำหน่ายอัจฉริยะ** ที่แยกชั้น UI (ตู้ / แอดมิน / สมาชิก), API กลาง (Flask + Socket.IO + Omise), MySQL และ agent ฮาร์ดแวร์บน Pi วิธีรันที่ตรงกับ repo มากที่สุดคือ **`docker compose up --build` ที่ root พร้อม `.env`** จากนั้นสร้างตู้ใน Admin แล้ว sync `MACHINE_ID`, `MACHINE_TOKEN`, และ rebuild `machine-ui` เมื่อเปลี่ยน `NEXT_PUBLIC_MACHINE_CODE` สำหรับพัฒนาแยกส่วน ใช้ MySQL จาก container `db` แล้วรัน `python main.py` / `npm run dev` ตามโฟลเดอร์ในหัวข้อ 16.5–16.8
+โปรเจกต์นี้คือ **สแต็กตู้จำหน่ายอัจฉริยะ** ที่แยกชั้น UI (ตู้ / แอดมิน / สมาชิก), API กลาง (Flask + Socket.IO + Omise), MySQL และ agent ฮาร์ดแวร์บน Pi วิธีรันที่ตรงกับ repo มากที่สุดคือ **`docker compose up --build` ที่ root พร้อม `.env`** จากนั้นสร้างตู้ใน Admin แล้ว sync `MACHINE_CODE`, `MACHINE_TOKEN`, และ rebuild `machine-ui` เมื่อเปลี่ยน `NEXT_PUBLIC_MACHINE_CODE` สำหรับพัฒนาแยกส่วน ใช้ MySQL จาก container `db` แล้วรัน `python main.py` / `npm run dev` ตามโฟลเดอร์ในหัวข้อ 16.5–16.8
 
 ---
 

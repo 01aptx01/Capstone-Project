@@ -189,7 +189,7 @@ class InventoryService:
         payment_method: str,
         total_price: float,
         promotion_id: int | None = None,
-        user_promotion_id: int | None = None, # ADDED
+        user_promotion_id: int | None = None,
     ) -> bool:
         db = self.get_db()
         cur = db.cursor(dictionary=True)
@@ -262,7 +262,7 @@ class InventoryService:
             db.close()
 
     def get_order_details_by_charge_id(self, charge_id: str) -> dict | None:
-        """Return { machine_code, cart: [{product_id, quantity}] } for pickup/dispense."""
+        """Return { machine_code, cart: [{product_id, quantity}] } for dispense recovery."""
         db = self.get_db()
         cur = db.cursor(dictionary=True)
         try:
@@ -344,7 +344,7 @@ class InventoryService:
                     """
                     UPDATE orders
                     SET status = 'paid'
-                    WHERE charge_id = %s AND status IN ('pending_payment', 'ready_to_scan')
+                    WHERE charge_id = %s AND status = 'pending_payment'
                     """,
                     (charge_id,),
                 )
@@ -401,7 +401,7 @@ class InventoryService:
         """อัปเดต status ของออเดอร์ตาม Unified State Machine
         
         Valid statuses:
-          pending_payment | cancelled | payment_failed | paid | ready_to_scan |
+          pending_payment | cancelled | payment_failed | paid |
           dispensing | completed | dispense_failed | refunded
         """
         db = self.get_db()
@@ -418,7 +418,7 @@ class InventoryService:
             )
             
             # If successfully paid or being dispensed/completed, mark the user's specific coupon as 'used'!
-            if status in ("paid", "dispensing", "completed", "ready_to_scan"):
+            if status in ("paid", "dispensing", "completed"):
                 cur.execute(
                     """
                     UPDATE user_promotions up
