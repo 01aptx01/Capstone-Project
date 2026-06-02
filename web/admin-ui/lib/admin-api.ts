@@ -496,6 +496,7 @@ export type AdminUserInfo = {
   position: string | null;
   phone: string | null;
   is_active: boolean;
+  roles?: string[];
   created_at: string | null;
 };
 
@@ -556,6 +557,19 @@ export async function revokeAdmin(
 
 export async function getMe(): Promise<{ user: AdminUserInfo }> {
   return adminFetch<{ user: AdminUserInfo }>("/auth/me");
+}
+
+export async function updateMe(body: {
+  first_name?: string;
+  last_name?: string;
+  position?: string;
+  phone?: string;
+}): Promise<{ user: AdminUserInfo }> {
+  return adminFetch<{ user: AdminUserInfo }>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
 }
 
 export async function changeAdminPassword(body: {
