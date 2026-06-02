@@ -15,12 +15,11 @@ from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
 from app.models import Machine, MachineSlot, Product
 
-_MAX_SLOTS_PER_MACHINE = 24
+_MAX_SLOTS_PER_MACHINE = 6
 
 
 def _log_machine_modification_event(machine_code: str, action: str):
     import random
-    from flask import g
     from app.models.machine import MachineEvent
     from app.models.admin_rbac import AdminUser
     try:
@@ -212,6 +211,17 @@ def admin_put_machine_slots(machine_code: str):
             return jsonify({"error": "duplicate slot_number in request"}), 400
         seen_numbers.add(sn)
         normalized.append((sn, pid, qty))
+
+    if len(normalized) > _MAX_SLOTS_PER_MACHINE:
+        return jsonify(
+            {"error": f"a machine can have at most {_MAX_SLOTS_PER_MACHINE} slots"}
+        ), 400
+
+    product_ids = [row[1] for row in normalized]
+    if len(set(product_ids)) != len(product_ids):
+        return jsonify(
+            {"error": "duplicate product_id: each slot must have a unique product"}
+        ), 400
 
     pids = {row[1] for row in normalized}
     if pids:
