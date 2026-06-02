@@ -10,7 +10,9 @@ from functools import wraps
 import jwt
 from flask import request, jsonify, g
 
-_JWT_SECRET = os.environ.get("ADMIN_JWT_SECRET", "dev-change-me-to-a-long-random-secret")
+def _get_jwt_secret() -> str:
+    # Strip any \r or spaces to prevent CRLF env files bugs in Docker
+    return (os.environ.get("ADMIN_JWT_SECRET") or "dev-change-me-to-a-long-random-secret").strip()
 
 
 def _current_admin_id() -> int | None:
@@ -29,16 +31,23 @@ def admin_required(f):
 
         token = auth_header[7:]
         try:
-            payload = jwt.decode(token, _JWT_SECRET, algorithms=["HS256"])
-        except jwt.ExpiredSignatureError:
+            payload = jwt.decode(token, _get_jwt_secret(), algorithms=["HS256"])
+        except jwt.ExpiredSignatureError as e:
+            from flask import current_app
+            current_app.logger.warning("JWT ExpiredSignatureError: %s", e)
             return jsonify({"error": "Token has expired. Please log in again."}), 401
-        except jwt.InvalidTokenError:
+        except jwt.InvalidTokenError as e:
+            from flask import current_app
+            current_app.logger.warning("JWT InvalidTokenError: %s, Token: %s, Secret: %s", e, token, _get_jwt_secret())
             return jsonify({"error": "Invalid token."}), 401
 
         if not payload.get("is_active", False):
             return jsonify({"error": "Account is pending activation."}), 403
 
-        admin_id = payload.get("sub")
+        try:
+            admin_id = int(payload.get("sub"))
+        except (ValueError, TypeError):
+            return jsonify({"error": "Invalid token subject."}), 401
 
         # DB-level check: admin must still exist and be active
         from app.models.admin_rbac import AdminUser

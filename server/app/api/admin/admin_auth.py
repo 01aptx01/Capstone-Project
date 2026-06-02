@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 # Helpers
 # ---------------------------------------------------------------------------
 
-_JWT_SECRET = os.environ.get("ADMIN_JWT_SECRET", "dev-change-me-to-a-long-random-secret")
+def _get_jwt_secret() -> str:
+    return (os.environ.get("ADMIN_JWT_SECRET") or "dev-change-me-to-a-long-random-secret").strip()
+
 _JWT_EXPIRES_H = int(os.environ.get("ADMIN_JWT_EXPIRES_HOURS", "12"))
 _INVITE_EXPIRES_H = int(os.environ.get("ADMIN_INVITE_EXPIRES_HOURS", "168"))
 
@@ -34,14 +36,17 @@ def _check_password(plain: str, hashed: str) -> bool:
 
 def _make_token(admin: AdminUser, expires_hours: int | None = None) -> str:
     exp_h = expires_hours or _JWT_EXPIRES_H
+    roles = [r.name for r in admin.roles] if getattr(admin, "roles", None) else ["admin"]
     payload = {
-        "sub": admin.id,
+        "sub": str(admin.id),
         "email": admin.email,
+        "roles": roles,
+        "type": "admin_access",
         "is_active": admin.is_active,
         "iat": datetime.datetime.utcnow(),
         "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=exp_h),
     }
-    return jwt.encode(payload, _JWT_SECRET, algorithm="HS256")
+    return jwt.encode(payload, _get_jwt_secret(), algorithm="HS256")
 
 
 def _admin_to_dict(admin: AdminUser) -> dict:
@@ -106,7 +111,7 @@ def admin_register():
         return jsonify({"error": "Registration token and new password are required."}), 400
 
     try:
-        payload = jwt.decode(reg_token, _JWT_SECRET, algorithms=["HS256"])
+        payload = jwt.decode(reg_token, _get_jwt_secret(), algorithms=["HS256"])
     except jwt.ExpiredSignatureError:
         return jsonify({"error": "Registration link has expired."}), 401
     except jwt.InvalidTokenError:

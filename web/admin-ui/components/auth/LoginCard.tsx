@@ -11,6 +11,7 @@ export default function LoginCard() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,7 +57,7 @@ export default function LoginCard() {
           <Image src="/Logo_modpao.png" alt="logo" width={48} height={48} priority />
         </div>
         <h1 className="text-2xl font-black text-[var(--text)]">Welcome Back</h1>
-        <p className="text-[var(--text)]0 text-sm mt-1">Sign in to MOD PAO Admin</p>
+        <p className="text-[var(--text)] text-sm mt-1">Sign in to MOD PAO Admin</p>
       </div>
 
       {error && (
@@ -68,7 +69,7 @@ export default function LoginCard() {
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-[13px] font-bold text-[var(--text)]0 mb-2">Email address</label>
+          <label className="block text-[13px] font-bold text-[var(--text)] mb-2">Email address</label>
           <input 
             type="email"
             required
@@ -79,15 +80,35 @@ export default function LoginCard() {
         </div>
 
         <div>
-          <label className="block text-[13px] font-bold text-[var(--text)]0 mb-2">Password</label>
-          <input 
-            type="password" 
-            required
-            value={password} 
-            onChange={(e) => setPassword(e.target.value)} 
-            className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl focus:bg-[var(--surface-1)] focus:border-[var(--primary)] outline-none transition-all text-[15px] font-medium" 
-          />
-    
+          <label className="block text-[13px] font-bold text-[var(--text)] mb-2">Password</label>
+          <div className="relative">
+            <input 
+              type={showPassword ? "text" : "password"} 
+              required
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl focus:bg-[var(--surface-1)] focus:border-[var(--primary)] outline-none transition-all text-[15px] font-medium pr-12" 
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-[var(--surface-3)] transition-colors flex items-center justify-center"
+            >
+              {showPassword ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-muted)]">
+                  <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/>
+                  <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                  <path d="M6.61 6.61A13.52 13.52 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/>
+                  <line x1="2" y1="2" x2="22" y2="22"/>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[var(--text-muted)]">
+                  <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         <button 
