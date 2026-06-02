@@ -1,83 +1,51 @@
-// ─── Types ────────────────────────────────────────────────────────────────────
+// lib/constants.ts
+// ─── SHARED TYPES & CONSTANTS ────────────────────────────────────────────────
+// กำหนดโครงสร้างข้อมูล (Interfaces) และค่าคงที่ระบบ (Constants)
+// สำหรับเมนูสินค้า, คูปองส่วนลด, และประวัติการสั่งซื้อที่ใช้ร่วมกันในระบบ UI
+
+// ─── Types (โครงสร้างข้อมูลของระบบ) ───────────────────────────────────────────
+
+// รายการเมนูสินค้าตู้น้ำ/ซาลาเปา
 export interface MenuItem {
   id: number;
   name: string;
   description: string;
   price: number;
-  category: "all" | "pork" | "veggie";
-  image: string; // placeholder color
+  category: "all" | "pork" | "veggie" | "sweet"; // ประเภทของสินค้า
+  image: string; // URL หรือสี Placeholder ของภาพสินค้า
 }
 
+// โครงสร้างประเภทสินค้าสำหรับกรอง (Filter Categories)
 export interface Category {
   key: "all" | "pork" | "veggie" | "sweet";
   label: string;
 }
 
-// ─── Colors ───────────────────────────────────────────────────────────────────
-export const COLORS = {
-  primary: "#FF8235",     // Orange header
-  accent: "#F97316",      // Orange accent
-  bg: "#FFF3E8",          // Light orange bg
-  gray: "rgba(71,71,71,0.62)",
-  grayDark: "rgba(71,71,71,0.7)",
-};
-
-// ─── Menu Items ───────────────────────────────────────────────────────────────
-export const MENU_ITEMS: MenuItem[] = [
-  {
-    id: 1,
-    name: "เปามดแดง",
-    description: "ไส้หมูแดงเข้มข้น หวานกำลังดี",
-    price: 25,
-    category: "pork",
-    image: "#D4A574",
-  },
-  {
-    id: 2,
-    name: "เปาหมูสับ",
-    description: "ไส้หมูสับนุ่มละมุน รสชาติกลมกล่อม",
-    price: 25,
-    category: "pork",
-    image: "#C4956A",
-  },
-  {
-    id: 3,
-    name: "เปาบัวแดง",
-    description: "ไส้บัวแดงหอมหวาน ทำจากถั่วแท้",
-    price: 22,
-    category: "veggie",
-    image: "#E8C4A0",
-  },
-  {
-    id: 4,
-    name: "เปาเต้าหู้",
-    description: "ไส้เต้าหู้ผัดซอส ทางเลือกเพื่อสุขภาพ",
-    price: 22,
-    category: "veggie",
-    image: "#F0D9B5",
-  },
-  {
-    id: 5,
-    name: "เปาไก่เห็ด",
-    description: "ไส้ไก่ผัดเห็ดหอม กลมกล่อมอร่อย",
-    price: 25,
-    category: "pork",
-    image: "#BFA080",
-  },
-  {
-    id: 6,
-    name: "เปามันแกว",
-    description: "ไส้มันแกวกรุบกรอบ สดชื่น",
-    price: 20,
-    category: "veggie",
-    image: "#E5D4C0",
-  },
-];
-
-// ─── Categories ───────────────────────────────────────────────────────────────
+// ─── Categories (หมวดหมู่สินค้าสำหรับการกรองข้อมูลในหน้ารายการสินค้า) ───────────
 export const CATEGORIES: Category[] = [
   { key: "all", label: "ทั้งหมด" },
-  { key: "pork", label: "หมูสับ/หมูแดง" },
+  { key: "pork", label: "ไส้คาว" },
   { key: "veggie", label: "มังสวิรัติ" },
   { key: "sweet", label: "ไส้หวาน" },
 ];
+
+// ─── Coupon (โครงสร้างข้อมูลคูปองส่วนลด) ──────────────────────────────────────────
+export interface Coupon {
+  id: number;
+  title: string;
+  description: string;
+  points: number; // จำนวนคะแนนที่ใช้ในการแลก
+  colorBg: string; // สีของธีมการ์ดคูปอง
+  discountValue: number; // มูลค่าส่วนลด (บาท)
+  expiry: string; // วันหมดอายุของคูปอง
+}
+
+// ─── Order History (โครงสร้างข้อมูลประวัติการสั่งซื้อสินค้า) ──────────────────────────
+export interface OrderHistory {
+  id: string;
+  orderNumber: string; // รหัสอ้างอิงออเดอร์
+  datetime: string; // วันและเวลาที่สั่งซื้อ
+  items: string; // สรุปรายการสินค้าที่ซื้อ (เช่น "หมูสับ x 1, ครีม x 2")
+  total: number; // ราคารวมสุทธิ
+  status: "ready_to_scan" | "completed"; // สถานะการรับสินค้า
+}
