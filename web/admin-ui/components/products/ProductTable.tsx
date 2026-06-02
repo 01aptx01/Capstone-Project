@@ -221,14 +221,6 @@ export default function ProductTable({
                         >
                           <i className="fi fi-rr-edit text-lg"></i>
                         </motion.button>
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.9 }}
-                          className="w-11 h-11 flex items-center justify-center rounded-xl bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] hover:text-rose-500 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-100 transition-colors"
-                          title={t("product.table.titleHistory")}
-                        >
-                          <i className="fi fi-rr-time-past text-lg"></i>
-                        </motion.button>
                       </div>
                     </td>
                   </motion.tr>
