@@ -1,13 +1,3 @@
-/** Built-in catalogue paths (match database/init.sql seed). */
-export const PRODUCT_IMAGE_CATALOG: { path: string; label: string }[] = [
-  { path: "/product/img/pao-moddaeng.png", label: "เปาหมูแดง" },
-  { path: "/product/img/pao-moosub.png", label: "เปาหมูสับ" },
-  { path: "/product/img/pao-shrimp.png", label: "เปากุ้ง" },
-  { path: "/product/img/pao-tofu.png", label: "เปาเต้าหู้" },
-  { path: "/product/img/pao-mushroom.png", label: "เปาเห็ดหอม" },
-  { path: "/product/img/pao-cream.png", label: "เปาครีม" },
-];
-
 const MAX_IMAGE_URL_LEN = 200;
 
 /** Accept empty, site-relative paths, or http(s) URLs. */
