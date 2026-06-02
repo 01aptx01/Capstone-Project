@@ -29,6 +29,24 @@ export default function SettingsView() {
   const { lang, setLang, t } = useLang();
   const [activeTab, setActiveTab] = useState("general");
   const [mounted, setMounted] = useState(false);
+  const [isAdminSuper, setIsAdminSuper] = useState(false);
+
+  // Decode JWT to check for superadmin email on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("admin_token");
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split(".")[1]));
+          if (payload && payload.email === "admin@modpao.com") {
+            setIsAdminSuper(true);
+          }
+        } catch (err) {
+          console.error("Error decoding admin token:", err);
+        }
+      }
+    }
+  }, []);
 
   // General
   const [notifications, setNotifications] = useState({ inventory: true, system: true });
@@ -149,7 +167,7 @@ export default function SettingsView() {
   const tabs = [
     { id: "general", label: t("settings.tabs.general") },
     { id: "security", label: t("settings.tabs.security") },
-    { id: "admin", label: t("settings.tabs.admin") },
+    ...(isAdminSuper ? [{ id: "admin", label: t("settings.tabs.admin") }] : []),
   ];
 
   return (
@@ -248,8 +266,8 @@ export default function SettingsView() {
 
         {/* ── SECURITY TAB ── */}
         {activeTab === "security" && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-left-4 duration-300">
-            <div className={`${cardCls} h-max`}>
+          <div className="max-w-[600px] animate-in slide-in-from-left-4 duration-300">
+            <div className={cardCls}>
               <h3 className="text-[18px] font-black text-[var(--text)] mb-6 flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-orange-50 text-[var(--primary)] flex items-center justify-center text-xl">                <i className="fi fi-rr-lock" /></div>
                 {t("settings.password.title")}
@@ -278,50 +296,11 @@ export default function SettingsView() {
                 </button>
               </form>
             </div>
-
-            <div className={`${cardCls} h-max`}>
-              <h3 className="text-[18px] font-black text-[var(--text)] mb-6 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-50 text-[var(--primary)] flex items-center justify-center text-xl">                <i className="fi fi-rr-smartphone" /></div>
-                {t("settings.phone.title")}
-              </h3>
-              {phoneState.step === "success" ? (
-                <div className="bg-[var(--success-bg)] border border-emerald-200 text-emerald-700 p-6 rounded-2xl flex flex-col items-center gap-3 animate-in zoom-in-95">
-                  <i className="fi fi-rr-check-circle text-4xl" />
-                  <div className="font-bold">{t("settings.phone.successTitle")}</div>
-                  <div className="text-[14px]">{t("settings.phone.newLabel")} {phoneState.current}</div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="p-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl">
-                    <div className="text-[12px] font-bold text-[var(--text-muted)]">{t("settings.phone.currentLabel")}</div>
-                    <div className="font-black text-[var(--text)] text-[16px]">{phoneState.current}</div>
-                  </div>
-                  {phoneState.step === "input" && (
-                    <div className="animate-in slide-in-from-right-4">
-                      <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.phone.newField")}</label>
-                      <input type="text" placeholder={t("settings.phone.placeholder")} value={phoneState.newPhone} onChange={e => setPhoneState(s => ({ ...s, newPhone: e.target.value }))} className={`${inputCls} mb-4`} />
-                      <button onClick={handlePhoneSubmit} className="w-full py-3.5 bg-[var(--text)] text-[var(--primary-contrast)] font-bold rounded-xl shadow-lg hover:-translate-y-0.5 transition-all">{t("settings.phone.sendOtp")}</button>
-                    </div>
-                  )}
-                  {phoneState.step === "otp" && (
-                    <div className="animate-in slide-in-from-right-4">
-                      <div className="text-[13px] text-[var(--text)] mb-4 font-medium">{t("settings.phone.otpHint")} <span className="font-bold text-[var(--primary)]">{phoneState.newPhone}</span></div>
-                      <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.phone.otpLabel")}</label>
-                      <input type="text" maxLength={6} value={phoneState.otp} onChange={e => setPhoneState(s => ({ ...s, otp: e.target.value }))} className={`${inputCls} text-center tracking-[0.5em] font-black text-xl mb-4`} />
-                      <div className="flex gap-3">
-                        <button onClick={() => setPhoneState(s => ({ ...s, step: "input" }))} className="px-6 py-3.5 bg-[var(--surface-1)] border border-[var(--border)] text-[var(--text-muted)] font-bold rounded-xl hover:bg-[var(--surface-2)] transition-all">{t("common.cancel")}</button>
-                        <button onClick={handlePhoneSubmit} className="flex-1 py-3.5 bg-[var(--primary)] text-[var(--primary-contrast)] font-bold rounded-xl shadow-lg  hover:-translate-y-0.5 transition-all">{t("settings.phone.confirmOtp")}</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
           </div>
         )}
 
         {/* ── ADMIN PERMISSIONS TAB ── */}
-        {activeTab === "admin" && (
+        {activeTab === "admin" && isAdminSuper && (
           <div className="animate-in slide-in-from-left-4 duration-300">
             {!isFirstAdmin ? (
               <div className="bg-rose-50 border border-rose-200 text-rose-700 p-8 rounded-2xl flex flex-col items-center gap-3">

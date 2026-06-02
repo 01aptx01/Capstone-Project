@@ -55,6 +55,63 @@ export default function MachineDetailPage({ params }: PageProps) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+  const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null);
+
+  const isDirty = useMemo(() => {
+    if (!machine) return false;
+    const original = slotsToDraft(machine.slots);
+    if (slotDraft.length !== original.length) return true;
+    for (let i = 0; i < slotDraft.length; i++) {
+      if (
+        slotDraft[i].slot_number !== original[i].slot_number ||
+        slotDraft[i].product_id !== original[i].product_id ||
+        slotDraft[i].quantity !== original[i].quantity
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, [slotDraft, machine]);
+
+  const handleBack = () => {
+    if (isDirty) {
+      setPendingNavUrl(null);
+      setShowUnsavedModal(true);
+    } else {
+      router.back();
+    }
+  };
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const anchor = target.closest("a");
+      if (anchor && anchor.href) {
+        const url = new URL(anchor.href, window.location.origin);
+        const currentUrl = new URL(window.location.href);
+        if (url.origin === currentUrl.origin && url.pathname !== currentUrl.pathname) {
+          e.preventDefault();
+          setPendingNavUrl(url.pathname + url.search);
+          setShowUnsavedModal(true);
+        }
+      }
+    };
+    document.addEventListener("click", handleGlobalClick, true);
+    return () => document.removeEventListener("click", handleGlobalClick, true);
+  }, [isDirty]);
+
   const machineCode = machine?.machine_code ?? decodeURIComponent(id);
 
   const loadMachine = useCallback(async () => {
@@ -212,6 +269,19 @@ export default function MachineDetailPage({ params }: PageProps) {
     try {
       await deleteMachine(machineCode);
       toast.success(t("deleteMachine.toastDeleted"));
+      try {
+        const { logAdminActivity } = await import("@/lib/activity-log");
+        logAdminActivity({
+          icon: "fi fi-rr-trash",
+          color: "from-rose-500 to-rose-600",
+          bg: "bg-rose-50",
+          title: "ลบตู้สินค้าสำเร็จ",
+          machine: machineCode,
+          time: "เมื่อครู่นี้",
+        });
+      } catch (e) {
+        console.error(e);
+      }
       router.push("/machines");
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("deleteMachine.toastFailed");
@@ -238,6 +308,19 @@ export default function MachineDetailPage({ params }: PageProps) {
       setMachine(updated);
       setSlotDraft(slotsToDraft(updated.slots));
       toast.success(t("machine.detail.toastSaved"));
+      try {
+        const { logAdminActivity } = await import("@/lib/activity-log");
+        logAdminActivity({
+          icon: "fi fi-rr-edit",
+          color: "from-[var(--primary)] to-[var(--primary)]",
+          bg: "bg-orange-50",
+          title: "แก้ไขสินค้าของตู้สำเร็จ",
+          machine: machine.machine_code,
+          time: "เมื่อครู่นี้",
+        });
+      } catch (err2) {
+        console.error(err2);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("machine.detail.toastSaveFail"));
     } finally {
@@ -252,7 +335,7 @@ export default function MachineDetailPage({ params }: PageProps) {
         <div className="flex items-center gap-6">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={handleBack}
             className="w-12 h-12 rounded-full border border-[var(--border)] bg-[var(--surface-1)] flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--primary)] hover:border-[var(--primary)] hover:shadow-md transition-all group"
           >
             <svg
@@ -514,6 +597,46 @@ export default function MachineDetailPage({ params }: PageProps) {
             className="flex-[2] py-4 rounded-[22px] bg-rose-600 text-white font-black text-[14px] hover:bg-rose-700 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {deleting ? t("deleteMachine.deleting") : t("deleteMachine.confirmYes")}
+          </button>
+        </div>
+      </div>
+    </Modal>
+
+    <Modal
+      open={showUnsavedModal}
+      onClose={() => setShowUnsavedModal(false)}
+      title="มีข้อมูลที่ยังไม่ได้บันทึก"
+    >
+      <div className="space-y-6">
+        <div className="flex items-start gap-4 p-4 rounded-2xl bg-rose-50 border border-rose-200">
+          <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+            <i className="fi fi-rr-triangle-warning text-rose-600 text-lg"></i>
+          </div>
+          <p className="text-[14px] font-bold text-rose-800 leading-relaxed">
+            คุณมีการแก้ไขข้อมูลของตู้นี้ที่ยังไม่ได้ทำการบันทึก คุณต้องการออกจากหน้านี้โดยละทิ้งการเปลี่ยนแปลงหรือไม่?
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setShowUnsavedModal(false)}
+            className="flex-1 py-4 rounded-[22px] bg-[var(--surface-2)] text-[var(--text-muted)] font-black text-[14px] hover:bg-[var(--border)] transition-all"
+          >
+            ยังคงอยู่
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowUnsavedModal(false);
+              if (pendingNavUrl) {
+                router.push(pendingNavUrl);
+              } else {
+                router.back();
+              }
+            }}
+            className="flex-1 py-4 rounded-[22px] bg-rose-600 text-white font-black text-[14px] hover:bg-rose-700 transition-all active:scale-95"
+          >
+            ออกยกเลิก
           </button>
         </div>
       </div>

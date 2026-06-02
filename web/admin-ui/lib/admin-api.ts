@@ -376,6 +376,7 @@ export async function updateCoupon(
 export type DashboardSummaryResponse = {
   total_sales_today: number;
   active_machines: number;
+  total_machines: number;
   top_products: {
     product_id: number;
     name: string;
@@ -415,6 +416,7 @@ export type AdminAlertsResponse = {
     created_at: string | null;
     is_resolved?: boolean;
     resolved_at?: string | null;
+    payload?: any;
   }[];
 };
 

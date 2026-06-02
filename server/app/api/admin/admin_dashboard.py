@@ -39,6 +39,9 @@ def admin_dashboard_summary():
     active_machines = db.session.scalar(
         select(func.count(Machine.machine_code)).where(Machine.status == "online")
     )
+    total_machines = db.session.scalar(
+        select(func.count(Machine.machine_code))
+    )
     top_products = db.session.execute(
         select(
             Product.product_id,
@@ -58,6 +61,7 @@ def admin_dashboard_summary():
             {
                 "total_sales_today": _to_float(total_sales_today),
                 "active_machines": int(active_machines or 0),
+                "total_machines": int(total_machines or 0),
                 "top_products": [
                     {
                         "product_id": int(r.product_id),
