@@ -28,22 +28,31 @@ const emptyForm = {
   isActive: true,
 };
 
+/** Send YYYY-MM-DD; server stores end-of-day Asia/Bangkok as UTC. */
 function fromDateInput(value: string): string | null {
   const s = value.trim();
   if (!s) return null;
-  const d = new Date(`${s}T23:59:59`);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const d = new Date(s);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function isoExpiryToDateInput(iso: string | null | undefined): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
 }
 
 function uiRowToFormData(row: UiCouponRow) {
@@ -347,6 +356,9 @@ export default function CouponFormModal({ open, onClose, mode, editRow }: Coupon
                   <label className="text-[11px] font-black text-[var(--text-muted)] ml-2 uppercase tracking-widest group-focus-within:text-[var(--primary)] transition-colors">
                     {t("createCoupon.label.validTo")}
                   </label>
+                  <p className="text-[11px] font-bold text-[var(--text-muted)] ml-2">
+                    {t("coupon.hint.expiryBangkok")}
+                  </p>
                   <input
                     type="date"
                     className="w-full px-6 py-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-[22px] outline-none focus:border-[var(--primary)]/30 focus:bg-[var(--surface-1)] transition-all font-bold text-[var(--text)]"

@@ -233,11 +233,16 @@ export type UiCouponRow = {
 };
 
 export function apiCouponToUiRow(c: ApiCoupon): UiCouponRow {
-  const now = new Date();
   const exp = c.expire_date ? new Date(c.expire_date) : null;
+  const serverStatus = (c.status || "").toLowerCase();
   let status = "inactive";
-  if (c.is_active && (!exp || exp >= now)) status = "active";
-  else if (exp && exp < now) status = "expired";
+  if (serverStatus === "active" || serverStatus === "inactive" || serverStatus === "expired") {
+    status = serverStatus;
+  } else {
+    const now = new Date();
+    if (c.is_active && (!exp || exp >= now)) status = "active";
+    else if (exp && exp < now) status = "expired";
+  }
 
   const pointsCost =
     typeof c.points_cost === "number" && Number.isFinite(c.points_cost)

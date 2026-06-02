@@ -102,15 +102,13 @@ export default function CouponTable() {
   };
 
   const filteredCoupons = useMemo(() => {
-    const now = new Date();
     const q = search.trim().toLowerCase();
     return rows.filter((coupon) => {
       let tabMatch = true;
-      const expiry = coupon.expiry ? new Date(coupon.expiry) : null;
       if (activeTab === "active") {
-        tabMatch = coupon.status === "active" && (!expiry || expiry >= now);
+        tabMatch = coupon.status === "active";
       } else if (activeTab === "expired") {
-        tabMatch = !!expiry && expiry < now;
+        tabMatch = coupon.status === "expired";
       }
 
       const searchMatch =
@@ -119,10 +117,7 @@ export default function CouponTable() {
         (coupon.id && coupon.id.toLowerCase().includes(q));
 
       const statusMatch =
-        filters.status === "all" ||
-        (filters.status === "expired"
-          ? !!expiry && expiry < now
-          : coupon.status === filters.status);
+        filters.status === "all" || coupon.status === filters.status;
       const typeMatch =
         filters.type === "all" ||
         (filters.type === "PERCENT" ? coupon.type === "PERCENT" : coupon.type !== "PERCENT");

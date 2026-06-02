@@ -11,22 +11,38 @@ export default function RedeemPage() {
   const { phone, profile, loadMember } = useUser();
   const [coupons, setCoupons] = useState<RedeemableCoupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [redeemingId, setRedeemingId] = useState<number | null>(null);
 
   const points = profile?.points ?? 0;
 
+  const loadCoupons = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const data = await fetchRedeemableCoupons();
+      setCoupons(data);
+    } catch (err) {
+      setCoupons([]);
+      setLoadError(
+        err instanceof Error ? err.message : "โหลดรายการคูปองไม่สำเร็จ",
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    void (async () => {
-      try {
-        const data = await fetchRedeemableCoupons();
-        setCoupons(data);
-      } catch {
-        setCoupons([]);
-      } finally {
-        setIsLoading(false);
-      }
-    })();
+    void loadCoupons();
+  }, []);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void loadCoupons();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   const handleRedeem = async (promotionId: number) => {
@@ -64,6 +80,12 @@ export default function RedeemPage() {
             </p>
           </Card>
         </div>
+
+        {loadError && (
+          <Alert variant="info" className="mb-4">
+            {loadError}
+          </Alert>
+        )}
 
         {message && (
           <Alert variant="info" className="mb-4">
