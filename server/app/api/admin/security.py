@@ -12,13 +12,14 @@ logger = logging.getLogger(__name__)
 JWT_ALGORITHM = "HS256"
 JWT_TOKEN_TYPE = "admin_access"
 JWT_INVITE_TYPE = "admin_invite"
+JWT_REGISTER_TYPE = "admin_register"
 
 # ใช้เฉพาะตอน dev ถ้าไม่ได้ตั้ง ADMIN_JWT_SECRET — production ต้องตั้งค่าจริง
-_DEV_FALLBACK_SECRET = "dev-insecure-change-me-set-ADMIN_JWT_SECRET"
+_DEV_FALLBACK_SECRET = "dev-change-me-to-a-long-random-secret"
 
 
 def _jwt_secret() -> str:
-    secret = os.environ.get("ADMIN_JWT_SECRET")
+    secret = (os.environ.get("ADMIN_JWT_SECRET") or "").strip()
     if not secret:
         logger.warning(
             "⚠️ [Auth] ADMIN_JWT_SECRET ไม่ได้ตั้งค่า — ใช้ค่า fallback สำหรับ dev เท่านั้น "
@@ -67,6 +68,7 @@ def create_access_token(*, admin_id: int, email: str, roles: list[str]) -> str:
     payload = {
         "sub": str(admin_id),
         "email": email,
+        # roles are informational only — authorization should query roles from DB
         "roles": roles,
         "type": JWT_TOKEN_TYPE,
         "iat": now,
@@ -100,5 +102,25 @@ def decode_invite_token(token: str) -> dict:
     """ถอดรหัส + ตรวจ JWT คำเชิญ — โยน jwt.PyJWTError ถ้าไม่ผ่าน."""
     payload = jwt.decode(token, _jwt_secret(), algorithms=[JWT_ALGORITHM])
     if payload.get("type") != JWT_INVITE_TYPE:
+        raise jwt.InvalidTokenError("wrong token type")
+    return payload
+
+
+def create_registration_token(*, admin_id: int) -> str:
+    """ออก JWT สำหรับยืนยันการสมัครครั้งแรกของ admin ที่ถูกเชิญ (อายุ ~7 วัน)."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    payload = {
+        "sub": str(admin_id),
+        "type": JWT_REGISTER_TYPE,
+        "iat": now,
+        "exp": now + datetime.timedelta(hours=_invite_expires_hours()),
+    }
+    return jwt.encode(payload, _jwt_secret(), algorithm=JWT_ALGORITHM)
+
+
+def decode_registration_token(token: str) -> dict:
+    """ถอดรหัส + ตรวจ JWT สำหรับสมัครครั้งแรก — โยน jwt.PyJWTError ถ้าไม่ผ่าน."""
+    payload = jwt.decode(token, _jwt_secret(), algorithms=[JWT_ALGORITHM])
+    if payload.get("type") != JWT_REGISTER_TYPE:
         raise jwt.InvalidTokenError("wrong token type")
     return payload

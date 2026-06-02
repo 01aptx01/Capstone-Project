@@ -1,18 +1,14 @@
 """Admin API auth — JWT verification via Authorization: Bearer <token>.
 
-Every protected request also verifies that the admin still exists and is active
-in the database, so that a revoked admin is kicked out immediately.
+Authorization is enforced from DB state (admin is_active + role mappings),
+not from the roles embedded in the token.
 """
 
-import os
 from functools import wraps
 
-import jwt
 from flask import request, jsonify, g
 
-def _get_jwt_secret() -> str:
-    # Strip any \r or spaces to prevent CRLF env files bugs in Docker
-    return (os.environ.get("ADMIN_JWT_SECRET") or "dev-change-me-to-a-long-random-secret").strip()
+from app.api.admin.security import decode_access_token
 
 
 def _current_admin_id() -> int | None:
@@ -31,18 +27,12 @@ def admin_required(f):
 
         token = auth_header[7:]
         try:
-            payload = jwt.decode(token, _get_jwt_secret(), algorithms=["HS256"])
-        except jwt.ExpiredSignatureError as e:
+            payload = decode_access_token(token)
+        except Exception as e:
+            # keep message generic to avoid leaking details
             from flask import current_app
-            current_app.logger.warning("JWT ExpiredSignatureError: %s", e)
+            current_app.logger.warning("Admin JWT decode failed: %s", e)
             return jsonify({"error": "Token has expired. Please log in again."}), 401
-        except jwt.InvalidTokenError as e:
-            from flask import current_app
-            current_app.logger.warning("JWT InvalidTokenError: %s, Token: %s, Secret: %s", e, token, _get_jwt_secret())
-            return jsonify({"error": "Invalid token."}), 401
-
-        if not payload.get("is_active", False):
-            return jsonify({"error": "Account is pending activation."}), 403
 
         try:
             admin_id = int(payload.get("sub"))
@@ -57,6 +47,12 @@ def admin_required(f):
             return jsonify({"error": "Your account has been revoked. Please contact the administrator."}), 401
 
         g._admin_id = admin_id
+        g.admin = {
+            "id": admin.id,
+            "email": admin.email,
+            "roles": [r.name for r in (admin.roles or [])],
+            "is_active": admin.is_active,
+        }
         return f(*args, **kwargs)
 
     return decorated
