@@ -2,7 +2,7 @@ import logging
 import os
 
 from dotenv import load_dotenv
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request, make_response
 from flask_cors import CORS
 from flasgger import Swagger
 
@@ -11,6 +11,8 @@ load_dotenv()
 from app.api.buy import buy_api
 from app.api.health import health_api
 from app.api.members import members_api
+from app.api.orders import orders_api
+from app.api.auth_otp import auth_otp_api
 from app.api.products import products_api
 from app.db_config.db import init_db
 from app.db_config.schema_repair import ensure_promotions_max_uses
@@ -69,14 +71,31 @@ def create_app() -> Flask:
     with flask_app.app_context():
         ensure_promotions_max_uses(db.engine)
 
-    allowed_origins = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
-    CORS(flask_app, origins=allowed_origins)
+    # Dynamically allow CORS origins or support wildcard during development to prevent local network fetch failures
+    CORS(flask_app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+    
+    @flask_app.after_request
+    def add_cors_headers(response):
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+        return response
+
+    flask_app.config.setdefault(
+        "SWAGGER",
+        {
+            "openapi": "3.0.3",
+            "uiversion": 3,
+        },
+    )
     Swagger(flask_app, template_file=_SWAGGER_FILE)
 
     flask_app.register_blueprint(buy_api)
     flask_app.register_blueprint(products_api)
     flask_app.register_blueprint(health_api)
     flask_app.register_blueprint(members_api)
+    flask_app.register_blueprint(orders_api)
+    flask_app.register_blueprint(auth_otp_api)
 
     from app.api.admin import admin_bp
 

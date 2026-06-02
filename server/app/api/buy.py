@@ -139,19 +139,49 @@ class BuyController:
         discount = 0.0
         final = subtotal
         promotion_id = None
+        user_promotion_id = None # ADDED
         raw = coupon_code
         if raw is not None and str(raw).strip():
-            reason, c = lookup_coupon_by_code(raw)
+            reason, c, user_promo_id = lookup_coupon_by_code(raw)
             if reason != "ok" or not c:
                 return None
             discount, final = discount_and_final(subtotal, c)
             promotion_id = c.promotion_id
+            user_promotion_id = user_promo_id # ADDED
         return {
             "subtotal": subtotal,
             "discount": discount,
             "final": final,
             "promotion_id": promotion_id,
+            "user_promotion_id": user_promotion_id, # ADDED
         }
+
+    def _resolve_fulfillment_mode(
+        self, data: dict | None = None, charge_id: str | None = None
+    ) -> str:
+        mode = None
+        if data and isinstance(data, dict):
+            mode = data.get("fulfillment_mode")
+        if not mode and charge_id:
+            order = self.pending_orders.get(charge_id)
+            if order:
+                mode = order.get("fulfillment_mode")
+        if not mode:
+            mode = os.environ.get("DEFAULT_FULFILLMENT_MODE", "immediate")
+        mode = str(mode).lower()
+        return mode if mode in ("immediate", "pickup") else "immediate"
+
+    def _handle_paid_order(self, charge_id: str, charge_obj=None) -> bool:
+        """After payment success: dispense immediately or wait for pickup scan."""
+        mode = self._resolve_fulfillment_mode(charge_id=charge_id)
+        if mode == "pickup":
+            logger.info(
+                f"[Checkout] Payment SUCCESS for {charge_id} — pickup mode (ready_to_scan)"
+            )
+            self.inventory_service.update_order_status(charge_id, "ready_to_scan")
+            self.pending_orders.pop(charge_id, None)
+            return True
+        return self._execute_dispense(charge_id, charge_obj=charge_obj)
 
     # =============================================
     # INTERNAL: Dispense orchestration
@@ -346,7 +376,7 @@ class BuyController:
                 {"valid": False, "reason": "pricing_failed", "message": "ไม่สามารถคำนวณยอดได้"}
             ), 200
 
-        reason, c = lookup_coupon_by_code(code)
+        reason, c, user_promo_id = lookup_coupon_by_code(code)
         if reason != "ok" or not c:
             return jsonify(
                 {
@@ -406,6 +436,7 @@ class BuyController:
         machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
         draft_id     = data.get("draft_id")
         coupon_code  = data.get("coupon_code") or data.get("couponCode")
+        fulfillment_mode = self._resolve_fulfillment_mode(data)
 
         busy_resp = self._reject_if_machine_busy(
             machine_code, exclude_charge_id=draft_id
@@ -442,6 +473,7 @@ class BuyController:
                 ), 400
             total_price = pricing["final"]
             promotion_id = pricing["promotion_id"]
+            user_promotion_id = pricing["user_promotion_id"] # ADDED
 
         charge_amount_satang = int(round(float(total_price) * 100))
         client_satang = int(amount) if amount is not None else None
@@ -470,7 +502,11 @@ class BuyController:
 
         # Step 3: จัดการ Order ใน DB (อัปเกรด draft หรือสร้างใหม่)
         self.order_statuses[charge.id] = "pending_payment"
-        self.pending_orders[charge.id] = {"cart": cart, "machine_code": machine_code}
+        self.pending_orders[charge.id] = {
+            "cart": cart,
+            "machine_code": machine_code,
+            "fulfillment_mode": fulfillment_mode,
+        }
 
         if draft_id:
             persisted = self.inventory_service.upgrade_draft_order(draft_id, charge.id, payment_method)
@@ -484,6 +520,7 @@ class BuyController:
                 payment_method=payment_method,
                 total_price=total_price,
                 promotion_id=promotion_id,
+                user_promotion_id=user_promotion_id, # ADDED
             )
 
         if not persisted:
@@ -495,8 +532,13 @@ class BuyController:
             # บัตรเครดิตผ่านทันที
             logger.info(f"[Checkout] Payment SUCCESS for charge {charge.id}")
             self.order_statuses[charge.id] = "paid"
-            self._execute_dispense(charge.id, charge_obj=charge)
-            return jsonify({"status": "paid", "charge_id": charge.id, "message": "Payment successful, dispensing..."})
+            self._handle_paid_order(charge.id, charge_obj=charge)
+            msg = (
+                "Payment successful, awaiting pickup scan"
+                if fulfillment_mode == "pickup"
+                else "Payment successful, dispensing..."
+            )
+            return jsonify({"status": "paid", "charge_id": charge.id, "message": msg})
 
         elif charge.status == "pending":
             # QR Code — รอลูกค้าสแกน
@@ -546,7 +588,7 @@ class BuyController:
                 self.order_statuses[charge_id] = "paid"
                 import omise
                 charge_obj = omise.Charge.retrieve(charge_id)
-                success = self._execute_dispense(charge_id, charge_obj=charge_obj)
+                success = self._handle_paid_order(charge_id, charge_obj=charge_obj)
                 msg = "dispense triggered" if success else "dispense skipped (already claimed or failed)"
                 return jsonify({"message": f"Webhook processed, payment successful, {msg}"}), 200
             else:
@@ -587,12 +629,17 @@ class BuyController:
 
         total_price = pricing["final"]
         promotion_id = pricing["promotion_id"]
+        user_promotion_id = pricing["user_promotion_id"] # ADDED
 
         import uuid
         draft_id = f"draft_{uuid.uuid4().hex[:16]}"
         
         self.order_statuses[draft_id] = "pending_payment"
-        self.pending_orders[draft_id] = {"cart": cart, "machine_code": machine_code}
+        self.pending_orders[draft_id] = {
+            "cart": cart,
+            "machine_code": machine_code,
+            "fulfillment_mode": self._resolve_fulfillment_mode(data),
+        }
         
         persisted = self.inventory_service.create_pending_order(
             machine_code=machine_code,
@@ -601,6 +648,7 @@ class BuyController:
             payment_method=payment_method,
             total_price=total_price,
             promotion_id=promotion_id,
+            user_promotion_id=user_promotion_id, # ADDED
         )
         
         if not persisted:
@@ -636,6 +684,22 @@ class BuyController:
 
     def mock_pay(self):
         """Development Bypass for Payment"""
+        import os
+
+        allow = os.environ.get("ALLOW_MOCK_PAY", "1").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        flask_env = os.environ.get("FLASK_ENV", "").strip().lower()
+        if flask_env == "production" or not allow:
+            return jsonify(
+                {
+                    "error": "forbidden",
+                    "message": "mock-pay is disabled in this environment",
+                }
+            ), 403
+
         data = request.get_json(silent=True)
         if not isinstance(data, dict):
             return jsonify({"status": "ERROR", "message": "Invalid JSON body"}), 400
@@ -656,7 +720,7 @@ class BuyController:
             return busy_resp
 
         self.order_statuses[charge_id] = "paid"
-        success = self._execute_dispense(charge_id)
+        success = self._handle_paid_order(charge_id)
 
         if success:
             return jsonify({"status": "paid", "message": "Payment marked as successful, dispense triggered"}), 200
@@ -705,7 +769,6 @@ class BuyController:
             if db_status == "pending_payment" and not str(charge_id).startswith("draft_"):
                 try:
                     import omise
-
                     charge = omise.Charge.retrieve(charge_id)
                     qr_uri = self._qr_uri_from_omise_charge(charge)
                     if qr_uri:
