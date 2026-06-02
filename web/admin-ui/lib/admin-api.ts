@@ -558,6 +558,17 @@ export async function getMe(): Promise<{ user: AdminUserInfo }> {
   return adminFetch<{ user: AdminUserInfo }>("/auth/me");
 }
 
+export async function changeAdminPassword(body: {
+  current_password: string;
+  new_password: string;
+}): Promise<{ ok: boolean; message: string }> {
+  return adminFetch<{ ok: boolean; message: string }>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify(body),
+    skipGlobalErrorToast: true,
+  });
+}
+
 export type AdminListItem = AdminUserInfo & { status: string };
 
 export async function listAdmins(): Promise<{ admins: AdminListItem[] }> {

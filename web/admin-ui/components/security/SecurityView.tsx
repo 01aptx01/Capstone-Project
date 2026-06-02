@@ -4,6 +4,7 @@ import { useState } from "react";
 import { isAxiosError } from "axios";
 import { useLang } from "@/lib/i18n/lang";
 import { inviteAdmin } from "@/lib/admin-api";
+import PasswordChangeForm from "@/components/settings/PasswordChangeForm";
 
 type AddMode = "password" | "invite";
 
@@ -49,6 +50,10 @@ export default function SecurityView() {
       const pw = tempPassword.trim();
       if (!pw) {
         setErrorMsg("กรุณากรอกรหัสผ่านชั่วคราว");
+        return;
+      }
+      if (pw.length < 6) {
+        setErrorMsg("รหัสผ่านชั่วคราวต้องมีอย่างน้อย 6 ตัวอักษร");
         return;
       }
       const res = await inviteAdmin(cleanEmail, pw);
@@ -256,20 +261,11 @@ export default function SecurityView() {
             </div>
           </div>
           
-          <div className="card-content space-y-6">
-            <div className="input-group">
-              <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("settings.password.current")}</label>
-              <input type="password" placeholder="••••••••" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-5 w-full font-bold tracking-widest" />
-            </div>
-            <div className="input-group">
-              <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("settings.password.new")}</label>
-              <input type="password" placeholder="••••••••" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-5 w-full font-bold tracking-widest" />
-            </div>
-            <div className="input-group">
-              <label className="text-[12px] font-black text-[var(--text-muted)] uppercase tracking-widest mb-3 block">{t("settings.password.confirm")}</label>
-              <input type="password" placeholder="••••••••" className="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-5 w-full font-bold tracking-widest" />
-            </div>
-            <button className="btn-primary !w-full !py-4 !text-[16px] !rounded-2xl mt-4 shadow-xl">{t("security.update")}</button>
+          <div className="card-content">
+            <PasswordChangeForm
+              inputClassName="glass !bg-[var(--surface-1)] !border-[var(--border)] focus:!border-[var(--primary)] !rounded-2xl !py-4 px-5 w-full font-bold tracking-widest"
+              submitClassName="btn-primary !w-full !py-4 !text-[16px] !rounded-2xl mt-4 shadow-xl disabled:opacity-60"
+            />
           </div>
         </div>
 

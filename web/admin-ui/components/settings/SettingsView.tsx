@@ -6,6 +6,7 @@ import { applyDarkModeClass, getStoredDarkMode, setStoredDarkMode } from "@/lib/
 import { useLang } from "@/lib/i18n/lang";
 import type { Lang } from "@/lib/i18n/dictionaries";
 import { inviteAdmin, listAdmins, revokeAdmin, type AdminListItem } from "@/lib/admin-api";
+import PasswordChangeForm from "@/components/settings/PasswordChangeForm";
 
 // ── Portal wrapper ────────────────────────────────────────────────────────────
 function Portal({ children }: { children: React.ReactNode }) {
@@ -52,9 +53,6 @@ export default function SettingsView() {
   const [notifications, setNotifications] = useState({ inventory: true, system: true });
   const [appearance, setAppearance] = useState({ darkMode: false, language: "th" as Lang });
 
-  // Security
-  const [passwordForm, setPasswordForm] = useState({ current: "", newPass: "", confirm: "" });
-  const [pwMsg, setPwMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [phoneState, setPhoneState] = useState({ current: "081-234-5678", newPhone: "", otp: "", step: "input" as "input" | "otp" | "success" });
 
   // Admin Permissions
@@ -112,17 +110,6 @@ export default function SettingsView() {
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordForm.newPass !== passwordForm.confirm) {
-      setPwMsg({ type: "error", text: "Passwords do not match." });
-      return;
-    }
-    setPwMsg({ type: "success", text: "Password changed successfully." });
-    setPasswordForm({ current: "", newPass: "", confirm: "" });
-    setTimeout(() => setPwMsg(null), 3000);
-  };
-
   const handlePhoneSubmit = () => {
     if (phoneState.step === "input" && phoneState.newPhone) {
       setPhoneState(s => ({ ...s, step: "otp" }));
@@ -136,6 +123,10 @@ export default function SettingsView() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteForm.email || !inviteForm.tempPassword) return;
+    if (inviteForm.tempPassword.trim().length < 6) {
+      showToast(t("settings.password.errorMinLength"));
+      return;
+    }
     try {
       await inviteAdmin(inviteForm.email, inviteForm.tempPassword);
       showToast(`Invitation sent to ${inviteForm.email}`);
@@ -272,29 +263,7 @@ export default function SettingsView() {
                 <div className="w-10 h-10 rounded-xl bg-orange-50 text-[var(--primary)] flex items-center justify-center text-xl">                <i className="fi fi-rr-lock" /></div>
                 {t("settings.password.title")}
               </h3>
-              {pwMsg && (
-                <div className={`px-4 py-3 rounded-xl text-[13px] font-bold mb-4 flex items-center gap-2 ${pwMsg.type === "success" ? "bg-[var(--success-bg)] border border-emerald-200 text-emerald-700" : "bg-rose-50 border border-rose-200 text-rose-600"}`}>
-                  <i className={`fi ${pwMsg.type === "success" ? "fi-rr-check" : "fi-rr-exclamation"}`} />
-                  {pwMsg.text}
-                </div>
-              )}
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div>
-                  <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.password.current")}</label>
-                  <input type="password" required value={passwordForm.current} onChange={e => setPasswordForm(s => ({ ...s, current: e.target.value }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.password.new")}</label>
-                  <input type="password" required value={passwordForm.newPass} onChange={e => setPasswordForm(s => ({ ...s, newPass: e.target.value }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.password.confirm")}</label>
-                  <input type="password" required value={passwordForm.confirm} onChange={e => setPasswordForm(s => ({ ...s, confirm: e.target.value }))} className={inputCls} />
-                </div>
-                <button type="submit" className="w-full py-3.5 bg-[var(--primary)] text-[var(--primary-contrast)] font-bold rounded-xl shadow-lg  hover:-translate-y-0.5 transition-all mt-2">
-                  {t("settings.password.submit")}
-                </button>
-              </form>
+              <PasswordChangeForm inputClassName={inputCls} />
             </div>
           </div>
         )}
