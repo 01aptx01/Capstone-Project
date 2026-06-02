@@ -98,7 +98,7 @@ export default function CouponModal({
       }
 
       setPreview({
-        code: data.code,
+        code: (data.code as string) || trimmed,
         promotion_id: data.promotion_id,
         type: data.type,
         subtotal_thb: data.subtotal_thb,

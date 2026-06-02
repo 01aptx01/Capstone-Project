@@ -165,7 +165,7 @@ class BuyController:
         user_promotion_id = None
         raw = coupon_code
         if raw is not None and str(raw).strip():
-            reason, c, user_promo_id = lookup_coupon_by_code(raw)
+            reason, c, user_promo_id, _user_code = lookup_coupon_by_code(raw)
             if reason != "ok" or not c:
                 return None
             discount, final = discount_and_final(subtotal, c)
@@ -374,13 +374,15 @@ class BuyController:
                 {"valid": False, "reason": "pricing_failed", "message": "ไม่สามารถคำนวณยอดได้"}
             ), 200
 
-        reason, c, user_promo_id = lookup_coupon_by_code(code)
-        if reason != "ok" or not c:
+        reason, c, user_promo_id, user_code = lookup_coupon_by_code(code)
+        if reason != "ok" or not c or not user_code:
             return jsonify(
                 {
                     "valid": False,
-                    "reason": reason,
-                    "message": reason_message_th(reason),
+                    "reason": reason if reason != "ok" else "not_found",
+                    "message": reason_message_th(
+                        reason if reason != "ok" else "not_found"
+                    ),
                 }
             ), 200
 
@@ -409,7 +411,8 @@ class BuyController:
             {
                 "valid": True,
                 "promotion_id": c.promotion_id,
-                "code": c.code,
+                "user_promotion_id": user_promo_id,
+                "code": user_code,
                 "type": c.type,
                 "discount_amount": float(c.discount_amount),
                 "points_cost": pc,
