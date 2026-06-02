@@ -315,6 +315,7 @@ export default function LoginPage() {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="ใส่ชื่อของคุณ"
+                    maxLength={100}
                     center
                     required
                   />
