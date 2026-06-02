@@ -14,6 +14,7 @@ import {
 } from "@/lib/admin-api";
 import Modal from "@/components/ui/Modal";
 import { useLang } from "@/lib/i18n/lang";
+import { blockNonIntegerKeys, digitsOnly } from "@/lib/integer-input";
 
 const MAX_SLOTS_PER_MACHINE = 24;
 
@@ -295,6 +296,14 @@ export default function MachineDetailPage({ params }: PageProps) {
     if (!machine) return;
     setSaving(true);
     setError(null);
+
+    const slotNumbers = slotDraft.map((r) => r.slot_number);
+    if (new Set(slotNumbers).size !== slotNumbers.length) {
+      setError(t("machine.detail.errorDuplicateSlot"));
+      setSaving(false);
+      return;
+    }
+
     const payload: ApiMachineSlotInput[] = slotDraft
       .slice()
       .sort((a, b) => a.slot_number - b.slot_number)
@@ -526,15 +535,18 @@ export default function MachineDetailPage({ params }: PageProps) {
                           </td>
                           <td className="py-3 px-2 align-middle">
                             <input
-                              type="number"
-                              min={0}
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               className="w-24 rounded-lg border border-[var(--border)] px-2 py-1.5 font-black text-[var(--text)]"
-                              value={row.quantity}
-                              onChange={(e) =>
+                              value={String(row.quantity)}
+                              onKeyDown={blockNonIntegerKeys}
+                              onChange={(e) => {
+                                const v = digitsOnly(e.target.value);
                                 updateDraftRow(row.rowKey, {
-                                  quantity: Number(e.target.value),
-                                })
-                              }
+                                  quantity: v === "" ? 0 : parseInt(v, 10),
+                                });
+                              }}
                               disabled={saving}
                             />
                           </td>

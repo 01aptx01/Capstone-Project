@@ -53,7 +53,6 @@ export default function SettingsView() {
   const [notifications, setNotifications] = useState({ inventory: true, system: true });
   const [appearance, setAppearance] = useState({ darkMode: false, language: "th" as Lang });
 
-  const [phoneState, setPhoneState] = useState({ current: "081-234-5678", newPhone: "", otp: "", step: "input" as "input" | "otp" | "success" });
 
   // Admin Permissions
   const [isFirstAdmin] = useState(true);
@@ -110,16 +109,6 @@ export default function SettingsView() {
   };
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
-  const handlePhoneSubmit = () => {
-    if (phoneState.step === "input" && phoneState.newPhone) {
-      setPhoneState(s => ({ ...s, step: "otp" }));
-    } else if (phoneState.step === "otp" && phoneState.otp.length >= 4) {
-      setPhoneState(s => ({ ...s, step: "success", current: s.newPhone, newPhone: "", otp: "" }));
-      showToast("Phone number updated successfully.");
-      setTimeout(() => setPhoneState(s => ({ ...s, step: "input" })), 2500);
-    }
-  };
-
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inviteForm.email || !inviteForm.tempPassword) return;
@@ -291,7 +280,15 @@ export default function SettingsView() {
                       </div>
                       <div>
                         <label className="block text-[13px] font-bold text-[var(--text-muted)] mb-2">{t("settings.admin.tempPasswordLabel")}</label>
-                        <input type="text" required placeholder={t("settings.admin.tempPasswordPlaceholder")} value={inviteForm.tempPassword} onChange={e => setInviteForm(s => ({ ...s, tempPassword: e.target.value }))} className={inputCls} />
+                        <input
+                          type="password"
+                          required
+                          minLength={6}
+                          placeholder={t("settings.admin.tempPasswordPlaceholder")}
+                          value={inviteForm.tempPassword}
+                          onChange={(e) => setInviteForm(s => ({ ...s, tempPassword: e.target.value }))}
+                          className={inputCls}
+                        />
                       </div>
                       <button type="submit" className="w-full py-3.5 bg-[var(--primary)] text-[var(--primary-contrast)] font-bold rounded-xl shadow-lg  hover:-translate-y-0.5 transition-all mt-2">
                         {t("settings.admin.sendInvite")}

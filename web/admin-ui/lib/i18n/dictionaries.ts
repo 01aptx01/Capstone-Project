@@ -245,6 +245,7 @@ export type DictKey =
   | "machine.detail.stat.status"
   | "machine.detail.toastSaved"
   | "machine.detail.toastSaveFail"
+  | "machine.detail.errorDuplicateSlot"
   | "machine.detail.locationUnknown"
   | "machine.detail.refreshing"
   | "machine.detail.refresh"
@@ -400,6 +401,7 @@ export type DictKey =
   | "machine.card.socketOn"
   | "machine.card.socketOff"
   | "addMachine.errorRequired"
+  | "addMachine.errorCodeMaxLength"
   | "addMachine.errorFailed"
   | "addMachine.modalTitleNew"
   | "addMachine.modalTitleSuccess"
@@ -444,6 +446,9 @@ export type DictKey =
   | "addProduct.placeholder.imageUrl"
   | "addProduct.label.category"
   | "addProduct.label.unitPrice"
+  | "addProduct.label.heatingTime"
+  | "addProduct.hint.heatingTime"
+  | "addProduct.errorHeatingTime"
   | "addProduct.label.description"
   | "addProduct.placeholder.description"
   | "addProduct.note"
@@ -891,6 +896,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.stat.status": "สถานะปฏิบัติการ (status)",
     "machine.detail.toastSaved": "บันทึกสต็อกแล้ว",
     "machine.detail.toastSaveFail": "บันทึกสต็อกไม่สำเร็จ",
+    "machine.detail.errorDuplicateSlot": "มีหมายเลขช่อง (slot) ซ้ำกัน กรุณาแก้ไขก่อนบันทึก",
     "machine.detail.locationUnknown": "ไม่ระบุสถานที่",
     "machine.detail.refreshing": "กำลังรีเฟรช…",
     "machine.detail.refresh": "รีเฟรชจากระบบ",
@@ -1047,6 +1053,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.card.socketOn": "เชื่อมต่อ",
     "machine.card.socketOff": "ไม่เชื่อมต่อ",
     "addMachine.errorRequired": "กรุณากรอกรหัสตู้ (Machine ID)",
+    "addMachine.errorCodeMaxLength": "รหัสตู้ต้องไม่เกิน 20 ตัวอักษร",
     "addMachine.errorFailed": "สร้างตู้ไม่สำเร็จ",
     "addMachine.modalTitleNew": "เพิ่มตู้สินค้าใหม่",
     "addMachine.modalTitleSuccess": "สร้างตู้สำเร็จ",
@@ -1092,6 +1099,9 @@ export const DICTS: Record<Lang, Dict> = {
     "addProduct.placeholder.imageUrl": "https://... หรือ /product/img/...",
     "addProduct.label.category": "หมวดหมู่",
     "addProduct.label.unitPrice": "ราคาต่อชิ้น (฿)",
+    "addProduct.label.heatingTime": "เวลาอุ่น (วินาที)",
+    "addProduct.hint.heatingTime": "จำนวนเต็ม 1–3600 วินาที (ค่าเริ่มต้น 15)",
+    "addProduct.errorHeatingTime": "เวลาอุ่นต้องเป็นจำนวนเต็ม 1–3600 วินาที",
     "addProduct.label.description": "รายละเอียด",
     "addProduct.placeholder.description": "รายละเอียดสินค้า...",
     "addProduct.note": "สต็อกต่อตู้แก้ที่เมนูตู้จำหน่าย — API สินค้าไม่เก็บจำนวนคงเหลือรวม",
@@ -1536,6 +1546,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.stat.status": "Operational status",
     "machine.detail.toastSaved": "Stock saved",
     "machine.detail.toastSaveFail": "Failed to save stock",
+    "machine.detail.errorDuplicateSlot": "Duplicate slot numbers — fix before saving",
     "machine.detail.locationUnknown": "Location not set",
     "machine.detail.refreshing": "Refreshing…",
     "machine.detail.refresh": "Refresh from server",
@@ -1692,6 +1703,7 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.card.socketOn": "Connected",
     "machine.card.socketOff": "Disconnected",
     "addMachine.errorRequired": "Please enter the Machine ID",
+    "addMachine.errorCodeMaxLength": "Machine ID must be at most 20 characters",
     "addMachine.errorFailed": "Failed to create machine",
     "addMachine.modalTitleNew": "Add new machine",
     "addMachine.modalTitleSuccess": "Machine created",
@@ -1737,6 +1749,9 @@ export const DICTS: Record<Lang, Dict> = {
     "addProduct.placeholder.imageUrl": "https://… or /product/img/…",
     "addProduct.label.category": "Category",
     "addProduct.label.unitPrice": "Unit price (฿)",
+    "addProduct.label.heatingTime": "Heating time (seconds)",
+    "addProduct.hint.heatingTime": "Whole seconds 1–3600 (default 15)",
+    "addProduct.errorHeatingTime": "Heating time must be a whole number from 1 to 3600 seconds",
     "addProduct.label.description": "Description",
     "addProduct.placeholder.description": "Product description…",
     "addProduct.note": "Adjust per-machine stock from the machine page — the product API does not track total qty.",

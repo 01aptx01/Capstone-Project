@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import type { LiveChartBuckets, RechartsSalesDatum } from "@/lib/admin-mappers";
 import { getSalesReport } from "@/lib/admin-api";
 import { useLang } from "@/lib/i18n/lang";
+import { blockNonIntegerKeys, digitsOnly } from "@/lib/integer-input";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -447,19 +448,37 @@ export default function DashboardChart({
               {historicalPeriod === "Year" && (
                 <div className="flex items-center gap-2">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="YYYY"
+                    maxLength={4}
                     className="px-3 py-1.5 border border-[var(--border)] bg-[var(--surface-2)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)] w-24 text-[var(--text)]"
                     value={yearRange.start}
-                    onChange={(e) => setYearRange((s) => ({ ...s, start: e.target.value }))}
+                    onKeyDown={blockNonIntegerKeys}
+                    onChange={(e) =>
+                      setYearRange((s) => ({
+                        ...s,
+                        start: digitsOnly(e.target.value).slice(0, 4),
+                      }))
+                    }
                   />
                   <span className="text-[var(--text-muted)] text-[13px]">{t("datePicker.through")}</span>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     placeholder="YYYY"
+                    maxLength={4}
                     className="px-3 py-1.5 border border-[var(--border)] bg-[var(--surface-2)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)] w-24 text-[var(--text)]"
                     value={yearRange.end}
-                    onChange={(e) => setYearRange((s) => ({ ...s, end: e.target.value }))}
+                    onKeyDown={blockNonIntegerKeys}
+                    onChange={(e) =>
+                      setYearRange((s) => ({
+                        ...s,
+                        end: digitsOnly(e.target.value).slice(0, 4),
+                      }))
+                    }
                   />
                   <button
                     onClick={() => void fetchHistorical()}
