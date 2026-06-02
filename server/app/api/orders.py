@@ -155,7 +155,7 @@ def redeem_coupon(phone: str):
     try:
         with get_db_cursor() as (db, cur):
             cur.execute(
-                "SELECT user_id, points FROM users WHERE phone_number = %s",
+                "SELECT user_id, points FROM users WHERE phone_number = %s FOR UPDATE",
                 (phone,),
             )
             user = cur.fetchone()
@@ -166,6 +166,7 @@ def redeem_coupon(phone: str):
                 """
                 SELECT promotion_id, code, points_cost, is_active, expire_date, max_uses
                 FROM promotions WHERE promotion_id = %s
+                FOR UPDATE
                 """,
                 (promotion_id,),
             )
