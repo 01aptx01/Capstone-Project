@@ -250,7 +250,6 @@ export type DictKey =
   | "machine.detail.refreshing"
   | "machine.detail.refresh"
   | "machine.detail.stockBySlot"
-  | "machine.detail.addSlot"
   | "machine.detail.cancelEdit"
   | "machine.detail.saveStock"
   | "machine.detail.saving"
@@ -260,10 +259,12 @@ export type DictKey =
   | "machine.detail.col.product"
   | "machine.detail.col.qty"
   | "machine.detail.col.price"
-  | "machine.detail.emptySlots"
   | "machine.detail.notInList"
   | "machine.detail.removeSlot"
   | "machine.detail.saveHint"
+  | "machine.detail.slotEmpty"
+  | "machine.detail.slotActivate"
+  | "machine.detail.errorDuplicateProduct"
   | "page.alerts.export.errorsIncl"
   | "page.alerts.export.errorsOnly"
   | "page.alerts.export.lowThreshold"
@@ -898,7 +899,6 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.refreshing": "กำลังรีเฟรช…",
     "machine.detail.refresh": "รีเฟรชจากระบบ",
     "machine.detail.stockBySlot": "สต็อกตามช่อง",
-    "machine.detail.addSlot": "เพิ่มช่อง",
     "machine.detail.cancelEdit": "ยกเลิกการแก้ไข",
     "machine.detail.saveStock": "บันทึกสต็อก",
     "machine.detail.saving": "กำลังบันทึก…",
@@ -908,11 +908,13 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.col.product": "สินค้า",
     "machine.detail.col.qty": "จำนวน",
     "machine.detail.col.price": "ราคา",
-    "machine.detail.emptySlots": "ยังไม่มีช่องสต็อก — กด \"เพิ่มช่อง\" เพื่อเริ่มต้น",
     "machine.detail.notInList": "(ไม่พบในรายการ)",
     "machine.detail.removeSlot": "ลบช่อง",
     "machine.detail.saveHint":
       "ตู้: {code} — บันทึกจะแทนที่สต็อกทั้งหมดของตู้นี้ (สูงสุด {max} ช่อง) · จำนวน 0 = ตู้แสดง「สินค้าหมด」และซื้อไม่ได้",
+    "machine.detail.slotEmpty": "ว่าง",
+    "machine.detail.slotActivate": "+ เพิ่มสินค้า",
+    "machine.detail.errorDuplicateProduct": "สินค้าในแต่ละช่องต้องไม่ซ้ำกัน กรุณาแก้ไขก่อนบันทึก",
     "page.alerts.export.errorsIncl": "รวมที่ resolve แล้ว",
     "page.alerts.export.errorsOnly": "เฉพาะที่ยังไม่ resolve",
     "page.alerts.export.lowThreshold": "เกณฑ์ quantity < {n}",
@@ -1545,7 +1547,6 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.refreshing": "Refreshing…",
     "machine.detail.refresh": "Refresh from server",
     "machine.detail.stockBySlot": "Stock by slot",
-    "machine.detail.addSlot": "Add slot",
     "machine.detail.cancelEdit": "Cancel edits",
     "machine.detail.saveStock": "Save stock",
     "machine.detail.saving": "Saving…",
@@ -1555,11 +1556,13 @@ export const DICTS: Record<Lang, Dict> = {
     "machine.detail.col.product": "Product",
     "machine.detail.col.qty": "Qty",
     "machine.detail.col.price": "Price",
-    "machine.detail.emptySlots": "No slots yet — click “Add slot” to start.",
     "machine.detail.notInList": "(not in catalog)",
     "machine.detail.removeSlot": "Remove slot",
     "machine.detail.saveHint":
       "Machine: {code} — saving replaces all stock for this machine (max {max} slots). Qty 0 shows as sold out on the kiosk and cannot be purchased.",
+    "machine.detail.slotEmpty": "Empty",
+    "machine.detail.slotActivate": "+ Add product",
+    "machine.detail.errorDuplicateProduct": "Each slot must have a unique product. Please fix duplicates before saving.",
     "page.alerts.export.errorsIncl": "Including resolved",
     "page.alerts.export.errorsOnly": "Unresolved only",
     "page.alerts.export.lowThreshold": "Threshold: quantity < {n}",
