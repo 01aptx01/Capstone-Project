@@ -61,9 +61,14 @@ export async function getMember(phone: string): Promise<MemberProfile> {
  * registerMember
  * ลงทะเบียนสมัครสมาชิกใหม่ด้วยชื่อแสดงผล
  */
-export async function registerMember(displayName: string): Promise<MemberProfile> {
+export async function registerMember(displayName: string, token?: string): Promise<MemberProfile> {
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
   return apiFetch("/api/members/register", {
     method: "POST",
+    headers,
     body: JSON.stringify({ display_name: displayName }),
   });
 }

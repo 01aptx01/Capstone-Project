@@ -39,6 +39,7 @@ CREATE TABLE otp_sessions (
   code_hash VARCHAR(64) NOT NULL,
   expires_at DATETIME NOT NULL,
   verified_at DATETIME NULL,
+  failed_attempts INT NOT NULL DEFAULT 0,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_otp_phone_expires (phone_number, expires_at)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
