@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLang } from "@/lib/i18n/lang";
+import { blockNonIntegerKeys, digitsOnly } from "@/lib/integer-input";
 
 const fallbackDay = [15, 30, 95, 180, 250, 160, 110, 60];
 const fallbackWeek = [600, 720, 560, 900, 1100, 1050, 1280];
@@ -274,20 +275,38 @@ export default function MachineChart() {
             )}
             {historicalPeriod === "Year" && (
               <div className="flex items-center gap-2">
-                <input 
-                  type="number" 
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="YYYY"
+                  maxLength={4}
                   className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)] w-24"
                   value={yearRange.start}
-                  onChange={(e) => setYearRange(s => ({...s, start: e.target.value}))}
+                  onKeyDown={blockNonIntegerKeys}
+                  onChange={(e) =>
+                    setYearRange((s) => ({
+                      ...s,
+                      start: digitsOnly(e.target.value).slice(0, 4),
+                    }))
+                  }
                 />
                 <span className="text-[var(--text-muted)] text-[13px] font-medium">{t("datePicker.through")}</span>
-                <input 
-                  type="number" 
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="YYYY"
+                  maxLength={4}
                   className="px-3 py-1.5 border border-[var(--border)] rounded-lg text-[13px] outline-none focus:border-[var(--primary)] w-24"
                   value={yearRange.end}
-                  onChange={(e) => setYearRange(s => ({...s, end: e.target.value}))}
+                  onKeyDown={blockNonIntegerKeys}
+                  onChange={(e) =>
+                    setYearRange((s) => ({
+                      ...s,
+                      end: digitsOnly(e.target.value).slice(0, 4),
+                    }))
+                  }
                 />
               </div>
             )}

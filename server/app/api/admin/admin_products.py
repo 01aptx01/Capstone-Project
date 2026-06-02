@@ -26,6 +26,21 @@ def _validate_product_price(price_dec: Decimal) -> str | None:
     return None
 
 
+def _parse_heating_time(raw) -> int | None:
+    """Non-negative int seconds; None if omitted/null."""
+    if raw is None or raw == "":
+        return None
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError("invalid heating_time")
+    if n < 1:
+        raise ValueError("heating_time must be at least 1 second")
+    if n > 3600:
+        raise ValueError("heating_time must be at most 3600 seconds")
+    return n
+
+
 def _dec(value):
     if value is None:
         return None
@@ -107,12 +122,17 @@ def admin_create_product():
     if price_err:
         return jsonify({"error": price_err}), 400
 
+    try:
+        heating_time = _parse_heating_time(data.get("heating_time"))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     p = Product(
         name=str(name).strip(),
         price=price_dec,
         description=data.get("description"),
         image_url=data.get("image_url"),
-        heating_time=data.get("heating_time"),
+        heating_time=heating_time if heating_time is not None else 15,
         category=(data.get("category") or "meat"),
     )
     try:
@@ -148,7 +168,10 @@ def admin_update_product(product_id: int):
         if "image_url" in data:
             p.image_url = data["image_url"]
         if "heating_time" in data:
-            p.heating_time = data["heating_time"]
+            try:
+                p.heating_time = _parse_heating_time(data.get("heating_time"))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
         if "category" in data and data["category"] is not None:
             p.category = str(data["category"])
         db.session.commit()

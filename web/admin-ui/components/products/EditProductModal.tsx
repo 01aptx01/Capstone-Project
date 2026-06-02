@@ -12,6 +12,12 @@ import {
   MIN_PRODUCT_PRICE_THB,
   parseProductPriceThb,
 } from "@/lib/product-price";
+import { blockNonIntegerKeys, digitsOnly } from "@/lib/integer-input";
+import {
+  DEFAULT_HEATING_TIME_SEC,
+  isValidHeatingTimeSeconds,
+  parseHeatingTimeSeconds,
+} from "@/lib/product-heating";
 import ProductImageUrlField from "@/components/products/ProductImageUrlField";
 import { ADMIN_PRODUCTS_REFRESH_EVENT } from "@/components/products/ProductTable";
 import { useLang } from "@/lib/i18n/lang";
@@ -32,6 +38,7 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
     name: "",
     category: "meat",
     unit_price: "",
+    heating_time: String(DEFAULT_HEATING_TIME_SEC),
     description: "",
     image_url: "",
   });
@@ -59,6 +66,10 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
               : "",
           description: String(product.description || ""),
           image_url: String(product.image || ""),
+          heating_time:
+            product.heating_time !== undefined && product.heating_time !== null
+              ? String(product.heating_time)
+              : String(DEFAULT_HEATING_TIME_SEC),
         });
         setFormError(null);
       });
@@ -102,6 +113,13 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
       setFormError(t("productImage.invalidUrl"));
       return;
     }
+    const heatingParsed = parseHeatingTimeSeconds(formData.heating_time);
+    const heatingTime =
+      heatingParsed === null ? DEFAULT_HEATING_TIME_SEC : heatingParsed;
+    if (!isValidHeatingTimeSeconds(heatingTime)) {
+      setFormError(t("addProduct.errorHeatingTime"));
+      return;
+    }
     setSubmitting(true);
     try {
       await updateProduct(productId, {
@@ -110,6 +128,7 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
         category: uiLabelToApiCategory(formData.category),
         description: formData.description.trim() || null,
         image_url: formData.image_url.trim() || null,
+        heating_time: heatingTime,
       });
       toast.success(t("editProduct.toastSaved"));
       window.dispatchEvent(new Event(ADMIN_PRODUCTS_REFRESH_EVENT));
@@ -187,15 +206,39 @@ export default function EditProductModal({ open, onClose, product }: EditProduct
             <div className="group space-y-1.5">
               <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">{t("addProduct.label.unitPrice")}</label>
               <input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 required
-                step="1"
-                min={MIN_PRODUCT_PRICE_THB}
                 className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
                 value={formData.unit_price}
-                onChange={(e) => setFormData({ ...formData, unit_price: e.target.value })}
+                onKeyDown={blockNonIntegerKeys}
+                onChange={(e) =>
+                  setFormData({ ...formData, unit_price: digitsOnly(e.target.value) })
+                }
               />
             </div>
+          </div>
+
+          <div className="group space-y-1.5">
+            <label className="text-[12px] font-black text-[var(--text-muted)] ml-1 uppercase tracking-[0.1em]">
+              {t("addProduct.label.heatingTime")}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              required
+              className="w-full px-5 py-4 bg-[var(--surface-2)] border-2 border-transparent rounded-[20px] outline-none focus:border-[var(--primary)] focus:bg-[var(--surface-1)] transition-all text-[15px] font-semibold text-[var(--text)]"
+              value={formData.heating_time}
+              onKeyDown={blockNonIntegerKeys}
+              onChange={(e) =>
+                setFormData({ ...formData, heating_time: digitsOnly(e.target.value) })
+              }
+            />
+            <p className="text-[11px] font-bold text-[var(--text-muted)] ml-1">
+              {t("addProduct.hint.heatingTime")}
+            </p>
           </div>
 
           <div className="group space-y-1.5">

@@ -60,6 +60,7 @@ export type UiProductRow = {
   status?: string;
   image?: string;
   description?: string;
+  heating_time?: number | null;
   product_id: number;
 };
 
@@ -86,6 +87,7 @@ export function apiProductToUiRow(
     status,
     image: p.image_url || undefined,
     description: p.description || undefined,
+    heating_time: p.heating_time ?? null,
   };
 }
 
