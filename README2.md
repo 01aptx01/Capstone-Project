@@ -29,7 +29,7 @@
 | :--- | :--- | :--- |
 | **API กลาง (Backend)** | Flask (Python 3) + Eventlet + python-socketio | จัดการ Business Logic, สต็อกสินค้า, การคำนวณราคา, ระบบแลก/ลดคูปอง, การเชื่อมต่อ Omise API, และการส่งงาน (Dispatch) ให้ฮาร์ดแวร์ผ่าน Socket.IO |
 | **หน้าจอลูกค้าตู้ (Machine UI)** | Next.js 16.2.4 (React 19, Tailwind v4) | แสดงเมนูและสต็อกตามจริง, ตะกร้าสินค้า, ระบบชำระเงิน (Omise Token/Source), และหน้าจอแสดงความร้อน/การจ่ายของผ่าน Socket.IO |
-| **แอปพลิเคชันสมาชิก (Web UI)** | Next.js (Responsive Mobile UI) | ระบบ OTP Login, สมัครสมาชิกใหม่, แดชบอร์ดคะแนนสะสม, ระบบแลกโปรโมชัน, และระบบสร้างรหัสคูปอง 8 หลักสำหรับใช้กดที่หน้าตู้ |
+| **แอปพลิเคชันสมาชิก (Web UI)** | Next.js (PWA & Offline Support) | ระบบ OTP Login, PWA (รองรับการใช้งานออฟไลน์และติดตั้งเป็นแอป), แดชบอร์ดคะแนนสะสม, ระบบแลกโปรโมชัน, และระบบสร้างรหัสคูปอง 8 หลักสำหรับใช้กดที่หน้าตู้ |
 | **แดชบอร์ดแอดมิน (Admin UI)** | Next.js (Dashboard UI) | บริหารคลังสินค้า/ช่องสต็อกต่อตู้, CRUD สินค้าและตู้, ตรวจดูออเดอร์, จัดการคูปอง, ตรวจจับเหตุการณ์ความผิดปกติแบบ Real-time |
 | **Hardware Agent** | Flask API + Socket.IO Client (Raspberry Pi/Docker) | ควบคุม GPIO, NFC Reader (MFRC522), มอเตอร์จ่ายของ, หลอดไฟ LED, เสียง VLC และมีระบบ SQLite Outbox สำหรับเก็บ Telemetry แบบออฟไลน์ |
 | **ฐานข้อมูลหลัก** | MySQL 8 (Relational DB) | เก็บข้อมูลธุรกรรม, สต็อกช่อง, คูปอง, ประวัติสมาชิก, telemetry logs, และแอดมิน RBAC |

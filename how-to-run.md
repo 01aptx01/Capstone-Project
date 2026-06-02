@@ -44,7 +44,7 @@
 | `client` | `vending-pi` | Telemetry & Hardware Agent (รันโค้ด Python จำลองฮาร์ดแวร์ GPIO/NFC บน Docker) |
 | `machine-ui` | `vending-machine-ui` | Next.js แอปพลิเคชันหน้าตู้จำหน่ายสินค้า (Kiosk UI) สำหรับลูกค้าสแกน/กดซื้อ |
 | `admin-ui` | `vending-admin-ui` | Next.js ระบบจัดการหลังบ้านของแอดมิน (CRUD สินค้า, ตู้, และสต็อกช่อง) |
-| `web-ui` | `vending-web-ui` | Next.js แอปพลิเคชันบนมือถือของลูกค้าสมาชิก (OTP Login, ดูคะแนนสะสม, แลกคูปอง) |
+| `web-ui` | `vending-web-ui` | Next.js แอปพลิเคชันบนมือถือของลูกค้าสมาชิกแบบ PWA (Offline Support, OTP Login, ดูคะแนนสะสม, แลกคูปอง) |
 | `swagger-ui` | `vending-swagger-ui` | Swagger UI เพื่อเปิดศึกษาโครงสร้าง API จากเอกสารสัญญากลาง [swagger.yaml](swagger.yaml) |
 | `compose-banner` | `vending-compose-banner` | บริการพิมพ์แบนเนอร์แสดงตารางลิงก์พอร์ตต่างๆ ในหน้าต่าง console |
 
