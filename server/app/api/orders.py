@@ -357,8 +357,8 @@ def reveal_coupon_code(phone: str, user_promo_id: int):
                 import string
 
                 while True:
-                    rand_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-                    generated = f"CP-{rand_str}"
+                    rand_str = ''.join(random.choices(string.digits, k=8))
+                    generated = rand_str
                     cur.execute("SELECT 1 FROM user_promotions WHERE code = %s", (generated,))
                     if not cur.fetchone():
                         code = generated
