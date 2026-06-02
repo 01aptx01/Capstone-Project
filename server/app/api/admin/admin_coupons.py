@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from app.api.admin import admin_bp
-from app.api.admin.decorators import admin_required
+from app.api.admin.decorators import roles_required
 from app.api.admin.pagination import get_pagination_params, list_envelope
 from app.extensions import db
 from app.models import Coupon, Order
@@ -88,7 +88,7 @@ def _parse_max_uses(raw):
 
 
 @admin_bp.route("/coupons/<int:promotion_id>/redemptions", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_coupon_redemptions(promotion_id: int):
     """Orders that used this coupon; member phone or 'unknown'."""
     c = db.session.get(Coupon, promotion_id)
@@ -126,7 +126,7 @@ def admin_coupon_redemptions(promotion_id: int):
 
 
 @admin_bp.route("/coupons", methods=["GET"])
-@admin_required
+@roles_required("admin")
 def admin_list_coupons():
     page, per_page = get_pagination_params()
 
@@ -146,7 +146,7 @@ def admin_list_coupons():
 
 
 @admin_bp.route("/coupons", methods=["POST"])
-@admin_required
+@roles_required("admin")
 def admin_create_coupon():
     data = request.get_json(silent=True) or {}
     code = data.get("code")
@@ -206,7 +206,7 @@ def admin_create_coupon():
 
 
 @admin_bp.route("/coupons/<int:promotion_id>", methods=["DELETE"])
-@admin_required
+@roles_required("admin")
 def admin_delete_coupon(promotion_id: int):
     c = db.session.get(Coupon, promotion_id)
     if not c:
@@ -225,7 +225,7 @@ def admin_delete_coupon(promotion_id: int):
 
 
 @admin_bp.route("/coupons/<int:promotion_id>", methods=["PUT"])
-@admin_required
+@roles_required("admin")
 def admin_update_coupon(promotion_id: int):
     c = db.session.get(Coupon, promotion_id)
     if not c:
