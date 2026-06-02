@@ -3,6 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
 
+  // Allow HMR from local network IPs
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
+  },
+  
+  // Allow webpack HMR from your specific local network IP
+  allowedDevOrigins: ["192.168.100.2", "localhost:3000", "192.168.100.2:3000"],
+
   // Image optimization
   images: {
     formats: ["image/webp", "image/avif"],

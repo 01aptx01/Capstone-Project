@@ -5,6 +5,8 @@ CREATE DATABASE IF NOT EXISTS vending;
 USE vending;
 
 -- Drop order
+DROP TABLE IF EXISTS user_promotions;
+DROP TABLE IF EXISTS otp_sessions;
 DROP TABLE IF EXISTS admin_user_role;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS admin_users;
@@ -21,6 +23,7 @@ DROP TABLE IF EXISTS machines;
 CREATE TABLE users (
   user_id INT AUTO_INCREMENT PRIMARY KEY,
   phone_number VARCHAR(20) NOT NULL,
+  display_name VARCHAR(100) NULL,
   points INT NOT NULL DEFAULT 0,
   registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   last_use DATETIME NULL,
@@ -28,6 +31,16 @@ CREATE TABLE users (
   UNIQUE KEY uq_users_phone (phone_number),
   -- Composite index: covers WHERE status='active' AND last_use < X (user maintenance sweeper)
   KEY idx_users_status_lastuse (status, last_use)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE otp_sessions (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  phone_number VARCHAR(15) NOT NULL,
+  code_hash VARCHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  verified_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_otp_phone_expires (phone_number, expires_at)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE promotions (
@@ -40,6 +53,24 @@ CREATE TABLE promotions (
   points_cost INT NOT NULL DEFAULT 0,
   max_uses INT NOT NULL DEFAULT 0 COMMENT '0 = unlimited redemptions',
   UNIQUE KEY uq_promotions_code (code)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE user_promotions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  promotion_id INT NOT NULL,
+  status ENUM('active','used','expired') NOT NULL DEFAULT 'active',
+  code VARCHAR(50) NULL,
+  redeemed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_user_promotions_code (code),
+  KEY idx_user_promotions_user (user_id),
+  KEY idx_user_promotions_promo (promotion_id),
+  CONSTRAINT fk_user_promotions_user
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_user_promotions_promotion
+    FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE machines (
@@ -84,6 +115,7 @@ CREATE TABLE orders (
   machine_code VARCHAR(20) NOT NULL,
   user_id INT NULL,
   promotion_id INT NULL,
+  user_promotion_id INT NULL,
   charge_id VARCHAR(64) NULL,
   total_price DECIMAL(10,2) NOT NULL,
   payment_method ENUM('cash','qr_code','credit_card') NOT NULL,
@@ -103,6 +135,7 @@ CREATE TABLE orders (
   KEY idx_orders_machine (machine_code),
   KEY idx_orders_user (user_id),
   KEY idx_orders_promo (promotion_id),
+  KEY idx_orders_user_promo (user_promotion_id),
   -- Composite: covers background sweeper (WHERE status='pending_payment' AND created_at < X)
   KEY idx_orders_status_created (status, created_at),
   -- Composite: covers dispatch_pending_jobs (WHERE machine_code=X AND status='paid')
@@ -115,6 +148,9 @@ CREATE TABLE orders (
     ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_orders_promotion
     FOREIGN KEY (promotion_id) REFERENCES promotions(promotion_id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_orders_user_promotion
+    FOREIGN KEY (user_promotion_id) REFERENCES user_promotions(id)
     ON UPDATE CASCADE ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -217,7 +253,7 @@ INSERT INTO machines (machine_code, secret_token_hash, location, status) VALUES 
 
 -- Products
 INSERT INTO products (name, description, price, heating_time, image_url, category) VALUES
-('เปามดแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png', 'meat'),
+('เปาหมูแดง', 'ไส้หมูแดงเข้มข้น หวานกำลังดี', 32.00, 15, '/product/img/pao-moddaeng.png', 'meat'),
 ('เปาหมูสับ', 'หมูสับไข่เค็ม รสกลมกล่อม', 32.00, 20, '/product/img/pao-moosub.png', 'meat'),
 ('เปากุ้ง', 'เนื้อกุ้งเด้งเต็มคำ', 32.00, 15, '/product/img/pao-shrimp.png', 'meat'),
 ('เปาเต้าหู้', 'ไส้เต้าหู้รสกลมกล่อม', 22.00, 12, '/product/img/pao-tofu.png', 'vegetarian'),
@@ -232,3 +268,41 @@ INSERT INTO machine_slots (machine_code, slot_number, product_id, quantity) VALU
 ('MP1-001', 4, 4, 20),
 ('MP1-001', 5, 5, 20),
 ('MP1-001', 6, 6, 20);
+
+-- Redeemable promotions (web-ui /redeem)
+INSERT INTO promotions (code, type, discount_amount, is_active, expire_date, points_cost, max_uses) VALUES
+('POINTS50', 'fixed_amount', 10.00, 1, DATE_ADD(NOW(), INTERVAL 1 YEAR), 50, 0),
+('POINTS100', 'percent', 15.00, 1, DATE_ADD(NOW(), INTERVAL 1 YEAR), 100, 0);
+
+-- Demo member (web-ui login / profile / redeem)
+INSERT INTO users (phone_number, points, last_use, status) VALUES
+('0631723422', 150, NOW(), 'active')
+ON DUPLICATE KEY UPDATE
+  points = VALUES(points),
+  last_use = VALUES(last_use),
+  status = VALUES(status);
+
+-- Seed mock order history for the demo user
+SET @demo_user_id = (SELECT user_id FROM users WHERE phone_number = '0631723422' LIMIT 1);
+
+-- Order 1: Completed order (2 days ago)
+INSERT INTO orders (machine_code, user_id, charge_id, total_price, payment_method, status, created_at)
+VALUES ('MP1-001', @demo_user_id, 'chrg_test_00000001', 57.00, 'qr_code', 'completed', DATE_SUB(NOW(), INTERVAL 2 DAY));
+
+SET @order1_id = LAST_INSERT_ID();
+INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES
+(@order1_id, 2, 1, 32.00), -- เปาหมูสับ
+(@order1_id, 5, 1, 25.00); -- เปาเห็ดหอม
+
+-- Order 2: Completed order (1 hour ago)
+INSERT INTO orders (machine_code, user_id, charge_id, total_price, payment_method, status, created_at)
+VALUES ('MP1-001', @demo_user_id, 'chrg_test_00000002', 32.00, 'credit_card', 'completed', DATE_SUB(NOW(), INTERVAL 1 HOUR));
+
+SET @order2_id = LAST_INSERT_ID();
+INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES
+(@order2_id, 1, 1, 32.00); -- เปาหมูแดง
+
+-- Seed one active coupon for the demo user
+SET @promo_id = (SELECT promotion_id FROM promotions WHERE code = 'POINTS50' LIMIT 1);
+INSERT INTO user_promotions (user_id, promotion_id, status)
+VALUES (@demo_user_id, @promo_id, 'active');

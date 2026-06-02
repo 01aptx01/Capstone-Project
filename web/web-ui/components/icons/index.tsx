@@ -1,21 +1,9 @@
-// ─── All SVG Icons ────────────────────────────────────────────────────────────
+// components/icons/index.tsx
+// ─── ALL SVG ICON COMPONENTS ──────────────────────────────────────────────────
+// คอลเลกชันไอคอน SVG สำหรับเรียกใช้งานในหน้าเว็บและระบบนำทาง (Icons Library)
+// เขียนเป็น React Functional Component เพื่อให้ง่ายต่อการเปลี่ยนสไตล์ ขนาด และสีผ่าน Props
 
-export function ModPaoLogo({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="14" cy="16" r="12" fill="white" />
-      <path d="M9 6 Q10 3 11 6" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <path d="M13 4 Q14 1 15 4" stroke="white" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <circle cx="10.5" cy="15" r="1.5" fill="#FF8235" />
-      <circle cx="17.5" cy="15" r="1.5" fill="#FF8235" />
-      <path d="M10 19 Q14 22 18 19" stroke="#FF8235" strokeWidth="1.5" strokeLinecap="round" fill="none" />
-      <text x="30" y="22" fontFamily="Georgia, serif" fontWeight="700" fontSize="16" fill="white" letterSpacing="1">
-        MOD PAO
-      </text>
-    </svg>
-  );
-}
-
+// ไอคอนสามขีด (Hamburger Menu Icon) สำหรับหน้าจอขนาดมือถือ
 export function HamburgerIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -24,14 +12,16 @@ export function HamburgerIcon() {
   );
 }
 
+// ไอคอนปิดกากบาท (Close/Cancel Icon) สำหรับปิดหน้าต่าง Modal หรือ Drawer
 export function CloseIcon() {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-      <path d="M6 6l12 12M18 6L6 18" stroke="#F97316" strokeWidth="2.5" strokeLinecap="round" />
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+      <path d="M6 6l12 12M18 6L6 18" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
     </svg>
   );
 }
 
+// ไอคอนรูปหน้าแรก (Home Icon)
 export function IconHome({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -41,6 +31,7 @@ export function IconHome({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปกล่องของขวัญ/แลกคูปอง (Redeem/Gift Icon)
 export function IconRedeem({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -53,6 +44,7 @@ export function IconRedeem({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปนาฬิกาประวัติการใช้งาน (History/Clock Icon)
 export function IconHistory({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -63,6 +55,7 @@ export function IconHistory({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนรูปโปรไฟล์/ผู้ใช้งาน (Profile/User Icon)
 export function IconProfile({ size = 22 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -72,14 +65,38 @@ export function IconProfile({ size = 22 }: { size?: number }) {
   );
 }
 
+// ไอคอนออกจากระบบ (Logout Icon)
 export function IconLogout() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-      <path d="M16 17l5-5-5-5M21 12H9M13 3H5a2 2 0 00-2 2v14a2 2 0 002 2h8" stroke="#F97316" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 17l5-5-5-5M21 12H9M13 3H5a2 2 0 00-2 2v14a2 2 0 002 2h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
+// ไอคอนรูปคูปองกระดาษ (Coupons/Ticket Icon)
+export function IconCoupons({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9 6v12M15 6v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="2 3" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+// ไอคอนรูปเครื่องหมายคำถาม/ศูนย์ช่วยเหลือ (Help/FAQ Icon)
+export function IconHelp({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9.5 9a2.5 2.5 0 014.5 1.5c0 2-2.5 2-2.5 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="0.75" fill="currentColor" />
+    </svg>
+  );
+}
+
+// ไอคอนรูปแว่นขยายค้นหา (Search Icon)
 export function IconSearch() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -89,6 +106,7 @@ export function IconSearch() {
   );
 }
 
+// ไอคอนรูปกระดิ่งแจ้งเตือน (Bell/Notification Icon)
 export function IconBell() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -98,6 +116,7 @@ export function IconBell() {
   );
 }
 
+// ไอคอนรูปรถเข็น/ตะกร้าสินค้า (Cart Icon)
 export function IconCart() {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -108,10 +127,11 @@ export function IconCart() {
   );
 }
 
+// ไอคอนรูปเมนูรายการอาหาร/หมวดหมู่
 export function IconMenu() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
       <path d="M3 7h18M3 12h18M3 17h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   );
-}
+}
