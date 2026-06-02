@@ -115,7 +115,7 @@ class ProductController:
 
     def get_products(self):
         """List available products with stock"""
-        machine_code = request.args.get("machine_code") or request.args.get("machine_id", "MP1-001")
+        machine_code = request.args.get("machine_code") or "MP1-001"
         logger.info(f"[ProductController] Fetching products for machine: {machine_code}")
 
         try:

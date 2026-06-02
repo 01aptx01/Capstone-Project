@@ -13,4 +13,3 @@ eventlet
 pytz
 bcrypt
 PyJWT
-twilio

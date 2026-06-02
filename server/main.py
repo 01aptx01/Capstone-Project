@@ -176,29 +176,49 @@ class ServerApp:
 
         socketio_enabled = os.getenv("SOCKETIO_ENABLED", "1") != "0"
         if socketio_enabled:
-            # Custom WSGI middleware to guarantee CORS headers on ALL requests (including preflights intercepted early)
+            from app.cors_config import (
+                cors_allow_headers,
+                cors_allow_methods,
+                is_allowed_origin,
+            )
+
             class CorsMiddleware:
                 def __init__(self, wsgi_app):
                     self.wsgi_app = wsgi_app
+
+                def _cors_headers(self, origin: str | None) -> list[tuple[str, str]]:
+                    from app.cors_config import normalize_origin
+
+                    o = normalize_origin(origin)
+                    if not o or not is_allowed_origin(o):
+                        return []
+                    return [
+                        ("Access-Control-Allow-Origin", o),
+                        ("Access-Control-Allow-Credentials", "true"),
+                        ("Access-Control-Allow-Headers", cors_allow_headers()),
+                        ("Access-Control-Allow-Methods", cors_allow_methods()),
+                    ]
+
                 def __call__(self, environ, start_response):
-                    if environ.get('REQUEST_METHOD') == 'OPTIONS':
-                        start_response('200 OK', [
-                            ('Access-Control-Allow-Origin', '*'),
-                            ('Access-Control-Allow-Headers', 'Content-Type,Authorization'),
-                            ('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS'),
-                            ('Content-Length', '0')
-                        ])
-                        return [b'']
-                    
+                    origin = environ.get("HTTP_ORIGIN")
+                    if environ.get("REQUEST_METHOD") == "OPTIONS":
+                        headers = self._cors_headers(origin)
+                        if not headers:
+                            start_response("403 Forbidden", [("Content-Length", "0")])
+                            return [b""]
+                        headers.append(("Content-Length", "0"))
+                        start_response("200 OK", headers)
+                        return [b""]
+
                     def custom_start_response(status, headers, exc_info=None):
                         headers_dict = {k.lower(): v for k, v in headers}
-                        if 'access-control-allow-origin' not in headers_dict:
-                            headers.append(('Access-Control-Allow-Origin', '*'))
-                        if 'access-control-allow-headers' not in headers_dict:
-                            headers.append(('Access-Control-Allow-Headers', 'Content-Type,Authorization'))
-                        if 'access-control-allow-methods' not in headers_dict:
-                            headers.append(('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS'))
+                        if (
+                            is_allowed_origin(origin)
+                            and "access-control-allow-origin" not in headers_dict
+                        ):
+                            headers.extend(self._cors_headers(origin))
                         return start_response(status, headers, exc_info)
+
                     return self.wsgi_app(environ, custom_start_response)
 
             wrapped_wsgi = CorsMiddleware(self.wsgi_app)

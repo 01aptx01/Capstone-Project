@@ -71,7 +71,7 @@ class BuyController:
 
     def get_active_order(self):
         """คืนว่าตู้นี้มีออเดอร์ค้างที่ห้ามเปิดซื้อใหม่หรือไม่ (สำหรับ kiosk หลังรีเฟรช)."""
-        machine_code = request.args.get("machine_code") or request.args.get("machine_id") or "MP1-001"
+        machine_code = request.args.get("machine_code") or "MP1-001"
         exclude_charge_id = (request.args.get("exclude_charge_id") or "").strip() or None
         row = self.inventory_service.get_blocking_order(
             machine_code, exclude_charge_id=exclude_charge_id
@@ -139,7 +139,7 @@ class BuyController:
         discount = 0.0
         final = subtotal
         promotion_id = None
-        user_promotion_id = None # ADDED
+        user_promotion_id = None
         raw = coupon_code
         if raw is not None and str(raw).strip():
             reason, c, user_promo_id = lookup_coupon_by_code(raw)
@@ -147,40 +147,17 @@ class BuyController:
                 return None
             discount, final = discount_and_final(subtotal, c)
             promotion_id = c.promotion_id
-            user_promotion_id = user_promo_id # ADDED
+            user_promotion_id = user_promo_id
         return {
             "subtotal": subtotal,
             "discount": discount,
             "final": final,
             "promotion_id": promotion_id,
-            "user_promotion_id": user_promotion_id, # ADDED
+            "user_promotion_id": user_promotion_id,
         }
 
-    def _resolve_fulfillment_mode(
-        self, data: dict | None = None, charge_id: str | None = None
-    ) -> str:
-        mode = None
-        if data and isinstance(data, dict):
-            mode = data.get("fulfillment_mode")
-        if not mode and charge_id:
-            order = self.pending_orders.get(charge_id)
-            if order:
-                mode = order.get("fulfillment_mode")
-        if not mode:
-            mode = os.environ.get("DEFAULT_FULFILLMENT_MODE", "immediate")
-        mode = str(mode).lower()
-        return mode if mode in ("immediate", "pickup") else "immediate"
-
     def _handle_paid_order(self, charge_id: str, charge_obj=None) -> bool:
-        """After payment success: dispense immediately or wait for pickup scan."""
-        mode = self._resolve_fulfillment_mode(charge_id=charge_id)
-        if mode == "pickup":
-            logger.info(
-                f"[Checkout] Payment SUCCESS for {charge_id} — pickup mode (ready_to_scan)"
-            )
-            self.inventory_service.update_order_status(charge_id, "ready_to_scan")
-            self.pending_orders.pop(charge_id, None)
-            return True
+        """After payment success: dispense at the machine via Socket.IO job.start."""
         return self._execute_dispense(charge_id, charge_obj=charge_obj)
 
     # =============================================
@@ -203,9 +180,7 @@ class BuyController:
                 cart = json.loads(raw_cart) if isinstance(raw_cart, str) else raw_cart
                 self.pending_orders[charge_id] = {
                     "cart": cart,
-                    "machine_code": metadata.get("machine_code")
-                    or metadata.get("machine_id")
-                    or "MP1-001",
+                    "machine_code": metadata.get("machine_code") or "MP1-001",
                 }
                 logger.info(
                     f"[Dispense] Recovered order from Omise metadata for charge: {charge_id}"
@@ -357,7 +332,7 @@ class BuyController:
         )
 
         code = data.get("code") or data.get("coupon_code")
-        machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
+        machine_code = data.get("machine_code") or "MP1-001"
         cart = self._normalize_cart(data.get("cart", []))
 
         if not cart:
@@ -433,10 +408,9 @@ class BuyController:
         payment_id   = data.get("payment_id")
         amount       = data.get("amount")
         raw_cart     = data.get("cart", [])
-        machine_code = data.get("machine_code") or data.get("machine_id", "MP1-001")
+        machine_code = data.get("machine_code") or "MP1-001"
         draft_id     = data.get("draft_id")
         coupon_code  = data.get("coupon_code") or data.get("couponCode")
-        fulfillment_mode = self._resolve_fulfillment_mode(data)
 
         busy_resp = self._reject_if_machine_busy(
             machine_code, exclude_charge_id=draft_id
@@ -473,7 +447,7 @@ class BuyController:
                 ), 400
             total_price = pricing["final"]
             promotion_id = pricing["promotion_id"]
-            user_promotion_id = pricing["user_promotion_id"] # ADDED
+            user_promotion_id = pricing["user_promotion_id"]
 
         charge_amount_satang = int(round(float(total_price) * 100))
         client_satang = int(amount) if amount is not None else None
@@ -505,7 +479,6 @@ class BuyController:
         self.pending_orders[charge.id] = {
             "cart": cart,
             "machine_code": machine_code,
-            "fulfillment_mode": fulfillment_mode,
         }
 
         if draft_id:
@@ -520,7 +493,7 @@ class BuyController:
                 payment_method=payment_method,
                 total_price=total_price,
                 promotion_id=promotion_id,
-                user_promotion_id=user_promotion_id, # ADDED
+                user_promotion_id=user_promotion_id,
             )
 
         if not persisted:
@@ -533,12 +506,13 @@ class BuyController:
             logger.info(f"[Checkout] Payment SUCCESS for charge {charge.id}")
             self.order_statuses[charge.id] = "paid"
             self._handle_paid_order(charge.id, charge_obj=charge)
-            msg = (
-                "Payment successful, awaiting pickup scan"
-                if fulfillment_mode == "pickup"
-                else "Payment successful, dispensing..."
+            return jsonify(
+                {
+                    "status": "paid",
+                    "charge_id": charge.id,
+                    "message": "Payment successful, dispensing...",
+                }
             )
-            return jsonify({"status": "paid", "charge_id": charge.id, "message": msg})
 
         elif charge.status == "pending":
             # QR Code — รอลูกค้าสแกน
@@ -629,7 +603,7 @@ class BuyController:
 
         total_price = pricing["final"]
         promotion_id = pricing["promotion_id"]
-        user_promotion_id = pricing["user_promotion_id"] # ADDED
+        user_promotion_id = pricing["user_promotion_id"]
 
         import uuid
         draft_id = f"draft_{uuid.uuid4().hex[:16]}"
@@ -638,7 +612,6 @@ class BuyController:
         self.pending_orders[draft_id] = {
             "cart": cart,
             "machine_code": machine_code,
-            "fulfillment_mode": self._resolve_fulfillment_mode(data),
         }
         
         persisted = self.inventory_service.create_pending_order(
@@ -648,7 +621,7 @@ class BuyController:
             payment_method=payment_method,
             total_price=total_price,
             promotion_id=promotion_id,
-            user_promotion_id=user_promotion_id, # ADDED
+            user_promotion_id=user_promotion_id,
         )
         
         if not persisted:

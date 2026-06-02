@@ -15,7 +15,7 @@ export interface MemberOrder {
   datetime: string;                 // วันที่สั่งซื้อ
   items: string;                    // รายชื่อสินค้าทั้งหมดแบบสรุปย่อ
   total: number;                    // ยอดเงินรวมสุทธิ
-  status: string;                   // สถานะรายการสั่งซื้อ (e.g. ready_to_scan, completed)
+  status: string;                   // สถานะรายการสั่งซื้อ (e.g. completed, paid)
 }
 
 // ข้อมูลคูปองสะสมคะแนนที่สมาชิกกดแลกมาแล้ว
