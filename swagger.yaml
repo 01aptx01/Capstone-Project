@@ -46,7 +46,7 @@ tags:
 - name: Machines
   description: Hardware agent (Socket.IO only; no REST event ingest)
 - name: Admin
-  description: Admin dashboard API (`/api/admin/*`). Auth is a placeholder (`@admin_required` passes through).
+  description: "Admin dashboard API (/api/admin/*). Auth uses JWT via Authorization header: Bearer <token> (see /api/admin/auth/login)."
 paths:
   /health:
     get:

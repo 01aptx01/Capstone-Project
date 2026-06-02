@@ -42,14 +42,6 @@ export default function LoginCard() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      router.push("/");
-    }, 800);
-  };
-
   return (
     <AuthCardWrapper>
       <div className="flex flex-col items-center mb-8">

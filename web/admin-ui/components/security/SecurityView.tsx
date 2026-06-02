@@ -3,9 +3,16 @@
 import { useState } from "react";
 import { isAxiosError } from "axios";
 import { useLang } from "@/lib/i18n/lang";
-import { createAdmin, createInvite, type InviteResult } from "@/lib/auth";
+import { inviteAdmin } from "@/lib/admin-api";
 
 type AddMode = "password" | "invite";
+
+type InviteResult = {
+  email: string;
+  invite_link: string;
+  temp_password: string;
+  message?: string;
+};
 
 export default function SecurityView() {
   const { t } = useLang();
@@ -19,14 +26,18 @@ export default function SecurityView() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
-  const [createdAdmin, setCreatedAdmin] = useState<{ email: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
   const resetResults = () => {
     setErrorMsg(null);
     setInviteResult(null);
-    setCreatedAdmin(null);
     setCopied(false);
+  };
+
+  const _mkTempPassword = () => {
+    // simple dev-friendly temp password; server enforces hashing, not complexity
+    const s = Math.random().toString(36).slice(2, 10);
+    return `Temp-${s}`;
   };
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
@@ -34,8 +45,19 @@ export default function SecurityView() {
     resetResults();
     setLoading(true);
     try {
-      const res = await createAdmin(email.trim().toLowerCase(), tempPassword, [role]);
-      setCreatedAdmin({ email: res.email });
+      const cleanEmail = email.trim().toLowerCase();
+      const pw = tempPassword.trim();
+      if (!pw) {
+        setErrorMsg("กรุณากรอกรหัสผ่านชั่วคราว");
+        return;
+      }
+      const res = await inviteAdmin(cleanEmail, pw);
+      setInviteResult({
+        email: cleanEmail,
+        invite_link: res.invite_link,
+        temp_password: pw,
+        message: res.message,
+      });
       setEmail("");
       setTempPassword("");
     } catch (err) {
@@ -54,8 +76,15 @@ export default function SecurityView() {
     resetResults();
     setLoading(true);
     try {
-      const res = await createInvite(email.trim().toLowerCase(), [role]);
-      setInviteResult(res);
+      const cleanEmail = email.trim().toLowerCase();
+      const pw = _mkTempPassword();
+      const res = await inviteAdmin(cleanEmail, pw);
+      setInviteResult({
+        email: cleanEmail,
+        invite_link: res.invite_link,
+        temp_password: pw,
+        message: res.message,
+      });
       setEmail("");
     } catch (err) {
       setErrorMsg(
@@ -185,21 +214,17 @@ export default function SecurityView() {
             </div>
           )}
 
-          {/* ผลลัพธ์: สร้างบัญชีตรง */}
-          {createdAdmin && (
-            <div className="mt-5 bg-[var(--success-bg)] border border-emerald-100 rounded-2xl px-5 py-4 text-emerald-700 font-bold text-[14px] flex items-center gap-2">
-              <i className="fi fi-rr-check-circle"></i>
-              สร้างบัญชี <span className="font-black">{createdAdmin.email}</span> แล้ว — แจ้งอีเมลและรหัสผ่านชั่วคราวให้เขาเข้าสู่ระบบได้เลย (แนะนำให้เปลี่ยนรหัสภายหลัง)
-            </div>
-          )}
-
           {/* ผลลัพธ์: ลิงก์คำเชิญ */}
           {inviteResult && (
             <div className="mt-5 bg-[var(--success-bg)] border border-emerald-100 rounded-2xl px-5 py-4">
               <div className="flex items-center gap-2 text-emerald-700 font-black text-[14px] mb-2">
                 <i className="fi fi-rr-check-circle"></i>
                 สร้างคำเชิญสำหรับ {inviteResult.email} แล้ว
-                {inviteResult.emailed ? " — ส่งอีเมลเรียบร้อย" : " (ยังไม่ได้ตั้ง SMTP — คัดลอกลิงก์ด้านล่างส่งให้เขาเอง)"}
+                {" (คัดลอกลิงก์ด้านล่างส่งให้เขาเอง)"}
+              </div>
+              <div className="text-emerald-700 font-bold text-[13px] mb-3">
+                รหัสผ่านชั่วคราว:{" "}
+                <span className="font-black">{inviteResult.temp_password}</span>
               </div>
               <div className="flex items-center gap-2">
                 <input
