@@ -1,4 +1,4 @@
-﻿services:
+services:
   compose-banner:
     image: alpine:3.20
     container_name: vending-compose-banner
@@ -56,9 +56,8 @@
       - AGENT_BASE_URL=${AGENT_BASE_URL:-http://client:5000}
       - KIOSK_SOCKET_SECRET=${KIOSK_SOCKET_SECRET:-dev-kiosk-secret-change-in-production}
       - TZ=Asia/Bangkok
-      # Set comma-separated allowed origins for CORS.
-      # Override via .env when running on LAN / hardware.
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://server:8000,http://machine-ui:3000,http://admin-ui:3000,http://web-ui:3000,http://192.168.1.44:3000,http://192.168.1.172:3000}
+      # Set CORS origins
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:8081,http://server:8000,http://machine-ui:3000,http://admin-ui:3000,http://web-ui:3000}
       - DOCKER_URL_SERVER=http://localhost:8000
       - DOCKER_URL_MACHINE_UI=http://localhost:3000
       - DOCKER_URL_ADMIN_UI=http://localhost:3001
@@ -68,8 +67,6 @@
       - DOCKER_URL_DB=mysql://localhost:3307
       - DOCKER_PUBLISHED_PORT_SERVER=8000
       - PRODUCT_IMAGES_DIR=/app/static/product/img
-      # Set OMISE_WEBHOOK_SECRET to your Omise webhook signing secret for production security
-      # - OMISE_WEBHOOK_SECRET=your_webhook_secret_here
     ports:
       - "8000:8000"
     healthcheck:
@@ -93,9 +90,8 @@
       - /dev/gpiomem:/dev/gpiomem
     environment:
       - SENSOR_MODE=${SENSOR_MODE:-mock}
-      # Prefer docker service DNS in compose; override via .env for LAN / hardware.
       - SERVER_SOCKET_URL=${SERVER_SOCKET_URL:-http://server:8000}
-      # Must match a row in `machines`; token from Admin โ’ Create machine (plaintext once).
+      # Must match a row in machines; token from Admin -> Create machine
       - MACHINE_CODE=${MACHINE_CODE:-MP1-001}
       - MACHINE_TOKEN=${MACHINE_TOKEN:-}
       - AGENT_DB_PATH=/data/agent.db
@@ -150,7 +146,7 @@
       - TZ=Asia/Bangkok
       - DOCKER_PUBLISHED_PORT=3002
       - DOCKER_HOST_URL=http://localhost:3002
-      # Middleware JWT verification โ€” must match server JWT_SECRET
+      # Middleware JWT verification - must match server JWT_SECRET
       - JWT_SECRET=${JWT_SECRET}
     container_name: vending-web-ui
     ports:

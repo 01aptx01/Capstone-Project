@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
   },
   
   // Allow webpack HMR from your specific local network IP
-  allowedDevOrigins: ["192.168.100.2", "localhost:3000", "192.168.100.2:3000"],
+  allowedDevOrigins: ["localhost:3000"],
 
   // Image optimization
   images: {
